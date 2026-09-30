@@ -56,6 +56,7 @@ namespace NocturneAccess.Systems.Menus
             public string CurrentText;
             public TMP_Text CurrentComponent;
             public int PendingSlot = -1;
+            public string PendingText;
             public long PendingSince;
             public long LastChange;
             public string Title = "";
@@ -155,8 +156,13 @@ namespace NocturneAccess.Systems.Menus
 
             if (!raw.Contains(state.Spec.Highlight) || text.Length == 0)
                 return;
+            // Menus rewrite the highlighted item every frame with identical text (0.0.5 test, 30 Sep 2026):
+            // only a real change may start or restart the settle timer, or it never runs out.
             if (state.PendingSlot < 0 && slot == state.Current && text == state.CurrentText)
                 return;
+            if (state.PendingSlot == slot && text == state.PendingText)
+                return;
+            state.PendingText = text;
 
             long now = Now;
             if (state.PendingSlot < 0)
@@ -167,14 +173,20 @@ namespace NocturneAccess.Systems.Menus
 
         private static void OnTitle(MenuState state, string raw)
         {
-            state.Title = TextUtil.Clean(raw);
+            string title = TextUtil.Clean(raw);
+            if (title == state.Title)
+                return;
+            state.Title = title;
             if (state.PendingSlot >= 0)
                 state.LastChange = Now;
         }
 
         private static void OnDescription(MenuState state, int line, string raw)
         {
-            state.Description[line] = TextUtil.Clean(raw);
+            string text = TextUtil.Clean(raw);
+            if (text == state.Description[line])
+                return;
+            state.Description[line] = text;
             if (state.PendingSlot >= 0)
                 state.LastChange = Now;
         }

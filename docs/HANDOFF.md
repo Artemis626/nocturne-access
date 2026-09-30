@@ -262,7 +262,11 @@ What 0.0.2 adds:
 
 **Phase 2 step 1 verified in game with 0.0.4 (30 Sep 2026, 15:48 session, controller, console hidden):** every dialogue page spoken whole with the speaker named (Hijiri, Soul); narration pages ("> There is a large cylinder. What will you do?") spoken without a stale name; the "> End the game?" Yes/No choice announced ("Choice, 2 options. No, 2 of 2") and every cursor move read. No garbled speech; the 30-second log snapshots worked. Pause-menu screens mapped (class-index).
 
-**Phase 2 step 2 built (0.0.5), waiting for the in-game test.**
+**0.0.5 test (30 Sep 2026, 16:08 session): menus failed, fixed in 0.0.6 (not yet verified).** Save/load prompts were spoken ("Checking data...", "Select a file to load.", "Load File 1?", "Load completed."), dialogue and the "Return to the title screen?" choice worked. But the title and pause menus stayed silent, speaking only once as they closed ("COMMAND MENU. Title Screen, 4 of 5"; "EXIT, 8 of 8"). Diagnosis from the log: classification and highlight writes were correct and visible, but these menus **rewrite the highlighted item, title and description every frame with identical text** (the probe hides identical rewrites), and MenuReader restarted its settle timer on every write, so it only ran out when the menu closed. 0.0.6 restarts the timer only on a real text change. Lesson for every reader: never let an identical rewrite count as activity.
+
+Still open from that test: the save prompt's Yes/No (`saveUI(Clone)/saveannounce/saveannounce_choice/answer01TM`, `answer02TM`) carries no highlight material; the cursor must come from another source (probe `saveUI`/`saveFileUI` class methods next). Francesco notes the same pattern in Suikoden 1&2 HD, where several classes drove identical-looking UI elements.
+
+**Phase 2 step 2 built (0.0.5).**
 
 - `Systems/Menus/MenuReader.cs`: generic reader for menus that mark the cursor with a font material. Specs: pause menu and its submenus (`TMC01`, title from `title_window_oubei`), terminal menu (`TMC01`), title menu (`TMC00`, description from `titlemain_note` lines). Says "Title. Item, N of M. Description"; waits until the item is visible; the first announcement after opening is queued, later moves interrupt; a menu whose highlighted item disappears counts as closed.
 - `Systems/Menus/AnnouncementReader.cs`: save/load prompts (`saveannounce_tex/Text_announce01TM`, `savelist_data/Text_announceTM`) and the controller-disconnect notice, spoken once visible, queued.
