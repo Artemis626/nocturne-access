@@ -25,10 +25,30 @@ Keys other software already uses. The mod must not bind these by default.
 
 ## Game keyboard bindings
 
-Not recorded yet. The game reads input through its own layer (`InputUtil`, `InputAssign`, `SteamKeyboard`; see `docs/class-index.md`), with logical keys named after pad buttons (`InputAssign.KeyID`: A, B, X, Y, L1, R1, START, SELECT and directions).
+Defaults read from the game's own CONFIG > KEYBOARD+MOUSE screen by the probe (UI dump, 30 Sep 2026). The game reads them through its own layer (`InputUtil`, `InputAssign`, `SteamKeyboard`; see `docs/class-index.md`).
+
+| Action | Key |
+| --- | --- |
+| Character/Cursor forward, back, left, right | W, S, A, D |
+| Movement front, back, left, right | W, S, A, D |
+| Confirm/Action | shown as an icon, not text (likely Enter or Space) |
+| Punch | shown as an icon, not text |
+| Cancel | C |
+| Center Camera | C |
+| Command Menu, Menu | F |
+| UI On/Off | + |
+| Camera up, down, left, right | I, K, J, L |
+| Rotate Camera left, right; Rotate Map left, right | Q, E |
+| Pass | E |
+| Toggle POV, Angle | V |
+| Auto Map | M |
+| Skill Help On/Off | H |
+| Auto Battle, Fast Forward Text, Toggle Scroll | Tab |
+
+**No function key is used by the game.** F1 to F12 are free apart from the reserved keys above (F9 to F11 Graphics Configurator, F12 Steam), so the mod's own keys should stay in the function-key range, plus modifiers if needed.
 
 NocturneModernController binds only P on the keyboard (its other controls are gamepad).
 
 On the opening splash screen, any key (F8 included) is taken as "press any key" by the game and restarts the opening music. Our mod only reads keys, never injects them.
 
-Still to do: record the game's default keyboard bindings from its keyboard settings screen (the Phase 1 probe will log that screen's text).
+Still to do: identify the two icon-only bindings (Confirm/Action and Punch).

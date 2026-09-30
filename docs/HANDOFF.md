@@ -222,15 +222,25 @@ Open questions for Phase 0:
 
 ## Current state
 
-Updated 30 Sep 2026, session 1.
+Updated 30 Sep 2026, end of session 1.
 
-**Phase 1: probe built (0.0.2), waiting for the probe session.** Design follows `docs/TEXT-HOOKING-HANDOFF.md` (Francesco's Suikoden Access notes).
+**Phase 1: gate passed in substance (30 Sep 2026).** Probe session 1 ran from the title screen through the Conception prologue to the first save at the Shinjuku Medical Center terminal. All 34 hooks patched, 0 failed; no crash. Log archived as `UserData/NocturneAccess/Logs/session_2026-09-30_14-07-16.log`; condensed transcript via `tools/probe-transcript.pl` (kept in `research/`). Every screen visited is mapped in `docs/class-index.md` (UI object paths).
 
-Findings so far:
+Findings:
 
-- UI text is TextMeshPro (45 game classes use it; TMP object names end in `TM`). Hooking TMP setters sees the game's real strings, so the "never reconstruct" rule is satisfiable everywhere found so far.
-- Dialogue and choices run through `itfMesManager`, the PS2 message engine, which hands finished strings to the UI (`SetMessage(GameObject, int line, string text)`), and has explicit select-window and cursor methods. This is the likely Phase 2 dialogue hook, but some candidates show `CallerCount(0)` (possibly inlined), so the probe must prove which ones fire.
-- Name and help text come from lookups (`datSkillName.Get`, `datItemName.Get`, `datSkillHelp_msg.Get`, `datItemHelp_msg.Get`, `itfMesManager.DAT_STR_REF_*`): menus can be read from game data, not just labels.
+- **All UI text is TextMeshPro and carries the game's exact strings.** The "never reconstruct" rule holds everywhere seen.
+- **Dialogue:** three line components per page plus a speaker component. The typewriter only moves `<alpha=#00>` tags; **each line holds its full text from the first write, and all lines of a page are written at once when the page starts.** A page can be spoken whole, immediately, by stripping tags.
+- **`itfMesManager.SetMessage` never fires.** Useful engine signals: `itfMesMngRequestMessage` (message start), `SwitchSpeaker` (speaker label on/off), `SelectWindowDispOn` / `itfMesMngRequestSelect` (choice opens), `ChangeSelection(index, 1)` (choice cursor).
+- **Navigation-relevant text exists:** `fieldUI/flocation` (location name as you move, overworld included) and `fieldUI/fannounce` (Talk / Examine / Open Door / Enter / Exit prompts).
+- **Menus** (title, difficulty, config, name entry, terminal, save) have clean item and description texts; the title and name-entry cursors still need a source.
+- **Game keyboard defaults recorded** in `docs/KEYS.md`; no function key is used by the game.
+- One Unity scene for the whole game: screens are `(Clone)` prefabs under `Canvas_UI`.
+
+Gaps, not blocking:
+
+- The probe compared raw strings, so every typewriter frame looked like new text: dialogue line 1 was muted after the first page. The mechanism is fully understood from lines 2 and 3 and the UI dumps.
+- `UIManager/Text/Text01000+` (116 components holding a space, rewritten every frame) flood the TMP hook: the main cause of the stutter Francesco noticed in menus.
+- Not visited: pause menu (`campUI`), battle, shops. Francesco now has a save at the first terminal, so these can be captured from there.
 
 What 0.0.2 adds:
 
@@ -241,7 +251,13 @@ What 0.0.2 adds:
 - `[Scene]` lines on each scene load. `Core/LogArchive.cs`: each session's log copied to `UserData/NocturneAccess/Logs/` on quit.
 - `tools/log-summary.sh`: quick overview Claude runs after every game run.
 
-**Next step:** Francesco plays from the title screen through the prologue to the first save terminal in Shinjuku Medical Center with the probe on, pressing F6 on each new kind of screen. Claude reads the log and archive, records which hooks fire and every component name in `docs/class-index.md`, and the Phase 1 gate is judged from that.
+**Next step: Phase 2, dialogue and choices first** (awaiting Francesco's go):
+
+1. Make the TMP hook cheap: decide per component once (by pointer) whether it matters, and return immediately for noise such as `UIManager/Text`. Make the probe tag-aware (compare stripped text) so the typewriter no longer triggers mutes.
+2. Dialogue reader: route `talk_window/Text0NTM` and `name_window/TextTM` writes, strip tags, detect page changes from the lines, speak "Speaker: line 1 line 2 line 3" as one interrupting utterance. Repeat key for the last page.
+3. Choice reader: on choice open, speak the options; on `ChangeSelection(index, 1)` speak the highlighted option from `talk01_choice/choice_answer_oubei0N/answer01TM`.
+4. Test from Francesco's save: talk to NPCs, answer a choice; in the same run open the pause menu with the probe on to map `campUI`.
+5. Then title, config, name entry, save and terminal menus (Phase 2 gate: prologue to first save by ear).
 
 **Phase 0: gate passed (30 Sep 2026).** Verified in game and in `Latest.log`: both mods load ("2 Mods loaded"), the NVDA backend found `nvdaControllerClient.dll` with NVDA running, "Nocturne Access loaded" is spoken at startup, and F8 speaks the status line on every press. No crash, and no conflict with HD Ears or Graphics Configurator (still 120 fps). The game launches normally.
 

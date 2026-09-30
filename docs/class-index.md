@@ -48,6 +48,49 @@ The game draws its UI text with TextMeshPro: 45 classes in Assembly-CSharp refer
 | `Il2Cpp.nbMainProcess.GetBattleUI(int index = 0) → GameObject` | static method | Proxy; Repo: MatthiewNocturne (AnalyzeBosses) | Battle UI roots. Index 5 is the Analyze window, whose rows are `banalyze_skill/banalyze_skillNN/banalyze_textTM` (`TextMeshProUGUI`). TMP objects in this game end in `TM`. |
 | `Il2Cpp.slMain.slHitAnyKeyNextFuncDelegate` | delegate | Proxy type list | Opening splash "press any key". Likely why any key (F8 too) restarts the opening music there. |
 
+### Message engine: what fired in probe session 1
+
+Source: Log, probe session 1 (30 Sep 2026, title screen to the first save in Shinjuku Medical Center, `UserData/NocturneAccess/Logs/session_2026-09-30_14-07-16.log`).
+
+- **Fired:** `SwitchSpeaker` (276), `ClearMessage` (177), `itfMesMngRequestMessage` (167), `WindowDispOn(instanceMes_tag)` (146), `OpenCheckSpeakerWindow` (143), `ChangeSelection` (126), `GetSpeakerName` (124), `OpenMessageWindow` (122), `SetVar` and `itfMesMngSetVarImmediate` (44 each), `itfMesMngRequestSelect` and `SelectWindowDispOn` (23 each), `WindowDispOff` (13), `ForceWindowDispOff` (1).
+- **Never fired:** `SetMessage` (as its CallerCount 0 suggested), `itfMesMngGetStrImmediate`, `WindowDispOn(int)`, `ClearSpeaker`, `SelectWindowDispOff`, `itfMesMngSetSelect`, `SelectItemMove`. The name and help lookups (`DAT_STR_REF_*`, `dat*.Get`, `nbDispText`) had no chance to fire: no menu with skills or items and no battle were visited.
+- `itfMesMngRequestMessage(id, message, page, 1)` starts a message, but one message can span several pages that the player advances. Pages are detected from the text lines, not from this call.
+- `ChangeSelection(index, onoff)`: when a choice opens, each option is called with `onoff = 0`, then the highlighted one with `onoff = 1`. Each cursor move calls the old option with 0 and the new one with 1.
+
+## UI object paths
+
+Source: Log, probe session 1 (30 Sep 2026). All paths are under `Canvas_UI/`, all components are `TextMeshProUGUI`. The whole game runs in one Unity scene (`xrd773`, after `Boot`), so screens are prefabs instantiated as `(Clone)` under `Canvas_UI`, and scene events cannot detect screen changes. `oubei` (欧米) marks the Western-language layout.
+
+**Text format.** Dialogue and many labels carry TMP tags: `<material="MsgFont0">`, `<material="TMC09">` and others choose fonts; the typewriter hides characters not yet shown with `<alpha=#00>` before each one. **Every write already contains the full line**: the typewriter only moves alpha tags. An empty line holds the invisible placeholder `<alpha=#00>あああああ</alpha>`. Stripping tags gives the game's exact string.
+
+| Screen | Path | Role |
+| --- | --- | --- |
+| Dialogue | `talkUI/talk01/talk_window/Text01TM`, `Text02TM`, `Text03TM` | The three lines of the current page. At the start of a page all lines are written at once with full (hidden) text; a page change first resets them to the placeholder. |
+| Dialogue | `talkUI/name01/name_window/TextTM` | Speaker name ("Woman's Voice", "Yuko", "Station Staff", "Message"). Shown or hidden by `itfMesManager.SwitchSpeaker`. |
+| Dialogue choice | `talkUI/talk01_choice/choice_answer_oubei01/answer01TM`, `..._oubei02/...` | Option texts ("I will.", "I don't understand.", "Yes", "No"). Cursor: `ChangeSelection(index, 1)`. |
+| Title menu | `titleUI(Clone)/titlemain/titlemainmenu/stretch/titlemain_item01..09/slide/Text_TM` | LOAD GAME, NEW GAME, NEW GAME: CHRONICLE, NEW GAME: MANIAX, CONTINUE, CONFIG, DOWNLOADABLE CONTENTS, LICENSE INFORMATION, LOCALIZATION CREDITS. Cursor source not found yet. |
+| Title menu | `titleUI(Clone)/titlemain/titlemain_note/Text_mainnote01TM..05TM` | Description of the highlighted item, one line per component, typewriter-revealed. |
+| Title prompt | `titleUI(Clone)/titlemain/talk01_choice/choice_answer01/answer01TM`, `02` | Title-screen Yes/No choice (separate from the dialogue choice). |
+| Difficulty | `titleUI(Clone)/titlemode/titlemodeselect/titlemode_item02..03/Text_mode_g`, `titlemode/titlemode_note/Text_modenote01TM` | NORMAL, HARD and the description. |
+| Difficulty confirm | `titleUI(Clone)/titlemode/namechoice/talk_window/Text01TM`, `titlemode/talk01_choice/choice_answer01..02/answer01TM` | "The difficulty can be changed at any time..." with Yes / No. |
+| Config | `configUI_steam(Clone)/tab/tab_button/tab_<name>/Text (TMP)` | Tabs (e.g. KEYBOARD+MOUSE). |
+| Config | `configUI_steam(Clone)/cfgmenu/scrollveiw_<tab>/content/cfgmenuset_<item>/cgfmenu_tilte/TextTM` and `.../cfgmenu_note01/TextTM` | Option name and description for each option on each tab (audio, game, graphics, display, gamepad, keyboard). Current values not located yet. |
+| Config keys | `.../cfgmenuset_keyboardconfig<NN>/cgfmenu_tilte/key/Image_key01/Text (TMP)` | Bound key per action; see `docs/KEYS.md`. |
+| Name entry | `nameUI_oubei(Clone)/nameinput/nameannounce/stretch/TextTM`, `.../namefull/stretch/stretch_name/TextTM`, `stretch_sur/TextTM`, `nameinput_letter01..NN/TextTM` | "Enter a name.", "Given:", "Family:", the letters typed so far. |
+| Name entry | `nameUI_oubei(Clone)/namelist/name_alpabet/name_alphabet_box/namelist_box0N/Text_letter0NTM`, `namemode/namelr_menu/namemode01..03/stretch_on|stretch_off/Text` | Letter grid and character sets (ABC, ÀÁÂ, #+=). Rewritten constantly; cursor source not found yet. |
+| Field | `fieldUI/flocation/stretch/TextTM` | Current location name, on the overworld map and in dungeons ("Yoyogi Park", "Harajuku", "Shinjuku Medical Center", "Exit", "Shutter"). Key input for navigation. |
+| Field | `fieldUI/fannounce/guidetext/TextTM` | Interaction prompt when something is in reach: "Talk", "Examine", "Open Door", "Enter", "Exit". Key input for navigation. |
+| Terminal | `terminalUI/tmnlcurrent/stretch/TextTM`, `terminalUI/institutionUI/institution_menu/insmenu_window/insmenu_top/TextTM`, `insmenu_base02..03/TextTM` | Terminal location, menu items (Save, Talk, Exit). |
+| Save | `saveUI(Clone)/savelist/savelist_data/Text_announceTM`, `.../savefile_mask/savefile/savefile/savefile_data/Text_nameTM`, `Text_locationTM`, `Text_difficultyTM`, `.../Text_newTM` | "Select a save location.", slot name, location, difficulty, "New File". |
+| Save | `saveUI(Clone)/saveannounce/saveannounce_tex/Text_announce01TM`, `saveannounce_choice/answer01TM`, `answer02TM` | Overwrite prompt, Yes / No, "Save completed." |
+| Automap | `automapUI/autm_frame_oubei/autmlocation/Text_locationTM`, `.../floor_mask/autm_floor/Text_floorTM`, `autmupdown/autmupdown_up|down/stretch_on/TextTM` | Map location, floor ("2F"), UP / DOWN. |
+| Button guide | `buttonguide01/guide/buttonguide_set0N/button0N/Text1TM`, `.../guidetext/Text_buttonTM` | Key glyphs and captions ("Select", "Confirm"). Not worth speaking. |
+| Magatama (preloaded) | `magUI(Clone)/magname_base/TextTM`, `magstatus/magstatus_item0N/TextTM`, `magnote/Text0NTM` | Written hidden at startup; not visited yet. |
+| **Noise** | `UIManager/Text/Text01000` onward (116 components) | Hold a single space and are rewritten every frame. No content. Main cause of probe stutter; must be discarded before any work. |
+| **Noise** | `BrightTextMesh/MsgFont0..5`, `BrightTextMesh/TMC00..25` | Static font warm-up meshes ("m0", "00"...). |
+
+Not visited yet: the pause menu (`campUI`, `campMenu`), battle, shops, fusion.
+
 ## Field
 
 | Name | Kind | Source | What we know |

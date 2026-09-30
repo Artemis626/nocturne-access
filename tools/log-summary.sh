@@ -25,6 +25,7 @@ grep -a -E 'Melon Assembly loaded|Mods? loaded\.' "$LOG" | sed 's/^/   /'
 echo
 echo "== Problems (errors, exceptions, warnings, failed or missing hooks)"
 grep -a -n -i -E 'error|exception|warn|fail|NOT DECLARED' "$LOG" \
+  | grep -a -v -E '\[(Probe:TMP|Probe:Mes|UiDump|SPEECH)\]|\[Patch\] Summary: [0-9]+ patched, 0 not declared, 0 failed' \
   | grep -a -v -E 'MelonStartScreen|UnhollowerMini|MelonUnityEngine|FileSystemWatcher|Preferences.IO.Watcher|ctor\(System.Int32, System.Int32\)|End of inner exception|^[0-9]+: +at ' \
   | cut -c1-300 | head -40 | sed 's/^/   /'
 
