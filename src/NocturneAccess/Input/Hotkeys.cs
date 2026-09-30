@@ -78,9 +78,15 @@ namespace NocturneAccess.Input
 
         private static void RepeatLast()
         {
-            if (MenuReader.LastUtteranceAt > DialogueReader.LastUtteranceAt && MenuReader.LastUtterance.Length > 0)
+            // Whichever screen spoke last: a menu, the save list, the save Yes/No (with its prompt), or dialogue.
+            string latest = "";
+            long latestAt = long.MinValue;
+            Consider(MenuReader.LastUtterance, MenuReader.LastUtteranceAt, ref latest, ref latestAt);
+            Consider(SaveListReader.LastUtterance, SaveListReader.LastUtteranceAt, ref latest, ref latestAt);
+            Consider(SaveChoiceReader.LastUtterance, SaveChoiceReader.LastUtteranceAt, ref latest, ref latestAt);
+            if (latestAt > DialogueReader.LastUtteranceAt)
             {
-                SpeechManager.Say(MenuReader.LastUtterance, interrupt: true, force: true);
+                SpeechManager.Say(latest, interrupt: true, force: true);
                 return;
             }
 
@@ -90,6 +96,15 @@ namespace NocturneAccess.Input
             if (option.Length > 0)
                 text += " Selected: " + option;
             SpeechManager.Say(text, interrupt: true, force: true);
+        }
+
+        private static void Consider(string text, long at, ref string latest, ref long latestAt)
+        {
+            if (text.Length > 0 && at > latestAt)
+            {
+                latest = text;
+                latestAt = at;
+            }
         }
 
         private static void SpeakStatus()

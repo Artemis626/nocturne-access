@@ -67,7 +67,7 @@ namespace NocturneAccess.Core
             MelonPreferences_Category menus = MelonPreferences.CreateCategory("NocturneAccess_Menus", "Menus");
             menus.SetFilePath(FilePath, true, false);
             MenusEnabled = menus.CreateEntry("Enabled", true, "Read menus",
-                "Speaks the highlighted item of the pause, terminal and title menus, and save/load prompts. Needs a restart.");
+                "Speaks the highlighted item of the pause, terminal and title menus, the save/load file list, prompts and Yes/No. Needs a restart.");
 
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);

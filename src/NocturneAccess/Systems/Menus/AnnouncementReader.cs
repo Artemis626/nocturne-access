@@ -48,6 +48,24 @@ namespace NocturneAccess.Systems.Menus
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static long _lastPoll;
 
+        /// <summary>
+        /// A prompt has new text that is not spoken yet (Systems/SpeechOrder.cs). Only recent changes
+        /// count: a prompt written while hidden can stay pending for WaitForVisibleMs.
+        /// </summary>
+        internal static bool AnyDue
+        {
+            get
+            {
+                long now = Clock.ElapsedMilliseconds;
+                foreach (Entry e in Entries)
+                {
+                    if (e.Pending && now - e.ChangedAt < SpeechOrder.MaxHoldMs)
+                        return true;
+                }
+                return false;
+            }
+        }
+
         internal static void Install()
         {
             if (!Config.MenusEnabled.Value)

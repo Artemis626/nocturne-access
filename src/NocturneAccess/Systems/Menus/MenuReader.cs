@@ -21,8 +21,9 @@ namespace NocturneAccess.Systems.Menus
     /// - Announced 80 ms after the last related write, so the title and description written in the
     ///   same frame are included: "Title. Item, 2 of 6. Description".
     /// - Menus are often built while hidden, so an announcement waits until the item is visible.
-    /// - The first announcement after a menu opens is queued (it must not cut off dialogue such as
-    ///   the terminal's question); later cursor moves interrupt.
+    /// - The first announcement after a menu opens is queued, and waits while a dialogue page or prompt
+    ///   is still due, so the terminal's question comes first (Systems/SpeechOrder.cs); later cursor
+    ///   moves interrupt.
     /// - When the highlighted item disappears, the menu counts as closed, so reopening it announces again.
     /// </summary>
     internal static class MenuReader
@@ -59,6 +60,7 @@ namespace NocturneAccess.Systems.Menus
             public string PendingText;
             public long PendingSince;
             public long LastChange;
+            public long HoldSince = -1;
             public string Title = "";
             public string LastTitleSpoken = "";
         }
@@ -233,6 +235,10 @@ namespace NocturneAccess.Systems.Menus
             }
 
             bool opening = state.Current < 0;
+            if (opening && SpeechOrder.Hold(state.Spec.Name, ref state.HoldSince, now))
+                return;
+            state.HoldSince = -1;
+
             state.Current = state.PendingSlot;
             state.CurrentText = slot.Text;
             state.CurrentComponent = slot.Component;

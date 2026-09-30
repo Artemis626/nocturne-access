@@ -20,6 +20,9 @@ namespace NocturneAccess.Systems.Dialogue
     /// - itfMesManager.SwitchSpeaker(bool sw, bool disp): the last call before a page says whether
     ///   the speaker box is shown for it.
     /// - itfMesManager.WindowDispOff(bool): the message window closed.
+    /// - itfMesManager.itfMesMngRequestMessage(id, message, page, callmode): a message was requested;
+    ///   its lines arrive a few hundred ms later. Until its page is spoken, PageDue is true, so a menu
+    ///   opening at the same moment (the terminal) waits behind it (Systems/SpeechOrder.cs).
     ///
     /// A page is spoken once no line or speaker change has arrived for SettleMs, as one
     /// interrupting utterance. The speaker is named when it changes, after the window reopens,
@@ -29,6 +32,7 @@ namespace NocturneAccess.Systems.Dialogue
     {
         private const string Tag = "[Dialogue]";
         private const long SettleMs = 150;
+        private const long RequestDueMs = 1500;
         private const string LinePathPrefix = "Canvas_UI/talkUI/talk01/talk_window/Text0";
         private const string SpeakerPath = "Canvas_UI/talkUI/name01/name_window/TextTM";
 
@@ -44,6 +48,11 @@ namespace NocturneAccess.Systems.Dialogue
         private static bool _windowReopened = true;
         private static string _lastPage = "";
         private static string _lastSpeakerSpoken = "";
+        private static long _requestedAt = -1;   // Clock ms of a requested message whose page is not spoken yet
+
+        /// <summary>A page is on its way: lines changed and not yet settled, or a message was just requested.</summary>
+        internal static bool PageDue
+            => _dirty || (_requestedAt >= 0 && Clock.ElapsedMilliseconds - _requestedAt < RequestDueMs);
 
         /// <summary>The last page with its speaker, for the repeat key.</summary>
         internal static string LastUtterance { get; private set; } = "";
@@ -64,6 +73,9 @@ namespace NocturneAccess.Systems.Dialogue
                 AccessTools.Method(typeof(DialogueReader), nameof(AfterSwitchSpeaker)));
             Patcher.Postfix("Dialogue", mes, "WindowDispOff", new[] { typeof(bool) },
                 AccessTools.Method(typeof(DialogueReader), nameof(AfterWindowOff)));
+            Type i = typeof(int);
+            Patcher.Postfix("Dialogue", mes, "itfMesMngRequestMessage", new[] { i, i, i, i },
+                AccessTools.Method(typeof(DialogueReader), nameof(AfterRequestMessage)));
         }
 
         private static TmpRouter.Handler Classify(string path)
@@ -118,6 +130,11 @@ namespace NocturneAccess.Systems.Dialogue
             _clearedSinceSpoken = true;
         }
 
+        private static void AfterRequestMessage()
+        {
+            _requestedAt = Clock.ElapsedMilliseconds;
+        }
+
         /// <summary>Called every frame: speaks a page once it has settled.</summary>
         internal static void Tick()
         {
@@ -145,6 +162,7 @@ namespace NocturneAccess.Systems.Dialogue
 
             if (!AnyLineVisible())
             {
+                _requestedAt = -1;
                 Log.Info($"{Tag} Skipped a page written while the window is hidden: \"{page}\"");
                 return;
             }
@@ -159,6 +177,7 @@ namespace NocturneAccess.Systems.Dialogue
             _lastSpeakerSpoken = speaker;
             _clearedSinceSpoken = false;
             _windowReopened = false;
+            _requestedAt = -1;
 
             Log.Info($"{Tag} Page. Speaker box {(_speakerOn ? "on" : "off")}, name \"{_speaker}\", named {(nameIt ? "yes" : "no")}.");
             SpeechManager.Say(nameIt ? $"{speaker}: {page}" : page, interrupt: true, force: true);

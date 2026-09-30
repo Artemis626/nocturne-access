@@ -185,6 +185,8 @@ Source: Proxy, Assembly-CSharp (ilspycmd decompile, 30 Sep 2026), unless marked 
 | `Resources.FindObjectsOfTypeAll<T>()` | Proxy, UnityEngine.CoreModule | `Capture/UiTreeDumper.cs` |
 | `Object.GetInstanceID()`, `Object.name`, `Component.gameObject`, `Component.transform`, `Transform.parent`, `GameObject.activeInHierarchy`, `Behaviour.isActiveAndEnabled` | Proxy, UnityEngine.CoreModule | `Capture/*`, `Core/UiUtil.cs` |
 | `Il2CppSystem.Object.GetIl2CppType()` | Proxy, Il2Cppmscorlib | Real runtime type of a component (the managed wrapper may only know the declared type). |
+| `Transform.position` (`Vector3` fields `x`, `y`) | Proxy, UnityEngine.CoreModule | `Systems/Menus/SaveChoiceReader.cs` (which option the save Yes/No highlight is over) |
+| `Il2CppObjectBase.Pointer`, `Il2CppReferenceArray<T>` (`Length`, indexer) | Il2CppInterop.Runtime | Object identity (`SaveListReader`: which slot owns a text) and game arrays (`saveUI._fileList`, `_choiceList`) |
 
 ## Screen reader DLLs
 
