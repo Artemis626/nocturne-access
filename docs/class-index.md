@@ -132,6 +132,20 @@ Also seen: `DisconnectCaution/saveannounce_tex/Text_announce01TM`, `Text_announc
 | Magatama | `magUI(Clone)/magtitle_window/TextTM`, `magname_base/TextTM` (`TMC19`), `magnote/Text01TM..03TM`, `magstatus/magstatus_item01..05/TextTM` | "Which will you ingest?", "Marogareh", "Imparts Physical skills", "Normal resistance", stat labels. |
 | Magatama → Stats | `campUIBase/statusUI(Clone)/title_window/TextTM` = "Which will you ingest?", `sskill/sskill_obtained01..08/TextTM` | Stats screen opened from the Magatama screen; skills to obtain are empty for now. |
 
+### Name entry (Log, 30 Sep 2026 20:44 session, probe and F6 dumps)
+
+Used for the player (family name, given name, nickname), Yuko (opens on the confirmation with "Takao / Yuko") and the classmate. All paths under `Canvas_UI/nameUI_oubei(Clone)/`.
+
+| Path | Content |
+| --- | --- |
+| `nameinput/nameannounce/stretch/TextTM` | "Enter a name.", then "Enter a nickname." (`TMC22`). |
+| `nameinput/namefull/stretch/stretch_sur/TextTM`, `stretch_name/TextTM` | Labels "Family:", "Given:". |
+| `nameinput/namefull/stretch/nameinput_letter01..10/TextTM` (family), `11..20` (given); `nameinput/namenick/stretch/nameinput_letter01..10/TextTM` | Typed letters, one per component, plain text ("A", "r"...). A deleted letter becomes blank (the router never sees blank writes). When the nickname starts, the name letters are restyled `TMC11`. |
+| `namelist/name_alpabet/name_alphabet_box/namelist_box01..16/Text_letter01..NNTM` | The letter grid: `namelist_boxNN` is the column, `Text_letterNN` the row (row 1 "A".."P", row 2 "Q".."Z", row 3 "a".."p"...). **The letter under the cursor blinks**: rewritten about 30 times a second, alternating plain and `<material="TMC12">`. `name_kana/...` is the Japanese grid, hidden. |
+| `namemode/namelr_menu/namemode01..03/stretch_on/Text`, `stretch_off/Text` | Character sets "ABC", "ÀÁÂ", "#+="; `stretch_on` is the selected one (`TMC10`; `TMC12` for a moment at opening), `stretch_off` the others (`TMC09`). |
+| `nameinput/nameconfirm/Text_fullTM`, `Text_nickTM`, `nameconfirm/namefull/stretch/stretch_sur`, `stretch_name`, `nameconfirm/namefull/stretch/nameinput_letterNN/TextTM`, `nameconfirm/namenick/...` | Confirmation: "Full Name", "Nickname", labels and the letters (`TMC12`). Each letter slot has two components (one blank). |
+| `namechoice/talk_window/Text01TM`, `talk01_choice/choice_answer01..02/answer01TM` | "> Is this okay?" and Yes/No, highlighted `TMC08`, other `TMC22`. |
+
 ### Title screen and config (Log, 30 Sep 2026 16:49 session, probe and F6 dumps)
 
 | Screen | Path or name | Content |
@@ -189,6 +203,11 @@ Source: Log, 30 Sep 2026 20:07 session (first battle, Will o' Wisp in the Unknow
 | `nbMainProcess.nbGetPartyFromFormindex(int) → nbParty_t` | static method (Repo) | `count[4..7]` = buff levels (Repo, DisplayBuffs), `formindex`, `partyindex`, `aisyo`. |
 | `datDevilName.Get(int id) → string`, `frName.frGetCNameString(sbyte TargetNo) → string` | static methods (Repo) | Demon name by unit id; the player's nickname with 0. |
 | `nbTarSelProcess.DispTargetHelp(ref nbTarSelProcessData_t t)` | static method (Repo) | Target help; `t.nowform` = target formindex, `t.ctype == 0` single target. Takes its argument by reference: not hooked (rule §2.6) unless needed. |
+| Verified in game (20:44 session, two Will o' Wisps) | Log | `activeunit` 0 on the player's turn, 4 on the enemies' turn. `press4_p` = `press4_ten` = 1 on the player's turn alone, 2 on the two enemies' turn (full icons). Enemies at formindex 4 and 5 (`enemypcnt` 2), both id 318, HP 10/10, MP 30/30; the player at formindex 0, id 0, named "Art" on the party panel, HP 30/30, MP 12/12. `phase` runs 7 (command input), 9, 10, 5, 4, 7 through a turn. HP changes appear in the data when the hit lands. |
+| `nbHelpProcess.nbDispText` during targeting | Log | Called continuously while the target cursor is shown (the probe logs it every 3 s, its repeat window), but the banner text is only rewritten when it changes: two identical enemies give one banner write, so moving between them is silent unless the target comes from data. |
+| `nbTarSelProcess.GetTarSelProcessData() → nbTarSelProcessData_t` | static method, Proxy | Target selection state without a by-reference hook. Fields: `nowform` (target formindex, Repo DisplayBuffs), `ctype` (0 = single target, Repo), `stat`, `nowno`, `friendcnt`, `enemycnt`, `friendno`, `enemyno` (`sbyte[]`), `partyindex`, `data`, `act`. Also `nbGetTarSelStat() → int`. |
+| Party panel hides mid-battle | Log | While an enemy talks, the party panel is hidden for about 5 s (21:40:42 to 21:40:45): not the end of the battle. The results text `resultUI(Clone)/brparty/brchara01/TextTM` is rewritten every frame. |
+| `Il2Cpp.statusUI` | MonoBehaviour, Proxy | Stats screen, also the level-up allocation. Fields: `titleText`, `raceText`, `nameText`, `TextStatus` (TMP[]: "Str".."Luc"), `ObjStatus`, `ObjStsBar` (GameObject[]), `ObjLV`, `ObjExp`, `ObjNowHp`, `ObjMaxHp`, `ObjNowMp`, `ObjMaxMp` (GameObject, presumably holding `CounterCtr`), `HpBar`, `MpBar` (Image), `lvUpBase`, `ObjPoint`, `ObjBonus`, `stsCursor` (GameObject), `pointAnim`, `infoAnim`, `aisyoText`, `obtainedText`, `awaitText`, `skillHelp`. During the level-up allocation no text is written at all (21:41:54 to 21:41:56): the cursor and values are objects and sprites. |
 
 ## Field
 
@@ -198,6 +217,8 @@ Source: Log, 30 Sep 2026 20:07 session (first battle, Will o' Wisp in the Unknow
 | `Il2Cpp.fldPlayer.fldPlayerCalc() → int` | static method | Proxy decompile, 30 Sep 2026; Repo: NocturneModernController (patched there) | Variants on the same class: `fldPlayerCalc_Hit()`, `fldPlayerCalc_WarpRun()`, `fldPlayerCalcHasigo() → int` (ladder), `fldPlayerCalc_Nml() → int`, `fldPlayerCalc_WarpStart()`, `fldPlayerCalc_FastStart()`, `fldPlayerCalc_Nml_syukan() → int`, `fldPlayerCalcForUnity()`. |
 | `Il2Cpp.fldCamera.fldCamMain() → Il2CppSystem.Object` | static method | Proxy; Repo: NocturneModernController | Field camera update. |
 | `Il2Cpp.fldAutoMap` | class | Proxy, Assembly-CSharp, 30 Sep 2026 | Automap. Candidate for layout data. Not yet inspected. |
+| `fieldUI/fannounce/guidetext/TextTM` | TMP | Log, session 1, 20:07 and 20:44 sessions | Interaction prompt ("Talk", "Examine", "Open Door", "Enter", "Exit"). **Hidden when nothing is in reach** (absent from field dumps, present when in reach). Its text is written only when the wording changes (15 writes in an hour), so a reader must watch visibility. The button glyph is `fannounce_button/Text2TM` (blank). |
+| `fieldUI/flocation/stretch/TextTM` | TMP | Log, 20:44 session | Location banner, shown on arrival then hidden. In the elevator it is written ("1Ｆ") 80 ms after `itfMesMngRequestMessage` for "> Select a floor.", whose lines arrive 300 ms later: the cause of the elevator ordering problem. |
 
 ## MelonLoader 0.6.1 API used by the mod
 

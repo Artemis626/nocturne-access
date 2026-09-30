@@ -264,7 +264,15 @@ What 0.0.2 adds:
 
 **Phase 2 step 1 verified in game with 0.0.4 (30 Sep 2026, 15:48 session, controller, console hidden):** every dialogue page spoken whole with the speaker named (Hijiri, Soul); narration pages ("> There is a large cylinder. What will you do?") spoken without a stale name; the "> End the game?" Yes/No choice announced ("Choice, 2 options. No, 2 of 2") and every cursor move read. No garbled speech; the 30-second log snapshots worked. Pause-menu screens mapped (class-index).
 
-**0.0.9 built and deployed, not yet tested: combat, version 1.** Francesco (20:07 session, 30 Sep 2026): the config screen works "extremely well"; the volume notches have no numbers yet, which can wait; remove the title cue (it fired during the Atlus splash, 20:07:58, not on the title screen); focus on combat. He fought the first battle (Will o' Wisp) with F6 dumps.
+**0.0.9 verified in game (30 Sep 2026, 20:44 session, `session_2026-09-30_20-44-36.log`): Francesco replayed the whole prologue with his eyes closed**, from NEW GAME to the first battle and the first save, about an hour. 44 hooks, no errors. Dialogue, choices, locations, the elevator's floor choice, the terminal, saving, title and pause menus all worked. Combat: "Battle. Will o' Wisp, Will o' Wisp.", the command menu, "Attack", "Dodged the attack!", HP changes ("Will o' Wisp 1, HP 4 of 10."), F2 ("Press turns: 1. Will o' Wisp 1, HP 10 of 10. Will o' Wisp 2, HP 10 of 10. Art, HP 30 of 30, MP 12 of 12."). Francesco's list of what still needs work:
+
+1. Interaction prompts ("Open Door", "Talk", "Examine") are not read; the location names are a great orientation tool and stay as they are.
+2. Name entry is silent (player, Yuko, classmate); F6 dumps taken.
+3. Elevator: the floor ("1Ｆ") was spoken before "> Select a floor." (the location banner is written 80 ms after the message request, the question 300 ms later).
+4. Combat: moving the target cursor between two identical enemies is silent after the first; also found in the log: "Battle. ..." repeated whenever the party panel hides while an enemy talks, and "Battle results." repeated about 60 times (the results text is rewritten every frame).
+5. The level-up allocation is silent (no text is written; values and cursor are objects).
+
+**0.0.9 (built earlier the same day): combat, version 1.** Francesco (20:07 session, 30 Sep 2026): the config screen works "extremely well"; the volume notches have no numbers yet, which can wait; remove the title cue (it fired during the Atlus splash, 20:07:58, not on the title screen); focus on combat. He fought the first battle (Will o' Wisp) with F6 dumps.
 
 - Removed `TitleCue` (a better signal will come later). `ConfigReader` polls a slider only on rows where one was found: no slider was ever found (no `[Config] Slider` line), and polling a closed screen's row caused a caught NullReferenceException (20:12:25).
 - `MenuReader` spec "Battle menu" (`bmenuset(Clone)/bmenu/*/bmenu_command/bmenu_commandNN/bmenu_text01TM`, `TMC01`) with the help line as description. A spec's description may now be a single component without a line number.
