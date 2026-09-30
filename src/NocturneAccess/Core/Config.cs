@@ -56,8 +56,8 @@ namespace NocturneAccess.Core
             dialogue.SetFilePath(FilePath, true, false);
             DialogueEnabled = dialogue.CreateEntry("Enabled", true, "Read dialogue",
                 "Speaks each dialogue page as it appears. Needs a restart.");
-            SpeakerEveryPage = dialogue.CreateEntry("SpeakerEveryPage", false, "Speaker on every page",
-                "Say the speaker's name before every page. When false, it is said when the speaker changes or the window reopens.");
+            SpeakerEveryPage = dialogue.CreateEntry("SpeakerEveryPage", true, "Speaker on every page",
+                "Say the speaker's name before every page (default). When false, it is said only when the speaker changes or the window reopens.");
             ChoicesEnabled = dialogue.CreateEntry("Choices", true, "Read choices",
                 "Speaks dialogue choices and the highlighted option. Needs a restart.");
 

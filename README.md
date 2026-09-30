@@ -15,6 +15,8 @@ Early development, not yet usable. Phase 0: the mod loads and speaks through NVD
 
 The mod works alongside other MelonLoader mods for this game, such as Nocturne Graphics Configurator.
 
+**Screen reader users: hide the MelonLoader console.** In Steam, open the game's Properties, and under Launch Options enter `--melonloader.hideconsole`. Otherwise NVDA can end up reading the console's log text, especially when playing with a controller (which keeps working when the game window is not focused). Logs are still written to `MelonLoader/Latest.log`.
+
 ## Keys
 
 See `docs/KEYS.md`.

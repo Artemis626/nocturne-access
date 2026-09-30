@@ -17,7 +17,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.3";
+        internal const string ModVersion = "0.0.4";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
@@ -53,6 +53,7 @@ namespace NocturneAccess.Core
         {
             Hotkeys.Update();
             DialogueReader.Tick();
+            LogArchive.Tick();
             Probes.Tick();
         }
 

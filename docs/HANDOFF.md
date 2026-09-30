@@ -260,6 +260,14 @@ What 0.0.2 adds:
 - F1 repeats the last page (and the highlighted option). Config section `[NocturneAccess_Dialogue]`.
 - `Patcher` now allows several features to add postfixes to the same method.
 
+**First test of 0.0.3 (30 Sep 2026, around 15:20–15:41) was untestable: garbled technical speech on every input.** Troubleshooting:
+
+- The mod's own speech was clean: every utterance is mirrored as `[SPEECH]`, and the surviving log has only 4, all correct ("> There is a large cylinder. What will you do?", "Hijiri: First things first, try and make it outside. Alive."). Dialogue and speaker detection worked.
+- NVDA's log (`%TEMP%\nvda.log`) shows a device appearing at 15:21 (braille auto-detect rescans: the controller connecting) and repeated freezes of up to 5 s at 15:27–15:29 (flooded with text).
+- Cause, by elimination: **NVDA reading the MelonLoader console window**, which prints every log line; the probe writes lines on almost every input. With a keyboard the game window must have focus, so NVDA never reads the console; a controller keeps working while the console has focus. Closing that console also kills the game without a clean shutdown, which is why that session's log was never archived and was then overwritten.
+- Fix: launch option `--melonloader.hideconsole` (MelonLoader docs; the log file is still written). 0.0.4 also snapshots the log to the archive every 30 seconds, so an unclean exit no longer loses it.
+- Francesco asked for the speaker on every page: `SpeakerEveryPage` now defaults to true, and his config was updated.
+
 Plan this was built from:
 
 1. Make the TMP hook cheap: decide per component once (by pointer) whether it matters, and return immediately for noise such as `UIManager/Text`. Make the probe tag-aware (compare stripped text) so the typewriter no longer triggers mutes.

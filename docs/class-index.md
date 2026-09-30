@@ -89,6 +89,15 @@ Source: Log, probe session 1 (30 Sep 2026). All paths are under `Canvas_UI/`, al
 | **Noise** | `UIManager/Text/Text01000` onward (116 components) | Hold a single space and are rewritten every frame. No content. Main cause of probe stutter; must be discarded before any work. |
 | **Noise** | `BrightTextMesh/MsgFont0..5`, `BrightTextMesh/TMC00..25` | Static font warm-up meshes ("m0", "00"...). |
 
+**Menu highlight is a font material** (Log, session of 30 Sep 2026 15:40). When the cursor moves, the game rewrites the old and new items with different `<material=...>` tags:
+
+- Terminal menu (`insmenu_top`, `insmenu_base02..03`): highlighted item `TMC01`, others `TMC00` (Save → Talk → Exit observed).
+- Title menu (`titlemain_item0N/slide/Text_TM`): highlighted item `TMC00`, others `TMC15`; the note (`titlemain_note`) is rewritten with the highlighted item's description at the same moment. A tenth item, `titlemain_item10` "EXIT", exists.
+
+The material pair differs per screen, so each menu reader must record its own pair.
+
+Also seen: `DisconnectCaution/saveannounce_tex/Text_announce01TM`, `Text_announce02TM` ("The input device has been disconnected." / "Please reconnect the device."); `saveUI(Clone)/saveannounce/saveannounce_tex/Text_announce01TM` also carries "Checking data...", "Load File 1?", "Load completed."; `fieldUI/flocation/stretch/TextTM` shows "Underground Facility" and "Terminal".
+
 Not visited yet: the pause menu (`campUI`, `campMenu`), battle, shops, fusion.
 
 ## Field
