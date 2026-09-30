@@ -1,0 +1,16 @@
+# Game and loader reference assemblies. Never commit or redistribute these.
+_dlls/
+
+# Research dumps and logs derived from game files. Never commit.
+research/
+
+# Machine-specific settings (game path).
+NocturneAccess.local.props
+
+# Build output and IDE state.
+bin/
+obj/
+*.user
+.vs/
+.vscode/
+.idea/

@@ -1,0 +1,11 @@
+<Project>
+  <!-- Shared build settings for every project in the repo. -->
+  <PropertyGroup>
+    <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+    <!-- Reference assemblies copied from the local game install by tools/copy-references.ps1. Gitignored. -->
+    <DllsDir>$(RepoRoot)_dlls\</DllsDir>
+  </PropertyGroup>
+
+  <!-- Machine-specific settings, e.g. GamePath. Copy NocturneAccess.local.props.example to create it. -->
+  <Import Project="$(RepoRoot)NocturneAccess.local.props" Condition="Exists('$(RepoRoot)NocturneAccess.local.props')" />
+</Project>

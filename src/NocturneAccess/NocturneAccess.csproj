@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>NocturneAccess</AssemblyName>
+    <RootNamespace>NocturneAccess</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Version>0.0.1</Version>
+    <!-- Embedded PDB gives file and line numbers in MelonLoader stack traces. -->
+    <DebugType>embedded</DebugType>
+    <Deterministic>true</Deterministic>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <!--
+    All references come from _dlls/ (see tools/copy-references.ps1).
+    Private=false: they are already present in the game folder at runtime, so nothing is copied to output.
+  -->
+  <ItemGroup>
+    <Reference Include="MelonLoader" HintPath="$(DllsDir)MelonLoader.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(DllsDir)0Harmony.dll" Private="false" />
+    <Reference Include="Il2CppInterop.Runtime" HintPath="$(DllsDir)Il2CppInterop.Runtime.dll" Private="false" />
+    <Reference Include="Il2CppInterop.Common" HintPath="$(DllsDir)Il2CppInterop.Common.dll" Private="false" />
+    <Reference Include="Il2Cppmscorlib" HintPath="$(DllsDir)Il2Cppmscorlib.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(DllsDir)UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.InputLegacyModule" HintPath="$(DllsDir)UnityEngine.InputLegacyModule.dll" Private="false" />
+  </ItemGroup>
+
+  <!-- The game only runs on Windows, and so do the screen reader backends. -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <Target Name="CheckReferences" BeforeTargets="ResolveAssemblyReferences" Condition="!Exists('$(DllsDir)MelonLoader.dll')">
+    <Error Text="Reference assemblies not found in _dlls\. Run: powershell -ExecutionPolicy Bypass -File tools\copy-references.ps1 -GamePath &quot;your game folder&quot;" />
+  </Target>
+
+  <!-- Copies the built mod into the game's Mods folder when GamePath is set (NocturneAccess.local.props). -->
+  <Target Name="DeployToGame" AfterTargets="Build" Condition="'$(GamePath)' != '' And Exists('$(GamePath)\Mods')">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GamePath)\Mods" Retries="2" RetryDelayMilliseconds="500" />
+    <Message Importance="high" Text="Deployed $(TargetFileName) to $(GamePath)\Mods" />
+  </Target>
+
+</Project>

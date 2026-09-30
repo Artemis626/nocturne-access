@@ -1,0 +1,9 @@
+<Project>
+  <!--
+    Copy this file to NocturneAccess.local.props (gitignored) and set your game folder.
+    When GamePath is set, every build copies NocturneAccess.dll into GamePath\Mods.
+  -->
+  <PropertyGroup>
+    <GamePath>C:\Program Files (x86)\Steam\steamapps\common\smt3hd</GamePath>
+  </PropertyGroup>
+</Project>
