@@ -96,7 +96,13 @@ Source: Log, probe session 1 (30 Sep 2026). All paths are under `Canvas_UI/`, al
 
 - Pause menu (`campUIBase/campUI/menu/menu_window/menu_top`, `menu_base02..06`): highlighted `TMC01`, others `TMC00`, same pair as the terminal (Log, 30 Sep 2026 15:48 session: Item → Skill → Party → Magatama → Stats → System, and in the System submenu Config → Load).
 
+- Save/load slot list (`saveUI(Clone)/savelist/savelist_data/savefile_mask/savefile/...`): highlighted slot `TMC01`, others `TMC00`. A filled slot rewrites its three texts (`Text_nameTM`, `Text_locationTM`, `Text_difficultyTM`); an empty slot its `Text_newTM` ("No File") (Log, 30 Sep 2026 16:18 session).
+- Item lists (`campUIBase/campUI/menu_itemskill/menu_item_window/menuitem_top`, `menuitem_base02..08/TextTM`): highlighted `TMC01` ("ID Card" under Key Items) (Log, 16:18 session).
+- Party member pick ("Who will use a skill?"): `campUIBase/campUI/party/party_status/party_status01/Text_nameTM` turns `TMC01` (Log, 16:18 session).
+
 The material pair differs per screen, so each menu reader must record its own pair.
+
+**Not every cursor is a material.** The save/load Yes/No (`saveannounce_choice/answer01TM`, `answer02TM`) is plain "Yes" / "No" with no tag, and two F6 dumps taken with the cursor on different options are identical (Log, 16:18 session). Its cursor is a separate object (`saveUI._choiceCursor`) driven by `slMain` (see Save and load below).
 
 ### Pause menu (Log, 30 Sep 2026 15:48 session, F6 dumps)
 
@@ -114,7 +120,39 @@ The material pair differs per screen, so each menu reader must record its own pa
 
 Also seen: `DisconnectCaution/saveannounce_tex/Text_announce01TM`, `Text_announce02TM` ("The input device has been disconnected." / "Please reconnect the device."); `saveUI(Clone)/saveannounce/saveannounce_tex/Text_announce01TM` also carries "Checking data...", "Load File 1?", "Load completed."; `fieldUI/flocation/stretch/TextTM` shows "Underground Facility" and "Terminal".
 
-Not visited yet: the pause menu (`campUI`, `campMenu`), battle, shops, fusion.
+### Pause menu sub-screens (Log, 30 Sep 2026 16:18 session, probe and F6 dumps)
+
+| Screen | Path | Content |
+| --- | --- | --- |
+| Item lists | `campUIBase/campUI/title_window/title_window_oubei/TextTM` | Title changes per list: "What will you use?", "What will you discard?", "GEMS", "KEY ITEMS". |
+| Item lists | `campUIBase/campUI/menu_itemskill/menu_item_window/menuitem_top/TextTM`, `menuitem_base02..08/TextTM` | Item names ("ID Card"); empty rows hold only a material tag. Highlighted `TMC01`. The pause menu's own items are hidden meanwhile, so MenuReader counts the pause menu as closed. |
+| Item lists | `campUIBase/campUI/menu_itemskill/menu_note/Text01TM..03TM` | Description of the highlighted item ("An employee ID/keycard for", "Shinjuku Medical Center."). Same text as `datItemHelp_msg.Get(id)`, which fired alongside (`datItemName.Get(112)` → "ID Card"). |
+| Skill | title "Who will use a skill?", `campUIBase/campUI/party/party_status/party_status01/Text_nameTM` | Party member pick; the highlighted member's name turns `TMC01`. |
+| Party panel | `campUIBase/campUI/party/party_status/party_status01..04/Text_nameTM`, `Tex_summonedTM`, `stock_status01..08/...` | Party and stock names (empty while no demons). |
+| Magatama | `magUI(Clone)/magtitle_window/TextTM`, `magname_base/TextTM` (`TMC19`), `magnote/Text01TM..03TM`, `magstatus/magstatus_item01..05/TextTM` | "Which will you ingest?", "Marogareh", "Imparts Physical skills", "Normal resistance", stat labels. |
+| Magatama → Stats | `campUIBase/statusUI(Clone)/title_window/TextTM` = "Which will you ingest?", `sskill/sskill_obtained01..08/TextTM` | Stats screen opened from the Magatama screen; skills to obtain are empty for now. |
+
+Not visited yet: battle, shops, fusion.
+
+## Save and load
+
+Source: Proxy, Assembly-CSharp (ilspycmd decompile, 30 Sep 2026), unless marked otherwise. `slMain` is the PS2-heritage save/load engine (`sl` = save/load); `saveUI` and `saveFileUI` are the Unity screens it drives.
+
+| Name | Kind | What we know |
+| --- | --- | --- |
+| `Il2Cpp.slMain` | class, all static | Save/load engine. Process functions take `dds3ProcessID_t` and are run through a process table, so they show CallerCount 0; Harmony postfixes on them still fire (Repo: NocturneAddNewSkills `SaveLoadDiagnostics.cs`, MIT: `slLoadProc_closeFile` fires once per real load). |
+| `slMain._saveUI` | static field, `saveUI` | The save/load screen instance. |
+| `slMain.slQueryYesNoCursor` | static field, int | Cursor of the save/load Yes/No query. Index-to-option mapping to verify in game. |
+| `slMain.slQueryYesNoMsg`, `slQueryYesNoKeyFlag` | static fields, int | Query message and key state. Not yet observed. |
+| `slMain.slQueryYesNo(slQueryYesFuncDelegate yesFunc, slQueryNoFuncDelegate noFunc, int yesNoDefault) → Object` | static method, CallerCount 4 | Starts a Yes/No query with a default. |
+| `slMain.slContinueYesNo(same parameters) → Object` | static method, CallerCount 0 | Variant, probably the title screen's continue query. |
+| `slMain.slQueryYesNoProc(dds3ProcessID_t)`, `slQueryYesNoDraw() → int` | static methods, CallerCount 0 | Per-frame logic and drawing of the query (process table). |
+| `slMain.gslSelect`, `gslSelTop`, `gslMode`, `slChooseSaveIndex` | static fields, int | Slot cursor, list scroll top, mode (1 during a load: Repo NocturneAddNewSkills), chosen slot. Not yet observed. |
+| `slMain.slLoadProc_closeFile(dds3ProcessID_t)` | static method | Fires once per completed load (Repo: NocturneAddNewSkills, verified there). |
+| `slMain.OnChoiceFileCollider(int, SteamColliders, SteamCollider, int)` | static method | Mouse hover on the Yes/No options. |
+| `Il2Cpp.saveUI` | MonoBehaviour | Fields only, no methods: `_scrollRect`, `_scrollcontent`, `_saveTop` (GameObject), `_titleMsg` (TMP), `_fileList` (`saveFileUI[]`), `_announceObj` (GameObject), `_announceList` (TMP[]: `Text_announce01TM..04TM`), `_choiceBaseObj` (GameObject), `_choiceObj` (GameObject[]), `_choiceList` (TMP[]: the Yes/No texts), `_choiceCursor` (GameObject: the highlight drawn over the chosen option). |
+| `Il2Cpp.saveFileUI` | MonoBehaviour, one per slot | `_fileNum`, `_playerLV`, `_brokenNum`, `_noDataNum`, `_lapNum` (`CounterCtr`), `_playTime` (`CounterCtr[]`), `_playerName`, `_terminalName`, `_difficulty`, `_noDataText` (TMP), `_lvObj`, `_endinglDel`, `_cursor` (GameObject), `_playMode`, `_endingBase`, `_anime` (Animator), `_endingOption`, `_lapObj`, `_loopStartNon` (GameObject[]), `_endingList` (Animator[]); method `SetAnime(int)`. |
+| `Il2Cpp.CounterCtr` | MonoBehaviour | **The game's sprite-digit number display.** Field `value` (int) holds the number shown; `blank` (bool); `image` (Image[]), `number`, `numberSpr` (Sprite[]). `Set(int val, Color col, int colidx)` has 48 callers, `Set2` 8, `SetInstitutionColor(int val, int colidx)` 4. This is the data source for every on-screen number (HP, MP, level, play time) under the no-reconstruction rule. |
 
 ## Field
 
