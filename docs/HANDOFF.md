@@ -264,7 +264,15 @@ What 0.0.2 adds:
 
 **Phase 2 step 1 verified in game with 0.0.4 (30 Sep 2026, 15:48 session, controller, console hidden):** every dialogue page spoken whole with the speaker named (Hijiri, Soul); narration pages ("> There is a large cylinder. What will you do?") spoken without a stale name; the "> End the game?" Yes/No choice announced ("Choice, 2 options. No, 2 of 2") and every cursor move read. No garbled speech; the 30-second log snapshots worked. Pause-menu screens mapped (class-index).
 
-**0.0.10 built and deployed, not yet tested: Francesco's prologue list.**
+**0.0.10 tested (30 Sep 2026, 22:05 session, `session_2026-09-30_22-05-36.log`; Francesco asked for analysis only, no code, this session).** 44 hooks, no errors. Francesco's report and the log:
+
+1. **Interaction prompts work perfectly** ("Open Door", "Talk"). Minor: a prompt is sometimes spoken twice within 100 ms (22:08:15.401 and .493, 22:09:26.633 and .725), likely the write and the reshow check both marking it pending.
+2. **The Stats reader works well on the Stats screen**: "Artemis Soul. Level 1. HP 30 of 30. MP 12 of 12. Str 4, Mag 3, Vit 4, Agi 3, Luc 3." (raw counters: one `CounterCtr` per object, as expected). Not heard: the race (the summary was spoken at 12.724, the visible race `Text_raceTM_oubei` "Fiend" was written at 12.911; `statusUI.raceText` may not be that component, `raceText_e` exists), and **the party pick before it ("Art", `party_status01/Text_nameTM` highlighted `TMC01` under the title "STATS") is never read**. Level-up allocation not tested this session.
+3. **Name entry: letters read very well** (cursor letters, digits, typed-letter echoes, character set, confirmation, Yes/No; Yuko's confirmation "Full Name. Family: Takao. Given: Yuko."). Not read: **pre-filled names** (Yuko's "Takao"/"Yuko" are written at opening but only the confirmation speaks them) and **the control buttons forward, back, delete, done**: image buttons that write no text; data candidates in `Nme_Draw` (`funccursorPos`, `namelist_rightbutton`, `_leftbutton`, `_deletebutton`, `_endbutton` with Animators).
+
+Also seen: the elevator was not reached; combat not reached in this run.
+
+**0.0.10 (built earlier the same day): Francesco's prologue list.**
 
 - `AnnouncementReader` per-path options. `FollowsDialogue`: the location banner (and the interaction prompt) waits, at most 1.5 s, while a dialogue page is due (the elevator's "1Ｆ" before "> Select a floor."). `Reshow`: the interaction prompt `fieldUI/fannounce` ("Talk", "Open Door", "Examine", "Enter", "Exit") is spoken every time it reappears, by watching its visibility every 100 ms. "Enter a name." / "Enter a nickname." added.
 - `Systems/Menus/NameEntryReader.cs`: the letter under the blinking `TMC12` cursor ("capital A", "r"), each typed letter, "Deleted X" (typed letters are re-read every 100 ms because deletions are blank writes), the character set ("ÀÁÂ, accented letters"), and the confirmation "Full Name. Family: Soul. Given: Artemis. Nickname: Art. > Is this okay?" before its Yes/No (MenuReader spec "Name prompt"; `NameEntryReader.ConfirmDue` is a SpeechOrder leader). F1 says the name so far. `TextUtil.SpeakableCharacter` names capitals and punctuation.
