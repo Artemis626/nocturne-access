@@ -87,6 +87,8 @@ namespace NocturneAccess.Input
             Consider(SaveListReader.LastUtterance, SaveListReader.LastUtteranceAt, ref latest, ref latestAt);
             Consider(SaveChoiceReader.LastUtterance, SaveChoiceReader.LastUtteranceAt, ref latest, ref latestAt);
             Consider(ConfigReader.LastUtterance, ConfigReader.LastUtteranceAt, ref latest, ref latestAt);
+            Consider(NameEntryReader.LastUtterance, NameEntryReader.LastUtteranceAt, ref latest, ref latestAt);
+            Consider(StatusReader.LastUtterance, StatusReader.LastUtteranceAt, ref latest, ref latestAt);
             if (latestAt > DialogueReader.LastUtteranceAt)
             {
                 SpeechManager.Say(latest, interrupt: true, force: true);

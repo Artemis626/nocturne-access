@@ -1,6 +1,6 @@
 # Nocturne Access: next session handoff
 
-Written 30 Sep 2026, updated in session 2 after the 0.0.8 test, for a fresh chat. Read this first, then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
+Written 30 Sep 2026, updated in session 2 after the 0.0.9 prologue test, for a fresh chat. Read this first, then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
 ## The project in one paragraph
 
@@ -29,34 +29,42 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | 0.0.6 | Menu settle-timer fix | Verified in game (16:18 session) |
 | 0.0.7 | Save/load Yes/No and file list; speech order (terminal race) | Verified in game (16:49 session) |
 | 0.0.8 | Title and config Yes/No, location names, config screen (title cue removed in 0.0.9) | Verified in game (20:07 session) |
-| **0.0.9** | Combat version 1: start, command menu, banner, HP changes, F2 status | **Built and deployed, not yet tested** |
+| 0.0.9 | Combat version 1: start, command menu, banner, HP changes, F2 status | Verified over the whole prologue (20:44 session) |
+| **0.0.10** | Interaction prompts, name entry, elevator order, battle targets, Stats and level-up | **Built and deployed, not yet tested** |
 
-Last commits: `7f79c46` (0.0.8), then the 0.0.9 commit.
+Last commits: `11e737b` (0.0.9 verified over the whole prologue; name entry and level-up mapped), then the 0.0.10 commit.
 
-## What 0.0.8 proved and what 0.0.9 adds
+## What 0.0.9 proved and what 0.0.10 adds
 
-0.0.8 verified (20:07 session): the config screen, the config and title Yes/No, and location names all worked. Francesco: volume notches without numbers can wait; the title cue fired on the Atlus splash, so it is removed; focus on combat. He fought the first battle (Will o' Wisp) with F6 dumps; the battle's text sources are in class-index, "Battle".
+0.0.9 verified (20:44 session): Francesco replayed the whole prologue with his eyes closed, NEW GAME to the first battle and save, and nearly everything worked by ear. His list, all addressed in 0.0.10 (built, not tested):
 
-0.0.9 (built, not tested) is combat version 1: battle start with the enemies, the command menu with help, the banner (actions, targets with HP, results such as "Dodged the attack!"), HP changes after hits, "Battle results.", and F2 for Press Turns and everyone's HP and MP.
+1. Interaction prompts ("Talk", "Open Door", "Examine", "Enter", "Exit") are now spoken each time they appear.
+2. Name entry: cursor letter, typed and deleted letters, character set, confirmation with the whole name, Yes/No.
+3. Elevator: the floor ("1Ｆ") now waits behind "> Select a floor.".
+4. Combat: identical enemies are told apart while targeting ("Foul Will o' Wisp 2, HP 10 of 10"); the battle start is no longer repeated when an enemy talks; "Battle results." once.
+5. Level-up and Stats: a summary with every number from game data, then the stat under the cursor and points left.
 
-## First thing next session: test 0.0.9
+## First thing next session: test 0.0.10
 
-1. Load, walk into the Unknown Realm (or wherever battles happen) until a battle starts. Expect "Battle. " and the enemy names, then the enemy's talk.
-2. Command menu: expect "Attack, 1 of 2. Physical attack (low damage)." and each move with its help line.
-3. Choose Attack: the target should be spoken with its HP ("Foul Will o' Wisp, HP 30 of 30"); move between targets if there are several.
-4. Watch the turn play out: expect "Attack", then the result ("Dodged the attack!") or the target's new HP ("Will o' Wisp, HP 12 of 30."); the enemy's skill name ("Deathtouch") and your HP after its hit.
-5. Press F2 at your turn: Press Turns, then enemies and party with HP (and MP). Compare with the screen: the number of Press Turn icons, and whether any are blinking.
-6. Win: expect "Battle results.".
+A new game (or a load before the prologue's name entry) covers everything:
 
-Then read the log: `[Battle:Data]` lines show every raw value at each change (turn, phase, activeunit, press4_p, press4_ten, counts, exp, maka, units). Check the Press Turn numbers and the HP against what Francesco saw, and find which field says whose turn it is.
+1. NEW GAME, difficulty, then the name screen. Expect "Enter a name." then "capital A". Move: each letter ("capital B", "r"). Type a letter: its echo; delete one: "Deleted ...". Switch character set (the game's left/right keys): "ÀÁÂ, accented letters". Press F1: the name so far. Finish: "Enter a nickname.", then the confirmation "Full Name. Family: .... Given: .... Nickname: .... > Is this okay?" and "Choice, 2 options. Yes, 1 of 2".
+2. Yuko's name screen: the confirmation with "Takao / Yuko" should be read straight away.
+3. Walk around Shibuya and the hospital: every "Talk", "Examine", "Open Door", "Enter" when something is in reach, again after walking away and back.
+4. The elevator: "> Select a floor." first, then the floor.
+5. The first battle (two Will o' Wisps): moving the target cursor says "Foul Will o' Wisp 1, HP ..." and "... 2, HP ..."; no repeated "Battle. ..." when they talk; "Battle results." once.
+6. Level up: the Stats summary after "> You leveled up!", then each stat as the cursor moves, its new value when a point is added, and "N points left". Compare the numbers with the screen, and tell me whether the stat the cursor is on matches.
+7. The Stats screen from the pause menu: the same summary.
+
+Then read the log: `[Status] Opened: ...` lists every counter under each stat object (check the numbers and which one is the stat value), `[Battle] Target formindex ...`, `[Name] ...`, `[Order] ...`.
 
 ## Open problems and next steps (in order)
 
-1. **Check 0.0.9** against the log: Press Turn meaning, HP numbers, whether party formindex matches the panel slot, what `activeunit`, `turn` and `phase` do, and the results' `exp` and `maka`.
-2. **Combat version 2**: whose turn it is ("Demi-fiend's turn") and who acts ("Will o' Wisp: Deathtouch"), damage amounts, weaknesses and resistances (hit results such as Weak, Resist, Null), Press Turns spoken after each action, skills and items menus in battle, targeting with duplicate enemies (via `nbTarSelProcessData_t.nowform` or the acting unit's `nowtform`), negotiation, the results screen's numbers, the level-up stat allocation (`statusUI`).
-3. **Numbers system for Magatama, Stats and item lists** (`CounterCtr.value`, see class-index "Save and load"); the config volume notches.
-4. A correct press-any-button cue (the Version text appears already during the Atlus splash).
-5. Remaining small Phase 2 screens: name entry, difficulty select; the Phase 2 gate (prologue to first save by ear).
+1. **Check 0.0.10** against the log and Francesco's report (Stats counter mapping, cursor row, name entry pronunciation of accented letters and symbols).
+2. **Combat version 2**: whose turn and who acts ("Will o' Wisp: Deathtouch"), damage amounts, weak/resist/null results, Press Turns after each action, skill and item menus in battle, negotiation, the results screen's numbers (EXP, macca).
+3. **Numbers system for the Magatama screen and item lists** (`CounterCtr.value`); the config volume notches (`configMenuUI.slideObj` was empty: look for their `CounterCtr` or `soundVol`).
+4. A correct press-any-button cue (the version text already shows during the Atlus splash).
+5. Difficulty select screen; the Phase 2 gate is essentially passed (prologue by ear).
 6. **Pathfinding and navigation** after combat (Francesco's order).
 
 ## Key facts to remember
@@ -66,4 +74,4 @@ Then read the log: `[Battle:Data]` lines show every raw value at each change (tu
 - Menus mark the highlighted item with a font material: pause and terminal `TMC01` (others `TMC00`), title `TMC00` (others `TMC15`).
 - Message engine `itfMesManager`: `SetMessage` never fires; `SwitchSpeaker`, `itfMesMngRequestMessage`, `SelectWindowDispOn`, `ChangeSelection(index, 1)` do.
 - `UIManager/Text/Text01000+` are 116 noise components rewritten every frame with a space; the TMP router drops blank writes first.
-- Code map: `Core/` (ModMain, Config, Log, Patcher, TmpRouter, TextUtil, UiUtil, LogArchive), `Speech/`, `Capture/` (probes, UI dumper), `Systems/Dialogue/` (DialogueReader, ChoiceReader), `Systems/SpeechOrder.cs` (first line waits behind dialogue or a prompt), `Systems/Menus/` (MenuReader, AnnouncementReader, SaveListReader, SaveChoiceReader, ConfigReader), `Systems/Battle/` (BattleReader), `Input/Hotkeys.cs`.
+- Code map: `Core/` (ModMain, Config, Log, Patcher, TmpRouter, TextUtil, UiUtil, LogArchive), `Speech/`, `Capture/` (probes, UI dumper), `Systems/Dialogue/` (DialogueReader, ChoiceReader), `Systems/SpeechOrder.cs` (first line waits behind dialogue or a prompt), `Systems/Menus/` (MenuReader, AnnouncementReader, SaveListReader, SaveChoiceReader, ConfigReader, NameEntryReader, StatusReader), `Systems/Battle/` (BattleReader), `Input/Hotkeys.cs`.

@@ -22,6 +22,8 @@ namespace NocturneAccess.Systems.Battle
     ///   under the cursor: text1 race, text2 name), "Dodged the attack!" (results, text from the message
     ///   engine). A call with text2 set is a target: spoken interrupting, since the cursor moves. Other
     ///   banners are queued. The same text is spoken again only after a new nbDispText call.
+    /// - Target under the cursor: nbTarSelProcess.GetTarSelProcessData().nowform (formindex) while target help
+    ///   is being shown, spoken with the unit's number and HP; identical enemies have identical banners.
     /// - Battle UI up: Canvas_UI/bparty(Clone)/bparty_window01/bparty_text01TM (the party panel, first
     ///   member's name). Results: Canvas_UI/resultUI(Clone)/brparty/brchara01/TextTM.
     ///
@@ -48,6 +50,8 @@ namespace NocturneAccess.Systems.Battle
         private const long VisibilityPollMs = 500;
         private const long BannerWaitMs = 1000;
         private const long EndAfterHiddenMs = 3000;
+        private const long ResumeWindowMs = 20_000;   // the party panel hides for about 5 s while an enemy talks
+        private const long TargetWindowMs = 300;      // nbDispText is called continuously while targeting
         private const int PartySlots = 4;
         private const int FirstEnemy = 4;
         private const int MaxEnemies = 8;
@@ -58,10 +62,12 @@ namespace NocturneAccess.Systems.Battle
             public ushort Id;
             public int Hp, MaxHp, Mp, MaxMp;
             public string Name = "";
+            public int Number;   // among units of the same name and side, fixed for the battle
         }
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static readonly Dictionary<int, Unit> Units = new Dictionary<int, Unit>();
+        private static readonly Dictionary<string, int> NameCounts = new Dictionary<string, int>();   // side+name -> units seen this battle
 
         private static TMP_Text _partyPanel;
         private static readonly string[] PanelNames = new string[PartySlots];   // names on the party panel, by slot
@@ -70,6 +76,8 @@ namespace NocturneAccess.Systems.Battle
         private static bool _started;
         private static bool _seenVisible;   // the party panel is written while hidden during the encounter intro
         private static long _hiddenSince = -1;
+        private static long _goneAt = -1;
+        private static bool _resultsShown;
         private static long _activeSince;
         private static long _lastDataPoll;
         private static long _lastVisibilityPoll;
@@ -84,6 +92,13 @@ namespace NocturneAccess.Systems.Battle
         private static bool _pendingIsTarget;
         private static TMP_Text _bannerComponent;
         private static long _pendingSince;
+
+        // Targeting
+        private static long _targetCallAt = long.MinValue;
+        private static string _targetRace = "";
+        private static string _targetName = "";
+        private static int _lastTargetForm = int.MinValue;
+        private static bool _targetFromData;
 
         internal static bool Active => _active;
 
@@ -121,10 +136,17 @@ namespace NocturneAccess.Systems.Battle
 
         // ---- Banner ----
 
-        private static void AfterDispText(string __1)
+        private static void AfterDispText(string __0, string __1)
         {
             _bannerRequested = true;
             _bannerIsTarget = __1 != null;
+            if (__1 != null)
+            {
+                // Target help: text1 is the race, text2 the name. Called continuously while the cursor is shown.
+                _targetCallAt = Clock.ElapsedMilliseconds;
+                _targetRace = TextUtil.Clean(__0);
+                _targetName = TextUtil.Clean(__1);
+            }
         }
 
         private static void OnBanner(TMP_Text component, string raw)
@@ -158,6 +180,8 @@ namespace NocturneAccess.Systems.Battle
             _pendingBanner = null;
             if (_pendingIsTarget)
             {
+                if (_targetFromData)
+                    return;   // PollTarget already said this target, with its number and HP
                 string hp = TargetHp(text);
                 SpeechManager.Say(hp.Length > 0 ? $"{text}, {hp}" : text, interrupt: true, force: true);
             }
@@ -191,20 +215,34 @@ namespace NocturneAccess.Systems.Battle
             _partyPanel = component;
             if (_active)
                 return;
+
+            long now = Clock.ElapsedMilliseconds;
             _active = true;
-            _started = false;
-            _activeSince = Clock.ElapsedMilliseconds;
+            _activeSince = now;
             _seenVisible = false;
             _hiddenSince = -1;
+
+            // The panel hides while an enemy talks (20:44 session): the same battle, not a new one.
+            if (_goneAt >= 0 && !_resultsShown && now - _goneAt < ResumeWindowMs)
+            {
+                Log.Info($"{Tag} Battle UI back.");
+                return;
+            }
+
+            _started = false;
+            _resultsShown = false;
             Units.Clear();
+            NameCounts.Clear();
             _lastData = "";
             Log.Info($"{Tag} Battle UI up.");
         }
 
         private static void OnResult(TMP_Text component, string raw)
         {
-            if (!_active)
+            // The results text is rewritten every frame (20:44 session): once per battle.
+            if (!_active || _resultsShown)
                 return;
+            _resultsShown = true;
             LogData(force: true);
             Log.Info($"{Tag} Results screen.");
             SpeechManager.Say("Battle results.", interrupt: false, force: true);
@@ -218,6 +256,7 @@ namespace NocturneAccess.Systems.Battle
             long now = Clock.ElapsedMilliseconds;
             try
             {
+                PollTarget(now);
                 SpeakPendingBanner(now);
 
                 if (!_started && now - _activeSince >= StartDelayMs)
@@ -251,7 +290,9 @@ namespace NocturneAccess.Systems.Battle
                     {
                         _active = false;
                         _pendingBanner = null;
-                        Array.Clear(PanelNames, 0, PanelNames.Length);
+                        _goneAt = now;
+                        if (_resultsShown)
+                            Array.Clear(PanelNames, 0, PanelNames.Length);
                         Log.Info($"{Tag} Battle UI gone.");
                     }
                 }
@@ -261,6 +302,47 @@ namespace NocturneAccess.Systems.Battle
                 if (_errors++ < 5)
                     Log.Error($"{Tag} {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// While the target cursor is shown (nbDispText with a name is being called), reads the target from
+        /// nbTarSelProcess.GetTarSelProcessData().nowform and speaks it when it changes: "Foul Will o' Wisp 2,
+        /// HP 10 of 10". Identical enemies give identical banners, so the banner alone cannot tell them apart.
+        /// Group targets (ctype not 0) are left to the banner.
+        /// </summary>
+        private static void PollTarget(long now)
+        {
+            if (now - _targetCallAt > TargetWindowMs)
+            {
+                _lastTargetForm = int.MinValue;
+                _targetFromData = false;
+                return;
+            }
+
+            nbTarSelProcessData_t t = nbTarSelProcess.GetTarSelProcessData();
+            if (t == null || t.ctype != 0)
+            {
+                _targetFromData = false;
+                return;
+            }
+            int form = t.nowform;
+            if (form == _lastTargetForm)
+                return;
+            _lastTargetForm = form;
+
+            if (!Units.TryGetValue(form, out Unit u))
+                ReadUnits(speakChanges: false);
+            if (!Units.TryGetValue(form, out u))
+            {
+                Log.Info($"{Tag} Target formindex {form}: no unit known, using the banner.");
+                _targetFromData = false;
+                return;
+            }
+
+            _targetFromData = true;
+            string race = _targetName == u.Name && _targetRace.Length > 0 ? _targetRace + " " : "";
+            Log.Info($"{Tag} Target formindex {form} ({u.Name}).");
+            SpeechManager.Say($"{race}{DisplayName(u)}, HP {u.Hp} of {u.MaxHp}", interrupt: true, force: true);
         }
 
         private static void AnnounceStart()
@@ -304,6 +386,7 @@ namespace NocturneAccess.Systems.Battle
             if (!Units.TryGetValue(form, out Unit u) || u.Id != w.id)
             {
                 u = new Unit { Form = form, Id = w.id, Hp = w.hp, MaxHp = w.maxhp, Mp = w.mp, MaxMp = w.maxmp, Name = form < PartySlots ? PanelNames[form] : NameOf(w.id) };
+                Number(u);
                 Units[form] = u;
                 return;
             }
@@ -332,13 +415,22 @@ namespace NocturneAccess.Systems.Battle
             }
         }
 
-        /// <summary>The unit's name, numbered when several units share it ("Will o' Wisp 2").</summary>
+        /// <summary>The unit's name, numbered when several units of this battle share it ("Will o' Wisp 2").</summary>
         private static string DisplayName(Unit u)
         {
-            List<Unit> same = Units.Values.Where(x => x.Name == u.Name && (x.Form >= FirstEnemy) == (u.Form >= FirstEnemy))
-                                          .OrderBy(x => x.Form).ToList();
             string name = u.Name.Length > 0 ? u.Name : (u.Form >= FirstEnemy ? "Enemy" : "Ally");
-            return same.Count > 1 ? $"{name} {same.IndexOf(u) + 1}" : name;
+            // Numbered when the battle had several of this name; the number stays when one falls.
+            return NameCounts.TryGetValue(NameKey(u), out int count) && count > 1 ? $"{name} {u.Number}" : name;
+        }
+
+        private static string NameKey(Unit u) => (u.Form >= FirstEnemy ? "e:" : "p:") + u.Name;
+
+        private static void Number(Unit u)
+        {
+            string key = NameKey(u);
+            NameCounts.TryGetValue(key, out int count);
+            NameCounts[key] = ++count;
+            u.Number = count;
         }
 
         /// <summary>Logs the raw battle state when it changes, to check the field meanings against the screen.</summary>

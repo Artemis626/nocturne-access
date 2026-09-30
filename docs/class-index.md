@@ -246,6 +246,7 @@ Source: Log, 30 Sep 2026 20:07 session (first battle, Will o' Wisp in the Unknow
 | `Il2CppObjectBase.Pointer`, `Il2CppReferenceArray<T>` (`Length`, indexer) | Il2CppInterop.Runtime | Object identity (`SaveListReader`: which slot owns a text) and game arrays (`saveUI._fileList`, `_choiceList`) |
 | `Transform.GetSiblingIndex()`, `Component.GetComponent<T>()` | Proxy, UnityEngine.CoreModule | `ConfigReader`: row order on screen; the row's `configMenuUI` |
 | `UnityEngine.UI.Slider` (`value`, `minValue`, `maxValue`, `wholeNumbers`) | Proxy, UnityEngine.UI | `ConfigReader`: volume values (`configMenuUI.slideObj`) |
+| `GameObject.GetComponentInChildren<T>()`, `GetComponentsInChildren<T>(bool)` | Proxy, UnityEngine.CoreModule | `StatusReader`: the `CounterCtr` under each stat object |
 
 ## Screen reader DLLs
 

@@ -12,6 +12,7 @@ namespace NocturneAccess.Systems
     /// highlight came at 08.079, the engine requested the question at 08.117, but the question's lines
     /// were only written about 400 ms later, so "Save, 1 of 3" was spoken before the question.
     ///
+    /// Leaders: a dialogue page, a prompt, the name confirmation summary.
     /// A follower (a menu, the save list, the save Yes/No) holds its first, queued announcement while a
     /// leader is due, then queues behind it. MaxHoldMs guards against a leader that never speaks.
     /// Cursor moves never wait.
@@ -28,7 +29,10 @@ namespace NocturneAccess.Systems
         /// </summary>
         internal static bool Hold(string follower, ref long holdSince, long now)
         {
-            string leader = DialogueReader.PageDue ? "dialogue page" : AnnouncementReader.AnyDue ? "prompt" : null;
+            string leader = DialogueReader.PageDue ? "dialogue page"
+                : AnnouncementReader.AnyDue ? "prompt"
+                : NameEntryReader.ConfirmDue ? "name confirmation"
+                : null;
             if (leader == null)
                 return false;
 

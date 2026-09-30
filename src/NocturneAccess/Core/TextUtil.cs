@@ -28,6 +28,44 @@ namespace NocturneAccess.Core
         internal static string RemoveTypewriter(string raw)
             => raw?.Replace(TypewriterTag, "").Replace("</alpha>", "") ?? string.Empty;
 
+        /// <summary>
+        /// A single character as it should be heard: "capital A" for upper-case letters, a name for
+        /// punctuation a screen reader may skip at low punctuation levels. Longer text is returned unchanged.
+        /// </summary>
+        internal static string SpeakableCharacter(string text)
+        {
+            if (string.IsNullOrEmpty(text) || text.Length != 1)
+                return text ?? string.Empty;
+            char c = text[0];
+            if (char.IsLetter(c) && char.IsUpper(c))
+                return "capital " + text;
+            switch (c)
+            {
+                case ' ': return "space";
+                case '.': return "period";
+                case ',': return "comma";
+                case '-': return "dash";
+                case '\'': return "apostrophe";
+                case '"': return "quote";
+                case '!': return "exclamation mark";
+                case '?': return "question mark";
+                case '&': return "ampersand";
+                case '#': return "number sign";
+                case '+': return "plus";
+                case '=': return "equals";
+                case '/': return "slash";
+                case ':': return "colon";
+                case ';': return "semicolon";
+                case '(': return "left paren";
+                case ')': return "right paren";
+                case '*': return "star";
+                case '@': return "at";
+                case '_': return "underscore";
+                case '~': return "tilde";
+                default: return text;
+            }
+        }
+
         /// <summary>Removes every rich-text tag and collapses whitespace and line breaks.</summary>
         internal static string Clean(string raw)
         {

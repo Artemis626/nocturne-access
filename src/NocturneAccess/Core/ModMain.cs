@@ -19,7 +19,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.9";
+        internal const string ModVersion = "0.0.10";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
@@ -39,6 +39,8 @@ namespace NocturneAccess.Core
             SaveListReader.Install();
             SaveChoiceReader.Install();
             ConfigReader.Install();
+            NameEntryReader.Install();
+            StatusReader.Install();
             BattleReader.Install();
             Probes.Install();
             Patcher.LogSummary();
@@ -66,6 +68,8 @@ namespace NocturneAccess.Core
             SaveListReader.Tick();
             SaveChoiceReader.Tick();
             ConfigReader.Tick();
+            NameEntryReader.Tick();
+            StatusReader.Tick();
             BattleReader.Tick();
             LogArchive.Tick();
             Probes.Tick();

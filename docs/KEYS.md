@@ -6,7 +6,7 @@ Keys are set in `UserData/NocturneAccess.cfg`, section `[NocturneAccess_Keys]`, 
 
 | Key | Action | Since |
 | --- | --- | --- |
-| F1 | Repeat whichever came last: the menu item (with position and description), the save or load file, the save Yes/No with its prompt, the config row, or the dialogue page with its speaker (plus the highlighted option while a choice is open) | 0.0.3, menus 0.0.5, save screen 0.0.7, config 0.0.8 |
+| F1 | Repeat whichever came last: the menu item (with position and description), the save or load file, the save Yes/No with its prompt, the config row, the name being entered, the Stats summary, or the dialogue page with its speaker (plus the highlighted option while a choice is open) | 0.0.3, menus 0.0.5, save screen 0.0.7, config 0.0.8, name entry and Stats 0.0.10 |
 | F2 | In battle: Press Turns (full and blinking), then each enemy with HP, then each party member with HP and MP, from game data. Outside battle: "Not in battle." | 0.0.9 |
 | F8 | Status: says "Nocturne Access running. Speech through NVDA." | 0.0.1 |
 | F7 | Debug: pause or resume the text probe (only when `Probe = true` in `[NocturneAccess_Debug]`) | 0.0.2 |

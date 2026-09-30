@@ -4,6 +4,7 @@ using System.Diagnostics;
 using Il2CppTMPro;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
+using NocturneAccess.Systems.Dialogue;
 
 namespace NocturneAccess.Systems.Menus
 {
@@ -14,6 +15,14 @@ namespace NocturneAccess.Systems.Menus
     /// When a component is hidden again, its text is forgotten, so the same prompt shown later
     /// ("Save completed.") is spoken again.
     ///
+    /// Two options per path:
+    /// - FollowsDialogue: waits, at most SpeechOrder.MaxHoldMs, while a dialogue page is due. The location
+    ///   banner is written right after the elevator's "> Select a floor." is requested, 300 ms before that
+    ///   question's lines (20:44 session), and was spoken first.
+    /// - Reshow: spoken again every time the component reappears, even without a new write. The
+    ///   interaction prompt ("Talk", "Open Door") is hidden when nothing is in reach and its text is only
+    ///   written when the wording changes (20:44 session), so visibility is watched every 100 ms.
+    ///
     /// Paths: probe logs of 30 Sep 2026, docs/class-index.md.
     /// </summary>
     internal static class AnnouncementReader
@@ -22,39 +31,55 @@ namespace NocturneAccess.Systems.Menus
         private const long SettleMs = 80;
         private const long WaitForVisibleMs = 10_000;
         private const long VisibilityPollMs = 250;
+        private const long ReshowPollMs = 100;
 
-        private static readonly HashSet<string> Paths = new HashSet<string>
+        [Flags]
+        private enum Options
+        {
+            None = 0,
+            FollowsDialogue = 1,
+            Reshow = 2,
+        }
+
+        private static readonly Dictionary<string, Options> Paths = new Dictionary<string, Options>
         {
             // Save and load: "Checking data...", "Load File 1?", "Load completed.", "Save completed.",
             // "There is already a save file. Previous data will be overwritten. Will you overwrite the file?"
-            "Canvas_UI/saveUI(Clone)/saveannounce/saveannounce_tex/Text_announce01TM",
+            ["Canvas_UI/saveUI(Clone)/saveannounce/saveannounce_tex/Text_announce01TM"] = Options.None,
             // "Select a save location.", "Select a file to load."
-            "Canvas_UI/saveUI(Clone)/savelist/savelist_data/Text_announceTM",
+            ["Canvas_UI/saveUI(Clone)/savelist/savelist_data/Text_announceTM"] = Options.None,
             // "The input device has been disconnected." / "Please reconnect the device."
-            "Canvas_UI/DisconnectCaution/saveannounce_tex/Text_announce01TM",
-            "Canvas_UI/DisconnectCaution/saveannounce_tex/Text_announce02TM",
+            ["Canvas_UI/DisconnectCaution/saveannounce_tex/Text_announce01TM"] = Options.None,
+            ["Canvas_UI/DisconnectCaution/saveannounce_tex/Text_announce02TM"] = Options.None,
             // Questions of the title and config Yes/No prompts (MenuReader reads their options):
             // "> End the game?", the difficulty confirmation, "Returning without changing settings. Will you proceed?",
             // and the config notice "Settings have been changed." (16:49 session).
-            "Canvas_UI/titleUI(Clone)/titlemain/namechoice/talk_window/Text01TM",
-            "Canvas_UI/titleUI(Clone)/titlemode/namechoice/talk_window/Text01TM",
-            "Canvas_UI/configUI_steam(Clone)/talk_window/Text01TM",
-            // Location name, written when arriving: "Underground Facility", "Terminal" (16:49 session).
-            "Canvas_UI/fieldUI/flocation/stretch/TextTM",
+            ["Canvas_UI/titleUI(Clone)/titlemain/namechoice/talk_window/Text01TM"] = Options.None,
+            ["Canvas_UI/titleUI(Clone)/titlemode/namechoice/talk_window/Text01TM"] = Options.None,
+            ["Canvas_UI/configUI_steam(Clone)/talk_window/Text01TM"] = Options.None,
+            // Name entry: "Enter a name.", "Enter a nickname." (20:44 session).
+            ["Canvas_UI/nameUI_oubei(Clone)/nameinput/nameannounce/stretch/TextTM"] = Options.None,
+            // Location name, written when arriving: "Underground Facility", "Terminal", "1Ｆ" (16:49 session).
+            ["Canvas_UI/fieldUI/flocation/stretch/TextTM"] = Options.FollowsDialogue,
+            // Interaction prompt: "Talk", "Examine", "Open Door", "Enter", "Exit" (20:44 session).
+            ["Canvas_UI/fieldUI/fannounce/guidetext/TextTM"] = Options.Reshow | Options.FollowsDialogue,
         };
 
         private sealed class Entry
         {
+            public Options Options;
             public TMP_Text Component;
             public string Text = "";
             public string Spoken = "";
             public long ChangedAt;
             public bool Pending;
+            public bool WasVisible;
         }
 
         private static readonly List<Entry> Entries = new List<Entry>();
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static long _lastPoll;
+        private static long _lastReshowPoll;
 
         /// <summary>
         /// A prompt has new text that is not spoken yet (Systems/SpeechOrder.cs). Only recent changes
@@ -83,10 +108,10 @@ namespace NocturneAccess.Systems.Menus
 
         private static TmpRouter.Handler Classify(string path)
         {
-            if (!Paths.Contains(path))
+            if (!Paths.TryGetValue(path, out Options options))
                 return null;
 
-            var entry = new Entry();
+            var entry = new Entry { Options = options };
             Entries.Add(entry);
             return (component, raw) =>
             {
@@ -107,15 +132,24 @@ namespace NocturneAccess.Systems.Menus
             bool poll = now - _lastPoll >= VisibilityPollMs;
             if (poll)
                 _lastPoll = now;
+            bool reshowPoll = now - _lastReshowPoll >= ReshowPollMs;
+            if (reshowPoll)
+                _lastReshowPoll = now;
 
             foreach (Entry e in Entries)
             {
                 try
                 {
+                    if (reshowPoll && (e.Options & Options.Reshow) != 0)
+                        CheckReshow(e, now);
+
                     if (e.Pending && now - e.ChangedAt >= SettleMs)
                     {
                         if (IsVisible(e.Component))
                         {
+                            if ((e.Options & Options.FollowsDialogue) != 0 && DialogueReader.PageDue
+                                && now - e.ChangedAt < SpeechOrder.MaxHoldMs)
+                                continue;   // let the dialogue page go first
                             e.Pending = false;
                             e.Spoken = e.Text;
                             SpeechManager.Say(e.Text, interrupt: false, force: true);
@@ -138,6 +172,29 @@ namespace NocturneAccess.Systems.Menus
                     Log.Error($"{Tag} {ex.Message}");
                 }
             }
+        }
+
+        /// <summary>A Reshow component that has just become visible is spoken again with its current text.</summary>
+        private static void CheckReshow(Entry e, long now)
+        {
+            bool visible = IsVisible(e.Component);
+            if (visible && !e.WasVisible)
+            {
+                string text = TextUtil.Clean(e.Component.text);
+                if (text.Length > 0)
+                {
+                    e.Text = text;
+                    e.ChangedAt = now;
+                    e.Pending = true;
+                }
+            }
+            else if (!visible && e.WasVisible)
+            {
+                e.Spoken = "";
+                e.Text = "";
+                e.Pending = false;
+            }
+            e.WasVisible = visible;
         }
 
         private static bool IsVisible(TMP_Text component)

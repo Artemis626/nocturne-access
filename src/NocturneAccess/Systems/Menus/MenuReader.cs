@@ -108,6 +108,13 @@ namespace NocturneAccess.Systems.Menus
             },
             new MenuSpec
             {
+                Name = "Name prompt",   // name entry "> Is this okay?"; the question comes from NameEntryReader
+                Item = new Regex(@"^Canvas_UI/nameUI_oubei\(Clone\)/talk01_choice/choice_answer(?<slot>\d\d)/answer01TM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC08\">",
+                IsChoice = true,
+            },
+            new MenuSpec
+            {
                 Name = "Config prompt",   // "Returning without changing settings. Will you proceed?"
                 Item = new Regex(@"^Canvas_UI/configUI_steam\(Clone\)/ChoiceKernel/talk01_choice/choice_answer(?<slot>\d\d)/answer01TM$", RegexOptions.Compiled),
                 Highlight = "<material=\"TMC08\">",
