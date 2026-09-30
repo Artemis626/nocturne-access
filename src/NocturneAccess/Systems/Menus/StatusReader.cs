@@ -31,6 +31,8 @@ namespace NocturneAccess.Systems.Menus
         private const string Tag = "[Status]";
         private const string AnchorPath = "Canvas_UI/campUIBase/statusUI(Clone)/sinfo_basic/sstatusname/Text_nameTM";
         private const long PollMs = 100;
+        private const long StableMs = 150;      // name and race unchanged this long before the summary
+        private const long MaxWaitMs = 600;     // speak anyway (a demon may show no race)
         private const int MaxParentDepth = 8;
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
@@ -44,6 +46,10 @@ namespace NocturneAccess.Systems.Menus
         private static int _points = int.MinValue;
         private static int _errors;
         private static long _holdSince = -1;
+        private static string _shown = "";      // "name|race" last spoken
+        private static string _seen = "";       // "name|race" last read
+        private static long _seenSince;
+        private static long _waitSince = -1;
 
         internal static string LastUtterance { get; private set; } = "";
         internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
@@ -94,23 +100,47 @@ namespace NocturneAccess.Systems.Menus
                         Log.Info($"{Tag} Closed.");
                     _open = false;
                     _levelUp = false;
+                    _shown = _seen = "";
+                    _waitSince = -1;
                     return;
                 }
 
                 bool levelUp = IsVisible(_ui.lvUpBase);
-                if (!_open)
+
+                // The race is written after the name (22:05 session: "Fiend" missing from the summary), and
+                // switching character (L/R) rewrites both: wait until they have been stable a moment.
+                string seen = Text(_ui.nameText) + "|" + Race();
+                if (seen != _seen)
                 {
+                    _seen = seen;
+                    _seenSince = now;
+                }
+                bool newCharacter = _open && seen != _shown && !_levelUp;
+                if (!_open || newCharacter)
+                {
+                    if (_waitSince < 0)
+                        _waitSince = now;
+                    bool raceShown = !seen.EndsWith("|", StringComparison.Ordinal);
+                    bool stable = now - _seenSince >= StableMs && raceShown;
+                    if (!stable && now - _waitSince < MaxWaitMs)
+                        return;
                     // At a level-up the screen opens just before "> You leveled up!": that page goes first.
-                    if (SpeechOrder.Hold("Stats", ref _holdSince, now))
+                    if (!_open && SpeechOrder.Hold("Stats", ref _holdSince, now))
                         return;
                     _holdSince = -1;
-                    _open = true;
-                    _levelUp = levelUp;
-                    _cursor = CursorRow();   // the starting row is in the summary; only moves are spoken
-                    _cursorValue = _cursor >= 0 ? StatValue(_cursor) ?? int.MinValue : int.MinValue;
-                    _points = Number(_ui.ObjPoint) ?? int.MinValue;
+                    _waitSince = -1;
+                    _shown = seen;
+                    if (!_open)
+                    {
+                        _open = true;
+                        _levelUp = levelUp;
+                        _cursor = CursorRow();   // the starting row is in the summary; only moves are spoken
+                        _cursorValue = _cursor >= 0 ? StatValue(_cursor) ?? int.MinValue : int.MinValue;
+                        _points = Number(_ui.ObjPoint) ?? int.MinValue;
+                    }
                     LogRaw();
-                    Say(Summary(), interrupt: false);
+                    Say(Summary(), interrupt: newCharacter);
+                    return;
                 }
                 else if (levelUp != _levelUp)
                 {
@@ -193,7 +223,7 @@ namespace NocturneAccess.Systems.Menus
         private static string Summary()
         {
             var parts = new List<string>();
-            string name = Text(_ui.nameText), race = Text(_ui.raceText);
+            string name = Text(_ui.nameText), race = Race();
             parts.Add(race.Length > 0 ? $"{name}, {race}" : name);
             int? level = Number(_ui.ObjLV);
             if (level.HasValue)
@@ -213,6 +243,16 @@ namespace NocturneAccess.Systems.Menus
             if (_levelUp && _points != int.MinValue)
                 parts.Add(_points == 1 ? "1 point left" : $"{_points} points left");
             return string.Join(". ", parts) + ".";
+        }
+
+        /// <summary>
+        /// The race: raceText_e is the Western version's text (Text_raceTM_oubei, "Fiend"); raceText, read in
+        /// the 22:05 session, gave nothing. Both fields: proxy statusUI.
+        /// </summary>
+        private static string Race()
+        {
+            string race = Text(_ui.raceText_e);
+            return race.Length > 0 ? race : Text(_ui.raceText);
         }
 
         private static void AddPair(List<string> parts, string label, int? now, int? max)

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Il2Cpp;
 using Il2CppTMPro;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
@@ -80,6 +81,8 @@ namespace NocturneAccess.Systems.Menus
         private static bool _confirmSpoken;
         private static long _confirmAt;
         private static bool _confirmWasVisible;
+        private static long _lastBlink;
+        private static string _buttonData = "";
 
         /// <summary>The confirmation summary is written but not spoken yet: its Yes/No waits behind it.</summary>
         internal static bool ConfirmDue => _confirmPending && Clock.ElapsedMilliseconds - _confirmAt < SpeechOrder.MaxHoldMs;
@@ -153,6 +156,8 @@ namespace NocturneAccess.Systems.Menus
                             _confirmAt = Clock.ElapsedMilliseconds;
                         }
                     };
+                case "nameinput/namefull/stretch/stretch_sur/TextTM":    // "Family:" beside the typed name (22:05 session)
+                case "nameinput/namefull/stretch/stretch_name/TextTM":   // "Given:"
                 case "nameinput/nameconfirm/Text_nickTM":
                 case "nameinput/nameconfirm/namefull/stretch/stretch_sur/TextTM":
                 case "nameinput/nameconfirm/namefull/stretch/stretch_name/TextTM":
@@ -183,6 +188,7 @@ namespace NocturneAccess.Systems.Menus
             if (!raw.Contains(Cursor))
                 return;
             Opened();
+            _lastBlink = Clock.ElapsedMilliseconds;
             string text = TextUtil.Clean(raw);
             if (text.Length == 0)
                 return;
@@ -212,6 +218,7 @@ namespace NocturneAccess.Systems.Menus
                     _lastLetterPoll = now;
                     PollLetters(now);
                     PollMode(now);
+                    LogButtonData(now);
                     bool confirmVisible = IsVisible(_confirmTitle);
                     if (confirmVisible && !_confirmWasVisible && !_confirmPending && !_confirmSpoken)
                     {
@@ -261,7 +268,59 @@ namespace NocturneAccess.Systems.Menus
             _cursorText = _pendingCursorText;
             _pendingCursor = null;
             _cursorAnnounced = true;
-            Say(TextUtil.SpeakableCharacter(_cursorText), interrupt: !first);
+            string letter = TextUtil.SpeakableCharacter(_cursorText);
+            string prefilled = first ? PrefilledName() : "";
+            Say(prefilled.Length > 0 ? $"{prefilled}. {letter}" : letter, interrupt: !first);
+        }
+
+        /// <summary>
+        /// A name already filled in when the screen opens (Yuko's "Takao" "Yuko", 22:05 session), with the
+        /// game's labels beside the fields: "Family: Takao. Given: Yuko". Empty when nothing is typed.
+        /// </summary>
+        private static string PrefilledName()
+        {
+            var parts = new List<string>();
+            AddField(parts, LabelText("nameinput/namefull/stretch/stretch_sur/TextTM"), TypedWord("family"));
+            AddField(parts, LabelText("nameinput/namefull/stretch/stretch_name/TextTM"), TypedWord("given"));
+            AddField(parts, "Nickname", TypedWord("nick"));
+            return string.Join(". ", parts);
+        }
+
+        /// <summary>
+        /// Diagnostic for the control buttons (forward, back, delete, done): image buttons that write no text
+        /// (22:05 session). Logs the name-entry data whenever it changes, to find which value says which button
+        /// has the cursor: funccursorPos, box_num, letter_num, cursor_str of Nme_Draw_EFGIS (the Western
+        /// variant) and Nme_Draw, each button's active state and scale, and whether the letter grid still
+        /// blinks (it should stop while a button has the cursor). All names: proxy Nme_Draw, Nme_Draw_EFGIS.
+        /// </summary>
+        private static void LogButtonData(long now)
+        {
+            string data;
+            try
+            {
+                data = $"blink {(now - _lastBlink < 300 ? "yes" : "no")}; "
+                     + $"EFGIS func {Nme_Draw_EFGIS.funccursorPos} box {Nme_Draw_EFGIS.box_num} letter {Nme_Draw_EFGIS.letter_num} str \"{Nme_Draw_EFGIS.cursor_str}\" "
+                     + $"right {Button(Nme_Draw_EFGIS.namelist_rightbutton)} left {Button(Nme_Draw_EFGIS.namelist_leftbutton)} "
+                     + $"delete {Button(Nme_Draw_EFGIS.namelist_deletebutton)} end {Button(Nme_Draw_EFGIS.namelist_endbutton)} "
+                     + $"func image {Button(Nme_Draw_EFGIS.functionImage)}; "
+                     + $"Draw func {Nme_Draw.funccursorPos} box {Nme_Draw.box_num} letter {Nme_Draw.letter_num} str \"{Nme_Draw.cursor_str}\"";
+            }
+            catch (Exception ex)
+            {
+                data = "error " + ex.Message;
+            }
+            if (data == _buttonData)
+                return;
+            _buttonData = data;
+            Log.Info($"{Tag} Data: {data}");
+        }
+
+        private static string Button(UnityEngine.GameObject obj)
+        {
+            if (obj == null)
+                return "none";
+            UnityEngine.Transform t = obj.transform;
+            return $"({(obj.activeInHierarchy ? "on" : "off")} scale {t.localScale.x:0.00} at {t.position.x:0},{t.position.y:0})";
         }
 
         /// <summary>Reads the known typed-letter components: a new letter is echoed, a vanished one said as deleted.</summary>

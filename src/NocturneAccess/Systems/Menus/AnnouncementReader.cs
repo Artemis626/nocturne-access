@@ -181,7 +181,8 @@ namespace NocturneAccess.Systems.Menus
             if (visible && !e.WasVisible)
             {
                 string text = TextUtil.Clean(e.Component.text);
-                if (text.Length > 0)
+                // Written and spoken just before this poll saw it appear (0.0.10: "Open Door" twice, 92 ms apart).
+                if (text.Length > 0 && text != e.Spoken)
                 {
                     e.Text = text;
                     e.ChangedAt = now;

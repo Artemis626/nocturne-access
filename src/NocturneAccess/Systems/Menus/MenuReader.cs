@@ -41,12 +41,17 @@ namespace NocturneAccess.Systems.Menus
             public string TitlePath;    // exact path, or null
             public Regex Description;   // group "line" (a one-line description may omit it), or null
             public bool IsChoice;       // a Yes/No: the opening says "Choice, N options."
+            public bool CloseWhenUnhighlighted;   // no item carries the highlight any more: the menu is closed
+            public bool Reshow;                   // closed while an item keeps the highlight: announce it when shown again
+            public string YieldTo;                // stay silent while this menu has a visible highlighted item
+            public bool ReannounceOnTitle;        // a new screen title re-announces the current item
         }
 
         private sealed class Slot
         {
             public TMP_Text Component;
             public string Text;
+            public bool Highlighted;    // the last write carried the highlight material
         }
 
         private sealed class MenuState
@@ -64,6 +69,9 @@ namespace NocturneAccess.Systems.Menus
             public long HoldSince = -1;
             public string Title = "";
             public string LastTitleSpoken = "";
+            public bool Yielded;        // stayed silent for its YieldTo menu since the last announcement
+            public int LastSlot = -1;   // the item last announced or taken, kept across Close
+            public string LastText;
         }
 
         // Paths and materials: probe logs of 30 Sep 2026, see docs/class-index.md.
@@ -75,6 +83,22 @@ namespace NocturneAccess.Systems.Menus
                 Item = new Regex(@"^Canvas_UI/campUIBase/campUI/menu/menu_window/menu_(?<slot>top|base\d\d)/TextTM$", RegexOptions.Compiled),
                 Highlight = "<material=\"TMC01\">",
                 TitlePath = "Canvas_UI/campUIBase/campUI/title_window/title_window_oubei/TextTM",
+                // The party pick keeps "Stats" highlighted here; back in the pause menu the title changes
+                // from "STATS" to "COMMAND MENU" with no item write (22:05 session, 22:07:28).
+                YieldTo = "Party pick",
+                ReannounceOnTitle = true,
+            },
+            new MenuSpec
+            {
+                // Party member pick (Stats "STATS", Skill "Who will use a skill?"): the member's name turns
+                // TMC01 and back to TMC00 on cancel, while the name stays visible (22:05 session, 22:07:10).
+                // Stock names (stock_statusNN, empty while no demons) count after the party (slot 10 + NN).
+                Name = "Party pick",
+                Item = new Regex(@"^Canvas_UI/campUIBase/campUI/party/party_status/(?:party_status(?<slot>\d\d)|stock_status(?<stock>\d\d))/Text_nameTM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC01\">",
+                TitlePath = "Canvas_UI/campUIBase/campUI/title_window/title_window_oubei/TextTM",
+                CloseWhenUnhighlighted = true,
+                Reshow = true,
             },
             new MenuSpec
             {
@@ -147,6 +171,11 @@ namespace NocturneAccess.Systems.Menus
 
         private static TmpRouter.Handler Classify(string path)
         {
+            // One title component can serve several menus (pause menu and party pick).
+            List<MenuState> titled = States.Where(s => s.Spec.TitlePath == path).ToList();
+            if (titled.Count > 0)
+                return (component, raw) => titled.ForEach(s => OnTitle(s, raw));
+
             foreach (MenuState state in States)
             {
                 MenuSpec spec = state.Spec;
@@ -154,12 +183,11 @@ namespace NocturneAccess.Systems.Menus
                 Match item = spec.Item.Match(path);
                 if (item.Success)
                 {
-                    int slot = SlotNumber(item.Groups["slot"].Value);
+                    int slot = item.Groups["stock"].Success
+                        ? 10 + SlotNumber(item.Groups["stock"].Value)
+                        : SlotNumber(item.Groups["slot"].Value);
                     return (component, raw) => OnItem(state, slot, component, raw);
                 }
-
-                if (spec.TitlePath != null && path == spec.TitlePath)
-                    return (component, raw) => OnTitle(state, raw);
 
                 if (spec.Description != null)
                 {
@@ -191,8 +219,9 @@ namespace NocturneAccess.Systems.Menus
                 state.Slots[slot] = s = new Slot();
             s.Component = component;
             s.Text = text;
+            s.Highlighted = raw.Contains(state.Spec.Highlight) && text.Length > 0;
 
-            if (!raw.Contains(state.Spec.Highlight) || text.Length == 0)
+            if (!s.Highlighted)
                 return;
             // Menus rewrite the highlighted item every frame with identical text (0.0.5 test, 30 Sep 2026):
             // only a real change may start or restart the settle timer, or it never runs out.
@@ -216,7 +245,17 @@ namespace NocturneAccess.Systems.Menus
                 return;
             state.Title = title;
             if (state.PendingSlot >= 0)
+            {
                 state.LastChange = Now;
+            }
+            else if (state.Spec.ReannounceOnTitle && state.Yielded && state.Current >= 0
+                     && state.Slots.TryGetValue(state.Current, out Slot current) && current.Highlighted)
+            {
+                // Back on this menu from a screen that shared its title: say where the cursor is.
+                state.PendingSlot = state.Current;
+                state.PendingText = current.Text;
+                state.PendingSince = state.LastChange = Now;
+            }
         }
 
         private static void OnDescription(MenuState state, int line, string raw)
@@ -243,8 +282,12 @@ namespace NocturneAccess.Systems.Menus
                 {
                     if (state.PendingSlot >= 0 && now - state.LastChange >= SettleMs)
                         TryAnnounce(state, now);
-                    else if (poll && state.Current >= 0 && state.PendingSlot < 0 && !IsVisible(state.CurrentComponent))
+                    else if (poll && state.Current >= 0 && state.PendingSlot < 0
+                             && (!IsVisible(state.CurrentComponent)
+                                 || (state.Spec.CloseWhenUnhighlighted && !state.Slots.Values.Any(s => s.Highlighted))))
                         Close(state);
+                    else if (poll && state.Spec.Reshow && state.Current < 0 && state.PendingSlot < 0)
+                        Reshow(state, now);
                 }
                 catch (Exception ex)
                 {
@@ -271,14 +314,35 @@ namespace NocturneAccess.Systems.Menus
             }
 
             bool opening = state.Current < 0;
+
+            MenuState yieldTo = state.Spec.YieldTo == null ? null : States.FirstOrDefault(s => s.Spec.Name == state.Spec.YieldTo);
+            if (yieldTo != null && HasVisibleHighlight(yieldTo) && state.PendingSlot == state.LastSlot && slot.Text == state.LastText)
+            {
+                // The other menu has the cursor: take this one's position silently. When this menu reopens
+                // (back from a screen), the other one is where the cursor is, so it announces again.
+                state.Current = state.PendingSlot;
+                state.CurrentText = slot.Text;
+                state.CurrentComponent = slot.Component;
+                state.PendingSlot = -1;
+                state.Yielded = true;
+                if (opening && yieldTo.Current >= 0)
+                    Close(yieldTo);
+                Log.Info($"{Tag} {state.Spec.Name} gives way to the {yieldTo.Spec.Name}.");
+                return;
+            }
+
             if (opening && SpeechOrder.Hold(state.Spec.Name, ref state.HoldSince, now))
                 return;
             state.HoldSince = -1;
+            state.Yielded = false;
 
-            state.Current = state.PendingSlot;
-            state.CurrentText = slot.Text;
+            state.Current = state.LastSlot = state.PendingSlot;
+            state.CurrentText = state.LastText = slot.Text;
             state.CurrentComponent = slot.Component;
             state.PendingSlot = -1;
+            // The menus that give way to this one re-announce when their title comes back.
+            foreach (MenuState other in States.Where(s => s.Spec.YieldTo == state.Spec.Name))
+                other.Yielded = true;
 
             List<int> visible = state.Slots
                 .Where(kv => kv.Value.Text.Length > 0 && IsVisible(kv.Value.Component))
@@ -308,6 +372,24 @@ namespace NocturneAccess.Systems.Menus
             if (opening)
                 Log.Info($"{Tag} {state.Spec.Name} opened.");
             SpeechManager.Say(utterance, interrupt: !opening, force: true);
+        }
+
+        private static bool HasVisibleHighlight(MenuState state)
+            => state.Slots.Values.Any(s => s.Highlighted && IsVisible(s.Component));
+
+        /// <summary>Closed while an item kept the highlight (a screen covered it): announce it when it is shown again.</summary>
+        private static void Reshow(MenuState state, long now)
+        {
+            foreach (KeyValuePair<int, Slot> kv in state.Slots)
+            {
+                if (!kv.Value.Highlighted || !IsVisible(kv.Value.Component))
+                    continue;
+                state.PendingSlot = kv.Key;
+                state.PendingText = kv.Value.Text;
+                state.PendingSince = state.LastChange = now;
+                Log.Info($"{Tag} {state.Spec.Name} shown again.");
+                return;
+            }
         }
 
         private static void Close(MenuState state)
