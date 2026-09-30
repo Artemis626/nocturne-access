@@ -21,7 +21,13 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<bool> BrailleOutput { get; private set; }
         internal static MelonPreferences_Entry<int> DedupeWindowMs { get; private set; }
 
+        // Dialogue
+        internal static MelonPreferences_Entry<bool> DialogueEnabled { get; private set; }
+        internal static MelonPreferences_Entry<bool> SpeakerEveryPage { get; private set; }
+        internal static MelonPreferences_Entry<bool> ChoicesEnabled { get; private set; }
+
         // Keys (names are UnityEngine.KeyCode values, e.g. F8, Backslash, Alpha1)
+        internal static MelonPreferences_Entry<string> KeyRepeat { get; private set; }
         internal static MelonPreferences_Entry<string> KeyStatus { get; private set; }
         internal static MelonPreferences_Entry<string> KeyDumpUi { get; private set; }
         internal static MelonPreferences_Entry<string> KeyToggleProbe { get; private set; }
@@ -46,8 +52,19 @@ namespace NocturneAccess.Core
             DedupeWindowMs = speech.CreateEntry("DedupeWindowMs", 250, "Dedupe window (ms)",
                 "An identical line repeated within this many milliseconds is spoken once. Hotkeys always speak.");
 
+            MelonPreferences_Category dialogue = MelonPreferences.CreateCategory("NocturneAccess_Dialogue", "Dialogue");
+            dialogue.SetFilePath(FilePath, true, false);
+            DialogueEnabled = dialogue.CreateEntry("Enabled", true, "Read dialogue",
+                "Speaks each dialogue page as it appears. Needs a restart.");
+            SpeakerEveryPage = dialogue.CreateEntry("SpeakerEveryPage", false, "Speaker on every page",
+                "Say the speaker's name before every page. When false, it is said when the speaker changes or the window reopens.");
+            ChoicesEnabled = dialogue.CreateEntry("Choices", true, "Read choices",
+                "Speaks dialogue choices and the highlighted option. Needs a restart.");
+
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);
+            KeyRepeat = keys.CreateEntry("Repeat", "F1", "Repeat key",
+                "Repeats the last dialogue page, and the highlighted option while a choice is open.");
             KeyStatus = keys.CreateEntry("Status", "F8", "Status key",
                 "Speaks whether the mod is running and which speech backend it uses.");
             KeyDumpUi = keys.CreateEntry("DumpUi", "F6", "Dump UI key",
@@ -64,6 +81,7 @@ namespace NocturneAccess.Core
 
             // Write the file now so new settings appear with their defaults.
             speech.SaveToFile(false);
+            dialogue.SaveToFile(false);
             keys.SaveToFile(false);
             debug.SaveToFile(false);
         }

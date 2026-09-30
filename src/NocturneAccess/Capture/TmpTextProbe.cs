@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using HarmonyLib;
 using Il2CppTMPro;
 using NocturneAccess.Core;
 
@@ -19,6 +18,8 @@ namespace NocturneAccess.Capture
     /// - "(hidden)": the object was inactive in the hierarchy when written (prefab placeholders,
     ///   alternative layouts). Useful to learn which components never show.
     /// - A component changing more than 30 times a second to unrelated text is muted, with one log line.
+    /// - Fed by Core/TmpRouter (blank writes never arrive). Texts are compared and logged with the
+    ///   typewriter's &lt;alpha=#00&gt; tags removed; other tags (fonts, colours) are kept.
     /// </summary>
     internal static class TmpTextProbe
     {
@@ -44,37 +45,14 @@ namespace NocturneAccess.Capture
         private static readonly Dictionary<int, Entry> Entries = new Dictionary<int, Entry>();
         private static readonly List<Entry> Queue = new List<Entry>();
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
-        private static int _errors;
 
         internal static bool Enabled { get; set; }
 
-        internal static void Install()
+        /// <summary>Called by TmpRouter for every non-blank write while the probe is enabled.</summary>
+        internal static void Record(TMP_Text component, int id, string raw)
         {
-            Type tmp = typeof(TMP_Text);
-            var postfix = AccessTools.Method(typeof(TmpTextProbe), nameof(AfterSetText));
-            Patcher.Postfix("Probe:TMP", tmp, "set_text", new[] { typeof(string) }, postfix);
-            Patcher.Postfix("Probe:TMP", tmp, "SetText", new[] { typeof(string) }, postfix);
-            Patcher.Postfix("Probe:TMP", tmp, "SetText", new[] { typeof(string), typeof(bool) }, postfix);
-        }
-
-        private static void AfterSetText(TMP_Text __instance, string __0)
-        {
-            if (!Enabled || __instance == null)
-                return;
-            try
-            {
-                Record(__instance, __0 ?? string.Empty);
-            }
-            catch (Exception ex)
-            {
-                if (_errors++ < 5)
-                    Log.Error($"{Tag} postfix error: {ex.Message}");
-            }
-        }
-
-        private static void Record(TMP_Text component, string text)
-        {
-            int id = component.GetInstanceID();
+            // Compare without the typewriter's alpha tags, so revealing a line is not "new text".
+            string text = TextUtil.RemoveTypewriter(raw);
             if (!Entries.TryGetValue(id, out Entry e))
             {
                 e = new Entry();

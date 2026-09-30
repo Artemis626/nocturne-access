@@ -15,14 +15,14 @@ namespace NocturneAccess.Core
     ///   declared on that exact type, with exact parameter types.
     /// - Every attempt is logged as patched, NOT DECLARED or FAILED, so "not found"
     ///   and "never tried" never look the same in the log. A summary line closes the pass.
-    /// - Each target method is patched once, even if two features ask for it.
+    /// - A given postfix is applied to a method once; different features may each add their own.
     /// </summary>
     internal static class Patcher
     {
         private const BindingFlags Declared =
             BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly;
 
-        private static readonly HashSet<MethodBase> Done = new HashSet<MethodBase>();
+        private static readonly HashSet<(MethodBase, MethodInfo)> Done = new HashSet<(MethodBase, MethodInfo)>();
         private static HarmonyLib.Harmony _harmony;
         private static int _patched;
         private static int _missing;
@@ -52,7 +52,7 @@ namespace NocturneAccess.Core
                 return false;
             }
 
-            if (!Done.Add(target))
+            if (!Done.Add((target, postfix)))
                 return true;
 
             try
@@ -64,7 +64,7 @@ namespace NocturneAccess.Core
             }
             catch (Exception ex)
             {
-                Done.Remove(target);
+                Done.Remove((target, postfix));
                 _failed++;
                 Log.Error($"[Patch] {feature}: {signature} FAILED: {ex.Message}");
                 return false;

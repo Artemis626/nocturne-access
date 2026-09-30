@@ -251,7 +251,16 @@ What 0.0.2 adds:
 - `[Scene]` lines on each scene load. `Core/LogArchive.cs`: each session's log copied to `UserData/NocturneAccess/Logs/` on quit.
 - `tools/log-summary.sh`: quick overview Claude runs after every game run.
 
-**Next step: Phase 2, dialogue and choices first** (awaiting Francesco's go):
+**Phase 2 step 1 built (0.0.3), waiting for the in-game test.**
+
+- `Core/TmpRouter.cs`: the single TMP hook. Blank writes return before any call into the game (kills the `UIManager/Text` noise); each component is classified once by path and cached by instance ID. The probe is fed from here and now compares text without typewriter tags.
+- `Core/TextUtil.cs`: tag stripping and placeholder detection.
+- `Systems/Dialogue/DialogueReader.cs`: speaks each page (150 ms settle) as one interrupting utterance; speaker from `SwitchSpeaker` state, named on change or window reopen (`SpeakerEveryPage` option).
+- `Systems/Dialogue/ChoiceReader.cs`: "Choice, N options. Text, 1 of N" (queued after the question), then each highlighted option (interrupting). Option count comes from options written since the last choice ended, because the option objects are still inactive at the first highlight.
+- F1 repeats the last page (and the highlighted option). Config section `[NocturneAccess_Dialogue]`.
+- `Patcher` now allows several features to add postfixes to the same method.
+
+Plan this was built from:
 
 1. Make the TMP hook cheap: decide per component once (by pointer) whether it matters, and return immediately for noise such as `UIManager/Text`. Make the probe tag-aware (compare stripped text) so the typewriter no longer triggers mutes.
 2. Dialogue reader: route `talk_window/Text0NTM` and `name_window/TextTM` writes, strip tags, detect page changes from the lines, speak "Speaker: line 1 line 2 line 3" as one interrupting utterance. Repeat key for the last page.

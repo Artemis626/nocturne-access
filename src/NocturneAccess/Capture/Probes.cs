@@ -21,7 +21,7 @@ namespace NocturneAccess.Capture
                 return;
             }
 
-            TmpTextProbe.Install();
+            // The TMP probe is fed by Core/TmpRouter's shared hook; only the message engine needs its own hooks.
             MesProbe.Install();
             Installed = true;
             SetEnabled(true);

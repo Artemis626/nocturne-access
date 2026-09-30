@@ -4,6 +4,7 @@ using MelonLoader;
 using NocturneAccess.Capture;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
+using NocturneAccess.Systems.Dialogue;
 using UnityEngine;
 // Inside the NocturneAccess.Input namespace, a bare "Input" means this namespace, not Unity's class.
 using UnityInput = UnityEngine.Input;
@@ -33,6 +34,7 @@ namespace NocturneAccess.Input
         internal static void Init()
         {
             Bindings.Clear();
+            Add("repeat", Config.KeyRepeat, KeyCode.F1, RepeatLast);
             Add("status", Config.KeyStatus, KeyCode.F8, SpeakStatus);
             Add("dump UI", Config.KeyDumpUi, KeyCode.F6, UiTreeDumper.Dump);
             Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle);
@@ -71,6 +73,16 @@ namespace NocturneAccess.Input
                     Log.Error($"Key {binding.Key} ({binding.Name}) failed: {ex}");
                 }
             }
+        }
+
+        private static void RepeatLast()
+        {
+            string page = DialogueReader.LastUtterance;
+            string option = ChoiceReader.CurrentOption;
+            string text = page.Length == 0 ? "No dialogue yet." : page;
+            if (option.Length > 0)
+                text += " Selected: " + option;
+            SpeechManager.Say(text, interrupt: true, force: true);
         }
 
         private static void SpeakStatus()
