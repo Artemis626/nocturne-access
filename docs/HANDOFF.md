@@ -202,7 +202,7 @@ Claude Code owns code and architecture; Francesco owns in-game testing, design d
 
 - Explain the reasoning for each step before doing it: what is being patched, why that class, what the test will show.
 - Never invent class, method or field names. Every name must come from the dumps, a reference repo, or a log line, and is recorded in `docs/class-index.md` with its source.
-- The MelonLoader log is ground truth. Every test ends with Francesco sharing the relevant part of `Latest.log`; Claude Code reads it before the next change.
+- The MelonLoader log is ground truth. **Rule (Francesco, 30 Sep 2026): after every game run, Claude Code reads the log itself, directly from the game folder** (`smt3hd\MelonLoader\Latest.log`, plus sessions archived in `smt3hd\UserData\NocturneAccess\Logs\`). Francesco never has to copy, paste or parse logs. `tools/log-summary.sh` gives a quick overview. MelonLoader 0.6.1 overwrites `Latest.log` on every launch and keeps no history, so the mod archives each session's log when the game closes.
 - One system per session. Commit at every working state with a message that says what was verified in game.
 - Give Francesco exact test steps: where to go in the game, which keys to press, what should be heard.
 - Keep `docs/HANDOFF.md` current at the end of each session: state, next step, known bugs.
@@ -223,16 +223,11 @@ Open questions for Phase 0:
 
 Updated 30 Sep 2026, end of session 1.
 
-**Phase 0: built, deployed, waiting for the in-game gate.**
-
-- Repo scaffolded, GPL-3.0 `LICENSE`, references in `_dlls/` (75 assemblies via `tools/copy-references.ps1`).
-- `NocturneAccess.dll` 0.0.1 builds with no warnings and is deployed to `smt3hd\Mods`.
-- The mod says "Nocturne Access loaded" in `OnLateInitializeMelon`, and F8 speaks a status line.
-- Nothing is verified in game yet.
-
-**Next step:** Francesco runs the Phase 0 test and pastes the `Latest.log` section. If the gate passes, commit "verified in game" and start Phase 1 (reconnaissance: ilspycmd dumps, TMP capture probe, UI tree dumper, class index).
+**Phase 0: gate passed (30 Sep 2026).** Verified in game and in `Latest.log`: both mods load ("2 Mods loaded"), the NVDA backend found `nvdaControllerClient.dll` with NVDA running, "Nocturne Access loaded" is spoken at startup, and F8 speaks the status line on every press. No crash, and no conflict with HD Ears or Graphics Configurator (still 120 fps). The game launches normally.
 
 **Known issues and notes:**
+
+- F8 pressed on the opening splash screen restarts the opening music; on the title menu it does nothing but our status line. Almost certainly the game's "press any key" handler on the splash (the type list has `slMain.slHitAnyKeyNextFuncDelegate`): any key would do the same. Harmless; our mod only reads keys and never injects them.
 
 - `Latest.log` shows a `MelonStartScreen` exception (`Texture2D` constructor not found on Unity 2019.4.10). Harmless: only the loader's splash screen fails. The `--melonloader.disablestartscreen` launch option removes it.
 - `Latest.log` shows a `FileSystemWatcher` exception from MelonLoader's preferences. It comes from the Graphics Configurator's config at the game root, set with a bare file name. Harmless; our config uses an absolute path to avoid it.
