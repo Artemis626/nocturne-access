@@ -70,7 +70,7 @@ Source: Log, probe session 1 (30 Sep 2026). All paths are under `Canvas_UI/`, al
 | Dialogue choice | `talkUI/talk01_choice/choice_answer_oubei01/answer01TM`, `..._oubei02/...` | Option texts ("I will.", "I don't understand.", "Yes", "No"). Cursor: `ChangeSelection(index, 1)`. |
 | Title menu | `titleUI(Clone)/titlemain/titlemainmenu/stretch/titlemain_item01..09/slide/Text_TM` | LOAD GAME, NEW GAME, NEW GAME: CHRONICLE, NEW GAME: MANIAX, CONTINUE, CONFIG, DOWNLOADABLE CONTENTS, LICENSE INFORMATION, LOCALIZATION CREDITS. Cursor source not found yet. |
 | Title menu | `titleUI(Clone)/titlemain/titlemain_note/Text_mainnote01TM..05TM` | Description of the highlighted item, one line per component, typewriter-revealed. |
-| Title prompt | `titleUI(Clone)/titlemain/talk01_choice/choice_answer01/answer01TM`, `02` | Title-screen Yes/No choice (separate from the dialogue choice). |
+| Title prompt | `titleUI(Clone)/titlemain/namechoice/talk_window/Text01TM` ("> End the game?"), `titleUI(Clone)/titlemain/talk01_choice/choice_answer01/answer01TM`, `02` | Title-screen Yes/No (EXIT). Highlighted option `TMC08`, other `TMC22`, same pair as the dialogue choice; Yes is highlighted at opening (Log, 16:49 session). |
 | Difficulty | `titleUI(Clone)/titlemode/titlemodeselect/titlemode_item02..03/Text_mode_g`, `titlemode/titlemode_note/Text_modenote01TM` | NORMAL, HARD and the description. |
 | Difficulty confirm | `titleUI(Clone)/titlemode/namechoice/talk_window/Text01TM`, `titlemode/talk01_choice/choice_answer01..02/answer01TM` | "The difficulty can be changed at any time..." with Yes / No. |
 | Config | `configUI_steam(Clone)/tab/tab_button/tab_<name>/Text (TMP)` | Tabs (e.g. KEYBOARD+MOUSE). |
@@ -132,6 +132,21 @@ Also seen: `DisconnectCaution/saveannounce_tex/Text_announce01TM`, `Text_announc
 | Magatama | `magUI(Clone)/magtitle_window/TextTM`, `magname_base/TextTM` (`TMC19`), `magnote/Text01TM..03TM`, `magstatus/magstatus_item01..05/TextTM` | "Which will you ingest?", "Marogareh", "Imparts Physical skills", "Normal resistance", stat labels. |
 | Magatama → Stats | `campUIBase/statusUI(Clone)/title_window/TextTM` = "Which will you ingest?", `sskill/sskill_obtained01..08/TextTM` | Stats screen opened from the Magatama screen; skills to obtain are empty for now. |
 
+### Title screen and config (Log, 30 Sep 2026 16:49 session, probe and F6 dumps)
+
+| Screen | Path or name | Content |
+| --- | --- | --- |
+| Press-any-button screen | `titleUI(Clone)/title/Version` | "Ver.1.0.4". The "press any button" prompt itself is an image, not text. Version is written each time the title screen appears (launch 16:49:40, after "Return to title" 16:54:34, about 8 s before the menu) and also on returning from Config, but then the title menu is already open. |
+| Title screen | `Il2Cpp.dds3TitleMain` (Proxy) | All static. EXIT prompt: `EndChoice`, `ChoiceIndex` (int), `main_endcursorYes`, `main_endcursorNo` (GameObject), `main_endcursorYesTM`, `main_endcursorNoTM`, `TitleMainChoiceWindow`. Start logo: `titleStartLogo` (GameObject), `titleStartLogoAnimflag`, `dds3LogoStart()`. Not needed yet: the prompt's highlight is a material. |
+| Config tabs | `configUI_steam(Clone)/tab/tab_button/tab_<name>/Text (TMP)`, name = audio, game, graphics, display, gamepad, keyboard | AUDIO, GAME, GRAPHICS, DISPLAY, GAMEPAD, KEYBOARD+MOUSE. Selected tab `TMC01`, others `TMC13`; they flicker while the screen builds. Only the selected tab's rows are visible. |
+| Config rows | `configUI_steam(Clone)/cfgmenu/scrollveiw_<tab>/content/cfgmenuset_<item>/cgfmenu_tilte/TextTM` | Row name ("BGM VOLUME", "DIFFICULTY"). Highlighted row `TMC01`, others `TMC00`. Each tab opens on `cfgmenuset_ok` ("CONFIRM"). `cfgmenuset_categoryNN` rows are headings ("▼ COMMON"). |
+| Config rows | `.../cfgmenuset_<item>/cfgmenu_note01/TextTM` | Description; `TMC01` on the highlighted row, `TMC13` otherwise. |
+| Config values | `.../cfgmenuset_<item>/cgfmenu_tilte/setting/Text (TMP)` | Current value ("OK", "Default", "English", "NORMAL", "OFF", "High", "1920x1080"); `TMC01` highlighted, `TMC13`/`TMC02` otherwise. On key rows the same path holds an untagged column label ("KEYBOARD", "MOUSE"), not a value. |
+| Config keys | `.../cfgmenuset_keyboardconfigNN/cgfmenu_tilte/key/Image_key01/Text (TMP)`, `Image_key02` | Bound key ("W", "F", "+"); empty when the key is an icon (Confirm/Action). Mouse bindings are separate rows `..._mouse`. |
+| Config volumes | `Il2Cpp.configMenuUI` (Proxy, MonoBehaviour per row) | Volume rows have no value text. `configMenuUI.slideObj` (`UnityEngine.UI.Slider[]`), `soundVol` (Animator[]), `titleText`, `menuText`, `SelText` (TMP), `menuCursor`. `dds3ConfigAudioSteam.ChgConfigAudio(uint Type, int value)` (5 callers), `cfgGetBit(uint Type) → int`. |
+| Config prompt | `configUI_steam(Clone)/talk_window/Text01TM`, `configUI_steam(Clone)/ChoiceKernel/talk01_choice/choice_answer01/answer01TM`, `02` | "Returning without changing settings. Will you proceed?" with Yes/No (`TMC08` highlighted, `TMC22` other); "Settings have been changed." alone. `dds3ConfigMainSteam` holds `EndChoicePos`, `EndChoiceYesText`, `EndChoiceNoText`, `MessageText`. |
+| Field | `fieldUI/flocation/stretch/TextTM` | Written on arrival: "Underground Facility" after the load (16:51:40), "Terminal" at the terminal room's door (16:52:07), "Underground Facility" again on leaving (16:53:38). |
+
 Not visited yet: battle, shops, fusion.
 
 ## Save and load
@@ -142,7 +157,7 @@ Source: Proxy, Assembly-CSharp (ilspycmd decompile, 30 Sep 2026), unless marked 
 | --- | --- | --- |
 | `Il2Cpp.slMain` | class, all static | Save/load engine. Process functions take `dds3ProcessID_t` and are run through a process table, so they show CallerCount 0; Harmony postfixes on them still fire (Repo: NocturneAddNewSkills `SaveLoadDiagnostics.cs`, MIT: `slLoadProc_closeFile` fires once per real load). |
 | `slMain._saveUI` | static field, `saveUI` | The save/load screen instance. |
-| `slMain.slQueryYesNoCursor` | static field, int | Cursor of the save/load Yes/No query. Index-to-option mapping to verify in game. |
+| `slMain.slQueryYesNoCursor` | static field, int | Cursor of the save/load Yes/No query: 0 = `_choiceList[0]` "Yes", 1 = "No"; -1 once answered. `slQueryYesNo` passes default 1 (No) for both the load and the overwrite prompt. The highlight object follows about a frame later (Log, 16:49 session, verified in game). |
 | `slMain.slQueryYesNoMsg`, `slQueryYesNoKeyFlag` | static fields, int | Query message and key state. Not yet observed. |
 | `slMain.slQueryYesNo(slQueryYesFuncDelegate yesFunc, slQueryNoFuncDelegate noFunc, int yesNoDefault) → Object` | static method, CallerCount 4 | Starts a Yes/No query with a default. |
 | `slMain.slContinueYesNo(same parameters) → Object` | static method, CallerCount 0 | Variant, probably the title screen's continue query. |
@@ -152,6 +167,7 @@ Source: Proxy, Assembly-CSharp (ilspycmd decompile, 30 Sep 2026), unless marked 
 | `slMain.OnChoiceFileCollider(int, SteamColliders, SteamCollider, int)` | static method | Mouse hover on the Yes/No options. |
 | `Il2Cpp.saveUI` | MonoBehaviour | Fields only, no methods: `_scrollRect`, `_scrollcontent`, `_saveTop` (GameObject), `_titleMsg` (TMP), `_fileList` (`saveFileUI[]`), `_announceObj` (GameObject), `_announceList` (TMP[]: `Text_announce01TM..04TM`), `_choiceBaseObj` (GameObject), `_choiceObj` (GameObject[]), `_choiceList` (TMP[]: the Yes/No texts), `_choiceCursor` (GameObject: the highlight drawn over the chosen option). |
 | `Il2Cpp.saveFileUI` | MonoBehaviour, one per slot | `_fileNum`, `_playerLV`, `_brokenNum`, `_noDataNum`, `_lapNum` (`CounterCtr`), `_playTime` (`CounterCtr[]`), `_playerName`, `_terminalName`, `_difficulty`, `_noDataText` (TMP), `_lvObj`, `_endinglDel`, `_cursor` (GameObject), `_playMode`, `_endingBase`, `_anime` (Animator), `_endingOption`, `_lapObj`, `_loopStartNon` (GameObject[]), `_endingList` (Animator[]); method `SetAnime(int)`. |
+| `saveFileUI` numbers | verified | Filled slot: `_fileNum` shown (file number), `_playerLV` shown (level), `_playTime` = [hours (0 shown blank), minutes] (36, then 37 after a minute of play). Empty slot: `_noDataNum` shown (file number), the others hidden; `_noDataText` is `Text_newTM` ("No File" when loading, "New File" when saving). `slMain.gslSelect` = slot index, `gslSelTop` = list scroll top (Log, 16:49 session). |
 | `Il2Cpp.CounterCtr` | MonoBehaviour | **The game's sprite-digit number display.** Field `value` (int) holds the number shown; `blank` (bool); `image` (Image[]), `number`, `numberSpr` (Sprite[]). `Set(int val, Color col, int colidx)` has 48 callers, `Set2` 8, `SetInstitutionColor(int val, int colidx)` 4. This is the data source for every on-screen number (HP, MP, level, play time) under the no-reconstruction rule. |
 
 ## Field
