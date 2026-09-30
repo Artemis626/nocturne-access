@@ -203,6 +203,8 @@ Source: Proxy, Assembly-CSharp (ilspycmd decompile, 30 Sep 2026), unless marked 
 | `Il2CppSystem.Object.GetIl2CppType()` | Proxy, Il2Cppmscorlib | Real runtime type of a component (the managed wrapper may only know the declared type). |
 | `Transform.position` (`Vector3` fields `x`, `y`) | Proxy, UnityEngine.CoreModule | `Systems/Menus/SaveChoiceReader.cs` (which option the save Yes/No highlight is over) |
 | `Il2CppObjectBase.Pointer`, `Il2CppReferenceArray<T>` (`Length`, indexer) | Il2CppInterop.Runtime | Object identity (`SaveListReader`: which slot owns a text) and game arrays (`saveUI._fileList`, `_choiceList`) |
+| `Transform.GetSiblingIndex()`, `Component.GetComponent<T>()` | Proxy, UnityEngine.CoreModule | `ConfigReader`: row order on screen; the row's `configMenuUI` |
+| `UnityEngine.UI.Slider` (`value`, `minValue`, `maxValue`, `wholeNumbers`) | Proxy, UnityEngine.UI | `ConfigReader`: volume values (`configMenuUI.slideObj`) |
 
 ## Screen reader DLLs
 

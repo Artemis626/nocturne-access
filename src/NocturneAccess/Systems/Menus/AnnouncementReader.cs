@@ -33,6 +33,14 @@ namespace NocturneAccess.Systems.Menus
             // "The input device has been disconnected." / "Please reconnect the device."
             "Canvas_UI/DisconnectCaution/saveannounce_tex/Text_announce01TM",
             "Canvas_UI/DisconnectCaution/saveannounce_tex/Text_announce02TM",
+            // Questions of the title and config Yes/No prompts (MenuReader reads their options):
+            // "> End the game?", the difficulty confirmation, "Returning without changing settings. Will you proceed?",
+            // and the config notice "Settings have been changed." (16:49 session).
+            "Canvas_UI/titleUI(Clone)/titlemain/namechoice/talk_window/Text01TM",
+            "Canvas_UI/titleUI(Clone)/titlemode/namechoice/talk_window/Text01TM",
+            "Canvas_UI/configUI_steam(Clone)/talk_window/Text01TM",
+            // Location name, written when arriving: "Underground Facility", "Terminal" (16:49 session).
+            "Canvas_UI/fieldUI/flocation/stretch/TextTM",
         };
 
         private sealed class Entry

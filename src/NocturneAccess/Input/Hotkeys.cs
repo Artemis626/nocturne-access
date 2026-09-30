@@ -78,12 +78,13 @@ namespace NocturneAccess.Input
 
         private static void RepeatLast()
         {
-            // Whichever screen spoke last: a menu, the save list, the save Yes/No (with its prompt), or dialogue.
+            // Whichever screen spoke last: a menu, the save list, the save Yes/No (with its prompt), the config screen, or dialogue.
             string latest = "";
             long latestAt = long.MinValue;
             Consider(MenuReader.LastUtterance, MenuReader.LastUtteranceAt, ref latest, ref latestAt);
             Consider(SaveListReader.LastUtterance, SaveListReader.LastUtteranceAt, ref latest, ref latestAt);
             Consider(SaveChoiceReader.LastUtterance, SaveChoiceReader.LastUtteranceAt, ref latest, ref latestAt);
+            Consider(ConfigReader.LastUtterance, ConfigReader.LastUtteranceAt, ref latest, ref latestAt);
             if (latestAt > DialogueReader.LastUtteranceAt)
             {
                 SpeechManager.Say(latest, interrupt: true, force: true);

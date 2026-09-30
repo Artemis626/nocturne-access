@@ -40,6 +40,7 @@ namespace NocturneAccess.Systems.Menus
             public string Highlight;    // material tag marking the highlighted item
             public string TitlePath;    // exact path, or null
             public Regex Description;   // group "line", or null
+            public bool IsChoice;       // a Yes/No: the opening says "Choice, N options."
         }
 
         private sealed class Slot
@@ -88,6 +89,22 @@ namespace NocturneAccess.Systems.Menus
                 Highlight = "<material=\"TMC00\">",
                 Description = new Regex(@"^Canvas_UI/titleUI\(Clone\)/titlemain/titlemain_note/Text_mainnote(?<line>\d\d)TM$", RegexOptions.Compiled),
             },
+            // Yes/No prompts outside dialogue (16:49 session): highlighted option TMC08, other TMC22.
+            // Their questions are prompts (AnnouncementReader), so the options queue behind them.
+            new MenuSpec
+            {
+                Name = "Title prompt",   // EXIT "> End the game?"; the difficulty confirmation
+                Item = new Regex(@"^Canvas_UI/titleUI\(Clone\)/(?:titlemain|titlemode)/talk01_choice/choice_answer(?<slot>\d\d)/answer01TM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC08\">",
+                IsChoice = true,
+            },
+            new MenuSpec
+            {
+                Name = "Config prompt",   // "Returning without changing settings. Will you proceed?"
+                Item = new Regex(@"^Canvas_UI/configUI_steam\(Clone\)/ChoiceKernel/talk01_choice/choice_answer(?<slot>\d\d)/answer01TM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC08\">",
+                IsChoice = true,
+            },
         };
 
         private static readonly List<MenuState> States = Specs.Select(s => new MenuState { Spec = s }).ToList();
@@ -98,6 +115,10 @@ namespace NocturneAccess.Systems.Menus
         internal static string LastUtterance { get; private set; } = "";
         internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
         internal static long Now => Clock.ElapsedMilliseconds;
+
+        /// <summary>True while the named menu is shown or about to be announced.</summary>
+        internal static bool IsActive(string name)
+            => States.Any(s => s.Spec.Name == name && (s.Current >= 0 || s.PendingSlot >= 0));
 
         internal static void Install()
         {
@@ -251,6 +272,8 @@ namespace NocturneAccess.Systems.Menus
                 .ToList();
             int position = visible.IndexOf(state.Current) + 1;
             string item = position > 0 ? $"{slot.Text}, {position} of {visible.Count}" : slot.Text;
+            if (opening && state.Spec.IsChoice)
+                item = $"Choice, {visible.Count} options. {item}";
 
             var parts = new List<string>();
             if (state.Title.Length > 0 && state.Title != state.LastTitleSpoken)

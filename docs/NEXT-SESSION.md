@@ -1,6 +1,6 @@
 # Nocturne Access: next session handoff
 
-Written 30 Sep 2026, updated in session 2 after the 0.0.6 test, for a fresh chat. Read this first, then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
+Written 30 Sep 2026, updated in session 2 after the 0.0.7 test, for a fresh chat. Read this first, then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
 ## The project in one paragraph
 
@@ -27,40 +27,41 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | 0.0.3 to 0.0.4 | Dialogue pages with speaker (every page), dialogue choices, F1 repeat, log snapshots | Verified in game (15:48 session) |
 | 0.0.5 | Menu reader (pause, terminal, title), save/load prompts | Prompts verified; menus failed |
 | 0.0.6 | Menu settle-timer fix | Verified in game (16:18 session) |
-| **0.0.7** | Save/load Yes/No and file list; speech order (terminal race) | **Built and deployed, not yet tested** |
+| 0.0.7 | Save/load Yes/No and file list; speech order (terminal race) | Verified in game (16:49 session) |
+| **0.0.8** | Title and config Yes/No, location names, press-any-button cue, config screen | **Built and deployed, not yet tested** |
 
-Last commits: `b60ef2a` (0.0.6 verified, save/load classes mapped), then the 0.0.7 commit.
+Last commits: `c90e8a9` (0.0.7 verified; title, splash and config mapped), then the 0.0.8 commit.
 
-## What 0.0.6 proved and what 0.0.7 adds
+## What 0.0.7 proved and what 0.0.8 adds
 
-0.0.6 fixed the silent menus (16:18 session): title, terminal and pause menus are spoken on every move. Rule kept from it: an identical rewrite must never count as activity.
+0.0.7 verified (16:49 session): the terminal says its question first; loading and saving are fully usable by ear (file list with numbers and levels, the load and overwrite Yes/No). Francesco then asked for: the title screen's EXIT Yes/No (silent), a cue on the press-any-button screen, the map name when a map loads, and the config, Magatama and Stats screens (F6 dumps taken). After those, combat, then pathfinding.
 
-0.0.7 (built, not tested) finishes the save/load screen and fixes the terminal race:
+0.0.8 (built, not tested):
 
-- **Terminal race**: the question was spoken after "Save, 1 of 3", because the question's lines arrive about 400 ms after the menu settles. Now a screen's first line waits (at most 1.5 s) while a dialogue page or prompt is due (`Systems/SpeechOrder.cs`).
-- **Save/load Yes/No**: the options have no highlight material (two F6 dumps identical). The cursor is `slMain.slQueryYesNoCursor`, read every frame, indexing the game's own `saveUI._choiceList` texts (`SaveChoiceReader`).
-- **File list**: slot identity from `saveUI._fileList`, numbers from `CounterCtr.value` (`SaveListReader`).
+- **Title EXIT and config Yes/No**: options highlighted with `TMC08`; the question is spoken first, then "Choice, 2 options. Yes, 1 of 2" and each move. Covers the difficulty confirmation too (same paths under `titlemode`), not yet seen in a log.
+- **Location name**: `fieldUI/flocation` is spoken when it appears or changes.
+- **Press-any-button cue**: "Title screen. Press any button." (the game's prompt is an image, so these are the mod's words).
+- **Config screen**: tab, row, value (text, bound keys or volume slider), position and description; value changes spoken alone.
 
-## First thing next session: test 0.0.7
+## First thing next session: test 0.0.8
 
-1. Title screen, LOAD GAME. Expect "Checking data...", "Select a file to load.", then "File 1. AAAA, Level 1, Shinjuku Medical Center, NORMAL" (Francesco's save; the level is whatever the screen shows).
-2. Move down: expect "File 2. No File", "File 3. No File"; then back up to File 1.
-3. Confirm File 1: expect "Load File 1?" then "Choice, 2 options. Yes, 1 of 2" (or No, if the game defaults to No). Move between Yes and No: each move spoken. Choose No first (back to the list, nothing lost), then confirm File 1 again and choose Yes.
-4. In game, go to the terminal: expect the question "> There is a large cylinder. What will you do?" first, then "Save, 1 of 3".
-5. Choose Save: expect "Select a save location." and the list; pick an empty file (File 2), expect the Yes/No if the game asks, then "Save completed.". Or pick File 1 to hear the overwrite prompt with its Yes/No.
-6. F1 on the list and on the Yes/No: expect the file again, and "Load File 1? Yes, 1 of 2".
+1. Launch: at the press-any-button screen expect "Title screen. Press any button."
+2. Title menu, CONFIG. Expect "AUDIO tab. CONFIRM, OK, 1 of 7. Apply changed settings." Move down: each row with its value and description. On BGM VOLUME press left/right: expect the new number alone. Switch tabs (the game's tab keys): expect "GAME tab. ..." and so on through KEYBOARD+MOUSE, where rows should say their key ("Command Menu, F, ...").
+3. Leave config without changing anything: expect "Returning without changing settings. Will you proceed?" then "Choice, 2 options. ...", each move, then Yes.
+4. Title menu, EXIT: expect "> End the game?" then "Choice, 2 options. Yes, 1 of 2", move, choose No; then later EXIT and Yes to quit.
+5. Load the save: after "Load completed." expect "Underground Facility". Walk to the terminal room door: expect "Terminal". Open and close the pause menu: tell me if the location is spoken again each time (it should not be).
+6. F1 on a config row.
 
-Then read the log: `[SaveChoice] Opened: ...` gives the option order, the cursor value and the default; `[SaveList] Slot N: fileNum ...` gives the raw numbers to check against the screen (file number, level, play time); `[Order] ... waits for ...` confirms the terminal fix. A `[SaveChoice] Cursor field says option X, highlight is over option Y` warning means the cursor mapping needs another look.
+Then read the log: `[Config] Slider on BGM VOLUME: value ..., min ..., max ...` gives the volume range; `[Config] No configMenuUI on ...` lines mean a row's value was not found; `[TitleCue]` confirms the cue.
 
 ## Open problems and next steps (in order)
 
-1. **Check 0.0.7's assumptions against the log**: `slQueryYesNoCursor` index 0 = `_choiceList[0]` ("Yes"); `_fileNum` / `_noDataNum` is the number shown on each slot; `_playerLV` is the level. Decide how to speak play time once its `CounterCtr` values are seen.
-2. **Pause menu sub-screens are silent** (mapped in class-index, "Pause menu sub-screens"): item lists (`menu_itemskill/menu_item_window/menuitem_top`, `menuitem_base02..08`, highlight `TMC01`, title from `title_window_oubei`, description `menu_note/Text01TM..03TM`) fit MenuReader as a new spec; the skill user pick (party name turns `TMC01`); Magatama and Stats need numbers from `CounterCtr`.
-3. Remaining Phase 2 screens: config values, name entry, difficulty select, the title-screen Yes/No (`titleUI(Clone)/titlemode/talk01_choice/...`).
+1. **Check 0.0.8** against the log (slider range and wording, config positions against the screen, whether the location repeats).
+2. **Numbers system, then Magatama, Stats and item lists** (last Phase 2 screens Francesco asked for): these screens' real content is sprite digits (stats, HP, MP, level). Read them from `CounterCtr.value` (verified on the save list: `_fileNum`, `_playerLV`, `_playTime`), found through the screen's own classes (`statusUI`, `magUI`, `campUI` party panel) or by routing `CounterCtr.Set(int, ...)` writes by path like the TMP router. Text parts are mapped in class-index ("Pause menu sub-screens"): Magatama name `magname_base` (`TMC19`) with `magnote` lines; Stats name, race, skills, feature; item lists (`menu_itemskill`, `TMC01`, description `menu_note`); skill user pick (party name `TMC01`).
+3. Remaining small Phase 2 screens: name entry, difficulty select (`titlemode_item02..03`, `titlemode_note`).
 4. **Phase 2 gate**: new game through the prologue to the first save by ear.
-5. **Phase 3 is navigation and pathfinding** (Francesco's priority, moved ahead of battle): start from `fieldUI/flocation` (location name, including the overhead map) and `fieldUI/fannounce` (Talk / Examine / Open Door / Enter / Exit prompts), then `fldPlayer`, `fldAutoMap`. Francesco can record OBS sessions for frame stills when a question is purely visual (map layout, cursor position).
-
-Numbers everywhere (HP, MP, level, stats, play time) can come from `CounterCtr.value` / `CounterCtr.Set(int, ...)` (48 callers): the sprite-digit display holds the number as data, which respects the no-reconstruction rule.
+5. **Combat** (Francesco's order: after these screens, before pathfinding).
+6. **Pathfinding and navigation**: `fieldUI/fannounce` (Talk / Examine / Open Door / Enter / Exit), `fldPlayer`, `fldAutoMap`, the overhead map. OBS stills from Francesco when a question is purely visual.
 
 ## Key facts to remember
 
@@ -69,4 +70,4 @@ Numbers everywhere (HP, MP, level, stats, play time) can come from `CounterCtr.v
 - Menus mark the highlighted item with a font material: pause and terminal `TMC01` (others `TMC00`), title `TMC00` (others `TMC15`).
 - Message engine `itfMesManager`: `SetMessage` never fires; `SwitchSpeaker`, `itfMesMngRequestMessage`, `SelectWindowDispOn`, `ChangeSelection(index, 1)` do.
 - `UIManager/Text/Text01000+` are 116 noise components rewritten every frame with a space; the TMP router drops blank writes first.
-- Code map: `Core/` (ModMain, Config, Log, Patcher, TmpRouter, TextUtil, UiUtil, LogArchive), `Speech/`, `Capture/` (probes, UI dumper), `Systems/Dialogue/` (DialogueReader, ChoiceReader), `Systems/SpeechOrder.cs` (first line waits behind dialogue or a prompt), `Systems/Menus/` (MenuReader, AnnouncementReader, SaveListReader, SaveChoiceReader), `Input/Hotkeys.cs`.
+- Code map: `Core/` (ModMain, Config, Log, Patcher, TmpRouter, TextUtil, UiUtil, LogArchive), `Speech/`, `Capture/` (probes, UI dumper), `Systems/Dialogue/` (DialogueReader, ChoiceReader), `Systems/SpeechOrder.cs` (first line waits behind dialogue or a prompt), `Systems/Menus/` (MenuReader, AnnouncementReader, SaveListReader, SaveChoiceReader, ConfigReader, TitleCue), `Input/Hotkeys.cs`.

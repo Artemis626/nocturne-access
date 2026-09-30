@@ -177,6 +177,8 @@ Each phase ends at a gate Francesco verifies in game. No phase starts until the 
 7. **Phase 6 — Puzzles and polish.** Dungeon-specific helpers, localisation of mod strings, config UI, docs.
 8. **Phase 7 — Release.** Packaging, notices, README with keys, GitHub release, announcement.
 
+**Order change (Francesco, 30 Sep 2026, after the 0.0.7 test): once the remaining Phase 2 screens (config, Magatama, Stats and similar) work, combat (Phase 4) comes next, then navigation and pathfinding (Phase 3).**
+
 The field gate is deliberately small: Shinjuku Medical Center is the first dungeon, so it tests the whole field stack on simple geometry before the Amala puzzles.
 
 ## Licensing and release
@@ -261,6 +263,13 @@ What 0.0.2 adds:
 - `Patcher` now allows several features to add postfixes to the same method.
 
 **Phase 2 step 1 verified in game with 0.0.4 (30 Sep 2026, 15:48 session, controller, console hidden):** every dialogue page spoken whole with the speaker named (Hijiri, Soul); narration pages ("> There is a large cylinder. What will you do?") spoken without a stale name; the "> End the game?" Yes/No choice announced ("Choice, 2 options. No, 2 of 2") and every cursor move read. No garbled speech; the 30-second log snapshots worked. Pause-menu screens mapped (class-index).
+
+**0.0.8 built and deployed, not yet tested: title and config Yes/No, cues, config screen.**
+
+- `MenuReader` specs "Title prompt" (`titleUI(Clone)/(titlemain|titlemode)/talk01_choice/choice_answerNN/answer01TM`) and "Config prompt" (`configUI_steam(Clone)/ChoiceKernel/talk01_choice/...`), highlight `TMC08`; a choice spec opens with "Choice, N options.". Their questions (`namechoice/talk_window/Text01TM`, `configUI_steam(Clone)/talk_window/Text01TM`) are prompts in `AnnouncementReader`, so the options queue behind them.
+- Location: `fieldUI/flocation/stretch/TextTM` is a prompt too: spoken when it appears or changes ("Underground Facility", "Terminal").
+- `Systems/Menus/TitleCue.cs`: "Title screen. Press any button." when the title's Version text is shown and the title menu is still closed 500 ms later; once per appearance. The mod's own words: the game's prompt is an image.
+- `Systems/Menus/ConfigReader.cs`: the config screen. Current row = highlighted (`TMC01`) visible row; tab from that row's scroll view, tab name from the tab text; value from the tagged setting text, the bound keys, or the row's `configMenuUI.slideObj` slider (polled every 100 ms; logs its range once); position among the tab's rows by sibling order, headings excluded; description from `cfgmenu_note01`. Opening "AUDIO tab. CONFIRM, OK, 1 of 7. Apply changed settings.", row moves without the tab, value changes alone.
 
 **0.0.7 verified in game (30 Sep 2026, 16:49 session, `session_2026-09-30_16-49-26.log`).** 43 hooks, no errors or warnings. The terminal now says the question first, then "Save, 1 of 3" (`[Order] Terminal menu waits for the dialogue page.`). Load and save by ear: "File 1. AAAA, Level 1, Shinjuku Medical Center, NORMAL", "File 2. No File" (loading) / "New File" (saving), all 10+ files with scrolling; the load and overwrite prompts with "Choice, 2 options. No, 2 of 2" (the game defaults to No) and every move; a new save into File 2 then read back. The cursor field mapping held (0 = Yes, 1 = No); the highlight-position fallback never triggered. Francesco's feedback: the title screen's EXIT Yes/No is silent; wanted cues for the press-any-button screen and for the map name when a map loads. F6 dumps of the config screen (all tabs), Magatama and Stats.
 
