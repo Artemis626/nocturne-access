@@ -39,7 +39,7 @@ namespace NocturneAccess.Systems.Menus
             public Regex Item;          // group "slot": "top", "baseNN" or "NN"
             public string Highlight;    // material tag marking the highlighted item
             public string TitlePath;    // exact path, or null
-            public Regex Description;   // group "line", or null
+            public Regex Description;   // group "line" (a one-line description may omit it), or null
             public bool IsChoice;       // a Yes/No: the opening says "Choice, N options."
         }
 
@@ -88,6 +88,14 @@ namespace NocturneAccess.Systems.Menus
                 Item = new Regex(@"^Canvas_UI/titleUI\(Clone\)/titlemain/titlemainmenu/stretch/titlemain_item(?<slot>\d\d)/slide/Text_TM$", RegexOptions.Compiled),
                 Highlight = "<material=\"TMC00\">",
                 Description = new Regex(@"^Canvas_UI/titleUI\(Clone\)/titlemain/titlemain_note/Text_mainnote(?<line>\d\d)TM$", RegexOptions.Compiled),
+            },
+            new MenuSpec
+            {
+                // Battle commands (20:07 session): "Attack", "Pass", highlighted TMC01; help line under the menu.
+                Name = "Battle menu",
+                Item = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bmenu/[^/]+/bmenu_command/bmenu_command(?<slot>\d\d)/bmenu_text01TM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC01\">",
+                Description = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bhelp_window/text_mask/TextTM$", RegexOptions.Compiled),
             },
             // Yes/No prompts outside dialogue (16:49 session): highlighted option TMC08, other TMC22.
             // Their questions are prompts (AnnouncementReader), so the options queue behind them.
@@ -151,7 +159,7 @@ namespace NocturneAccess.Systems.Menus
                     Match desc = spec.Description.Match(path);
                     if (desc.Success)
                     {
-                        int line = int.Parse(desc.Groups["line"].Value) - 1;
+                        int line = desc.Groups["line"].Success ? int.Parse(desc.Groups["line"].Value) - 1 : 0;
                         if (line >= 0 && line < state.Description.Length)
                             return (component, raw) => OnDescription(state, line, raw);
                     }

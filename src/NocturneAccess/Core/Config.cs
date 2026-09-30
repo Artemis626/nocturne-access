@@ -29,9 +29,14 @@ namespace NocturneAccess.Core
         // Menus
         internal static MelonPreferences_Entry<bool> MenusEnabled { get; private set; }
 
+        // Battle
+        internal static MelonPreferences_Entry<bool> BattleEnabled { get; private set; }
+        internal static MelonPreferences_Entry<bool> SpeakHpChanges { get; private set; }
+
         // Keys (names are UnityEngine.KeyCode values, e.g. F8, Backslash, Alpha1)
         internal static MelonPreferences_Entry<string> KeyRepeat { get; private set; }
         internal static MelonPreferences_Entry<string> KeyStatus { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyBattleStatus { get; private set; }
         internal static MelonPreferences_Entry<string> KeyDumpUi { get; private set; }
         internal static MelonPreferences_Entry<string> KeyToggleProbe { get; private set; }
 
@@ -69,12 +74,21 @@ namespace NocturneAccess.Core
             MenusEnabled = menus.CreateEntry("Enabled", true, "Read menus",
                 "Speaks the highlighted item of the pause, terminal and title menus, the save/load file list, prompts and Yes/No. Needs a restart.");
 
+            MelonPreferences_Category battle = MelonPreferences.CreateCategory("NocturneAccess_Battle", "Battle");
+            battle.SetFilePath(FilePath, true, false);
+            BattleEnabled = battle.CreateEntry("Enabled", true, "Read battles",
+                "Speaks the battle start with the enemies, actions, targets and results, and HP changes. Needs a restart.");
+            SpeakHpChanges = battle.CreateEntry("SpeakHpChanges", true, "Speak HP changes",
+                "After each hit or heal, say the unit's HP (from game data).");
+
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);
             KeyRepeat = keys.CreateEntry("Repeat", "F1", "Repeat key",
                 "Repeats whichever came last: the menu item, or the dialogue page (plus the highlighted option while a choice is open).");
             KeyStatus = keys.CreateEntry("Status", "F8", "Status key",
                 "Speaks whether the mod is running and which speech backend it uses.");
+            KeyBattleStatus = keys.CreateEntry("BattleStatus", "F2", "Battle status key",
+                "In battle: Press Turns, then every enemy and party member with HP and MP.");
             KeyDumpUi = keys.CreateEntry("DumpUi", "F6", "Dump UI key",
                 "Debug: writes every text currently visible on screen to Latest.log.");
             KeyToggleProbe = keys.CreateEntry("ToggleProbe", "F7", "Toggle probe key",
@@ -91,6 +105,7 @@ namespace NocturneAccess.Core
             speech.SaveToFile(false);
             dialogue.SaveToFile(false);
             menus.SaveToFile(false);
+            battle.SaveToFile(false);
             keys.SaveToFile(false);
             debug.SaveToFile(false);
         }

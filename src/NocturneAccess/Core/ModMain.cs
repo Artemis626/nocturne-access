@@ -3,6 +3,7 @@ using NocturneAccess.Capture;
 using NocturneAccess.Core;
 using NocturneAccess.Input;
 using NocturneAccess.Speech;
+using NocturneAccess.Systems.Battle;
 using NocturneAccess.Systems.Dialogue;
 using NocturneAccess.Systems.Menus;
 
@@ -18,7 +19,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.8";
+        internal const string ModVersion = "0.0.9";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
@@ -38,7 +39,7 @@ namespace NocturneAccess.Core
             SaveListReader.Install();
             SaveChoiceReader.Install();
             ConfigReader.Install();
-            TitleCue.Install();
+            BattleReader.Install();
             Probes.Install();
             Patcher.LogSummary();
 
@@ -65,7 +66,7 @@ namespace NocturneAccess.Core
             SaveListReader.Tick();
             SaveChoiceReader.Tick();
             ConfigReader.Tick();
-            TitleCue.Tick();
+            BattleReader.Tick();
             LogArchive.Tick();
             Probes.Tick();
         }

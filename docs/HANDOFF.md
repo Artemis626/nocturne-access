@@ -264,7 +264,13 @@ What 0.0.2 adds:
 
 **Phase 2 step 1 verified in game with 0.0.4 (30 Sep 2026, 15:48 session, controller, console hidden):** every dialogue page spoken whole with the speaker named (Hijiri, Soul); narration pages ("> There is a large cylinder. What will you do?") spoken without a stale name; the "> End the game?" Yes/No choice announced ("Choice, 2 options. No, 2 of 2") and every cursor move read. No garbled speech; the 30-second log snapshots worked. Pause-menu screens mapped (class-index).
 
-**0.0.8 built and deployed, not yet tested: title and config Yes/No, cues, config screen.**
+**0.0.9 built and deployed, not yet tested: combat, version 1.** Francesco (20:07 session, 30 Sep 2026): the config screen works "extremely well"; the volume notches have no numbers yet, which can wait; remove the title cue (it fired during the Atlus splash, 20:07:58, not on the title screen); focus on combat. He fought the first battle (Will o' Wisp) with F6 dumps.
+
+- Removed `TitleCue` (a better signal will come later). `ConfigReader` polls a slider only on rows where one was found: no slider was ever found (no `[Config] Slider` line), and polling a closed screen's row caused a caught NullReferenceException (20:12:25).
+- `MenuReader` spec "Battle menu" (`bmenuset(Clone)/bmenu/*/bmenu_command/bmenu_commandNN/bmenu_text01TM`, `TMC01`) with the help line as description. A spec's description may now be a single component without a line number.
+- `Systems/Battle/BattleReader.cs`: battle start ("Battle. Will o' Wisp.", 1 s after the party panel appears, enemies from formindex 4 up to `enemypcnt`); the banner (`bannounce`), spoken on every `nbHelpProcess.nbDispText` call: a target (text2 set) interrupts and adds its HP when the name is unique, others queue; HP changes of every unit, polled every 200 ms ("Will o' Wisp, HP 12 of 30."); "Battle results." on the results screen; F2 status. Party units only for slots showing a name on the party panel, named as shown. Every data change is logged as `[Battle:Data]` (turn, phase, activeunit, Press Turn fields, counts, exp, macca, each unit) to check the field meanings. Config `[NocturneAccess_Battle] Enabled`, `SpeakHpChanges`; key `BattleStatus = F2`.
+
+**0.0.8 verified in game (20:07 session): config screen, config and title Yes/No, location names ("Underground Facility", "Elevator", "Unknown Realm"). Built as:**
 
 - `MenuReader` specs "Title prompt" (`titleUI(Clone)/(titlemain|titlemode)/talk01_choice/choice_answerNN/answer01TM`) and "Config prompt" (`configUI_steam(Clone)/ChoiceKernel/talk01_choice/...`), highlight `TMC08`; a choice spec opens with "Choice, N options.". Their questions (`namechoice/talk_window/Text01TM`, `configUI_steam(Clone)/talk_window/Text01TM`) are prompts in `AnnouncementReader`, so the options queue behind them.
 - Location: `fieldUI/flocation/stretch/TextTM` is a prompt too: spoken when it appears or changes ("Underground Facility", "Terminal").

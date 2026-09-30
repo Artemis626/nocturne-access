@@ -170,6 +170,26 @@ Source: Proxy, Assembly-CSharp (ilspycmd decompile, 30 Sep 2026), unless marked 
 | `saveFileUI` numbers | verified | Filled slot: `_fileNum` shown (file number), `_playerLV` shown (level), `_playTime` = [hours (0 shown blank), minutes] (36, then 37 after a minute of play). Empty slot: `_noDataNum` shown (file number), the others hidden; `_noDataText` is `Text_newTM` ("No File" when loading, "New File" when saving). `slMain.gslSelect` = slot index, `gslSelTop` = list scroll top (Log, 16:49 session). |
 | `Il2Cpp.CounterCtr` | MonoBehaviour | **The game's sprite-digit number display.** Field `value` (int) holds the number shown; `blank` (bool); `image` (Image[]), `number`, `numberSpr` (Sprite[]). `Set(int val, Color col, int colidx)` has 48 callers, `Set2` 8, `SetInstitutionColor(int val, int colidx)` 4. This is the data source for every on-screen number (HP, MP, level, play time) under the no-reconstruction rule. |
 
+## Battle
+
+Source: Log, 30 Sep 2026 20:07 session (first battle, Will o' Wisp in the Unknown Realm; probe and F6 dumps), and Proxy. Meanings marked Repo come from MatthiewNocturne (MIT), which reads or writes the same fields.
+
+| Name or path | Kind | What we know |
+| --- | --- | --- |
+| `bparty(Clone)/bparty_window01..04/bparty_text01TM` | TMP | Party panel: member names ("AAAA"); empty slots are blank. First written hidden at the encounter (20:14:48), about 3 s before the enemy talks. HP and MP on the panel are sprites. |
+| `bmenuset(Clone)/bmenu/normal_command/bmenu_command/bmenu_command01..NN/bmenu_text01TM` | TMP | Command menu ("Attack", "Pass" at this point in the game). Highlighted `TMC01`, others `TMC00`. Written hidden at 20:15:30, shown later. Stays visible during target selection. |
+| `bmenuset(Clone)/bhelp_window/text_mask/TextTM` | TMP | Help line of the highlighted command ("Physical attack (low damage).", "Skip action at 1/2 turn cost."). No material tag. |
+| `bannounce(Clone)/stretch/TextTM` | TMP | The battle banner: action names ("Attack", the enemy's "Deathtouch"), the target under the cursor ("Foul　Will o' Wisp": race, ideographic space, name) and results ("Dodged the attack! "). |
+| `nbHelpProcess.nbDispText(string text1, string text2, int type, int max, uint col, bool type_skill)` | static method | Fills the banner. Seen: `("Deathtouch", null, 0, 30, …, True)` skill; `("Attack", null, 0, 30, …, False)` action; `("Foul", "Will o' Wisp", 0, 2, …, False)` target; `(null, null, 1, 45, …)` a message, whose text comes from `itfMesManager.itfMesMngGetStrImmediate(3, 3, 0)` → "Dodged the attack! " (after `itfMesMngRequestMessage(3, 3, 0, 2)`). |
+| Enemy talk | dialogue | "Will o' Wisp: I WAnt eAT..." goes through the normal dialogue engine and was spoken by DialogueReader. |
+| `resultUI(Clone)/brparty/brchara01/TextTM` | TMP | Results screen: party name; EXP and macca are sprites. Level up then says "> You leveled up! Please customize your stats." and opens `statusUI` (stat labels all `TMC00`; cursor and values not text), then "> Is this okay?" (dialogue choice). |
+| `Il2Cpp.nbMainProcess.nbGetMainProcessData() → nbMainProcessData_t` | static method (Repo) | Battle state, a class. Fields (Proxy): `form` (`nbFormation_t[]`), `enemyunit` (`datUnitWork_t[]`), `party` (`nbParty_t[]`), `playerpcnt`, `enemypcnt`, `activeunit`, `turn`, `phase`, `press3`, `press4_p`, `press4_ten`, `press4_hansya`, `press4_miss`, `TarSelType`, `encno`, `endtype`, `order`, `orderindex`, `maka`, `exp`, `negopformindex`, `negoeformindex`. Repo (ModernPressTurns): `press4_p` = full Press Turns, `press4_ten` = all Press Turn icons (so blinking = ten − p). Others to verify from the `[Battle:Data]` log. |
+| `nbMainProcess.nbGetUnitWorkFromFormindex(int formindex) → datUnitWork_t` | static method (Repo) | A unit. Formindex 0 to 3 is the party, 4 and up the enemies (Repo, InfiniteEnemyMp). Returns null for a dead or empty slot (Repo, DisplayBuffs checks it). |
+| `datUnitWork_t` (: `datUnitWork_s`) | class | `id`, `hp`, `maxhp`, `mp`, `maxmp` (Repo: BuffedRecarm, HealEveryone), `level`, `badstatus`, `exp`, `param`, `skill`, `skillcnt`, `nowcommand`, `nowtform`, `nowtarea`. |
+| `nbMainProcess.nbGetPartyFromFormindex(int) → nbParty_t` | static method (Repo) | `count[4..7]` = buff levels (Repo, DisplayBuffs), `formindex`, `partyindex`, `aisyo`. |
+| `datDevilName.Get(int id) → string`, `frName.frGetCNameString(sbyte TargetNo) → string` | static methods (Repo) | Demon name by unit id; the player's nickname with 0. |
+| `nbTarSelProcess.DispTargetHelp(ref nbTarSelProcessData_t t)` | static method (Repo) | Target help; `t.nowform` = target formindex, `t.ctype == 0` single target. Takes its argument by reference: not hooked (rule §2.6) unless needed. |
+
 ## Field
 
 | Name | Kind | Source | What we know |

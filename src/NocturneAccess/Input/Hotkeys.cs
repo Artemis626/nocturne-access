@@ -4,6 +4,7 @@ using MelonLoader;
 using NocturneAccess.Capture;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
+using NocturneAccess.Systems.Battle;
 using NocturneAccess.Systems.Dialogue;
 using NocturneAccess.Systems.Menus;
 using UnityEngine;
@@ -37,6 +38,7 @@ namespace NocturneAccess.Input
             Bindings.Clear();
             Add("repeat", Config.KeyRepeat, KeyCode.F1, RepeatLast);
             Add("status", Config.KeyStatus, KeyCode.F8, SpeakStatus);
+            Add("battle status", Config.KeyBattleStatus, KeyCode.F2, BattleReader.SpeakStatus);
             Add("dump UI", Config.KeyDumpUi, KeyCode.F6, UiTreeDumper.Dump);
             Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle);
         }

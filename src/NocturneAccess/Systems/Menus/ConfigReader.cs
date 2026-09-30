@@ -61,6 +61,7 @@ namespace NocturneAccess.Systems.Menus
             public string Value = "";
             public readonly SortedDictionary<int, string> Keys = new SortedDictionary<int, string>();
             public bool SliderLogged;
+            public bool HasSlider;      // an active slider was found; only then is it polled
         }
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
@@ -173,7 +174,9 @@ namespace NocturneAccess.Systems.Menus
                 else if (_current != null && now - _lastSliderPoll >= SliderPollMs)
                 {
                     _lastSliderPoll = now;
-                    if (_current.Value.Length == 0 && _current.Keys.Count == 0)
+                    // Only rows where a slider was found (none were in the 20:08 session), and only while shown:
+                    // polling a row of a closed screen touched a destroyed object (NullReferenceException at 20:12:25).
+                    if (_current.HasSlider && _current.Value.Length == 0 && _current.Keys.Count == 0 && IsVisible(_current.TitleComponent))
                     {
                         string slider = SliderValue(_current);
                         if (slider.Length > 0 && slider != _spokenValue)
@@ -318,6 +321,7 @@ namespace NocturneAccess.Systems.Menus
                 Slider s = sliders[i];
                 if (s == null || !s.gameObject.activeInHierarchy)
                     continue;
+                row.HasSlider = true;
                 float v = s.value;
                 if (!row.SliderLogged)
                 {

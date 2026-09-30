@@ -1,6 +1,6 @@
 # Nocturne Access: next session handoff
 
-Written 30 Sep 2026, updated in session 2 after the 0.0.7 test, for a fresh chat. Read this first, then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
+Written 30 Sep 2026, updated in session 2 after the 0.0.8 test, for a fresh chat. Read this first, then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
 ## The project in one paragraph
 
@@ -28,40 +28,36 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | 0.0.5 | Menu reader (pause, terminal, title), save/load prompts | Prompts verified; menus failed |
 | 0.0.6 | Menu settle-timer fix | Verified in game (16:18 session) |
 | 0.0.7 | Save/load Yes/No and file list; speech order (terminal race) | Verified in game (16:49 session) |
-| **0.0.8** | Title and config Yes/No, location names, press-any-button cue, config screen | **Built and deployed, not yet tested** |
+| 0.0.8 | Title and config Yes/No, location names, config screen (title cue removed in 0.0.9) | Verified in game (20:07 session) |
+| **0.0.9** | Combat version 1: start, command menu, banner, HP changes, F2 status | **Built and deployed, not yet tested** |
 
-Last commits: `c90e8a9` (0.0.7 verified; title, splash and config mapped), then the 0.0.8 commit.
+Last commits: `7f79c46` (0.0.8), then the 0.0.9 commit.
 
-## What 0.0.7 proved and what 0.0.8 adds
+## What 0.0.8 proved and what 0.0.9 adds
 
-0.0.7 verified (16:49 session): the terminal says its question first; loading and saving are fully usable by ear (file list with numbers and levels, the load and overwrite Yes/No). Francesco then asked for: the title screen's EXIT Yes/No (silent), a cue on the press-any-button screen, the map name when a map loads, and the config, Magatama and Stats screens (F6 dumps taken). After those, combat, then pathfinding.
+0.0.8 verified (20:07 session): the config screen, the config and title Yes/No, and location names all worked. Francesco: volume notches without numbers can wait; the title cue fired on the Atlus splash, so it is removed; focus on combat. He fought the first battle (Will o' Wisp) with F6 dumps; the battle's text sources are in class-index, "Battle".
 
-0.0.8 (built, not tested):
+0.0.9 (built, not tested) is combat version 1: battle start with the enemies, the command menu with help, the banner (actions, targets with HP, results such as "Dodged the attack!"), HP changes after hits, "Battle results.", and F2 for Press Turns and everyone's HP and MP.
 
-- **Title EXIT and config Yes/No**: options highlighted with `TMC08`; the question is spoken first, then "Choice, 2 options. Yes, 1 of 2" and each move. Covers the difficulty confirmation too (same paths under `titlemode`), not yet seen in a log.
-- **Location name**: `fieldUI/flocation` is spoken when it appears or changes.
-- **Press-any-button cue**: "Title screen. Press any button." (the game's prompt is an image, so these are the mod's words).
-- **Config screen**: tab, row, value (text, bound keys or volume slider), position and description; value changes spoken alone.
+## First thing next session: test 0.0.9
 
-## First thing next session: test 0.0.8
+1. Load, walk into the Unknown Realm (or wherever battles happen) until a battle starts. Expect "Battle. " and the enemy names, then the enemy's talk.
+2. Command menu: expect "Attack, 1 of 2. Physical attack (low damage)." and each move with its help line.
+3. Choose Attack: the target should be spoken with its HP ("Foul Will o' Wisp, HP 30 of 30"); move between targets if there are several.
+4. Watch the turn play out: expect "Attack", then the result ("Dodged the attack!") or the target's new HP ("Will o' Wisp, HP 12 of 30."); the enemy's skill name ("Deathtouch") and your HP after its hit.
+5. Press F2 at your turn: Press Turns, then enemies and party with HP (and MP). Compare with the screen: the number of Press Turn icons, and whether any are blinking.
+6. Win: expect "Battle results.".
 
-1. Launch: at the press-any-button screen expect "Title screen. Press any button."
-2. Title menu, CONFIG. Expect "AUDIO tab. CONFIRM, OK, 1 of 7. Apply changed settings." Move down: each row with its value and description. On BGM VOLUME press left/right: expect the new number alone. Switch tabs (the game's tab keys): expect "GAME tab. ..." and so on through KEYBOARD+MOUSE, where rows should say their key ("Command Menu, F, ...").
-3. Leave config without changing anything: expect "Returning without changing settings. Will you proceed?" then "Choice, 2 options. ...", each move, then Yes.
-4. Title menu, EXIT: expect "> End the game?" then "Choice, 2 options. Yes, 1 of 2", move, choose No; then later EXIT and Yes to quit.
-5. Load the save: after "Load completed." expect "Underground Facility". Walk to the terminal room door: expect "Terminal". Open and close the pause menu: tell me if the location is spoken again each time (it should not be).
-6. F1 on a config row.
-
-Then read the log: `[Config] Slider on BGM VOLUME: value ..., min ..., max ...` gives the volume range; `[Config] No configMenuUI on ...` lines mean a row's value was not found; `[TitleCue]` confirms the cue.
+Then read the log: `[Battle:Data]` lines show every raw value at each change (turn, phase, activeunit, press4_p, press4_ten, counts, exp, maka, units). Check the Press Turn numbers and the HP against what Francesco saw, and find which field says whose turn it is.
 
 ## Open problems and next steps (in order)
 
-1. **Check 0.0.8** against the log (slider range and wording, config positions against the screen, whether the location repeats).
-2. **Numbers system, then Magatama, Stats and item lists** (last Phase 2 screens Francesco asked for): these screens' real content is sprite digits (stats, HP, MP, level). Read them from `CounterCtr.value` (verified on the save list: `_fileNum`, `_playerLV`, `_playTime`), found through the screen's own classes (`statusUI`, `magUI`, `campUI` party panel) or by routing `CounterCtr.Set(int, ...)` writes by path like the TMP router. Text parts are mapped in class-index ("Pause menu sub-screens"): Magatama name `magname_base` (`TMC19`) with `magnote` lines; Stats name, race, skills, feature; item lists (`menu_itemskill`, `TMC01`, description `menu_note`); skill user pick (party name `TMC01`).
-3. Remaining small Phase 2 screens: name entry, difficulty select (`titlemode_item02..03`, `titlemode_note`).
-4. **Phase 2 gate**: new game through the prologue to the first save by ear.
-5. **Combat** (Francesco's order: after these screens, before pathfinding).
-6. **Pathfinding and navigation**: `fieldUI/fannounce` (Talk / Examine / Open Door / Enter / Exit), `fldPlayer`, `fldAutoMap`, the overhead map. OBS stills from Francesco when a question is purely visual.
+1. **Check 0.0.9** against the log: Press Turn meaning, HP numbers, whether party formindex matches the panel slot, what `activeunit`, `turn` and `phase` do, and the results' `exp` and `maka`.
+2. **Combat version 2**: whose turn it is ("Demi-fiend's turn") and who acts ("Will o' Wisp: Deathtouch"), damage amounts, weaknesses and resistances (hit results such as Weak, Resist, Null), Press Turns spoken after each action, skills and items menus in battle, targeting with duplicate enemies (via `nbTarSelProcessData_t.nowform` or the acting unit's `nowtform`), negotiation, the results screen's numbers, the level-up stat allocation (`statusUI`).
+3. **Numbers system for Magatama, Stats and item lists** (`CounterCtr.value`, see class-index "Save and load"); the config volume notches.
+4. A correct press-any-button cue (the Version text appears already during the Atlus splash).
+5. Remaining small Phase 2 screens: name entry, difficulty select; the Phase 2 gate (prologue to first save by ear).
+6. **Pathfinding and navigation** after combat (Francesco's order).
 
 ## Key facts to remember
 
@@ -70,4 +66,4 @@ Then read the log: `[Config] Slider on BGM VOLUME: value ..., min ..., max ...` 
 - Menus mark the highlighted item with a font material: pause and terminal `TMC01` (others `TMC00`), title `TMC00` (others `TMC15`).
 - Message engine `itfMesManager`: `SetMessage` never fires; `SwitchSpeaker`, `itfMesMngRequestMessage`, `SelectWindowDispOn`, `ChangeSelection(index, 1)` do.
 - `UIManager/Text/Text01000+` are 116 noise components rewritten every frame with a space; the TMP router drops blank writes first.
-- Code map: `Core/` (ModMain, Config, Log, Patcher, TmpRouter, TextUtil, UiUtil, LogArchive), `Speech/`, `Capture/` (probes, UI dumper), `Systems/Dialogue/` (DialogueReader, ChoiceReader), `Systems/SpeechOrder.cs` (first line waits behind dialogue or a prompt), `Systems/Menus/` (MenuReader, AnnouncementReader, SaveListReader, SaveChoiceReader, ConfigReader, TitleCue), `Input/Hotkeys.cs`.
+- Code map: `Core/` (ModMain, Config, Log, Patcher, TmpRouter, TextUtil, UiUtil, LogArchive), `Speech/`, `Capture/` (probes, UI dumper), `Systems/Dialogue/` (DialogueReader, ChoiceReader), `Systems/SpeechOrder.cs` (first line waits behind dialogue or a prompt), `Systems/Menus/` (MenuReader, AnnouncementReader, SaveListReader, SaveChoiceReader, ConfigReader), `Systems/Battle/` (BattleReader), `Input/Hotkeys.cs`.
