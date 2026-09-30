@@ -1,0 +1,59 @@
+using System.Collections.Generic;
+using System.Text;
+using UnityEngine;
+
+namespace NocturneAccess.Core
+{
+    /// <summary>Small helpers for describing Unity UI objects in logs.</summary>
+    internal static class UiUtil
+    {
+        private const int MaxDepth = 16;
+        private const int MaxLoggedChars = 600;
+
+        /// <summary>Hierarchy path such as "Canvas/mesWindow/mes_textTM", root first.</summary>
+        internal static string PathOf(Transform transform)
+        {
+            if (transform == null)
+                return "(null)";
+
+            var parts = new List<string>();
+            Transform t = transform;
+            for (int depth = 0; t != null && depth < MaxDepth; depth++)
+            {
+                parts.Add(t.name);
+                t = t.parent;
+            }
+            if (t != null)
+                parts.Add("...");
+
+            parts.Reverse();
+            return string.Join("/", parts);
+        }
+
+        /// <summary>Keeps a logged string on one line: escapes line breaks and tabs, truncates very long text.</summary>
+        internal static string Escape(string text)
+        {
+            if (text == null)
+                return "(null)";
+
+            var sb = new StringBuilder(text.Length + 8);
+            foreach (char c in text)
+            {
+                switch (c)
+                {
+                    case '\n': sb.Append("\\n"); break;
+                    case '\r': break;
+                    case '\t': sb.Append("\\t"); break;
+                    default: sb.Append(c); break;
+                }
+            }
+
+            if (sb.Length > MaxLoggedChars)
+            {
+                sb.Length = MaxLoggedChars;
+                sb.Append("...(truncated)");
+            }
+            return sb.ToString();
+        }
+    }
+}

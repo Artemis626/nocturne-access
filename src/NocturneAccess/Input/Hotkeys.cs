@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using MelonLoader;
+using NocturneAccess.Capture;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
 using UnityEngine;
@@ -18,13 +20,22 @@ namespace NocturneAccess.Input
     /// </summary>
     internal static class Hotkeys
     {
-        private static KeyCode _statusKey = KeyCode.None;
+        private sealed class Binding
+        {
+            public string Name;
+            public KeyCode Key;
+            public Action Action;
+        }
+
+        private static readonly List<Binding> Bindings = new List<Binding>();
         private static bool _disabled;
 
         internal static void Init()
         {
-            _statusKey = ParseKey(Config.KeyStatus, KeyCode.F8);
-            Log.Info($"Hotkeys: status = {_statusKey}.");
+            Bindings.Clear();
+            Add("status", Config.KeyStatus, KeyCode.F8, SpeakStatus);
+            Add("dump UI", Config.KeyDumpUi, KeyCode.F6, UiTreeDumper.Dump);
+            Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle);
         }
 
         internal static void Update()
@@ -32,17 +43,49 @@ namespace NocturneAccess.Input
             if (_disabled)
                 return;
 
-            try
+            foreach (Binding binding in Bindings)
             {
-                if (_statusKey != KeyCode.None && UnityInput.GetKeyDown(_statusKey))
-                    SpeechManager.Say($"Nocturne Access running. Speech through {SpeechManager.BackendName}.", interrupt: true, force: true);
+                bool pressed;
+                try
+                {
+                    pressed = UnityInput.GetKeyDown(binding.Key);
+                }
+                catch (Exception ex)
+                {
+                    // Called every frame: log once and stop, rather than flooding the log.
+                    _disabled = true;
+                    Log.Error("Hotkeys disabled: reading the keyboard failed: " + ex);
+                    return;
+                }
+
+                if (!pressed)
+                    continue;
+
+                try
+                {
+                    Log.Debug($"Key {binding.Key} ({binding.Name})");
+                    binding.Action();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"Key {binding.Key} ({binding.Name}) failed: {ex}");
+                }
             }
-            catch (Exception ex)
-            {
-                // Called every frame: log once and stop, rather than flooding the log.
-                _disabled = true;
-                Log.Error("Hotkeys disabled after an error: " + ex);
-            }
+        }
+
+        private static void SpeakStatus()
+        {
+            SpeechManager.Say($"Nocturne Access running. Speech through {SpeechManager.BackendName}.", interrupt: true, force: true);
+        }
+
+        private static void Add(string name, MelonPreferences_Entry<string> entry, KeyCode fallback, Action action)
+        {
+            KeyCode key = ParseKey(entry, fallback);
+            if (key == KeyCode.None)
+                return;
+
+            Bindings.Add(new Binding { Name = name, Key = key, Action = action });
+            Log.Info($"Hotkeys: {name} = {key}.");
         }
 
         private static KeyCode ParseKey(MelonPreferences_Entry<string> entry, KeyCode fallback)

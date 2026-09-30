@@ -27,6 +27,14 @@ Nocturne Access is licensed under the GNU General Public License version 3 (see 
 - Screen reader abstraction library by Davy Kager. License: GNU LGPL. Source: https://github.com/dkager/tolk
 - Used only if the player places `Tolk.dll` beside `smt3hd.exe`.
 
+## Design references
+
+No code from these projects is included yet. If any is borrowed, it will be credited here with its license text.
+
+- NocturneModernController, NocturneAddNewSkills (MIT, Gray Ghost): class and method names for field and skill data.
+- MatthiewNocturne (MIT, Matthiew Purple): battle UI class names and object paths.
+- Suikoden Access (Francesco): text-hooking design, `docs/TEXT-HOOKING-HANDOFF.md`.
+
 ## Game files
 
 Shin Megami Tensei III Nocturne HD Remaster is © ATLUS / SEGA. No game files, and no assemblies generated from them, are included in this repository or its releases.

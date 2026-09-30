@@ -29,12 +29,32 @@ Game version at time of verification: 1.0.4 (Latest.log).
 
 No Rewired and no Unity Input System assembly exists in this build (checked the full proxy list and scanned Assembly-CSharp and Assembly-CSharp-firstpass for their names).
 
+## Text and messages
+
+The game draws its UI text with TextMeshPro: 45 classes in Assembly-CSharp reference TMP types (proxy decompile, 30 Sep 2026). Only `Nme_Draw` also references legacy `UnityEngine.UI.Text`.
+
+| Name | Kind | Source | What we know |
+| --- | --- | --- | --- |
+| `Il2CppTMPro.TMP_Text` | class | Proxy, Unity.TextMeshPro, 30 Sep 2026 | Base of all TMP text. Setters hooked by the probe: `set_text(string)`, `SetText(string)`, `SetText(string, bool)`. Other writers exist and are not hooked yet: `SetText(string, float...)`, `SetText(StringBuilder)`, `SetCharArray(...)`. Inherits `UnityEngine.UI.MaskableGraphic`, so builds need `UnityEngine.UI.dll`. |
+| `Il2CppTMPro.TextMeshProUGUI`, `Il2CppTMPro.TextMeshPro` | classes | Proxy, Unity.TextMeshPro | Concrete TMP types (canvas UI and world-space). |
+| TMP users in Assembly-CSharp | classes | Proxy decompile, 30 Sep 2026 | Includes `itfMesManager`, `campMenu`, `campUI`, `dds3TitleMain`, `dds3StartMenuDisp`, `ModeSelect`, `configMenuUI`, `dds3ConfigMainSteam`, `saveUI`, `saveFileUI`, `statusUI`, `devilInfo`, `DHeartsUI`, `autoMapUI`, `flocationUI`, `buttonguideUI`, `fclUI`, `fclShopDraw`, `fclTerminalDraw`, `fclCombineDraw`, `fclRecoverDraw`, `fclRagDraw`, `fldDraw`, `cmpDraw`, `cmpPanel`, `nbCommSelProcess`, `ScrollText`, `MemoryDisp`. Candidates for Phase 2 menu handlers. |
+| `Il2Cpp.itfMesManager` | class, all static | Proxy, Assembly-CSharp, 30 Sep 2026 | The message engine ported from PS2 (`itf` = interface, `Mes` = message). Holds dialogue text, speaker, message windows and choice (select) windows. Methods probed in Phase 1 are listed in `Capture/MesProbe.cs`. Key ones: `SetMessage(GameObject obj, int line, string text)` (CallerCount 0), `itfMesMngRequestMessage(int id, int message, int page, int callmode = 0)` (3 callers), `itfMesMngGetStrImmediate(int id, int message, int page) → string`, `WindowDispOn(instanceMes_tag)`, `WindowDispOff(bool sw = false)`, `SwitchSpeaker(bool sw, bool disp = true)`, `GetSpeakerName(instanceMes_tag) → byte[]`, `SelectWindowDispOn/Off(instanceMes_tag)`, `itfMesMngRequestSelect(int id, int select)`, `ChangeSelection(int index, int onoff)` (8 callers), `SelectItemMove(select_tag psel, int direct)` (CallerCount 0), name lookups `DAT_STR_REF_DVNAME/RCNAME/SKNAME/ITNAME/DHNAME(int) → string`. Per-frame (not hooked): `CalcMesFlow`, `CalcWindow`, `CalcMessage`, `CalcSelect`. `ConvertZenkakuNumber` takes `ref string` (not hooked). |
+| `Il2Cpp.instanceMes_tag`, `message_tag`, `select_tag`, `Speaker_tag`, `window_tag`, `variable_tag`, `mesflow_tag` | classes | Proxy, Assembly-CSharp | Message engine state (PS2 structs ported as classes). Fields not yet inspected. |
+| `Il2Cpp.datSkillName.Get(int id, int Devilid = 0) → string` | static method | Proxy; Repo: NocturneAddNewSkills | Skill name lookup. |
+| `Il2Cpp.datItemName.Get(int id) → string` | static method | Proxy; Repo: NocturneAddNewSkills | Item name lookup. |
+| `Il2Cpp.datSkillHelp_msg.Get(int id) → string`, `Il2Cpp.datItemHelp_msg.Get(int id) → string` | static methods | Proxy; Repo: NocturneAddNewSkills | Skill and item help text. |
+| `Il2Cpp.nbHelpProcess.nbDispText(string text1, string text2, int type, int max, uint col, bool type_skill = false)` | static method | Proxy; Repo: NocturneAddNewSkills | Battle help line. |
+| `Il2Cpp.nbNegoProcess.nbDispNegoMessage(ref nbNegoProcessData_t n, int msgid, int msgno, int sel)` | static method | Proxy; Repo: MatthiewNocturne | Negotiation message. Takes a by-ref struct: not hooked (Suikoden handoff §2.6). |
+| `Il2Cpp.nbMainProcess.GetBattleUI(int index = 0) → GameObject` | static method | Proxy; Repo: MatthiewNocturne (AnalyzeBosses) | Battle UI roots. Index 5 is the Analyze window, whose rows are `banalyze_skill/banalyze_skillNN/banalyze_textTM` (`TextMeshProUGUI`). TMP objects in this game end in `TM`. |
+| `Il2Cpp.slMain.slHitAnyKeyNextFuncDelegate` | delegate | Proxy type list | Opening splash "press any key". Likely why any key (F8 too) restarts the opening music there. |
+
 ## Field
 
 | Name | Kind | Source | What we know |
 | --- | --- | --- | --- |
-| `Il2Cpp.fldPlayer` | class | Proxy, Assembly-CSharp, 30 Sep 2026; Repo: NocturneModernController PR #7 | Field player logic. Not yet inspected. |
-| `fldPlayerCalc` | method name | Proxy string table, 30 Sep 2026; Repo: NocturneModernController PR #7 | A method, not a class. Variants in the same table: `fldPlayerCalcForUnity`, `fldPlayerCalc_Hit`, `fldPlayerCalc_Nml`, `fldPlayerCalc_FastStart`, `fldPlayerCalcHasigo`. Owning class to confirm in Phase 1. |
+| `Il2Cpp.fldPlayer` | class | Proxy, Assembly-CSharp, 30 Sep 2026; Repo: NocturneModernController PR #7 | Field player logic. |
+| `Il2Cpp.fldPlayer.fldPlayerCalc() → int` | static method | Proxy decompile, 30 Sep 2026; Repo: NocturneModernController (patched there) | Variants on the same class: `fldPlayerCalc_Hit()`, `fldPlayerCalc_WarpRun()`, `fldPlayerCalcHasigo() → int` (ladder), `fldPlayerCalc_Nml() → int`, `fldPlayerCalc_WarpStart()`, `fldPlayerCalc_FastStart()`, `fldPlayerCalc_Nml_syukan() → int`, `fldPlayerCalcForUnity()`. |
+| `Il2Cpp.fldCamera.fldCamMain() → Il2CppSystem.Object` | static method | Proxy; Repo: NocturneModernController | Field camera update. |
 | `Il2Cpp.fldAutoMap` | class | Proxy, Assembly-CSharp, 30 Sep 2026 | Automap. Candidate for layout data. Not yet inspected. |
 
 ## MelonLoader 0.6.1 API used by the mod
@@ -45,8 +65,20 @@ No Rewired and no Unity Input System assembly exists in this build (checked the 
 | `MelonMod.OnUpdate` | Loader | `Core/ModMain.cs` |
 | `MelonGameAttribute(developer, name)`: loads only when both match exactly | Loader (`IsCompatible` body) | `Core/ModMain.cs` |
 | Developer `アトラス`, game name `smt3hd` | Log | `Core/ModMain.cs` |
-| `MelonEnvironment.GameRootDirectory`, `UserDataDirectory`, `UserLibsDirectory` | Loader | `Core/Config.cs`, `Speech/*Backend.cs` |
+| `MelonEnvironment.GameRootDirectory`, `UserDataDirectory`, `UserLibsDirectory`, `MelonLoaderDirectory` | Loader | `Core/Config.cs`, `Core/LogArchive.cs`, `Speech/*Backend.cs` |
 | `MelonPreferences.CreateCategory`, `MelonPreferences_Category.SetFilePath(path, autoload, printmsg)`, `CreateEntry<T>`, `SaveToFile` | Loader | `Core/Config.cs` |
+| `HarmonyDontPatchAllAttribute` (assembly), `MelonBase.HarmonyInstance` | Loader | `Core/ModMain.cs`, `Core/Patcher.cs` |
+| `MelonMod.OnSceneWasInitialized(int buildIndex, string sceneName)` | Loader | `Core/ModMain.cs` |
+| Launch options `--melonloader.maxwarnings` / `--melonloader.maxerrors` (default 100 per log) | Loader docs (`MelonLoader/Documentation/README.md`) | Past 100 warnings or errors MelonLoader stops logging them: keep warnings rare. |
+| No log history: only `MelonLoader/Latest.log`, overwritten each launch | Observed 30 Sep 2026 | Reason for `Core/LogArchive.cs`. |
+
+## Unity API used by the mod
+
+| Name | Source | Used in |
+| --- | --- | --- |
+| `Resources.FindObjectsOfTypeAll<T>()` | Proxy, UnityEngine.CoreModule | `Capture/UiTreeDumper.cs` |
+| `Object.GetInstanceID()`, `Object.name`, `Component.gameObject`, `Component.transform`, `Transform.parent`, `GameObject.activeInHierarchy`, `Behaviour.isActiveAndEnabled` | Proxy, UnityEngine.CoreModule | `Capture/*`, `Core/UiUtil.cs` |
+| `Il2CppSystem.Object.GetIl2CppType()` | Proxy, Il2Cppmscorlib | Real runtime type of a component (the managed wrapper may only know the declared type). |
 
 ## Screen reader DLLs
 

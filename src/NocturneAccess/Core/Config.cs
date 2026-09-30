@@ -23,9 +23,12 @@ namespace NocturneAccess.Core
 
         // Keys (names are UnityEngine.KeyCode values, e.g. F8, Backslash, Alpha1)
         internal static MelonPreferences_Entry<string> KeyStatus { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyDumpUi { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyToggleProbe { get; private set; }
 
         // Debug
         internal static MelonPreferences_Entry<bool> VerboseLogging { get; private set; }
+        internal static MelonPreferences_Entry<bool> ProbeEnabled { get; private set; }
 
         internal static bool VerboseLoggingEnabled => VerboseLogging?.Value ?? false;
 
@@ -47,11 +50,17 @@ namespace NocturneAccess.Core
             keys.SetFilePath(FilePath, true, false);
             KeyStatus = keys.CreateEntry("Status", "F8", "Status key",
                 "Speaks whether the mod is running and which speech backend it uses.");
+            KeyDumpUi = keys.CreateEntry("DumpUi", "F6", "Dump UI key",
+                "Debug: writes every text currently visible on screen to Latest.log.");
+            KeyToggleProbe = keys.CreateEntry("ToggleProbe", "F7", "Toggle probe key",
+                "Debug: pauses or resumes the text probe (only when Probe = true).");
 
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);
             VerboseLogging = debug.CreateEntry("VerboseLogging", false, "Verbose logging",
                 "Writes [DEBUG] lines to Latest.log, including lines dropped by the dedupe window.");
+            ProbeEnabled = debug.CreateEntry("Probe", true, "Text probe",
+                "Research tool: logs every UI text and message-engine call to Latest.log. Needs a restart. On during development; will default to off for players.");
 
             // Write the file now so new settings appear with their defaults.
             speech.SaveToFile(false);

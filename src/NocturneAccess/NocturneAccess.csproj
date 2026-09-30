@@ -7,7 +7,7 @@
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <Version>0.0.1</Version>
+    <Version>0.0.2</Version>
     <!-- Embedded PDB gives file and line numbers in MelonLoader stack traces. -->
     <DebugType>embedded</DebugType>
     <Deterministic>true</Deterministic>
@@ -28,6 +28,10 @@
     <Reference Include="Il2Cppmscorlib" HintPath="$(DllsDir)Il2Cppmscorlib.dll" Private="false" />
     <Reference Include="UnityEngine.CoreModule" HintPath="$(DllsDir)UnityEngine.CoreModule.dll" Private="false" />
     <Reference Include="UnityEngine.InputLegacyModule" HintPath="$(DllsDir)UnityEngine.InputLegacyModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UI" HintPath="$(DllsDir)UnityEngine.UI.dll" Private="false" />
+    <Reference Include="UnityEngine.UIModule" HintPath="$(DllsDir)UnityEngine.UIModule.dll" Private="false" />
+    <Reference Include="Unity.TextMeshPro" HintPath="$(DllsDir)Unity.TextMeshPro.dll" Private="false" />
+    <Reference Include="Assembly-CSharp" HintPath="$(DllsDir)Assembly-CSharp.dll" Private="false" />
   </ItemGroup>
 
   <!-- The game only runs on Windows, and so do the screen reader backends. -->

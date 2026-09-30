@@ -118,12 +118,13 @@ Nocturne Access/                (repo root; GitHub slug suggestion: nocturne-acc
   Directory.Build.props         shared paths; imports NocturneAccess.local.props
   NocturneAccess.local.props    (gitignored) GamePath; builds auto-deploy to GamePath\Mods
   src/NocturneAccess/
-    Core/        ModMain.cs, Config.cs, Log.cs
+    Core/        ModMain.cs, Config.cs, Log.cs, Patcher.cs, UiUtil.cs, LogArchive.cs
     Speech/      ISpeechBackend.cs, NvdaBackend.cs, TolkBackend.cs, LogOnlyBackend.cs, SpeechManager.cs
     Input/       Hotkeys.cs    (namespace NocturneAccess.Input: use the UnityInput alias for Unity's Input)
-    Capture/     TmpTextProbe.cs, UiTreeDumper.cs            (Phase 1)
+    Capture/     Probes.cs, TmpTextProbe.cs, MesProbe.cs, UiTreeDumper.cs   (Phase 1 research tools)
     Systems/     Dialogue/, Menus/, Field/, Battle/, ...     (Phase 2 onwards)
-  tools/         copy-references.ps1 (fills _dlls/ from a local install)
+  tools/         copy-references.ps1 (fills _dlls/ from a local install), log-summary.sh (log overview)
+  research/refs/ (gitignored) clones of the MIT reference repos
   _dlls/         (gitignored game + loader references)
   research/      (gitignored decomp dumps, type lists, logs)
   docs/          HANDOFF.md, class-index.md, KEYS.md
@@ -221,7 +222,26 @@ Open questions for Phase 0:
 
 ## Current state
 
-Updated 30 Sep 2026, end of session 1.
+Updated 30 Sep 2026, session 1.
+
+**Phase 1: probe built (0.0.2), waiting for the probe session.** Design follows `docs/TEXT-HOOKING-HANDOFF.md` (Francesco's Suikoden Access notes).
+
+Findings so far:
+
+- UI text is TextMeshPro (45 game classes use it; TMP object names end in `TM`). Hooking TMP setters sees the game's real strings, so the "never reconstruct" rule is satisfiable everywhere found so far.
+- Dialogue and choices run through `itfMesManager`, the PS2 message engine, which hands finished strings to the UI (`SetMessage(GameObject, int line, string text)`), and has explicit select-window and cursor methods. This is the likely Phase 2 dialogue hook, but some candidates show `CallerCount(0)` (possibly inlined), so the probe must prove which ones fire.
+- Name and help text come from lookups (`datSkillName.Get`, `datItemName.Get`, `datSkillHelp_msg.Get`, `datItemHelp_msg.Get`, `itfMesManager.DAT_STR_REF_*`): menus can be read from game data, not just labels.
+
+What 0.0.2 adds:
+
+- `Core/Patcher.cs`: tolerant, logged patching (`[assembly: HarmonyDontPatchAll]`, strict signatures, patched / NOT DECLARED / FAILED lines and a summary).
+- `Capture/TmpTextProbe.cs`: postfixes on `TMP_Text.set_text`, `SetText(string)`, `SetText(string, bool)`; logs `[Probe:TMP] path [type] = "text"` once a text settles (200 ms), with write counts and hidden flags, muting components that change over 30 times a second.
+- `Capture/MesProbe.cs`: postfixes on 31 message-engine and lookup methods; logs `[Probe:Mes] Class.Method(args) -> result`, repeat-limited and muted if noisy.
+- `Capture/UiTreeDumper.cs`: F6 writes every visible TMP text to the log. F7 pauses or resumes the probe. `Probe = true` in `[NocturneAccess_Debug]` (turn the default off before any player release).
+- `[Scene]` lines on each scene load. `Core/LogArchive.cs`: each session's log copied to `UserData/NocturneAccess/Logs/` on quit.
+- `tools/log-summary.sh`: quick overview Claude runs after every game run.
+
+**Next step:** Francesco plays from the title screen through the prologue to the first save terminal in Shinjuku Medical Center with the probe on, pressing F6 on each new kind of screen. Claude reads the log and archive, records which hooks fire and every component name in `docs/class-index.md`, and the Phase 1 gate is judged from that.
 
 **Phase 0: gate passed (30 Sep 2026).** Verified in game and in `Latest.log`: both mods load ("2 Mods loaded"), the NVDA backend found `nvdaControllerClient.dll` with NVDA running, "Nocturne Access loaded" is spoken at startup, and F8 speaks the status line on every press. No crash, and no conflict with HD Ears or Graphics Configurator (still 120 fps). The game launches normally.
 
