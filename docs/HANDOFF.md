@@ -262,7 +262,15 @@ What 0.0.2 adds:
 
 **Phase 2 step 1 verified in game with 0.0.4 (30 Sep 2026, 15:48 session, controller, console hidden):** every dialogue page spoken whole with the speaker named (Hijiri, Soul); narration pages ("> There is a large cylinder. What will you do?") spoken without a stale name; the "> End the game?" Yes/No choice announced ("Choice, 2 options. No, 2 of 2") and every cursor move read. No garbled speech; the 30-second log snapshots worked. Pause-menu screens mapped (class-index).
 
-**Next step, Phase 2 step 2: menus.** One reader for "highlighted item" menus using the font-material signal (pause menu and submenus, terminal menu: `TMC01` highlighted), speaking the screen title on entry and the item on each move; then the title menu (`TMC00` highlighted plus its note), the save/load list and prompts. Numbers (HP, MP, stats) come later from game data, since they are not text.
+**Phase 2 step 2 built (0.0.5), waiting for the in-game test.**
+
+- `Systems/Menus/MenuReader.cs`: generic reader for menus that mark the cursor with a font material. Specs: pause menu and its submenus (`TMC01`, title from `title_window_oubei`), terminal menu (`TMC01`), title menu (`TMC00`, description from `titlemain_note` lines). Says "Title. Item, N of M. Description"; waits until the item is visible; the first announcement after opening is queued, later moves interrupt; a menu whose highlighted item disappears counts as closed.
+- `Systems/Menus/AnnouncementReader.cs`: save/load prompts (`saveannounce_tex/Text_announce01TM`, `savelist_data/Text_announceTM`) and the controller-disconnect notice, spoken once visible, queued.
+- F1 repeats whichever came last (menu or dialogue). Config `[NocturneAccess_Menus] Enabled`.
+- The pause menu has no description text: its right side is the party panel (names; HP/MP are sprite digits). The title menu's notes are its descriptions.
+- Not yet: the save-slot list (all empty slots are `savefile(Clone)` with identical paths, so slots need identity by component, not path) and the save prompt's Yes/No (no highlight marker seen yet); config screen values; name entry.
+
+**Plan for step 2 (kept for reference):** One reader for "highlighted item" menus using the font-material signal (pause menu and submenus, terminal menu: `TMC01` highlighted), speaking the screen title on entry and the item on each move; then the title menu (`TMC00` highlighted plus its note), the save/load list and prompts. Numbers (HP, MP, stats) come later from game data, since they are not text.
 
 **First test of 0.0.3 (30 Sep 2026, around 15:20–15:41) was untestable: garbled technical speech on every input.** Troubleshooting:
 

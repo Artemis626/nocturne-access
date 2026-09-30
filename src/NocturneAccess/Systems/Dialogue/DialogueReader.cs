@@ -47,6 +47,7 @@ namespace NocturneAccess.Systems.Dialogue
 
         /// <summary>The last page with its speaker, for the repeat key.</summary>
         internal static string LastUtterance { get; private set; } = "";
+        internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
 
         internal static void Install()
         {
@@ -153,6 +154,7 @@ namespace NocturneAccess.Systems.Dialogue
                           && (Config.SpeakerEveryPage.Value || speaker != _lastSpeakerSpoken || _windowReopened);
 
             LastUtterance = speaker.Length > 0 ? $"{speaker}: {page}" : page;
+            LastUtteranceAt = Environment.TickCount64;
             _lastPage = page;
             _lastSpeakerSpoken = speaker;
             _clearedSinceSpoken = false;

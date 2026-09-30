@@ -1,0 +1,278 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text.RegularExpressions;
+using Il2CppTMPro;
+using NocturneAccess.Core;
+using NocturneAccess.Speech;
+
+namespace NocturneAccess.Systems.Menus
+{
+    /// <summary>
+    /// Speaks the highlighted item of menus that mark their cursor with a font material.
+    ///
+    /// Source (docs/class-index.md, "Menu highlight is a font material"): when the cursor moves,
+    /// the game rewrites the old item with its normal material and the new item with the highlight
+    /// material. So a write that carries the highlight material means "this item now has the cursor".
+    ///
+    /// Each menu is a MenuSpec: item path pattern (with a slot), highlight material, optional
+    /// screen-title component, optional description lines.
+    /// - Announced 80 ms after the last related write, so the title and description written in the
+    ///   same frame are included: "Title. Item, 2 of 6. Description".
+    /// - Menus are often built while hidden, so an announcement waits until the item is visible.
+    /// - The first announcement after a menu opens is queued (it must not cut off dialogue such as
+    ///   the terminal's question); later cursor moves interrupt.
+    /// - When the highlighted item disappears, the menu counts as closed, so reopening it announces again.
+    /// </summary>
+    internal static class MenuReader
+    {
+        private const string Tag = "[Menu]";
+        private const long SettleMs = 80;
+        private const long WaitForVisibleMs = 60_000;
+        private const long VisibilityPollMs = 250;
+
+        private sealed class MenuSpec
+        {
+            public string Name;
+            public Regex Item;          // group "slot": "top", "baseNN" or "NN"
+            public string Highlight;    // material tag marking the highlighted item
+            public string TitlePath;    // exact path, or null
+            public Regex Description;   // group "line", or null
+        }
+
+        private sealed class Slot
+        {
+            public TMP_Text Component;
+            public string Text;
+        }
+
+        private sealed class MenuState
+        {
+            public MenuSpec Spec;
+            public readonly Dictionary<int, Slot> Slots = new Dictionary<int, Slot>();
+            public readonly string[] Description = new string[8];
+            public int Current = -1;
+            public string CurrentText;
+            public TMP_Text CurrentComponent;
+            public int PendingSlot = -1;
+            public long PendingSince;
+            public long LastChange;
+            public string Title = "";
+            public string LastTitleSpoken = "";
+        }
+
+        // Paths and materials: probe logs of 30 Sep 2026, see docs/class-index.md.
+        private static readonly MenuSpec[] Specs =
+        {
+            new MenuSpec
+            {
+                Name = "Pause menu",
+                Item = new Regex(@"^Canvas_UI/campUIBase/campUI/menu/menu_window/menu_(?<slot>top|base\d\d)/TextTM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC01\">",
+                TitlePath = "Canvas_UI/campUIBase/campUI/title_window/title_window_oubei/TextTM",
+            },
+            new MenuSpec
+            {
+                Name = "Terminal menu",
+                Item = new Regex(@"^Canvas_UI/terminalUI/institutionUI/institution_menu/insmenu_window/insmenu_(?<slot>top|base\d\d)/TextTM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC01\">",
+            },
+            new MenuSpec
+            {
+                Name = "Title menu",
+                Item = new Regex(@"^Canvas_UI/titleUI\(Clone\)/titlemain/titlemainmenu/stretch/titlemain_item(?<slot>\d\d)/slide/Text_TM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC00\">",
+                Description = new Regex(@"^Canvas_UI/titleUI\(Clone\)/titlemain/titlemain_note/Text_mainnote(?<line>\d\d)TM$", RegexOptions.Compiled),
+            },
+        };
+
+        private static readonly List<MenuState> States = Specs.Select(s => new MenuState { Spec = s }).ToList();
+        private static readonly Stopwatch Clock = Stopwatch.StartNew();
+        private static long _lastPoll;
+
+        /// <summary>The last menu announcement and when it was made, for the repeat key.</summary>
+        internal static string LastUtterance { get; private set; } = "";
+        internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
+        internal static long Now => Clock.ElapsedMilliseconds;
+
+        internal static void Install()
+        {
+            if (!Config.MenusEnabled.Value)
+            {
+                Log.Info($"{Tag} Off in the config.");
+                return;
+            }
+            TmpRouter.Register("MenuReader", Classify);
+        }
+
+        private static TmpRouter.Handler Classify(string path)
+        {
+            foreach (MenuState state in States)
+            {
+                MenuSpec spec = state.Spec;
+
+                Match item = spec.Item.Match(path);
+                if (item.Success)
+                {
+                    int slot = SlotNumber(item.Groups["slot"].Value);
+                    return (component, raw) => OnItem(state, slot, component, raw);
+                }
+
+                if (spec.TitlePath != null && path == spec.TitlePath)
+                    return (component, raw) => OnTitle(state, raw);
+
+                if (spec.Description != null)
+                {
+                    Match desc = spec.Description.Match(path);
+                    if (desc.Success)
+                    {
+                        int line = int.Parse(desc.Groups["line"].Value) - 1;
+                        if (line >= 0 && line < state.Description.Length)
+                            return (component, raw) => OnDescription(state, line, raw);
+                    }
+                }
+            }
+            return null;
+        }
+
+        /// <summary>"top" is the first slot; "base02" and "02" are slot 2.</summary>
+        private static int SlotNumber(string slot)
+        {
+            if (slot == "top")
+                return 1;
+            string digits = new string(slot.Where(char.IsDigit).ToArray());
+            return int.TryParse(digits, out int n) ? n : 99;
+        }
+
+        private static void OnItem(MenuState state, int slot, TMP_Text component, string raw)
+        {
+            string text = TextUtil.Clean(raw);
+            if (!state.Slots.TryGetValue(slot, out Slot s))
+                state.Slots[slot] = s = new Slot();
+            s.Component = component;
+            s.Text = text;
+
+            if (!raw.Contains(state.Spec.Highlight) || text.Length == 0)
+                return;
+            if (state.PendingSlot < 0 && slot == state.Current && text == state.CurrentText)
+                return;
+
+            long now = Now;
+            if (state.PendingSlot < 0)
+                state.PendingSince = now;
+            state.PendingSlot = slot;
+            state.LastChange = now;
+        }
+
+        private static void OnTitle(MenuState state, string raw)
+        {
+            state.Title = TextUtil.Clean(raw);
+            if (state.PendingSlot >= 0)
+                state.LastChange = Now;
+        }
+
+        private static void OnDescription(MenuState state, int line, string raw)
+        {
+            state.Description[line] = TextUtil.Clean(raw);
+            if (state.PendingSlot >= 0)
+                state.LastChange = Now;
+        }
+
+        /// <summary>Called every frame.</summary>
+        internal static void Tick()
+        {
+            long now = Now;
+            bool poll = now - _lastPoll >= VisibilityPollMs;
+            if (poll)
+                _lastPoll = now;
+
+            foreach (MenuState state in States)
+            {
+                try
+                {
+                    if (state.PendingSlot >= 0 && now - state.LastChange >= SettleMs)
+                        TryAnnounce(state, now);
+                    else if (poll && state.Current >= 0 && state.PendingSlot < 0 && !IsVisible(state.CurrentComponent))
+                        Close(state);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"{Tag} {state.Spec.Name}: {ex.Message}");
+                    state.PendingSlot = -1;
+                }
+            }
+        }
+
+        private static void TryAnnounce(MenuState state, long now)
+        {
+            if (!state.Slots.TryGetValue(state.PendingSlot, out Slot slot))
+            {
+                state.PendingSlot = -1;
+                return;
+            }
+
+            // Built while hidden: wait until it is shown.
+            if (!IsVisible(slot.Component))
+            {
+                if (now - state.PendingSince > WaitForVisibleMs)
+                    state.PendingSlot = -1;
+                return;
+            }
+
+            bool opening = state.Current < 0;
+            state.Current = state.PendingSlot;
+            state.CurrentText = slot.Text;
+            state.CurrentComponent = slot.Component;
+            state.PendingSlot = -1;
+
+            List<int> visible = state.Slots
+                .Where(kv => kv.Value.Text.Length > 0 && IsVisible(kv.Value.Component))
+                .Select(kv => kv.Key)
+                .OrderBy(k => k)
+                .ToList();
+            int position = visible.IndexOf(state.Current) + 1;
+            string item = position > 0 ? $"{slot.Text}, {position} of {visible.Count}" : slot.Text;
+
+            var parts = new List<string>();
+            if (state.Title.Length > 0 && state.Title != state.LastTitleSpoken)
+            {
+                parts.Add(state.Title);
+                state.LastTitleSpoken = state.Title;
+            }
+            parts.Add(item);
+
+            string description = string.Join(" ", state.Description.Where(d => !string.IsNullOrEmpty(d)));
+            if (description.Length > 0)
+                parts.Add(description);
+
+            string utterance = string.Join(". ", parts);
+            LastUtterance = utterance;
+            LastUtteranceAt = Environment.TickCount64;
+            if (opening)
+                Log.Info($"{Tag} {state.Spec.Name} opened.");
+            SpeechManager.Say(utterance, interrupt: !opening, force: true);
+        }
+
+        private static void Close(MenuState state)
+        {
+            state.Current = -1;
+            state.CurrentText = null;
+            state.CurrentComponent = null;
+            state.LastTitleSpoken = "";
+            Log.Info($"{Tag} {state.Spec.Name} closed.");
+        }
+
+        private static bool IsVisible(TMP_Text component)
+        {
+            try
+            {
+                return component != null && component.gameObject.activeInHierarchy;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+}

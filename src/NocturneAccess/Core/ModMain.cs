@@ -4,6 +4,7 @@ using NocturneAccess.Core;
 using NocturneAccess.Input;
 using NocturneAccess.Speech;
 using NocturneAccess.Systems.Dialogue;
+using NocturneAccess.Systems.Menus;
 
 // Developer and game name exactly as MelonLoader reports them in Latest.log
 // ("Game Developer: アトラス", "Game Name: smt3hd"), so the mod only loads in this game.
@@ -17,7 +18,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.4";
+        internal const string ModVersion = "0.0.5";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
@@ -32,6 +33,8 @@ namespace NocturneAccess.Core
             TmpRouter.Install();
             DialogueReader.Install();
             ChoiceReader.Install();
+            MenuReader.Install();
+            AnnouncementReader.Install();
             Probes.Install();
             Patcher.LogSummary();
 
@@ -53,6 +56,8 @@ namespace NocturneAccess.Core
         {
             Hotkeys.Update();
             DialogueReader.Tick();
+            MenuReader.Tick();
+            AnnouncementReader.Tick();
             LogArchive.Tick();
             Probes.Tick();
         }

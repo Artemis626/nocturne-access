@@ -5,6 +5,7 @@ using NocturneAccess.Capture;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
 using NocturneAccess.Systems.Dialogue;
+using NocturneAccess.Systems.Menus;
 using UnityEngine;
 // Inside the NocturneAccess.Input namespace, a bare "Input" means this namespace, not Unity's class.
 using UnityInput = UnityEngine.Input;
@@ -77,6 +78,12 @@ namespace NocturneAccess.Input
 
         private static void RepeatLast()
         {
+            if (MenuReader.LastUtteranceAt > DialogueReader.LastUtteranceAt && MenuReader.LastUtterance.Length > 0)
+            {
+                SpeechManager.Say(MenuReader.LastUtterance, interrupt: true, force: true);
+                return;
+            }
+
             string page = DialogueReader.LastUtterance;
             string option = ChoiceReader.CurrentOption;
             string text = page.Length == 0 ? "No dialogue yet." : page;
