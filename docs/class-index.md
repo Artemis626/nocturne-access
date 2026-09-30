@@ -94,7 +94,23 @@ Source: Log, probe session 1 (30 Sep 2026). All paths are under `Canvas_UI/`, al
 - Terminal menu (`insmenu_top`, `insmenu_base02..03`): highlighted item `TMC01`, others `TMC00` (Save → Talk → Exit observed).
 - Title menu (`titlemain_item0N/slide/Text_TM`): highlighted item `TMC00`, others `TMC15`; the note (`titlemain_note`) is rewritten with the highlighted item's description at the same moment. A tenth item, `titlemain_item10` "EXIT", exists.
 
+- Pause menu (`campUIBase/campUI/menu/menu_window/menu_top`, `menu_base02..06`): highlighted `TMC01`, others `TMC00`, same pair as the terminal (Log, 30 Sep 2026 15:48 session: Item → Skill → Party → Magatama → Stats → System, and in the System submenu Config → Load).
+
 The material pair differs per screen, so each menu reader must record its own pair.
+
+### Pause menu (Log, 30 Sep 2026 15:48 session, F6 dumps)
+
+| Screen | Path | Content |
+| --- | --- | --- |
+| Pause menu | `campUIBase/campUI/title_window/title_window_oubei/TextTM` | Screen title: "COMMAND MENU", "ITEM", "PARTY" |
+| Pause menu | `campUIBase/campUI/menu/menu_window/menu_top/TextTM`, `menu_base02..06/TextTM` | Items. Top level: Item, Skill, Party, Magatama, Stats, System. System: Config, Load, Suspend, Title Screen, End Game. Item: Use, Discard, Gems, Key Items. Party: Summon, Return to stock, Part with. The same components are reused for each level. |
+| Pause menu | `campUIBase/campUI/party/party_status/party_status01/Text_nameTM` | Party member name. |
+| Magatama | `magUI(Clone)/magtitle_window/TextTM`, `magname_base/TextTM`, `magnote/Text01TM..`, `magstatus/magstatus_item01..05/TextTM` | "Which will you ingest?", "Marogareh", its notes ("Imparts Physical skills", "Normal resistance"), stat labels. |
+| Stats | `campUIBase/statusUI(Clone)/title_window/TextTM`, `sinfo_basic/sstatusname/Text_nameTM`, `sinfo_basic/Text_raceTM_oubei`, `sskill/sskill_await2_01..06/TextTM`, `sfeature/help_mask/TextTM`, `sstatus/Text_stat01TM..05TM` | "STATS", full name, race "Fiend", skills ("Lunge", locked ones "？"), feature line, stat labels. |
+
+**Numbers are not text.** No HP, MP, level or stat value appears in any TMP component on these screens: they are drawn as sprite digits. Under the no-reconstruction rule, numbers must be read from game data (party and demon state), not from the screen.
+
+`System > End Game` asks "> End the game?" through the dialogue engine, with a Yes/No dialogue choice (read correctly by ChoiceReader).
 
 Also seen: `DisconnectCaution/saveannounce_tex/Text_announce01TM`, `Text_announce02TM` ("The input device has been disconnected." / "Please reconnect the device."); `saveUI(Clone)/saveannounce/saveannounce_tex/Text_announce01TM` also carries "Checking data...", "Load File 1?", "Load completed."; `fieldUI/flocation/stretch/TextTM` shows "Underground Facility" and "Terminal".
 

@@ -260,6 +260,10 @@ What 0.0.2 adds:
 - F1 repeats the last page (and the highlighted option). Config section `[NocturneAccess_Dialogue]`.
 - `Patcher` now allows several features to add postfixes to the same method.
 
+**Phase 2 step 1 verified in game with 0.0.4 (30 Sep 2026, 15:48 session, controller, console hidden):** every dialogue page spoken whole with the speaker named (Hijiri, Soul); narration pages ("> There is a large cylinder. What will you do?") spoken without a stale name; the "> End the game?" Yes/No choice announced ("Choice, 2 options. No, 2 of 2") and every cursor move read. No garbled speech; the 30-second log snapshots worked. Pause-menu screens mapped (class-index).
+
+**Next step, Phase 2 step 2: menus.** One reader for "highlighted item" menus using the font-material signal (pause menu and submenus, terminal menu: `TMC01` highlighted), speaking the screen title on entry and the item on each move; then the title menu (`TMC00` highlighted plus its note), the save/load list and prompts. Numbers (HP, MP, stats) come later from game data, since they are not text.
+
 **First test of 0.0.3 (30 Sep 2026, around 15:20–15:41) was untestable: garbled technical speech on every input.** Troubleshooting:
 
 - The mod's own speech was clean: every utterance is mirrored as `[SPEECH]`, and the surviving log has only 4, all correct ("> There is a large cylinder. What will you do?", "Hijiri: First things first, try and make it outside. Alive."). Dialogue and speaker detection worked.
