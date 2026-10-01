@@ -41,6 +41,7 @@ namespace NocturneAccess.Input
             Add("battle status", Config.KeyBattleStatus, KeyCode.F2, BattleReader.SpeakStatus);
             Add("dump UI", Config.KeyDumpUi, KeyCode.F6, UiTreeDumper.Dump);
             Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle);
+            Add("navigation dump", Config.KeyNavDump, KeyCode.F5, NavDump.Dump);
         }
 
         internal static void Update()

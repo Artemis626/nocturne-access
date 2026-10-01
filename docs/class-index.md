@@ -225,29 +225,32 @@ Source: Log, 30 Sep 2026 20:07 session (first battle, Will o' Wisp in the Unknow
 | `fieldUI/fannounce/guidetext/TextTM` | TMP | Log, session 1, 20:07 and 20:44 sessions | Interaction prompt ("Talk", "Examine", "Open Door", "Enter", "Exit"). **Hidden when nothing is in reach** (absent from field dumps, present when in reach). Its text is written only when the wording changes (15 writes in an hour), so a reader must watch visibility. The button glyph is `fannounce_button/Text2TM` (blank). |
 | `fieldUI/flocation/stretch/TextTM` | TMP | Log, 20:44 session | Location banner, shown on arrival then hidden. In the elevator it is written ("1Ｆ") 80 ms after `itfMesMngRequestMessage` for "> Select a floor.", whose lines arrive 300 ms later: the cause of the elevator ordering problem. |
 
-## Field navigation (Proxy and Ref, 1 Oct 2026; not used in code yet)
+## Field navigation (Proxy and Ref, 1 Oct 2026; read in code from 0.0.12, diagnostic only)
 
 Full tables with meanings and what is still to verify: `docs/NAVIGATION-DESIGN.md` section 2.
+
+Used in 0.0.12 by `Systems/Navigation/FieldState.cs` (prefix and postfix on `fldPlayerCalc`), `FieldData.cs`, `CollisionCache.cs`, `Capture/NavProbe.cs` (postfixes on `padcheck`, `evtBitCheck`, `cfgGetBit`, `fldPlayerCalc_Nml`, `fldPlayerCalc_Nml_syukan`) and `Capture/NavDump.cs` (F5). Members added on 1 Oct 2026 for the diagnostic are listed after a semicolon; all are from the proxy decompile (`research/decomp/Assembly-CSharp`).
 
 | Class | Kind, source | Members |
 | --- | --- | --- |
 | `Il2Cpp.fldGlobal` | static, Proxy | `fldGb` (`fldGlobalWork_t`), `fldHitData` (`FldHitData`), `fldCameraParam`, `area_name`, `basyo_name`, `floor_name`, `field_name`, `player` (`dds3Basic_t`) |
-| `Il2Cppfield_H.fldGlobalWork_t` | Proxy | `fieldID`, `areaID`, `blockID`, `fieldOldID`, `areaOldID`, `cammode`, `cammode2`, `syukan_cam_reset_flg`, `AmSBlock`, `AmFloor`, `ElvIdx`, `NoEncountCnt`, `EncPID`, `playerX/Y/Z`, `playerOldX/Y/Z`, `playerNewX/Y/Z`, `PlayerKakudo`, `PlayerKakudoGoal`, `PlayerSaka` |
+| `Il2Cppfield_H.fldGlobalWork_t` | Proxy | `fieldID`, `areaID`, `blockID`, `fieldOldID`, `areaOldID`, `cammode`, `cammode2`, `syukan_cam_reset_flg`, `AmSBlock`, `AmFloor`, `ElvIdx`, `NoEncountCnt`, `EncPID`, `playerX/Y/Z`, `playerOldX/Y/Z`, `playerNewX/Y/Z`, `PlayerKakudo`, `PlayerKakudoGoal`, `PlayerSaka`; `flag`, `AreaToArea`, `LastMoveLeng`, `HitUpdate`, `cammode5name` (string), `campos` (Vector4), `NoInpPlCnt`, `NoInpAmCnt` |
 | `Il2Cppfield_H.fldAreaName_t`, `fldBasyoName_t`, `fldFloorName_t` | Proxy | `_fld`, `_area` / `_basyo` / `_floor`, `_name` |
-| `Il2Cpp.fldPlayer` | static, Proxy; Ref patches `fldPlayerCalc` | `fldPlayerObj`, `playerRun`, `fldPlayerAct`, `gKeyInputDir`, `fldCamKakudoGoal`, `gFldPlayerSyukanDly`, `fldPlayerCalc()`, `fldPlayerCalc_Nml()`, `fldPlayerCalc_Nml_syukan()`, `fldPlayerCalc360_4(float)`, `fldPlayerCalc360_8(float)` |
-| `Il2Cpp.fldCamera` | static, Proxy | `fldCameraObj`, `CameraMoveDir`, `fldCamDirLockRotY`, `calcCamSyukan()`, `fldCamSyukanSuriawase()` |
+| `Il2Cpp.fldPlayer` | static, Proxy; Ref patches `fldPlayerCalc` | `fldPlayerObj`, `playerRun`, `fldPlayerAct`, `gKeyInputDir`, `fldCamKakudoGoal`, `gFldPlayerSyukanDly`, `fldPlayerCalc()`, `fldPlayerCalc_Nml()`, `fldPlayerCalc_Nml_syukan()`, `fldPlayerCalc360_4(float)`, `fldPlayerCalc360_8(float)`; `gKeyInputCnt`, `gfldPlayerKakudo2` (float), `gfldPlayerKakudo2Mode`, `PlayerStayCnt`, `gPlayerMsk` (ints). `fldPlayerCalc_Nml` and `_syukan` return int, no parameters |
+| `Il2Cpp.fldCamera` | static, Proxy | `fldCameraObj`, `CameraMoveDir`, `fldCamDirLockRotY`, `calcCamSyukan()`, `fldCamSyukanSuriawase()`; `CameraMoveDir` and `fldCamDirLockRotY` are float |
 | `Il2Cpp.fldHit` | static, Proxy | `gfldCollision` (`collision_s[]`), `gfldCollsionNum`, `gfldCollsionBlkNum`, `fldHitChkCamera(Vector4, Vector4, ref Vector4)`, `HitPositionInside2`, `HitPositionInside3`, `fldHitChkUnit(Vector4)` |
-| `Il2Cppfield_H.collision_s` | Proxy | `mode2D`, `numedges`, `normal`, `num`, `e_normal`, `e_num`, `min`, `max`, `point`, `elv`, `blockID`, `hitflag`, `resID`, `pFace`, `npcID` |
-| `Il2Cppfield_H.fldResCollisionPolyFace_t` | Proxy | `Attr`, `Myuka`, `Se`, `Basyo`, `Amap0`, `Amap1`, `EncType`, `EncIdx` |
-| `Il2Cpp.fldAutoMap` | static, Proxy | `pfldAmArea` (`fldAmAreaData_t[]`), `nfldAmArea`, `gAmap_NowField`, `gAmap_NowArea`, `gAmap_NowFloor`, `fldAutoMapChkOpen(int, int, int)` |
-| `Il2Cppfield_H.fldAmAreaData_t`, `fldAmSBlock_t`, `fldAmIcon_t`, `fldAmXYZ_t` | Proxy | `pName`, `pSB`, `nSB`, `pPos`; `pName`, `floor`, `pPos0`, `pPos1`, `pIcon`, `nIcon`; `type`, `pPos`; `x`, `y`, `z` |
-| `Il2Cpp.fld_Npc` | static, Proxy | `fldNpc` (`fldNpc_tag[]`: `x`, `y`, `z`, `rot`, `name`, `Type`, `ItemBoxIdx`, `fldObj`), `fldNpcNum` |
-| `Il2Cpp.fldTakaraWork_tag` | Proxy | `x`, `y`, `z`, `r`, `type`, `TakaraIdx` |
-| `Il2Cpp.fldEveHit` | static, Proxy | `gEvnRng`, `gEvnRngNum`, `gEve`, `gEveNum` (`fldResHead_t`: `resourceName`, `sisei.pos`, `resourceLink.data[].name`, `areaname`), `gEvnRngBox` (`putevebox_s`), `gProgramEveHit` |
-| `Il2Cpp.SIActionName` | enum, Proxy | `CMN_UpFront`, `CMN_DownBack`, `CMN_Left`, `CMN_Right`, `CMN_EnterAction`, `FD_Turn_Left`, `FD_Turn_Right`, `FD_Return_Front`, `FD_Subjectivity` (keyboard V, "Toggle POV"), `FD_Automap` |
-| `Il2Cpp.SteamInputAssign` | Ref (NocturneModernController, live-confirmed for `FD_Turn_*`) | `padcheck(int pad, SIActionName action, SIPressType type)`; postfix to add a logical press. `SIPressType.DOWN = 0`, `TRIG = 1`, `REP = 2` |
+| `Il2Cppfield_H.collision_s` | Proxy | `mode2D`, `numedges`, `normal`, `num`, `e_normal`, `e_num`, `min`, `max`, `point`, `elv`, `blockID`, `hitflag`, `resID`, `pFace`, `npcID`; `hojiID` (int); `e_normal`, `point` are `Il2CppStructArray<Vector4>`, `e_num`, `min`, `max` are `Il2CppStructArray<float>`, `normal`, `elv` are Vector4, `pFace` is `fldResCollisionPolyFace_t` |
+| `Il2Cppfield_H.fldResCollisionPolyFace_t` | Proxy | `Attr`, `Myuka`, `Se`, `Basyo`, `Amap0`, `Amap1`, `EncType`, `EncIdx`; `TomeIdx` (ushort), `Spc1`, `Spc2` (short). Types: `Attr` uint, `Myuka`, `Se`, `Amap0`, `Amap1` byte, `Basyo` ushort |
+| `Il2Cpp.fldAutoMap` | static, Proxy | `pfldAmArea` (`fldAmAreaData_t[]`), `nfldAmArea`, `gAmap_NowField`, `gAmap_NowArea`, `gAmap_NowFloor`, `fldAutoMapChkOpen(int, int, int)` (not called); `gAmap_InFloor`, `gAmap_OfsX`, `gAmap_OfsZ`, `gAmap_InX`, `gAmap_InZ`, `AutoMapSeq`, `mapIndex` (ints) |
+| `Il2Cppfield_H.fldAmAreaData_t`, `fldAmSBlock_t`, `fldAmIcon_t`, `fldAmXYZ_t` | Proxy | `pName`, `pSB`, `nSB`, `pPos`; `pName`, `floor`, `pPos0`, `pPos1`, `pIcon`, `nIcon`; `type`, `pPos`; `x`, `y`, `z`; `fldAmSBlock_t.nodeIdx` (uint). `nSB`, `nIcon`, `type` are uint |
+| `Il2Cpp.fld_Npc` | static, Proxy | `fldNpc` (`fldNpc_tag[]`: `x`, `y`, `z`, `rot`, `name`, `Type`, `ItemBoxIdx`, `fldObj`), `fldNpcNum`; `gfldTakaraWork` (`fldTakaraWork_tag[]`), `gfldTakaraNum`, `gFldNowTalk`, `gFldNowTalkIdx`; `fldNpc_tag`: `hojiID`, `tType`, `tCamera`, `tId1`, `tId2`, `npcmodel`, `csize`; `rot` is Vector4 |
+| `Il2Cpp.fldTakaraWork_tag` | Proxy | `x`, `y`, `z`, `r`, `type`, `TakaraIdx`; `MotPhase`, `fldTakaraTblIdx` |
+| `Il2Cpp.fldEveHit` | static, Proxy | `gEvnRng`, `gEvnRngNum`, `gEve`, `gEveNum` (`fldResHead_t`: `resourceName`, `sisei.pos`, `resourceLink.data[].name`, `areaname`), `gEvnRngBox` (`putevebox_s`), `gProgramEveHit`; `gProgramEveHitNum`, `gEveOff`, `gFldEveRngIdx`, `gFldEveRngIdx_N`, `gFldEveRngIdx_T`, `OldHitDoor`, `OldHitInf` (ints). `fldResHead_t`: `resourceID`, `resourceType`, `flag`, `SBlockName`, `union`, `pPut`; `fldResHeadPos_t`: `pos`, `rot`, `scl` (Vector4); `fldResHeadAreaName_t`: `num`, `name`; `fldResHeadLink_t`: `num`, `data`; `fldResHeadLinkData_t`: `mode`, `name`, `scl`; `fldResPut_t`: `Type`, `EveIdx`, `Visible`; `putevebox_s`: `vtx`, `boxnml`, `type`, `sizex`, `sizey`, `sizez`, `TakaraIdx`, `npcHoji`, `npcHit`, `npcIdx`, `mode2D`, `facehit`, `put_serialID`; `fldProgramEveHit_tag`: `ball` (`fldResPutEveBall_t`: `Type`, `r`), `sisei`, `ResHead` |
+| `Il2Cpp.SIActionName` | enum, Proxy | `CMN_UpFront`, `CMN_DownBack`, `CMN_Left`, `CMN_Right`, `CMN_EnterAction`, `FD_Turn_Left`, `FD_Turn_Right`, `FD_Return_Front`, `FD_Subjectivity` (keyboard V, "Toggle POV"), `FD_Automap`; `MAX` (31) ends the enum |
+| `Il2Cpp.SteamInputAssign` | Ref (NocturneModernController, live-confirmed for `FD_Turn_*`) | `padcheck(int pad, SIActionName action, SIPressType type)`; postfix to add a logical press. `SIPressType.DOWN = 0`, `TRIG = 1`, `REP = 2`. Proxy: `padcheck` is an instance method (Harmony `__0` is the pad index) |
 | `Il2Cpp.EventBit` | static, Proxy; Ref EarlyCompendium patches `evtBitCheck` | `evtBitCheck(int no)` (bool), `evtBitOn(int)`, `evtBitOff(int)`, `CheckUnlock(int)` |
-| `Il2Cpp.dds3GlobalWork` | static, Proxy; Ref BetterNewGamePlus patches the last two | `DDS3_GBWK`, `NewGame2_SYS_ENDING0` .. `NewGame2_SYS_ENDING7`, `NewGame2_SYS_ZENSHO_ALL`, `NewGame2_EV_ZENSYO_ALL`, `NewGame2_endcnt`, `NewGame2Push()`, `NewGame2Pop()` |
+| `Il2Cpp.dds3GlobalWork` | static, Proxy; Ref BetterNewGamePlus patches the last two | `DDS3_GBWK`, `NewGame2_SYS_ENDING0` .. `NewGame2_SYS_ENDING7`, `NewGame2_SYS_ZENSHO_ALL`, `NewGame2_EV_ZENSYO_ALL`, `NewGame2_endcnt`, `NewGame2Push()`, `NewGame2Pop()`. `NewGame2_endcnt` is short, the others int |
+| `Il2Cpp.dds3ConfigMain` | static, Proxy; Ref AnalyzeBosses reads `cfgGetBit(9)` | `cfgGetBit(uint Type)` returns int (postfix logs calls during the V capture) |
 | First person (Log, 1 Oct 2026 10:23 session) | Francesco | V (`FD_Subjectivity`) does nothing on a first playthrough: locked to New Game+. Unlock plan: `docs/NAVIGATION-DESIGN.md` section 5. |
 
 ## MelonLoader 0.6.1 API used by the mod
@@ -277,6 +280,8 @@ Full tables with meanings and what is still to verify: `docs/NAVIGATION-DESIGN.m
 | `Transform.GetSiblingIndex()`, `Component.GetComponent<T>()` | Proxy, UnityEngine.CoreModule | `ConfigReader`: row order on screen; the row's `configMenuUI` |
 | `UnityEngine.UI.Slider` (`value`, `minValue`, `maxValue`, `wholeNumbers`) | Proxy, UnityEngine.UI | `ConfigReader`: volume values (`configMenuUI.slideObj`) |
 | `GameObject.GetComponentInChildren<T>()`, `GetComponentsInChildren<T>(bool)` | Proxy, UnityEngine.CoreModule | `StatusReader`: the `CounterCtr` under each stat object |
+| `Transform.position`, `eulerAngles`, `forward`, `lossyScale` (Vector3 `x`, `y`, `z`) | Proxy, UnityEngine.CoreModule | `FieldData`, `NavDump`: player and camera objects, to compare with `fldGb` coordinates and `PlayerKakudo` |
+| `Input.GetKeyDown(KeyCode.V)` | Proxy, UnityEngine.InputLegacyModule | `NavProbe`: V (Toggle POV) starts the story-flag capture; read only, the game still gets the key |
 
 ## Screen reader DLLs
 

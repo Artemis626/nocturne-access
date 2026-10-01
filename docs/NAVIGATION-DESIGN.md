@@ -125,7 +125,7 @@ Risks and answers:
 4. **Grid and A*** with spoken directions (no auto-walk).
 5. **Blobber mode** with step moves, then auto-walk.
 
-**Decisions (Francesco, 1 Oct 2026):** blobber mode is a **toggle, on by default**, switched with one key, so later areas and personal preference can fall back to free movement. Still open: S as step back or turn around; how much speech per step; the toggle key (F3, F4, F5 are free).
+**Decisions (Francesco, 1 Oct 2026):** blobber mode is a **toggle, on by default**, switched with one key, so later areas and personal preference can fall back to free movement. Still open: S as step back or turn around; how much speech per step; the toggle key (F3 and F4 are free; F5 is the navigation dump since 0.0.12).
 
 ## 5. Unlocking first person (New Game+ only)
 

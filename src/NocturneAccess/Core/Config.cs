@@ -33,12 +33,17 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<bool> BattleEnabled { get; private set; }
         internal static MelonPreferences_Entry<bool> SpeakHpChanges { get; private set; }
 
+        // Navigation
+        internal static MelonPreferences_Entry<bool> NavDiagnostics { get; private set; }
+        internal static MelonPreferences_Entry<int> NavTraceIntervalMs { get; private set; }
+
         // Keys (names are UnityEngine.KeyCode values, e.g. F8, Backslash, Alpha1)
         internal static MelonPreferences_Entry<string> KeyRepeat { get; private set; }
         internal static MelonPreferences_Entry<string> KeyStatus { get; private set; }
         internal static MelonPreferences_Entry<string> KeyBattleStatus { get; private set; }
         internal static MelonPreferences_Entry<string> KeyDumpUi { get; private set; }
         internal static MelonPreferences_Entry<string> KeyToggleProbe { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyNavDump { get; private set; }
 
         // Debug
         internal static MelonPreferences_Entry<bool> VerboseLogging { get; private set; }
@@ -81,6 +86,13 @@ namespace NocturneAccess.Core
             SpeakHpChanges = battle.CreateEntry("SpeakHpChanges", true, "Speak HP changes",
                 "After each hit or heal, say the unit's HP (from game data).");
 
+            MelonPreferences_Category navigation = MelonPreferences.CreateCategory("NocturneAccess_Navigation", "Navigation");
+            navigation.SetFilePath(FilePath, true, false);
+            NavDiagnostics = navigation.CreateEntry("Diagnostics", true, "Navigation diagnostics",
+                "Development: logs the player's position, facing and input while exploring, place and event changes, and the story flags checked when V (Toggle POV) is pressed. Needs a restart.");
+            NavTraceIntervalMs = navigation.CreateEntry("TraceIntervalMs", 250, "Trace interval (ms)",
+                "With Diagnostics on: at most one position line per this many milliseconds, only when something changed.");
+
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);
             KeyRepeat = keys.CreateEntry("Repeat", "F1", "Repeat key",
@@ -93,6 +105,8 @@ namespace NocturneAccess.Core
                 "Debug: writes every text currently visible on screen to Latest.log.");
             KeyToggleProbe = keys.CreateEntry("ToggleProbe", "F7", "Toggle probe key",
                 "Debug: pauses or resumes the text probe (only when Probe = true).");
+            KeyNavDump = keys.CreateEntry("NavDump", "F5", "Navigation dump key",
+                "Debug: writes the navigation data of the current area (position, place names, walls, auto-map, people, boxes, event volumes) to UserData/NocturneAccess/NavDumps, with a summary in Latest.log.");
 
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);
@@ -106,6 +120,7 @@ namespace NocturneAccess.Core
             dialogue.SaveToFile(false);
             menus.SaveToFile(false);
             battle.SaveToFile(false);
+            navigation.SaveToFile(false);
             keys.SaveToFile(false);
             debug.SaveToFile(false);
         }

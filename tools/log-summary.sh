@@ -35,7 +35,7 @@ grep -a -E '\[Patch\] Summary|\[Probe\] ' "$LOG" | cut -c1-200 | sed 's/^/   /'
 
 echo
 echo "== Lines per tag"
-for tag in 'SPEECH' 'Probe:TMP' 'Probe:Mes' 'UiDump' 'Scene' 'LogArchive'; do
+for tag in 'SPEECH' 'Probe:TMP' 'Probe:Mes' 'UiDump' 'Scene' 'LogArchive' 'Nav:Trace' 'Nav:Change' 'Nav:Gate' 'Nav:Dump'; do
   printf '   %-12s %s\n' "$tag" "$(grep -a -c "\[$tag\]" "$LOG")"
 done
 
@@ -51,4 +51,14 @@ if [ -d "$ARCHIVE" ]; then
   echo
   echo "== Archived sessions (newest first)"
   ls -1t "$ARCHIVE" | head -5 | sed 's/^/   /'
+fi
+
+if grep -a -q '\[Nav:' "$LOG"; then
+  echo
+  echo "== Navigation (changes, V captures, dumps; full dumps in UserData/NocturneAccess/NavDumps)"
+  grep -a -E '\[Nav:Change\]' "$LOG" | cut -c1-220 | tail -n 30 | sed 's/^/   /'
+  echo "   --"
+  grep -a -E '\[Nav:Gate\] (Capture|padcheck|fldPlayerCalc_Nml_syukan|NewGame2)' "$LOG" | cut -c1-260 | sed 's/^/   /'
+  echo "   --"
+  grep -a -E '\[Nav:Dump\] Full dump' "$LOG" | cut -c1-220 | sed 's/^/   /'
 fi

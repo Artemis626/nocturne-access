@@ -11,6 +11,7 @@ Keys are set in `UserData/NocturneAccess.cfg`, section `[NocturneAccess_Keys]`, 
 | F8 | Status: says "Nocturne Access running. Speech through NVDA." | 0.0.1 |
 | F7 | Debug: pause or resume the text probe (only when `Probe = true` in `[NocturneAccess_Debug]`) | 0.0.2 |
 | F6 | Debug: write every text currently visible on screen to the log | 0.0.2 |
+| F5 | Debug: navigation dump. Writes the current area's navigation data (position, facing, place names, collision polygons, auto-map, people, item boxes, event volumes, input and story-flag tables) to `UserData/NocturneAccess/NavDumps/navdump_[time].txt`, with a summary in the log. Says "Navigation data saved." May move to a modifier combination when navigation needs more keys. | 0.0.12 |
 
 ## Reserved keys
 
