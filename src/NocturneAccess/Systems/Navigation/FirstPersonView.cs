@@ -43,6 +43,24 @@ namespace NocturneAccess.Systems.Navigation
 
         internal static bool On { get; private set; }
 
+        /// <summary>The mod can switch first person (hooks in, and the game has not taken the flag over).</summary>
+        internal static bool Available => _installed && !_gameOwnsFlag;
+
+        /// <summary>The player turned first person off with V: blobber mode does not switch it back on by itself.</summary>
+        internal static bool UserTurnedOff { get; private set; }
+
+        internal static void SetOn(bool on, bool speak)
+        {
+            if (!Available || On == on)
+                return;
+            On = on;
+            Log.Info($"[Nav] First person {(on ? "on" : "off")} (blobber mode).");
+            if (speak)
+                SpeechManager.Say(on ? "First person" : "Third person", interrupt: true);
+        }
+
+        internal static void ClearUserChoice() => UserTurnedOff = false;
+
         internal static void Install()
         {
             if (!Config.UnlockFirstPerson.Value)
@@ -88,6 +106,7 @@ namespace NocturneAccess.Systems.Navigation
             _lastToggleMs = now;
 
             On = !On;
+            UserTurnedOff = !On;
             Log.Info($"[Nav] First person {(On ? "on" : "off")} (by {(key ? "key V" : "pad R3 trigger")}).");
             SpeechManager.Say(On ? "First person" : "Third person", interrupt: true);
         }

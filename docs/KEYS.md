@@ -12,8 +12,7 @@ Keys are set in `UserData/NocturneAccess.cfg`, section `[NocturneAccess_Keys]`, 
 | F8 | Status: says "Nocturne Access running. Speech through NVDA." | 0.0.1 |
 | F7 | Debug: pause or resume the text probe (only when `Probe = true` in `[NocturneAccess_Debug]`) | 0.0.2 |
 | F6 | Debug: write every text currently visible on screen to the log | 0.0.2 |
-| F3 | Debug, temporary (0.0.13): step test. Since 0.0.15 it presses the game's up button (pad U, the path W takes) for half a second, then says "Step test: moved N." or "did not move." Will become a navigation key later. | 0.0.13 |
-| F4 | Debug, temporary (0.0.13): turn test. Presses the game's turn-right action (`FD_Turn_Right`) until the player or camera turned 90 degrees (at most 1.5 s), then says both angles. Will become a navigation key later. | 0.0.13 |
+| F4 | Blobber mode on or off (on at start). On: W walks exactly one square, A / D side-step one square; first person where the game allows it (its own 90-degree turns with Q / E, spoken), the mod's own facing in fixed-camera rooms (Q / E turn it). Speaks only changes: "wall ahead", "door ahead", "opening left", "Wall." when blocked. | 0.0.16 |
 | F5 | Debug: navigation dump. Writes the current area's navigation data (position, facing, place names, collision polygons, auto-map, people, item boxes, event volumes, input and story-flag tables) to `UserData/NocturneAccess/NavDumps/navdump_[time].txt`, with a summary in the log. Says "Navigation data saved." May move to a modifier combination when navigation needs more keys. | 0.0.12 |
 
 ## Reserved keys

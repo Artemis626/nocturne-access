@@ -50,6 +50,9 @@ namespace NocturneAccess.Systems.Navigation
         internal static int SourceBlockCount { get; private set; }
         internal static int ArrayLength { get; private set; }
 
+        /// <summary>Increases on every rebuild, so derived data (GridSense walls) knows when to refresh.</summary>
+        internal static int Version { get; private set; }
+
         /// <summary>Rebuilds when needed. Returns true if it rebuilt.</summary>
         internal static bool Refresh(int field, int area, bool force = false)
         {
@@ -64,6 +67,7 @@ namespace NocturneAccess.Systems.Navigation
             _field = field;
             _area = area;
             Items.Clear();
+            Version++;
             SourceCount = count;
             SourceBlockCount = fldHit.gfldCollsionBlkNum;
             ArrayLength = array == null ? 0 : array.Length;

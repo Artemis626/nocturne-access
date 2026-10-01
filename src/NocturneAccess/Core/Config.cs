@@ -38,6 +38,8 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<int> NavTraceIntervalMs { get; private set; }
         internal static MelonPreferences_Entry<bool> UnlockFirstPerson { get; private set; }
         internal static MelonPreferences_Entry<bool> PadInjection { get; private set; }
+        internal static MelonPreferences_Entry<bool> BlobberOnAtStart { get; private set; }
+        internal static MelonPreferences_Entry<int> BlobberCellSize { get; private set; }
 
         // Keys (names are UnityEngine.KeyCode values, e.g. F8, Backslash, Alpha1)
         internal static MelonPreferences_Entry<string> KeyRepeat { get; private set; }
@@ -46,8 +48,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyDumpUi { get; private set; }
         internal static MelonPreferences_Entry<string> KeyToggleProbe { get; private set; }
         internal static MelonPreferences_Entry<string> KeyNavDump { get; private set; }
-        internal static MelonPreferences_Entry<string> KeyStepTest { get; private set; }
-        internal static MelonPreferences_Entry<string> KeyTurnTest { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyBlobber { get; private set; }
 
         // Debug
         internal static MelonPreferences_Entry<bool> VerboseLogging { get; private set; }
@@ -100,6 +101,10 @@ namespace NocturneAccess.Core
                 "Lets V (Toggle POV) switch to first person on a first playthrough. Held in memory only: the game's first-person flag is never written, so saves are unchanged. Needs a restart.");
             PadInjection = navigation.CreateEntry("PadInjection", true, "Pad injection",
                 "Lets the mod press the game's own pad buttons during the field update (step test, later blobber moves). Turn off if the game crashes at start. Needs a restart.");
+            BlobberOnAtStart = navigation.CreateEntry("BlobberOnAtStart", true, "Blobber mode at start",
+                "Blobber mode is on when the game starts (F4 switches it).");
+            BlobberCellSize = navigation.CreateEntry("BlobberCellSize", 600, "Blobber cell size",
+                "Development: one step in game units (600 = one corridor width in the Underground Facility).");
 
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);
@@ -115,10 +120,8 @@ namespace NocturneAccess.Core
                 "Debug: pauses or resumes the text probe (only when Probe = true).");
             KeyNavDump = keys.CreateEntry("NavDump", "F5", "Navigation dump key",
                 "Debug: writes the navigation data of the current area (position, place names, walls, auto-map, people, boxes, event volumes) to UserData/NocturneAccess/NavDumps, with a summary in Latest.log.");
-            KeyStepTest = keys.CreateEntry("StepTest", "F3", "Step test key",
-                "Debug, temporary: presses the game's up button for half a second, then says how far the player moved.");
-            KeyTurnTest = keys.CreateEntry("TurnTest", "F4", "Turn test key",
-                "Debug, temporary: presses the game's turn-right action until the player or camera turned 90 degrees, then says how far.");
+            KeyBlobber = keys.CreateEntry("Blobber", "F4", "Blobber mode key",
+                "Turns blobber mode on or off: W and the side keys move exactly one square, first person where the game allows it, the mod's own facing in fixed-camera rooms.");
 
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);

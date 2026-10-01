@@ -7,6 +7,7 @@ using NocturneAccess.Speech;
 using NocturneAccess.Systems.Battle;
 using NocturneAccess.Systems.Dialogue;
 using NocturneAccess.Systems.Menus;
+using NocturneAccess.Systems.Navigation;
 using UnityEngine;
 // Inside the NocturneAccess.Input namespace, a bare "Input" means this namespace, not Unity's class.
 using UnityInput = UnityEngine.Input;
@@ -42,8 +43,7 @@ namespace NocturneAccess.Input
             Add("dump UI", Config.KeyDumpUi, KeyCode.F6, UiTreeDumper.Dump);
             Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle);
             Add("navigation dump", Config.KeyNavDump, KeyCode.F5, NavDump.Dump);
-            Add("step test", Config.KeyStepTest, KeyCode.F3, MoveTest.StepTest);
-            Add("turn test", Config.KeyTurnTest, KeyCode.F4, MoveTest.TurnTest);
+            Add("blobber mode", Config.KeyBlobber, KeyCode.F4, BlobberMode.Toggle);
         }
 
         internal static void Update()

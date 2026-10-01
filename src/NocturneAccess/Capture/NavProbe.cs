@@ -393,6 +393,7 @@ namespace NocturneAccess.Capture
 
             string keys = TakeTraceKeys();
             string analog = AnalogInput.TakeActivity();
+            string pads = PadInput.TakeTraceButtons();
             long nml = _nmlCalls - _traceNml, syukan = _syukanCalls - _traceSyukan;
             _traceNml = _nmlCalls;
             _traceSyukan = _syukanCalls;
@@ -402,7 +403,7 @@ namespace NocturneAccess.Capture
                            || s.Kakudo != _lastTrace.Kakudo || s.KakudoGoal != _lastTrace.KakudoGoal
                            || s.CamMode != _lastTrace.CamMode || s.CamMode2 != _lastTrace.CamMode2
                            || Math.Abs(s.CamYaw - _lastTrace.CamYaw) > 1f || Math.Abs(s.ObjYaw - _lastTrace.ObjYaw) > 0.01f
-                           || syukan > 0 || keys.Length > 0 || analog.Length > 0;
+                           || syukan > 0 || keys.Length > 0 || analog.Length > 0 || pads.Length > 0;
             if (!changed)
                 return;
 
@@ -413,7 +414,7 @@ namespace NocturneAccess.Capture
                      $" | obj {(s.HasObject ? FieldData.V(s.ObjPos) + " yaw " + FieldData.F(s.ObjYaw) : "none")}" +
                      $" | cam {(s.HasCamera ? FieldData.V(s.CamPos) + " yaw " + FieldData.F(s.CamYaw) : "none")}" +
                      $" | cammode {s.CamMode}/{s.CamMode2} act {s.Act} run {(s.Run ? 1 : 0)} dir {s.KeyInputDir}" +
-                     $" | floor {floorText} | calc nml {nml} syukan {syukan} | keys {(keys.Length == 0 ? "-" : keys)} | analog {(analog.Length == 0 ? "-" : analog)}");
+                     $" | floor {floorText} | calc nml {nml} syukan {syukan} | keys {(keys.Length == 0 ? "-" : keys)} | analog {(analog.Length == 0 ? "-" : analog)} | pads {(pads.Length == 0 ? "-" : pads)}");
         }
 
         private static string TakeTraceKeys()

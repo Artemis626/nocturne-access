@@ -23,6 +23,7 @@ namespace NocturneAccess.Systems.Navigation
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static long _lastCalcMs = long.MinValue / 2;
+        private static int _errors;
 
         internal static bool InPlayerCalc { get; private set; }
 
@@ -50,6 +51,16 @@ namespace NocturneAccess.Systems.Navigation
             _lastCalcMs = Clock.ElapsedMilliseconds;
             CalcCount++;
             InPlayerCalc = true;
+            try
+            {
+                PadInput.BeginTick();
+                BlobberMode.BeforeCalc();
+            }
+            catch (Exception ex)
+            {
+                if (++_errors <= 3)
+                    Log.Error($"[Nav] Blobber update failed: {ex}");
+            }
         }
 
         private static void AfterCalc()

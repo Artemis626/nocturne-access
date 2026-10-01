@@ -11,7 +11,9 @@ Needs: `llvm-objdump` (WinLibs, on PATH), `ilspycmd`, perl. Outputs go to `resea
    find research/native/acs -name "*.cs" -print0 | xargs -0 perl tools/native/symmap.pl > research/native/symmap.txt
    ```
 
-2. Disassemble one method with call targets named (RVA and length from the dummy's `Address` attribute):
+2. Quickest: `bash tools/native/dis.sh 'fldPlayer.fldPlayerCalcHasigo('` (any unique part of a name in `symmap.txt`; the map has RVA, name, length).
+
+   By hand, disassemble one method with call targets named (RVA and length from the dummy's `Address` attribute):
 
    ```
    llvm-objdump -d --no-show-raw-insn --start-address=$((0x180000000+RVA)) --stop-address=$((0x180000000+RVA+LEN)) GameAssembly.dll | perl tools/native/annot.pl research/native/symmap.txt
