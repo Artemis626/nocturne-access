@@ -52,12 +52,14 @@ Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:0
 
 ## Open problems and next steps (in order)
 
-1. The fixes above (items 1 to 6).
-2. **Combat version 2**: whose turn and who acts ("Will o' Wisp: Deathtouch"), damage amounts, weak/resist/null results, Press Turns after each action, skill and item menus in battle, negotiation, the results screen's numbers (EXP, macca).
-3. **Numbers for the Magatama screen and item lists** (`CounterCtr.value`); the config volume notches (`configMenuUI.slideObj` was empty: look for `CounterCtr` or `soundVol`).
-4. A correct press-any-button cue (the version text already shows during the Atlus splash).
-5. Difficulty select screen.
-6. **Pathfinding and navigation** after combat (Francesco's order).
+**Francesco, 1 Oct 2026: 0.0.11 verified; navigation now comes first (3D dungeons, not the world map). Read `docs/NAVIGATION-DESIGN.md`. Next session: Francesco reads the design and decides (blobber mode as main play or a toggle, S as step back or turn around, the toggle key); then step 1 of its plan, the read-only diagnostic run.**
+
+1. Navigation, `docs/NAVIGATION-DESIGN.md` section 4: diagnostic run, input proof of concept, read-only aids, grid and A*, blobber mode.
+2. Name entry control buttons: read `Nme_Draw_EFGIS.cursor_str` (path under the cursor) while Francesco visits forward, back, delete, done.
+3. **Combat version 2**: whose turn and who acts ("Will o' Wisp: Deathtouch"), damage amounts, weak/resist/null results, Press Turns after each action, skill and item menus in battle, negotiation, the results screen's numbers (EXP, macca).
+4. **Numbers for the Magatama screen and item lists** (`CounterCtr.value`); the config volume notches (`configMenuUI.slideObj` was empty: look for `CounterCtr` or `soundVol`).
+5. A correct press-any-button cue (the version text already shows during the Atlus splash).
+6. Difficulty select screen.
 
 ## Key facts to remember
 

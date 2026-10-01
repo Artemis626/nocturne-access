@@ -1,0 +1,128 @@
+# Navigation and pathfinding: research and design
+
+Written 1 Oct 2026 for Francesco, analysis only (no code). Scope: 3D dungeons (field), not the world map. Every name below comes from the proxy decompile (`research/decomp/Assembly-CSharp`, marked Proxy) or the MIT reference NocturneModernController (marked Ref); none is used in code yet, and each meaning marked "to verify" needs one diagnostic run.
+
+## 1. Verdict
+
+- **The game exposes everything a navigation system needs as data**: the player's position and facing, the area and place it is in with the game's own place names, every wall and floor polygon of the loaded area, the auto-map's room graph with icons and explored flags, every NPC, item box and event volume (doors, triggers) with positions.
+- **Movement can be driven natively.** NocturneModernController injects the game's own logical actions (`FD_Turn_Left` / `FD_Turn_Right`) through `SteamInputAssign.padcheck` and confirmed it live in dungeons. The game's collision, doors and events then behave exactly as with a real key.
+- **First person is not a New Game+ unlock in this version**: "Toggle POV" (`FD_Subjectivity`) is bound to V by default on the game's own keyboard config screen, and the field code has a separate first-person movement routine (`fldPlayerCalc_Nml_syukan`, "syukan" = subjective view). What it allows (walking or only looking) must be tested.
+- **A blobber mode is feasible**, as a layer over the free 3D movement rather than a rewrite of it: the mod lays a grid on the game's own collision, walks the player cell to cell with injected input, and turns in 90 degree steps. A* on that grid then matches every instruction exactly ("forward 3, turn right, forward 2"). The main risk is geometry that is not grid-shaped (diagonal or curved rooms, later Amala areas); the design below handles it with waypoint cells instead of a strict tile map.
+
+## 2. What the game gives us
+
+### 2.1 Player position, facing, state
+
+| Source | What | Origin |
+| --- | --- | --- |
+| `fldGlobal.fldGb` (`fldGlobalWork_t`, static) | `playerX`, `playerY`, `playerZ`; `playerOldX/Y/Z`, `playerNewX/Y/Z`; `PlayerKakudo` (facing angle), `PlayerKakudoGoal`; `PlayerSaka` (slope) | Proxy |
+| same | `fieldID`, `areaID`, `blockID`, `fieldOldID`, `areaOldID`; `AmSBlock`, `AmFloor` (auto-map block and floor); `ElvIdx` (elevator); `cammode`, `cammode2`, `syukan_cam_reset_flg`; `NoEncountCnt`, `EncPID` | Proxy |
+| `fldPlayer` (static) | `fldPlayerObj` (GameObject), `playerRun`, `fldPlayerAct`, `gKeyInputDir`, `fldCamKakudoGoal`, `gFldPlayerSyukanDly`; `fldPlayerCalc()` (field update, dispatches to `fldPlayerCalc_Nml()` or `fldPlayerCalc_Nml_syukan()`), `fldPlayerCalc360_4(float)` and `fldPlayerCalc360_8(float)` (angle to 4 or 8 directions) | Proxy; dispatch Ref (CONFIRMED there) |
+| Exploration signal | "Exploring" = `fldPlayer.fldPlayerCalc` ran within the last 100 ms (Harmony postfix) | Ref, used by four of its mods |
+| `fldCamera` (static) | `fldCameraObj`, `CameraMoveDir`, `fldCamDirLockRotY`, `calcCamSyukan()`, `fldCamSyukanSuriawase()`, `fldHitChkCamera` user | Proxy |
+
+To verify: the unit of `PlayerKakudo` (degrees or radians) and its zero direction; `cammode` values in third and first person; whether `fldGb.playerX/Z` equals `fldPlayerObj.transform.position`.
+
+### 2.2 Place names (game text, so they can be spoken)
+
+| Source | What | Origin |
+| --- | --- | --- |
+| `fldGlobal.area_name` (`fldAreaName_t`: `_fld`, `_area`, `_name`), `basyo_name` (`fldBasyoName_t`: `_fld`, `_basyo`, `_name`), `floor_name` (`fldFloorName_t`: `_fld`, `_floor`, `_name`), `field_name` | Area, place ("basyo") and floor names by ID | Proxy |
+| `fieldUI/flocation` | The location banner the mod already speaks ("Underground Facility", "Terminal") | Log |
+| Collision faces carry `Basyo` (place ID) | So every floor polygon maps to a game place name | Proxy, to verify |
+
+### 2.3 Geometry: walls and floors
+
+| Source | What | Origin |
+| --- | --- | --- |
+| `fldHit.gfldCollision` (`collision_s[]`), `gfldCollsionNum`, `gfldCollsionBlkNum` | Every collision polygon of the loaded area | Proxy |
+| `collision_s` | `mode2D`, `numedges`, `normal`, `num` (plane), `e_normal[]`, `e_num[]` (edge planes), `min[]`, `max[]` (bounding box), `point[]`, `elv`, `blockID`, `hitflag`, `resID`, `pFace`, `npcID` | Proxy |
+| `fldResCollisionPolyFace_t` (`pFace`) | `Attr`, `Myuka`, `Se` (footstep sound), `Basyo`, `Amap0`, `Amap1` (auto-map flags), `EncType`, `EncIdx` | Proxy |
+| `fldHit.fldHitChkCamera(Vector4 eyepos, Vector4 disppos, ref Vector4 hitpos)` | The game's own segment-against-walls test (it keeps the camera out of walls): "is there a wall between A and B, and where" | Proxy |
+| `fldHit.HitPositionInside2/3(...)`, `fldHitChkUnit(Vector4)` | Point-in-polygon with radius; the player's own collision step | Proxy |
+
+To verify: which polygons are walls and which are floors (`mode2D`, `Myuka`, the normal's Y), and whether calling `fldHitChkCamera` from the mod is safe (it may use the game's per-frame state). Plain C# over `collision_s` (bounding boxes, edge planes) is the fallback and needs no native call.
+
+### 2.4 The auto-map: a ready room graph
+
+| Source | What | Origin |
+| --- | --- | --- |
+| `fldAutoMap.pfldAmArea` (`fldAmAreaData_t[]`: `pName`, `pSB`, `nSB`, `pPos`), `nfldAmArea` | Areas of the current field | Proxy |
+| `fldAmSBlock_t` | Sub-block: `pName`, `floor`, `pPos0`, `pPos1` (bounding box), `pIcon[]` / `nIcon` | Proxy |
+| `fldAmIcon_t` | `type`, `pPos` (x, y, z): the auto-map icons (doors, terminals, stairs and so on; type values to map) | Proxy |
+| `fldAutoMap.fldAutoMapChkOpen(fld, area, block)`, `gAmap_NowField`, `gAmap_NowArea`, `gAmap_NowFloor` | Explored flags and where the map is | Proxy |
+
+This gives "rooms" (sub-blocks with boxes) and their connections (shared edges, door icons) for free: the coarse level of the path planner, and good spoken landmarks.
+
+### 2.5 Entities
+
+| Source | What | Origin |
+| --- | --- | --- |
+| `fld_Npc.fldNpc` (`fldNpc_tag[]`: `x`, `y`, `z`, `rot`, `name`, `Type`, `ItemBoxIdx`, `fldObj`), `fldNpcNum` | NPCs, with position | Proxy |
+| `fldTakaraWork_tag` (`x`, `y`, `z`, `r`, `type`, `TakaraIdx`), `FldHitData._fldItemBoxTbl` | Item boxes ("cube boxes") | Proxy |
+| `fldEveHit.gEvnRng` / `gEvnRngNum`, `gEve` / `gEveNum` (`fldResHead_t`: `resourceName`, `sisei.pos`, `resourceLink` with `data[].name`, `areaname`), `gEvnRngBox` (`putevebox_s`: box vertices, `type`, `TakaraIdx`), `gProgramEveHit` | Event volumes: doors, area exits, story triggers, item and NPC ranges | Proxy |
+| `fieldUI/fannounce` | "Open Door", "Talk", "Examine", "Enter", "Exit": spoken already, the confirmation that the player is in front of something | Log |
+
+To verify: which event names or types are doors and exits, and where a link leads (`resourceLink` names against `area_name`). Spoken labels use the game's text when it exists (place names, prompts) and the mod's own category words otherwise ("door", "box", "person"), never invented names.
+
+### 2.6 Driving movement
+
+| Source | What | Origin |
+| --- | --- | --- |
+| `SIActionName` | `CMN_UpFront`, `CMN_DownBack`, `CMN_Left`, `CMN_Right`, `CMN_EnterAction`, `FD_Turn_Left`, `FD_Turn_Right`, `FD_Return_Front`, `FD_Subjectivity`, `FD_Automap`, `FD_Camera_*` | Proxy |
+| `SteamInputAssign.padcheck(int pad, SIActionName action, SIPressType type)` | Logical input check; a postfix that turns the result true for an action is a native-equivalent press | Ref (live-confirmed for `FD_Turn_*` in dungeons; the mod's earlier native-hook attempt crashed and was dropped) |
+| `SteamInputUtil.PRESS / TRIG / REP(SIActionName)` | The same check for the current pad | Ref |
+| Movement step constants 29 and 20 (dungeon), 16 (world map) per field tick | Speed; the Ref notes that dungeon doors are thin volumes and that more than 1.6 times the speed can skip through them | Ref |
+
+To verify: whether walking (`CMN_UpFront`) goes through `padcheck` like turning (keyboard W likely does; an analog stick may not), and what A and D do in first person (strafe or turn).
+
+### 2.7 Not general, but worth knowing
+
+`fldTest` holds a grid route table for one scripted chase (`FroFtoI`, `FroItoF`, `FroGetRouteIdx(sx, sz, gx, gz)`, `FRO_ROUTEDATA_t`), loaded only for that map. It shows the developers themselves discretised a dungeon into a grid for an AI; it is not usable as our general path data.
+
+## 3. Two ways to build navigation
+
+### 3.1 Assistive layer over free movement (lower risk)
+
+The player keeps the game's normal controls. The mod adds:
+
+1. **Where am I**: place name (from `Basyo` and `basyo_name`), floor, facing as a compass direction ("Medical Center lobby, facing north").
+2. **Wall sense**: distance to the nearest wall ahead, left, right and behind, from the collision polygons; optional audio cue as a wall gets close.
+3. **Scanner**: nearby doors, boxes, people, exits, terminals, with direction relative to facing and distance ("door, ahead left, 6 steps").
+4. **Path guidance**: A* to a chosen target; spoken directions updated as the player moves ("go forward, then turn right").
+
+Weakness: directions against free analog movement are approximate ("slightly left"), and Francesco has to steer by ear.
+
+### 3.2 Blobber mode (the ambitious option)
+
+Like 90s Shin Megami Tensei or Strange Journey: the world moves in cells and 90 degree turns, seen in first person.
+
+- **Grid**: cells of a fixed size (to measure: about one corridor width, likely close to the walk speed times a few ticks) laid over the area. A cell is walkable when the player's collision circle fits there (same test as the game: polygons with their edge planes). Edges between cells are open when the segment between their centres hits no wall (`fldHitChkCamera` or our own test). Cells snap to the room boxes of the auto-map where possible, so corridors line up.
+- **Moves**: W = one cell forward, S = one cell back (or turn around, Francesco's choice), A / D = turn 90 degrees, optional strafe. Each move is executed by holding the game's own logical actions through `padcheck` until the player reaches the next cell centre or faces the new direction (`fldPlayerCalc360_4` gives the native 4-direction snap), then stops. The game's collision, slopes, doors and events stay in charge, so nothing can be skipped (normal speed only).
+- **The game's own keys are reinterpreted only while blobber mode is on** (the real W press is suppressed in `padcheck` and replaced by the step); a mod F-key toggles the mode, so the free controls are always one key away.
+- **First person view** (`FD_Subjectivity`) is switched on with the mode, for players with some sight; speech does not depend on it.
+- **Each step speaks** what changed: "corridor", "door ahead", "opening on the left", "wall" (a bump sound when a move is blocked), the place name when it changes.
+- **A* on the same grid** gives instructions that are exactly executable ("forward 3, turn right, forward 2"), and an auto-walk can execute them step by step, stopping for battles, dialogue, prompts or any key press.
+
+Why it fits Nocturne: its dungeons (Shinjuku Medical Center, Ginza, Ikebukuro tunnels, Amala) are mostly corridors and rectangular rooms, the auto-map is already block-based, and doors and events are point volumes reached by facing them.
+
+Risks and answers:
+
+| Risk | Answer |
+| --- | --- |
+| Diagonal or curved geometry; open areas | Waypoint cells: a cell is a point the player walks to, not a tile; diagonal edges allowed where the straight line is clear. Fall back to free movement with guidance (3.1) where the grid is poor. |
+| Thin door and event volumes | Normal speed only; a step that crosses an event volume behaves exactly like walking by hand. |
+| Random encounters and events mid-walk | Exploration signal stops: the step or auto-walk aborts and resumes only on a key press. |
+| Analog movement not routed through `padcheck` | The test below decides; the fallback is steering by angle while holding forward. |
+| Several floors, slopes, stairs, elevators | Grid per floor (`AmFloor`, `playerY`); stairs and elevators are graph edges announced by their prompt. |
+| Moving NPCs and pushable objects | Re-check the next cell before each step. |
+
+## 4. Plan (each step ends with a test run)
+
+1. **Diagnostic run, read only (next session).** A key dumps the navigation data to the log: player position, facing, `cammode`, IDs and resolved place names; counts and samples of collision polygons with their face flags; auto-map areas, sub-blocks and icons; NPCs, boxes and event volumes with names and positions. Francesco walks a known route in Shinjuku Medical Center, turns in place, presses V (first person) and tries walking in it, and opens a door.
+2. **Input proof of concept.** Inject `CMN_UpFront` for 0.5 s and `FD_Turn_Right` until 90 degrees, only while exploring; confirm collision and doors behave natively, in third and first person.
+3. **Read-only aids** (3.1 items 1 to 3): where am I, wall sense, scanner. Useful alone, and they validate the geometry reading.
+4. **Grid and A*** with spoken directions (no auto-walk).
+5. **Blobber mode** with step moves, then auto-walk.
+
+Decisions for Francesco: blobber mode as the main way to play or as a toggle next to free movement; S as step back or turn around; how much speech per step; which F-key toggles the mode (F3, F4, F5 are free).
