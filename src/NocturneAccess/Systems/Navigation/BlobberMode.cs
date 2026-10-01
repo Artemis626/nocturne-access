@@ -183,6 +183,14 @@ namespace NocturneAccess.Systems.Navigation
                 else
                     _facingSpoken = GridSense.Normalize90(gb.PlayerKakudoGoal);   // its own turns are not announced
             }
+            else if (AutoWalk.Active)
+            {
+                // The walk makes its own turns and speaks its own result: no snap, no cues, a fresh baseline afterwards.
+                StopSnap("auto-walk");
+                _facingSpoken = GridSense.Normalize90(gb.PlayerKakudoGoal);
+                _cueCell = CellKey(x, z);
+                _haveView = false;
+            }
             else
             {
                 if (_snapping)

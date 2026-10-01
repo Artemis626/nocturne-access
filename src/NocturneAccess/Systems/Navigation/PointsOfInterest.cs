@@ -21,8 +21,14 @@ namespace NocturneAccess.Systems.Navigation
         public float X, Z;
         public float Distance;
         public bool Reachable = true;   // false: no walkable cell within ReachRadius can be reached from the player (another room)
+        public string Name = "";        // the game's place name for a door (FldNameData.GetBasyoName), or ""
+        public bool Soul;               // a person whose model is "shinentai" (the game's speaker name for them is "Soul")
 
-        public string Label => Kind == PoiKind.Door ? "Door" : Kind == PoiKind.Person ? "Person" : "Item box";
+        public string Label => Kind == PoiKind.Door ? (Name.Length > 0 ? Name + " door" : "Door")
+            : Kind == PoiKind.Person ? (Soul ? "Soul" : "Person") : "Item box";
+
+        /// <summary>The label inside a sentence: game names and "Soul" keep their capitals, the mod's own words do not.</summary>
+        public string InSentence => Name.Length > 0 || Soul ? Label : Label.ToLowerInvariant();
 
         /// <summary>How close a reachable cell must be: a door sits in its wall (goal cells about 75 away), a person or a box in
         /// furniture (the Soul's goal cell was 135 away, 0.0.21 test).</summary>
@@ -31,16 +37,22 @@ namespace NocturneAccess.Systems.Navigation
 
     /// <summary>
     /// Points of interest of the current area, from fldEveHit.gEvnRng and its gEvnRngBox (docs/PATHFINDING.md section 1):
-    /// - doors: type 10 named "NNd_MM";
-    /// - people: an NPC index (box npcIdx) whose fld_Npc.fldNpc entry is not Type 999;
+    /// - doors: type 10 named "NNd_MM", and type-10 event volumes ("NNeve_MM", the elevator) that have a place pad;
+    ///   a door is named with the game's own text, FldNameData.GetBasyoName(fieldID, basyo) of the place pad in front of it:
+    ///   a small horizontal polygon with Attr 0x1000 and a Basyo number (area 5: Terminal, Healing Room, Elevator), the
+    ///   polygon that makes the location banner name the room when the player steps into the door volume;
+    /// - people: an NPC index (box npcIdx) whose fld_Npc.fldNpc entry is not Type 999; "Soul" when its object is
+    ///   "shinentai(Clone)" (the speaker name the game shows for them);
     /// - item boxes: box TakaraIdx 0 or more, or an NPC of Type 999 ("itembox1").
-    /// Story triggers ("NNeve_MM") are invisible and left out. The game has no names for these (empty name tables), so the
-    /// mod says its own category words. Page Up / Page Down move the selection (nearest first) and speak kind, distance in
+    /// Other story triggers ("NNeve_MM") are invisible and left out. Unnamed things get the mod's own category words. Page Up / Page Down move the selection (nearest first) and speak kind, distance in
     /// metres (game units / 100) and compass direction (north = +Z, the game's compass).
     /// </summary>
     internal static class PointsOfInterest
     {
         private static readonly Regex DoorName = new Regex(@"^\d+d_\d+$");
+        private static readonly Regex EventName = new Regex(@"^\d+eve_\d+$");
+        private const float PadReach = 300f;      // a place pad this close to a door names it
+        private const float PadMaxSize = 700f;    // larger place polygons are whole rooms, not door pads
         private static readonly string[] Compass = { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" };
 
         private static int _selected = -1;     // gEvnRng index
@@ -62,6 +74,7 @@ namespace NocturneAccess.Systems.Navigation
             Il2CppReferenceArray<fldNpc_tag> npcs = fld_Npc.fldNpc;
             int n = ranges == null ? 0 : Math.Min(fldEveHit.gEvnRngNum, ranges.Length);
             int npcCount = npcs == null ? 0 : Math.Min(fld_Npc.fldNpcNum, npcs.Length);
+            List<CollisionPoly> pads = PlacePads();
             for (int i = 0; i < n; i++)
             {
                 fldResHead_t h = ranges[i];
@@ -70,21 +83,30 @@ namespace NocturneAccess.Systems.Navigation
                 string name = h.resourceName ?? "";
                 putevebox_s box = boxes != null && i < boxes.Length ? boxes[i] : null;
                 PoiKind? kind = null;
-                if (h.resourceType == 10 && DoorName.IsMatch(name))
+                Vector4 p = h.sisei.pos;
+                string placeName = h.resourceType == 10 ? PlaceName(gb.fieldID, pads, p.x, p.z) : "";
+                bool soul = false;
+                if (h.resourceType == 10 && (DoorName.IsMatch(name) || (EventName.IsMatch(name) && placeName.Length > 0)))
                     kind = PoiKind.Door;
                 else if (box != null && box.TakaraIdx >= 0)
                     kind = PoiKind.ItemBox;
                 else if (box != null && box.npcIdx >= 0 && box.npcIdx < npcCount && npcs[box.npcIdx] != null)
-                    kind = npcs[box.npcIdx].Type == 999 ? PoiKind.ItemBox : PoiKind.Person;
+                {
+                    fldNpc_tag npc = npcs[box.npcIdx];
+                    kind = npc.Type == 999 ? PoiKind.ItemBox : PoiKind.Person;
+                    GameObject obj = npc.fldObj;
+                    soul = obj != null && (obj.name ?? "").StartsWith("shinentai", StringComparison.Ordinal);
+                }
                 if (kind == null)
                     continue;
 
-                Vector4 p = h.sisei.pos;
                 list.Add(new Poi
                 {
                     Index = i,
                     Kind = kind.Value,
                     ResName = name,
+                    Name = kind == PoiKind.Door ? placeName : "",
+                    Soul = soul,
                     X = p.x,
                     Z = p.z,
                     Distance = (float)Math.Sqrt((p.x - px) * (p.x - px) + (p.z - pz) * (p.z - pz)),
@@ -94,6 +116,63 @@ namespace NocturneAccess.Systems.Navigation
                     added.Reachable = WalkGrid.ReachableNear(px, pz, added.X, added.Z, added.ReachRadius);
             }
             return list.OrderBy(q => q.Distance).ToList();
+        }
+
+        /// <summary>Place pads of the loaded area: small horizontal polygons with Attr 0x1000 and a Basyo number.</summary>
+        private static List<CollisionPoly> PlacePads()
+        {
+            var pads = new List<CollisionPoly>();
+            foreach (CollisionPoly c in CollisionCache.Polys)
+            {
+                if ((c.Attr & 0x1000) == 0 || c.Basyo == 0 || c.Points.Length < 3 || Math.Abs(c.Normal.y) < 0.5f)
+                    continue;
+                Bounds(c, out float x0, out float z0, out float x1, out float z1);
+                if (x1 - x0 <= PadMaxSize && z1 - z0 <= PadMaxSize)
+                    pads.Add(c);
+            }
+            return pads;
+        }
+
+        /// <summary>The game's name of the nearest place pad within PadReach of (x, z), or "".</summary>
+        private static string PlaceName(int field, List<CollisionPoly> pads, float x, float z)
+        {
+            CollisionPoly best = null;
+            float bestD = PadReach;
+            foreach (CollisionPoly c in pads)
+            {
+                Bounds(c, out float x0, out float z0, out float x1, out float z1);
+                float dx = Math.Max(0, Math.Max(x0 - x, x - x1)), dz = Math.Max(0, Math.Max(z0 - z, z - z1));
+                float d = (float)Math.Sqrt(dx * dx + dz * dz);
+                if (d <= bestD)
+                {
+                    bestD = d;
+                    best = c;
+                }
+            }
+            if (best == null)
+                return "";
+            try
+            {
+                FldNameData names = fldGlobal.fldNameData;
+                string s = names == null ? null : names.GetBasyoName(field, best.Basyo);
+                return TextUtil.Clean(s ?? "").Trim();
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[Nav:Poi] Place name {best.Basyo} could not be read: {ex.Message}");
+                return "";
+            }
+        }
+
+        private static void Bounds(CollisionPoly c, out float x0, out float z0, out float x1, out float z1)
+        {
+            x0 = z0 = float.MaxValue;
+            x1 = z1 = float.MinValue;
+            foreach (Vector4 v in c.Points)
+            {
+                x0 = Math.Min(x0, v.x); x1 = Math.Max(x1, v.x);
+                z0 = Math.Min(z0, v.z); z1 = Math.Max(z1, v.z);
+            }
         }
 
         /// <summary>Page Up (+1) / Page Down (-1).</summary>

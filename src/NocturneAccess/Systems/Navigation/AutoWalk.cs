@@ -12,28 +12,33 @@ using UnityEngine;
 namespace NocturneAccess.Systems.Navigation
 {
     /// <summary>
-    /// Walks the player to the selected point of interest in third person (fixed-camera rooms first; docs/PATHFINDING.md
-    /// section 2.3). Home asks; the walk starts at the next field update.
-    ///
-    /// Every field update, before the game reads the pads (FieldState prefix), it holds the pad combination whose
-    /// camera-relative bearing is nearest the wanted world direction: fldPlayerCalc_Nml reads DDS3_ORGMAP_PRESS U, D, L,
-    /// R relative to the camera (U = camera yaw, R +90, D +180, L +270) and snaps the facing goal to world multiples of
-    /// 45 degrees. The pads are chosen again every tick because the "fixed" camera pans while the player walks.
-    /// The path (WalkGrid) is a list of straight runs; the next run starts 20 units before the end of the current one
-    /// (the facing eases, so turns curve). Re-plans when more than 90 units off the run or still for 8 ticks (at most
-    /// 6 times). Ends when the game's own hit index (fldEveHit.gFldEveRngIdx) is the target ("Arrived."; the game speaks
-    /// its prompt), after a final straight approach of at most 1 s towards the target, after 30 s, or at once when the
-    /// player presses a movement key. It never presses confirm.
+    /// Walks the player to the selected point of interest (docs/PATHFINDING.md sections 2.3 and 5). Home asks; the walk
+    /// starts at the next field update. Every field update, before the game reads the pads (FieldState prefix), it holds
+    /// the game's own pad buttons, as keys would be pressed:
+    /// - Third person (fixed-camera rooms): fldPlayerCalc_Nml reads DDS3_ORGMAP_PRESS U, D, L, R relative to the camera
+    ///   (U = camera yaw, R +90, D +180, L +270) and snaps the facing goal to world multiples of 45 degrees. The pads are
+    ///   chosen again every tick because the "fixed" camera pans. The next run starts 20 units before the end of the
+    ///   current one (the facing eases, so turns curve); drift over 40 units is corrected with the neighbouring 45.
+    /// - First person: a 4-direction path; for each run the game's own turn (pad L +90, R -90 in PlayerKakudo, D turns
+    ///   round, one tick each, waiting for the turn to finish as CentreWalk does), then pad U to the run's end.
+    /// Re-plans when more than 90 units off the run or still for 8 ticks (at most 6 times). Arrival is the game's own:
+    /// its hit index (fldEveHit.gFldEveRngIdx) is the target AND the player faces it (within 50 degrees): the 0.0.22
+    /// test showed the "Open Door" prompt waits for the facing. If in reach but not facing, it turns towards the target.
+    /// Ends after 30 s, or at once when the player presses a movement key. It never presses confirm.
     /// </summary>
     internal static class AutoWalk
     {
         private const float NextRunLead = 20f;
+        private const float HalfTick = 14.5f;
         private const float OffPathLimit = 90f;
         private const float CorrectOn = 40f, CorrectOff = 10f;
+        private const float FacingTolerance = 50f;
         private const int StillTicks = 8;
         private const int MaxReplans = 6;
         private const long TimeoutMs = 30000;
+        private const long TurnWaitMs = 1500;
         private const int ApproachTicks = 30;
+        private const int FaceTicks = 20;
         private const long RequestMs = 500;
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
@@ -51,13 +56,13 @@ namespace NocturneAccess.Systems.Navigation
         };
 
         private static long _requestMs = long.MinValue / 2;
-        private static bool _active;
+        private static bool _active, _firstPerson;
         private static Poi _target;
         private static List<PathRun> _runs;
-        private static int _run, _replans, _still, _approach, _area, _combo = -1;
+        private static int _run, _replans, _still, _approach, _facing, _area, _combo = -1, _turns;
         private static bool _correcting;
         private static float _lastX, _lastZ;
-        private static long _startMs;
+        private static long _startMs, _turnMs = long.MinValue / 2;
 
         internal static bool Active => _active;
 
@@ -88,20 +93,21 @@ namespace NocturneAccess.Systems.Navigation
             if (!_active)
                 return;
 
+            PadInput.ReleaseAll();
             if (gb.areaID != _area || gb.fieldID < 10)
             {
                 Stop("area change", null);
+                return;
+            }
+            if (_firstPerson != (gb.cammode == 0 && FirstPersonView.On))
+            {
+                Stop("view changed", "Auto-walk stopped.");
                 return;
             }
             string key = RealMovementKey();
             if (key.Length > 0)
             {
                 Stop($"pad {key} pressed", "Auto-walk stopped.");
-                return;
-            }
-            if (fldEveHit.gFldEveRngIdx == _target.Index)
-            {
-                Stop("the game's hit index is the target", "Arrived.");
                 return;
             }
             if (Clock.ElapsedMilliseconds - _startMs > TimeoutMs)
@@ -115,36 +121,65 @@ namespace NocturneAccess.Systems.Navigation
             _lastX = x;
             _lastZ = z;
             _still = moved < 2f ? _still + 1 : 0;
+            if (Turning(gb))
+                _still = 0;   // a first-person turn stands still on purpose
+
+            float toTarget = Bearing(x, z, _target.X, _target.Z);
+            if (fldEveHit.gFldEveRngIdx == _target.Index)
+            {
+                if (Facing(gb, toTarget) || ++_facing > FaceTicks)
+                {
+                    Stop($"the game's hit index is the target{(_facing > FaceTicks ? " (facing not reached)" : "")}", "Arrived.");
+                    return;
+                }
+                FaceTowards(gb, toTarget);
+                return;
+            }
 
             if (_run >= _runs.Count)
             {
-                Approach(gb, x, z);
+                Approach(gb, x, z, toTarget);
                 return;
             }
 
             PathRun r = _runs[_run];
-            GridSenseDir(r.Dir, out float ux, out float uz);
+            Dir(r.Dir, out float ux, out float uz);
             float along = (x - r.Ax) * ux + (z - r.Az) * uz;
             float cross = (x - r.Ax) * uz - (z - r.Az) * ux;   // > 0: the player is to the right of the run (east of a run going north)
-            if (along >= r.Length - NextRunLead)
+            float lead = _firstPerson ? HalfTick : NextRunLead;
+            if (along >= r.Length - lead)
             {
                 _run++;
                 _correcting = false;
+                _turns = 0;
                 if (_run >= _runs.Count)
                 {
-                    Log.Info($"[Nav:Walk] Goal cell reached at {FieldData.F(x)} {FieldData.F(z)}; approaching the {_target.Label.ToLowerInvariant()}.");
-                    Approach(gb, x, z);
+                    Log.Info($"[Nav:Walk] Goal cell reached at {FieldData.F(x)} {FieldData.F(z)}; approaching the {_target.InSentence}.");
+                    Approach(gb, x, z, toTarget);
                     return;
                 }
                 r = _runs[_run];
                 LogRun(gb, "next run");
-                GridSenseDir(r.Dir, out ux, out uz);
+                Dir(r.Dir, out ux, out uz);
                 cross = (x - r.Ax) * uz - (z - r.Az) * ux;
             }
 
-            if (Math.Abs(cross) > OffPathLimit || _still >= StillTicks)
+            if (Math.Abs(cross) > OffPathLimit || (_still >= StillTicks && !Turning(gb)))
             {
                 Replan(gb, Math.Abs(cross) > OffPathLimit ? $"{FieldData.F(cross)} off the run" : $"still for {_still} ticks");
+                return;
+            }
+
+            if (_firstPerson)
+            {
+                // Face the run with the game's own turn, then walk.
+                if (!FacingSquare(gb, r.Bearing))
+                {
+                    if (!TurnTo(gb, r.Bearing))
+                        Replan(gb, "the turn did not happen");
+                    return;
+                }
+                PadInput.Hold(SDF_PADMAP.SDF_PADMAP_U, true);
                 return;
             }
 
@@ -168,11 +203,6 @@ namespace NocturneAccess.Systems.Navigation
                 Say("Auto-walk is not available here.");
                 return;
             }
-            if (gb.cammode == 0 && FirstPersonView.On)
-            {
-                Say("Auto-walk works in fixed-camera rooms and third person for now.");
-                return;
-            }
             Poi poi = PointsOfInterest.Current(gb);
             if (poi == null)
             {
@@ -184,8 +214,10 @@ namespace NocturneAccess.Systems.Navigation
                 Say("No path.");
                 return;
             }
+            CentreWalk.Cancel("auto-walk");
             _target = poi;
             _area = gb.areaID;
+            _firstPerson = gb.cammode == 0 && FirstPersonView.On;
             _replans = 0;
             _startMs = Clock.ElapsedMilliseconds;
             if (!Plan(gb, "start"))
@@ -194,14 +226,14 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
             _active = true;
-            Say($"Walking to {poi.Label.ToLowerInvariant()}, {PointsOfInterest.Describe(gb.playerX, gb.playerZ, poi.X, poi.Z)}.");
+            Say($"Walking to {poi.InSentence}, {PointsOfInterest.Describe(gb.playerX, gb.playerZ, poi.X, poi.Z)}.");
         }
 
         private static bool Plan(fldGlobalWork_t gb, string why)
         {
             var clock = Stopwatch.StartNew();
             float minDist = _target.Kind == PoiKind.Door ? 0f : 120f;   // outside a person's or box's 100 x 100 box
-            _runs = WalkGrid.Plan(gb.playerX, gb.playerZ, _target.X, _target.Z, minDist, out float gx, out float gz);
+            _runs = WalkGrid.Plan(gb.playerX, gb.playerZ, _target.X, _target.Z, minDist, _firstPerson, out float gx, out float gz);
             if (_runs != null && Math.Sqrt((gx - _target.X) * (gx - _target.X) + (gz - _target.Z) * (gz - _target.Z)) > _target.ReachRadius)
             {
                 Log.Info($"[Nav:Walk] Plan ({why}): the nearest reachable cell {FieldData.F(gx)} {FieldData.F(gz)} is too far from {_target.Label} {_target.ResName}.");
@@ -215,13 +247,16 @@ namespace NocturneAccess.Systems.Navigation
             _run = 0;
             _still = 0;
             _approach = 0;
+            _facing = 0;
+            _turns = 0;
             _correcting = false;
             _combo = -1;
             _lastX = gb.playerX;
             _lastZ = gb.playerZ;
-            Log.Info($"[Nav:Walk] Plan ({why}) from {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)} to {_target.Label} {_target.ResName} " +
-                     $"(gEvnRng {_target.Index}) at {FieldData.F(_target.X)} {FieldData.F(_target.Z)}: goal cell {FieldData.F(gx)} {FieldData.F(gz)}, " +
-                     $"{_runs.Count} runs [{string.Join(", ", _runs.Select(r => $"{r.Bearing}:{FieldData.F(r.Length)}"))}], {clock.ElapsedMilliseconds} ms.");
+            Log.Info($"[Nav:Walk] Plan ({why}, {(_firstPerson ? "first person" : "third person")}) from {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)} " +
+                     $"to {_target.Label} {_target.ResName} (gEvnRng {_target.Index}) at {FieldData.F(_target.X)} {FieldData.F(_target.Z)}: " +
+                     $"goal cell {FieldData.F(gx)} {FieldData.F(gz)}, {_runs.Count} runs [{string.Join(", ", _runs.Select(r => $"{r.Bearing}:{FieldData.F(r.Length)}"))}], " +
+                     $"{clock.ElapsedMilliseconds} ms.");
             return true;
         }
 
@@ -239,19 +274,78 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         /// <summary>After the goal cell: straight at the target so the game's hit check can fire (doors: into the volume).</summary>
-        private static void Approach(fldGlobalWork_t gb, float x, float z)
+        private static void Approach(fldGlobalWork_t gb, float x, float z, float toTarget)
         {
-            if (++_approach > ApproachTicks || (_approach > 5 && _still >= 5))
+            if (++_approach > ApproachTicks || (_approach > 5 && _still >= 5 && !Turning(gb)))
             {
                 Stop($"approach ended at {FieldData.F(x)} {FieldData.F(z)} without the game's hit (gFldEveRngIdx {fldEveHit.gFldEveRngIdx})",
-                     $"Near the {_target.Label.ToLowerInvariant()}.");
+                     $"Near the {_target.InSentence}.");
                 return;
             }
-            float bearing = (float)(Math.Atan2(_target.X - x, _target.Z - z) * 180.0 / Math.PI);
-            Press(bearing);
+            if (_firstPerson)
+            {
+                float square = Square(toTarget);
+                if (!FacingSquare(gb, square))
+                {
+                    TurnTo(gb, square);
+                    _approach--;   // turning does not use up the approach
+                    return;
+                }
+                PadInput.Hold(SDF_PADMAP.SDF_PADMAP_U, true);
+                return;
+            }
+            Press(toTarget);
         }
 
-        /// <summary>Holds the pad combination whose camera-relative bearing is nearest the wanted compass bearing.</summary>
+        /// <summary>In reach but not facing the target: turn towards it (first person: the game's 90-degree turn).</summary>
+        private static void FaceTowards(fldGlobalWork_t gb, float toTarget)
+        {
+            if (_firstPerson)
+            {
+                float square = Square(toTarget);
+                if (!FacingSquare(gb, square))
+                    TurnTo(gb, square);
+                return;
+            }
+            Press(toTarget);
+        }
+
+        /// <summary>
+        /// One tick of the game's own first-person turn towards a compass bearing (a multiple of 90): pad L adds 90 to
+        /// PlayerKakudo, R subtracts 90, D turns round (0.0.15 to 0.0.18 logs). Waits while a turn is running.
+        /// Returns false when turns stop working (4 presses for one run).
+        /// </summary>
+        private static bool TurnTo(fldGlobalWork_t gb, float bearing)
+        {
+            if (Turning(gb) || Clock.ElapsedMilliseconds - _turnMs < 100)
+                return true;
+            if (++_turns > 4)
+                return false;
+            int want = Mod360((int)Math.Round(180 - bearing));                 // compass bearing = 180 - PlayerKakudo
+            int now = GridSense.Normalize90(gb.PlayerKakudoGoal);
+            int delta = Mod360(want - now);
+            SDF_PADMAP pad = delta == 180 ? SDF_PADMAP.SDF_PADMAP_D : delta == 90 ? SDF_PADMAP.SDF_PADMAP_L : SDF_PADMAP.SDF_PADMAP_R;
+            if (OffSquare(gb) > 2)
+                pad = SDF_PADMAP.SDF_PADMAP_R;   // a diagonal facing kept from third person: square it first
+            PadInput.Hold(pad, true);
+            _turnMs = Clock.ElapsedMilliseconds;
+            Log.Info($"[Nav:Walk] Turn: facing {FieldData.F(gb.PlayerKakudo)}, want bearing {FieldData.F(bearing)} (kakudo {want}): pad {pad.ToString().Replace("SDF_PADMAP_", "")}.");
+            return true;
+        }
+
+        private static bool Turning(fldGlobalWork_t gb)
+            => _firstPerson && (fldPlayer.gFldPlayerSyukanDly != 0 || Math.Abs(Diff(gb.PlayerKakudo, gb.PlayerKakudoGoal)) > 2);
+
+        private static bool FacingSquare(fldGlobalWork_t gb, float bearing)
+            => !Turning(gb) && OffSquare(gb) <= 2 && Math.Abs(Diff(180 - gb.PlayerKakudoGoal, bearing)) < 1;
+
+        private static bool Facing(fldGlobalWork_t gb, float bearing)
+            => !Turning(gb) && Math.Abs(Diff(180 - gb.PlayerKakudo, bearing)) <= FacingTolerance;
+
+        private static float OffSquare(fldGlobalWork_t gb)
+            => Math.Abs(Diff(gb.PlayerKakudoGoal, GridSense.Normalize90(gb.PlayerKakudoGoal)));
+
+        /// <summary>Holds the pad combination whose camera-relative bearing is nearest the wanted compass bearing (third person).</summary>
         private static void Press(float bearing)
         {
             float camYaw = 0;
@@ -262,20 +356,19 @@ namespace NocturneAccess.Systems.Navigation
             float bestDiff = float.MaxValue;
             for (int i = 0; i < Combos.Length; i++)
             {
-                float diff = Math.Abs(((camYaw + i * 45f - bearing) % 360 + 540) % 360 - 180);
+                float diff = Math.Abs(Diff(camYaw + i * 45f, bearing));
                 if (diff < bestDiff)
                 {
                     bestDiff = diff;
                     best = i;
                 }
             }
-            PadInput.ReleaseAll();
             foreach (SDF_PADMAP p in Combos[best])
                 PadInput.Hold(p, true);
             if (best != _combo)
             {
                 _combo = best;
-                Log.Info($"[Nav:Walk] Bearing {FieldData.F(((bearing % 360) + 360) % 360)}, camera yaw {FieldData.F(camYaw)}: pads " +
+                Log.Info($"[Nav:Walk] Bearing {FieldData.F(Mod360(bearing))}, camera yaw {FieldData.F(camYaw)}: pads " +
                          $"{string.Join("+", Combos[best].Select(p => p.ToString().Replace("SDF_PADMAP_", "")))} ({FieldData.F(bestDiff)} off).");
             }
         }
@@ -293,16 +386,30 @@ namespace NocturneAccess.Systems.Navigation
             if (PadInput.Real(SDF_PADMAP.SDF_PADMAP_D, 0)) return "D";
             if (PadInput.Real(SDF_PADMAP.SDF_PADMAP_L, 0)) return "L";
             if (PadInput.Real(SDF_PADMAP.SDF_PADMAP_R, 0)) return "R";
+            if (PadInput.Real(SDF_PADMAP.SDF_PADMAP_L1, 1)) return "L1";
+            if (PadInput.Real(SDF_PADMAP.SDF_PADMAP_R1, 1)) return "R1";
             return "";
         }
 
+        /// <summary>Compass bearing from (x, z) to (tx, tz): 0 north (+Z), 90 east (+X).</summary>
+        private static float Bearing(float x, float z, float tx, float tz)
+            => Mod360((float)(Math.Atan2(tx - x, tz - z) * 180.0 / Math.PI));
+
+        private static float Square(float bearing) => Mod360((float)Math.Round(bearing / 90.0) * 90f);
+
         /// <summary>World unit vector of a path direction (0 north = +Z, clockwise).</summary>
-        private static void GridSenseDir(int dir, out float ux, out float uz)
+        private static void Dir(int dir, out float ux, out float uz)
         {
             double a = dir * Math.PI / 4;
             ux = (float)Math.Round(Math.Sin(a), 6);
             uz = (float)Math.Round(Math.Cos(a), 6);
         }
+
+        private static float Diff(float a, float b) => ((a - b) % 360 + 540) % 360 - 180;
+
+        private static float Mod360(float a) => (a % 360 + 360) % 360;
+
+        private static int Mod360(int a) => (a % 360 + 360) % 360;
 
         internal static void Stop(string why, string speech)
         {

@@ -144,3 +144,43 @@ The walk to the item box went to the nearest reachable cell, at the Healing Room
 - Page Up and Page Down list only reachable points; the log lists all of them, marking the others "not reachable, left out". When the area has no grid, all points are listed.
 - A walk whose nearest reachable cell is farther than the reach radius says "No path." instead of walking to a wall.
 - The navigation dump marks unreachable points "not reachable from here".
+
+## 5. The basement corridors: named doors, Souls, first-person auto-walk (0.0.23, 1 Oct 2026)
+
+### Results of the 0.0.22 test (log `session_2026-10-01_19-07-38.log`)
+
+Francesco: "It worked very well." In the Healing Room, Page Up listed only the door and the Soul (two unreachable points left out), and both walks arrived ("Talk", "Open Door").
+
+One nitpick, in the empty room west of the Healing Room. The player had entered through door `01d_01` and stood inside its volume facing into the room. The game's hit index was already the door, so the walk ended at once ("Arrived."), but the game's "Open Door" prompt came only after a W press turned the player towards the door. **The prompt needs the player to face the door, not only to stand in its volume.**
+
+### Read in the game's code: where room names come from
+
+- `fldGlobal.fldNameData` (`FldNameData`, a ScriptableObject) holds the real name tables; the `fldGlobal` arrays `area_name`, `basyo_name` and `floor_name` are empty in this build. Its methods:
+  - `GetAreaName(fld, area)`;
+  - `GetBasyoName(fld, basyo)`;
+  - `GetFloorName(fld, floor)`;
+  - `GetSaveNmlName` / `GetSaveSmlName(terminal)`.
+- `fldAutoMap.fldDrawAreaBlockFont` (the auto-map's labels) calls `GetAreaName(fldGb.fieldID, fldGb.nameU)` and `GetBasyoName(fldGb.fieldID, fldGb.nameD)`. `nameU` and `nameD` are `fldGlobalWork_t` fields at 0x74 and 0x78.
+- **Place pads.** The corridor area (field 15, area 5) has small horizontal polygons with `Attr` 0x1000 and a `Basyo` number in front of three doors:
+  - basyo 10, x -4400..-4000, z 600..900: the elevator, event volume `01eve_04`;
+  - basyo 11, x -7400..-7000, z -2900..-2700: door `01d_02`, the Terminal (the save point);
+  - basyo 15, x -5600..-5200, z -5700..-5500: door `01d_07`, the Healing Room.
+
+  Inside the Healing Room, one room-sized place polygon (basyo 15) reaches 100 units past its walls. Standing on these polygons is what makes the location banner name the room behind a door.
+- **People:** all three corridor NPCs (`01npc_01`, `01npc_02`, `npc_hoji_01`) use the object `shinentai(Clone)`, the model the game's dialogue names "Soul".
+
+### Design (0.0.23, not yet tested)
+
+- **Door names:** a door is named with the game's own text, `GetBasyoName(fieldID, basyo)` of the nearest place pad within 300 units. A pad is a polygon no larger than 700 x 700; room-sized place polygons do not name doors. Type-10 event volumes (`NNeve_MM`) count as doors only when a pad names them: that is the elevator. Speech: "Healing Room door, 30 metres, south-west. 2 of 8."
+- **Souls:** a person whose object is `shinentai` is called "Soul".
+- **Facing at arrival:** a walk ends "Arrived." only when the game's hit index is the target **and** the player faces it (within 50 degrees). Otherwise it turns towards the target: in third person by pressing towards it, in first person with the game's own turn. After 20 ticks it gives up on the facing.
+- **First-person auto-walk** (the corridors). Home now works in first person too.
+  - **Search:** 4 directions, a turn penalty of 2, and a wall-distance cost: a step next to a wall costs up to 3 times more than one 300 units away, so routes keep to the middle.
+  - **Each run:** the game's own turn (one tick of pad L (+90 `PlayerKakudo`), R (-90) or D (round)), waiting for it to finish, then pad U to the run's end, within half a tick.
+  - **The end:** turn towards the target's nearest square direction and walk until the game's hit index fires.
+  - **Interruptions:** any movement key, Q and E included, stops the walk; so does a view change.
+- **Blobber mode during a walk:** no snap and no cues; its baseline is refreshed afterwards.
+- **Checked offline** (corridor dump of 12:05):
+  - A square lattice of 600 does not reach the elevator: the passage there runs at x -4000 to -4144.
+  - The fine grid reaches every door and Soul in the basement corridor: doors within 29 units, Souls within 95 to 135.
+  - The exception is door `01d_01`, 50 m east, where no floor is loaded; the reachability filter leaves it out.

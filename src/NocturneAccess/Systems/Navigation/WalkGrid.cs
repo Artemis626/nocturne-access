@@ -26,8 +26,9 @@ namespace NocturneAccess.Systems.Navigation
     /// - A cell is walkable when its centre lies on such a floor and is at least Clearance units from every vertical
     ///   polygon overlapping the body (5 to 180 units above the player's Y; game Y points down): walls, closed doors,
     ///   furniture and NPC boxes. The game stops the player 60 units from a wall.
-    /// - Search: Dijkstra from the player's cell (8 directions, diagonal cost 1.414, no cutting past a blocked corner,
-    ///   a penalty per direction change), then the reachable cell nearest the target, at least a minimum distance away.
+    /// - Search: Dijkstra from the player's cell (8 directions, or 4 in first person, where the game turns in 90-degree
+    ///   steps; diagonal cost 1.414; no cutting past a blocked corner; a penalty per direction change; steps closer than
+    ///   NearRange to a wall cost up to 1 + NearCost times more, so routes keep to the middle of corridors), then the reachable cell nearest the target, at least a minimum distance away.
     /// Rebuilt when the collision copy changes (CollisionCache.Version), the area changes or the player's floor moves.
     /// </summary>
     internal static class WalkGrid
@@ -37,7 +38,9 @@ namespace NocturneAccess.Systems.Navigation
         private const float FloorBand = 60f;
         private const float BodyLow = 5f, BodyHigh = 180f;
         private const int MaxCells = 400;          // per side; larger areas get a window around the player
-        private const float TurnPenalty = 0.5f;
+        private const float TurnPenalty = 2f;
+        private const float NearRange = 300f;      // cells closer than this to a wall cost more: routes keep to the middle
+        private const float NearCost = 2f;
         private static readonly int[] Dx = { 0, 1, 1, 1, 0, -1, -1, -1 };   // index = Dir: 0 north (+Z) clockwise
         private static readonly int[] Dz = { 1, 1, 0, -1, -1, -1, 0, 1 };
 
@@ -46,6 +49,7 @@ namespace NocturneAccess.Systems.Navigation
         private static float _x0, _z0;              // centre of cell (0, 0)
         private static int _w, _h;
         private static byte[] _cell = Array.Empty<byte>();   // 0 no floor, 1 walkable, 2 blocked
+        private static float[] _near = Array.Empty<float>();  // distance to the nearest wall, capped at NearRange
         private static readonly List<int> LastPath = new List<int>();
         private static bool[] _reach = Array.Empty<bool>();
         private static int _reachStart = -1, _reachBuild = -1, _builds;
@@ -124,6 +128,9 @@ namespace NocturneAccess.Systems.Navigation
             _w = Math.Min(MaxCells, (int)Math.Ceiling((maxX - _x0) / CellSize) + 1);
             _h = Math.Min(MaxCells, (int)Math.Ceiling((maxZ - _z0) / CellSize) + 1);
             _cell = new byte[_w * _h];
+            _near = new float[_w * _h];
+            for (int k = 0; k < _near.Length; k++)
+                _near[k] = NearRange;
 
             foreach (CollisionPoly f in floors)
             {
@@ -149,6 +156,14 @@ namespace NocturneAccess.Systems.Navigation
                         if (_cell[k] == 1 && SegmentDistance(x, z, ax, az, bx, bz) < Clearance)
                             _cell[k] = 2;
                     });
+                ForCells(Math.Min(ax, bx) - NearRange, Math.Min(az, bz) - NearRange, Math.Max(ax, bx) + NearRange, Math.Max(az, bz) + NearRange,
+                    (i, j, x, z) =>
+                    {
+                        int k = j * _w + i;
+                        float d = SegmentDistance(x, z, ax, az, bx, bz);
+                        if (d < _near[k])
+                            _near[k] = d;
+                    });
             }
 
             int walkable = 0;
@@ -163,7 +178,7 @@ namespace NocturneAccess.Systems.Navigation
         /// A path from (px, pz) to the reachable walkable cell nearest (tx, tz) that is at least minDist from it.
         /// Returns null if no cell is reachable. The runs start at the player's cell.
         /// </summary>
-        internal static List<PathRun> Plan(float px, float pz, float tx, float tz, float minDist, out float goalX, out float goalZ)
+        internal static List<PathRun> Plan(float px, float pz, float tx, float tz, float minDist, bool fourWay, out float goalX, out float goalZ)
         {
             goalX = goalZ = 0;
             LastPath.Clear();
@@ -189,7 +204,7 @@ namespace NocturneAccess.Systems.Navigation
                 if (d > dist[cur])
                     continue;
                 int ci = cur % _w, cj = cur / _w;
-                for (int s = 0; s < 8; s++)
+                for (int s = 0; s < 8; s += fourWay ? 2 : 1)
                 {
                     int ni = ci + Dx[s], nj = cj + Dz[s];
                     if (!Walkable(ni, nj))
@@ -197,7 +212,8 @@ namespace NocturneAccess.Systems.Navigation
                     bool diagonal = Dx[s] != 0 && Dz[s] != 0;
                     if (diagonal && (!Walkable(ci + Dx[s], cj) || !Walkable(ci, cj + Dz[s])))
                         continue;
-                    float nd = d + (diagonal ? 1.4142f : 1f) + (dir[cur] >= 0 && dir[cur] != s ? TurnPenalty : 0f);
+                    float near = 1f - _near[nj * _w + ni] / NearRange;
+                    float nd = d + (diagonal ? 1.4142f : 1f) * (1f + NearCost * near * near) + (dir[cur] >= 0 && dir[cur] != s ? TurnPenalty : 0f);
                     int nk = nj * _w + ni;
                     if (nd < dist[nk])
                     {

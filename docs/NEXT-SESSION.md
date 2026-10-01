@@ -39,7 +39,8 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.19** | Centring fixes: ignored during dialogue, diagonal facing squared first | Built 1 Oct 2026, not yet tested; section 14 |
 | **0.0.20** | Pathfinding scaffold: points of interest (F5, Shift+F5), walkability grid and search, auto-walk in fixed-camera rooms and third person (Ctrl+F5), modifier keys, navigation dump on Shift+F6 with the grid map | Built 1 Oct 2026, **not yet tested in game**; `docs/PATHFINDING.md` |
 | **0.0.21** | Point-of-interest keys: Page Up / Page Down / Home (Francesco: single keys) | Verified 1 Oct 15:20: auto-walk to the Soul and the door "worked perfectly" |
-| **0.0.22** | Only reachable points of interest are listed (the item box and door of the unconnected room west of the Healing Room are left out) | Built 1 Oct 2026, not yet tested; `docs/PATHFINDING.md` section 4 |
+| **0.0.22** | Only reachable points of interest are listed (the item box and door of the unconnected room west of the Healing Room are left out) | Verified 1 Oct 19:07 ("worked very well"); arrival needed facing (fixed in 0.0.23) |
+| **0.0.23** | Basement: doors named with the game's place names (Terminal, Healing Room, Elevator), Souls, first-person auto-walk with the game's turns, facing at arrival | Built 1 Oct 2026, **not yet tested in game**; `docs/PATHFINDING.md` section 5 |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 
