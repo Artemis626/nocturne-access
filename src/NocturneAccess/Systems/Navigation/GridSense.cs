@@ -103,7 +103,7 @@ namespace NocturneAccess.Systems.Navigation
                 float rx = p.x - x, rz = p.z - z;
                 float along = rx * dx + rz * dz;
                 float cross = Math.Abs(rx * dz - rz * dx);
-                if (along > 0 && along <= reach && cross <= DoorHalfWidth)
+                if (along > 0 && along <= reach && cross <= DoorHalfWidth && cross <= along)   // within 45 degrees: a door beside the player is not "ahead" (0.0.23 test)
                     return true;
             }
             return false;

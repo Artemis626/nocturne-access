@@ -40,6 +40,8 @@ namespace NocturneAccess.Systems.Navigation
         private const int ApproachTicks = 30;
         private const int FaceTicks = 20;
         private const long RequestMs = 500;
+        private const int IdleTicks = 3;        // the movement routine did not run: an event or dialogue took over
+        private const float FacingMinDistance = 80f;
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static readonly Queue<string> Pending = new Queue<string>();
@@ -59,7 +61,7 @@ namespace NocturneAccess.Systems.Navigation
         private static bool _active, _firstPerson;
         private static Poi _target;
         private static List<PathRun> _runs;
-        private static int _run, _replans, _still, _approach, _facing, _area, _combo = -1, _turns;
+        private static int _run, _replans, _still, _approach, _facing, _area, _combo = -1, _turns, _idle, _moveCount;
         private static bool _correcting;
         private static float _lastX, _lastZ;
         private static long _startMs, _turnMs = long.MinValue / 2;
@@ -115,6 +117,16 @@ namespace NocturneAccess.Systems.Navigation
                 Stop("timed out", "Auto-walk timed out.");
                 return;
             }
+            // A story event or dialogue stops the game's movement routine while the field update goes on (0.0.23 test,
+            // field 11: trigger 01eve_15 moved the player and opened a dialogue): end the walk instead of re-planning.
+            int moves = FieldState.SyukanCount + FieldState.NmlCount;
+            _idle = moves == _moveCount ? _idle + 1 : 0;
+            _moveCount = moves;
+            if (_idle >= IdleTicks)
+            {
+                Stop("the game stopped taking movement (event or dialogue)", "Walk interrupted by an event.");
+                return;
+            }
 
             float x = gb.playerX, z = gb.playerZ;
             float moved = Math.Abs(x - _lastX) + Math.Abs(z - _lastZ);
@@ -125,9 +137,10 @@ namespace NocturneAccess.Systems.Navigation
                 _still = 0;   // a first-person turn stands still on purpose
 
             float toTarget = Bearing(x, z, _target.X, _target.Z);
-            if (fldEveHit.gFldEveRngIdx == _target.Index)
+            float flat = (float)Math.Sqrt((_target.X - x) * (_target.X - x) + (_target.Z - z) * (_target.Z - z));
+            if (InReach(flat))
             {
-                if (Facing(gb, toTarget) || ++_facing > FaceTicks)
+                if (flat < FacingMinDistance || Facing(gb, toTarget) || ++_facing > FaceTicks)
                 {
                     Stop($"the game's hit index is the target{(_facing > FaceTicks ? " (facing not reached)" : "")}", "Arrived.");
                     return;
@@ -194,6 +207,21 @@ namespace NocturneAccess.Systems.Navigation
             Press(bearing);
         }
 
+        /// <summary>
+        /// The game's own "in reach": doors through fldEveHit.OldHitDoor (it resets on leaving the volume); others through
+        /// gFldEveRngIdx or OldHitInf, which can keep an old value after the player walked away (0.0.23 test: 7 long after
+        /// the elevator door), so the distance is checked too.
+        /// </summary>
+        private static bool InReach(float flat)
+        {
+            int i = _target.Index;
+            if (_target.Kind == PoiKind.Door)
+                return fldEveHit.OldHitDoor == i || (fldEveHit.gFldEveRngIdx == i && flat <= 150f);
+            if (_target.Kind == PoiKind.Place)
+                return (fldEveHit.OldHitDoor == i || fldEveHit.gFldEveRngIdx == i) && flat <= 250f;
+            return (fldEveHit.OldHitInf == i || fldEveHit.gFldEveRngIdx == i) && flat <= 350f;
+        }
+
         private static void TryStart(fldGlobalWork_t gb)
         {
             if (_active)
@@ -219,6 +247,8 @@ namespace NocturneAccess.Systems.Navigation
             _area = gb.areaID;
             _firstPerson = gb.cammode == 0 && FirstPersonView.On;
             _replans = 0;
+            _idle = 0;
+            _moveCount = FieldState.SyukanCount + FieldState.NmlCount;
             _startMs = Clock.ElapsedMilliseconds;
             if (!Plan(gb, "start"))
             {
@@ -226,14 +256,15 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
             _active = true;
-            Say($"Walking to {poi.InSentence}, {PointsOfInterest.Describe(gb.playerX, gb.playerZ, poi.X, poi.Z)}.");
+            Say($"Walking to {poi.InSentence}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}.");
         }
 
         private static bool Plan(fldGlobalWork_t gb, string why)
         {
             var clock = Stopwatch.StartNew();
-            float minDist = _target.Kind == PoiKind.Door ? 0f : 120f;   // outside a person's or box's 100 x 100 box
-            _runs = WalkGrid.Plan(gb.playerX, gb.playerZ, _target.X, _target.Z, minDist, _firstPerson, out float gx, out float gz);
+            float minDist = _target.IsDoorLike ? 0f : 120f;   // outside a person's or box's 100 x 100 box
+            float floorY = _target.IsDoorLike ? _target.Y + 100f : _target.Y;   // a door's volume centre is about 100 above its floor
+            _runs = WalkGrid.Plan(gb.playerX, gb.playerY, gb.playerZ, _target.X, floorY, _target.Z, minDist, _firstPerson, out float gx, out float gz);
             if (_runs != null && Math.Sqrt((gx - _target.X) * (gx - _target.X) + (gz - _target.Z) * (gz - _target.Z)) > _target.ReachRadius)
             {
                 Log.Info($"[Nav:Walk] Plan ({why}): the nearest reachable cell {FieldData.F(gx)} {FieldData.F(gz)} is too far from {_target.Label} {_target.ResName}.");

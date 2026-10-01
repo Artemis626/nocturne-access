@@ -339,14 +339,14 @@ namespace NocturneAccess.Capture
             List<Poi> pois = fldGlobal.fldGb == null ? new List<Poi>() : PointsOfInterest.Build(fldGlobal.fldGb);
             Both($"points of interest: {pois.Count}");
             foreach (Poi p in pois)
-                Both($"  gEvnRng {p.Index} {p.Label} {Q(p.ResName)} at {F(p.X)} {F(p.Z)} d {F(p.Distance)}: {PointsOfInterest.Describe(s.X, s.Z, p.X, p.Z)}{(p.Reachable ? "" : ", not reachable from here")}");
+                Both($"  gEvnRng {p.Index} {p.Label} {Q(p.ResName)} at {F(p.X)} {F(p.Z)} d {F(p.Distance)}: {PointsOfInterest.Describe(s.X, s.Y, s.Z, p)}{(p.Reachable ? "" : ", not reachable from here")}");
             if (!WalkGrid.Ensure(s.FieldId, s.AreaId, s.X, s.Y, s.Z))
             {
                 Both("walk grid: no floor here");
                 return;
             }
             Both($"walk grid {WalkGrid.Width} x {WalkGrid.Height} (map in the file)");
-            FileOnly(WalkGrid.AsciiMap(s.X, s.Z, pois.Select(p => (p.X, p.Z, p.Kind == PoiKind.Door ? 'D' : p.Kind == PoiKind.Person ? 'P' : 'B'))));
+            FileOnly(WalkGrid.AsciiMap(s.X, s.Y, s.Z, pois.Select(p => (p.X, p.Z, p.IsDoorLike ? 'D' : p.Kind == PoiKind.Person ? 'P' : 'B'))));
         }
 
         private static void DumpNpcs(PlayerSnapshot s)

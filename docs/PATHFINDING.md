@@ -184,3 +184,47 @@ One nitpick, in the empty room west of the Healing Room. The player had entered 
   - A square lattice of 600 does not reach the elevator: the passage there runs at x -4000 to -4144.
   - The fine grid reaches every door and Soul in the basement corridor: doors within 29 units, Souls within 95 to 135.
   - The exception is door `01d_01`, 50 m east, where no floor is loaded; the reachability filter leaves it out.
+
+## 6. The prologue test of 0.0.23 and the fixes (0.0.24, 1 Oct 2026)
+
+Francesco tested outside the basement on purpose, "to test the waters in an untested area": field 11 (the prologue station and park, outdoors), field 14 (Shinjuku Medical Center 1F and 2F) and its stairwell. Log `session_2026-10-01_19-57-26.log`, recordings `2026-10-01 20-01-02.mp4` and `20-05-11.mp4`. No errors.
+
+### What worked
+
+- **First-person walks:**
+  - field 11, 30 m north-west with three of the game's own turns, "Arrived.";
+  - field 14 to the Elevator door (20 m) and to door `01d_15` (41 m, two runs), both "Arrived." then "Open Door".
+- **Door names from place pads:** "Elevator door", "Room A203 door", "Room A204 door", "Exit door", "Walkway door".
+- **Reachability left out the rooms of the other wing.**
+
+### What went wrong, and why
+
+1. **An event interrupted a walk.** In field 11 the walk crossed story trigger `01eve_15` (an `NNeve` volume). The game moved the player and opened a dialogue ("Station Staff: ...Huh? [game line removed]"). The first-person movement routine stopped running (`syukan` 0, `act` 5) while `fldPlayerCalc` went on. The walk took "not moving" for a block, re-planned six times and said "Blocked."
+2. **A door against a wall.** Door `01d_06` at -1800 2350 (z 2350): its volume centre lies 50 behind the wall (z 2400), and the player stops at z 2460. The game never fired a hit there. The reach test accepted any walkable cell within 150 units of a door; this one had cells at 115. Doors that worked had cells within about 75. The walk ended "Near the door." with Francesco facing the wall.
+3. **A stale hit index.** `gFldEveRngIdx` stayed 7 (the elevator door) long after the player left it. `OldHitDoor` reset to -1 on leaving the volume. Arrival must not trust `gFldEveRngIdx` alone.
+4. **Two floors at one spot: the stairwell** (field 14 area 14, fixed camera). Doors `01d_01` (1F) and `01d_02` (2F, 400 units higher) have the same x and z; the 2F landing is right above the 1F door (recording 2). The grid took only floors within 60 of the player's height, so the 2F door looked "here". Francesco climbed the stairs by hand; the player's y went -2 to -402 over ramps (floor polygons at -80, -140, -200, -300, -360, -400).
+5. **Event volumes listed as doors.** Story volumes next to doors carry the door's place name ("Room A203 door" three times, from `01d_09`, `01eve_02` and `02eve_02`). Doors with two volumes at one spot appeared twice. "Vending Machine door" was an event volume.
+6. **"Door ahead" in three directions.** At -1816 2460 the blobber cue said "door ahead" facing east, north and west: a door 110 units to the side counted as ahead.
+
+### Fixes (0.0.24, not yet tested)
+
+- **Events:** `FieldState` also counts `fldPlayerCalc_Nml` runs (`NmlCount`). If neither movement routine has run for 3 field updates, the walk ends: "Walk interrupted by an event." Home starts it again afterwards.
+- **Arrival:** doors through `OldHitDoor`; people through `OldHitInf` or `gFldEveRngIdx` within 350 units; place events through `OldHitDoor` or `gFldEveRngIdx` within 250. The facing check is skipped within 80 units, where a bearing is meaningless.
+- **Doors behind walls:** the reach radius for doors is now 95, so `01d_06` is no longer listed.
+- **Multi-level walking map:**
+  - `WalkGrid` keeps up to 3 floor heights per cell, from every real floor polygon (`Attr` 0) at its plane height.
+  - Moves join heights at most 45 apart (stairs and ramps).
+  - A wall blocks a floor only when it overlaps the body above it, 30 to 180 units up, so stair steps lower than 30 do not block.
+  - A goal must be within 200 of the target's floor height. A door's volume centre counts as 100 above its floor, as it was at the basement doors (y -100 over floors at 0).
+  - Points of interest keep their height, and Page Up says ", upstairs" or ", downstairs" when a point is more than 150 above or below.
+  - The ASCII map shows the player's level, ":" marking floor only at other levels.
+- **List:**
+  - Event volumes with a place name (`PoiKind.Place`) are spoken by that name alone ("Elevator", "Vending Machine"), and dropped when a real door within 800 has the same name.
+  - Duplicates of one kind within 20 units and 50 in height are merged.
+  - Place pads must lie on the door's floor (within 150 of the door's floor height).
+- **Cue:** a door counts as "ahead", "left" or "right" only within 45 degrees of that direction.
+
+### Still open
+
+- Story triggers are not avoided by the search: a walk through one stops at the event. Avoiding them could block progress, since many are where the story continues. Ask Francesco.
+- Not yet verified that the stairwell's floors connect as ramps in the grid (the dump of this run would show it: Shift+F6 in the stairwell).

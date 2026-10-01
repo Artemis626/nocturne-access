@@ -38,6 +38,9 @@ namespace NocturneAccess.Systems.Navigation
         /// </summary>
         internal static int SyukanCount { get; private set; }
 
+        /// <summary>fldPlayerCalc_Nml (third-person movement) calls since start; with SyukanCount, a change means the game took movement.</summary>
+        internal static int NmlCount { get; private set; }
+
         internal static void Install()
         {
             Patcher.Prefix("Navigation", typeof(fldPlayer), nameof(fldPlayer.fldPlayerCalc), Type.EmptyTypes,
@@ -46,6 +49,8 @@ namespace NocturneAccess.Systems.Navigation
                 AccessTools.Method(typeof(FieldState), nameof(AfterCalc)));
             Patcher.Prefix("Navigation", typeof(fldPlayer), nameof(fldPlayer.fldPlayerCalc_Nml_syukan), Type.EmptyTypes,
                 AccessTools.Method(typeof(FieldState), nameof(BeforeSyukan)));
+            Patcher.Prefix("Navigation", typeof(fldPlayer), nameof(fldPlayer.fldPlayerCalc_Nml), Type.EmptyTypes,
+                AccessTools.Method(typeof(FieldState), nameof(BeforeNml)));
         }
 
         internal static void Tick()
@@ -72,6 +77,8 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         private static void BeforeSyukan() => SyukanCount++;
+
+        private static void BeforeNml() => NmlCount++;
 
         private static void AfterCalc()
         {
