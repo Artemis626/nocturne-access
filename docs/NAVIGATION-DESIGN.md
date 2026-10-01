@@ -143,3 +143,47 @@ Method (two short runs):
 2. **Force it, narrowly.** Return true for that flag only while `fldPlayer.fldPlayerCalc` runs (a prefix sets a flag, the postfix clears it), so other New Game+ content (bosses, items, Dante) stays locked. If the gate is a field (`NewGame2_endcnt`), set it in the prefix and restore it in the postfix. Never call `evtBitOn` (it would be saved). A config option `[NocturneAccess_Navigation] UnlockFirstPerson = true`.
 
 Then test: V switches to first person; walk, turn, open a door; note what A and D do.
+
+## 6. Verified by the 0.0.12 diagnostic (1 Oct 2026, session 12:04, Underground Facility, field 15)
+
+Source: `session_2026-10-01_12-04-33.log` and `UserData/NocturneAccess/NavDumps/navdump_2026-10-01_12-05-56.txt` .. `12-07-54.txt` (corridor, in front of the Terminal door, back from the Terminal, in front of the Healing Room door, inside the Healing Room).
+
+### Space and facing
+
+- `fldGb.playerX/Z` = player object `transform.position` x 100, same signs. **Y points down** in game coordinates: floors at y 0 have normal (0, -1, 0), walls run from y -400 to 0; `playerY` is -2 (Unity y 0).
+- `PlayerKakudo` is in **degrees**: 0 faces -Z, 90 faces +X, 180 faces +Z, 270 faces -X. Forward vector in game XZ = (sin k, -cos k). Unity yaw = 180 - k (mod 360).
+- Keyboard movement is camera-relative and snapped to 8 directions: `PlayerKakudoGoal` jumps to a multiple of 45 and `PlayerKakudo` eases to it in about 0.5 s.
+- `fldPlayer.gKeyInputDir`: -1 none, 0 forward, 2 right, 4 back, 6 left (1, 3, 5, 7 the diagonals), relative to the camera. `fldPlayerAct`: 0 idle, 1 moving, 5 at a door. `playerRun` true while moving.
+- The field update runs 30 times a second; walking moves 29 units per tick (about 232 per 250 ms), the Ref's step constant 29. The player stops 60 units from a wall (collision radius 60).
+
+### Geometry
+
+- 212 collision polygons in the corridor area, 155 in the Healing Room, all quads; reading them takes 0 to 5 ms. `gfldCollision` has 2048 slots; `gfldCollsionNum` is the live count.
+- `mode2D` 0 = wall facing X, 2 = wall facing Z, 1 = horizontal. **Everything is axis-aligned on a 300-unit lattice**: corridors are 600 wide with walls at centre ± 300; corridor and door centres sit on multiples of 600 (x -7200, -5400, -9000, z -4200). Natural blobber cell: 600, centres on multiples of 600.
+- Real floors and walls have `Attr` 0. `Attr` 0x800, 0x1000, 0x8000 are horizontal overlays at y -10 or -43 (not walls; meaning to find, `Amap0` 2..9 and `Spc` 1/2 on some). `Attr` 0x80 with `npcID` 0..1 are 100 x 100 boxes around NPCs and item boxes. `hitflag` 1 marks the polygons last touched. `Myuka`, `Se`, `EncType` are 0 everywhere; `Basyo` is 0 on real floors.
+- Doors are closed walls in the collision: a doorway is crossed only by the door event (prompt "Open Door", confirm, area load).
+
+### Names
+
+- `fldGlobal.area_name`, `basyo_name`, `floor_name` have 400, 336 and 224 slots but **every entry is null** in this build; `field_name[15]` is null too. Spoken place names must come from the location banner (`fieldUI/flocation`), which the mod already speaks. The banner names the **destination** as soon as the player enters a door volume ("Terminal", "Healing Room", just before "Open Door").
+
+### Auto-map
+
+- `pfldAmArea` holds 22 areas for field 15 (`pName` "001".."022"); `gAmap_NowArea` = `areaID` (5). Sub-block boxes are relative to the area: **world box = sub-block box - area `pPos`** (area 5 pos 3600, 0, 2700; sub-block "s06" -3900..-3300 x, -1200..0 z = the corridor -7500..-6900, -3900..-2700). `AmSBlock` = sub-block index + 1; `blockID` matches the sub-block index here. Sub-block `floor` is a floor number; names are "s01".."s16" (not speakable). Some sub-blocks carry only an icon and a garbage box (1.3e10). Icon types 1 to 10 seen; meanings to map.
+
+### Entities
+
+- `fldEveHit.gEvnRng` (12 in the corridor area): **type 10 with names `NNd_MM` are doors**: boxes 300 wide, 100 deep, 200 tall standing in the doorway, `boxnml` pointing into the room, `sisei.pos` at the door centre. `NNeve_MM` are story triggers (same shape, some rotated 45 degrees). Type 0 entries with `npcIdx` are NPC talk ranges. `resourceLink` is empty: the destination is not in the data (the banner gives its name).
+- Entering a door volume sets `gFldEveRngIdx` and `OldHitDoor` to its index; leaving resets them to -1.
+- `fld_Npc.fldNpc`: people (`shinentai(Clone)` objects, positions in game units, `csize` 30) and **item boxes** (Type 999, `ItemBoxIdx`, object `itembox1(Clone)`); `gfldTakaraWork` stayed empty. `fldEveHit.gProgramEveHit` holds the NPC talk balls (r 160 to 180). `gEve` entries all sit at the origin: not positional.
+
+### Input
+
+- `SteamInputAssign.padcheck` (pad 0) is asked **every field tick** about `CMN_UpFront`, `CMN_DownBack`, `CMN_Left`, `CMN_Right`, `FD_Turn_Left/Right`, `FD_Camera_*`, `FD_Return_Front`, `FD_Automap`, but it **never answered true** for Francesco's keyboard (W, A, S, D, Q, E): the keyboard reaches the game another way. So the player's own input is read from `gKeyInputDir`, not from padcheck. Injection through padcheck is still the plan (the game asks every tick); step 2 proves it.
+- Q and E rotate the camera in third person (camera yaw changes, player still).
+
+### First-person gate
+
+- **`FD_Subjectivity` is never asked for**, before or after V: the gate sits before the input check.
+- Inside `fldPlayerCalc` the game checks exactly two story flags, both false: **3712 once per field tick** and 2800 three times per tick (2800 is also checked outside). `cfgGetBit(4)` is checked occasionally. `NewGame2_*` statics are all 0 on a first playthrough.
+- Candidate gate: **flag 3712** (one check per tick, the shape of `if (flag && padcheck(FD_Subjectivity))`); 2800 second.

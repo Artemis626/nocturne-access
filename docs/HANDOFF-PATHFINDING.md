@@ -7,7 +7,7 @@ Written 1 Oct 2026 at the end of the menus-and-battle chat, for the chat that st
 - Mod version **0.0.11**, verified in game (1 Oct 2026, 09:47 session): dialogue, choices, every menu screen met so far, save/load, config, name entry (letters and pre-filled names), Stats and level-up, interaction prompts, location names, combat version 1. Francesco calls it reliable enough to play the prologue by ear.
 - Last commits: `6498be9` (0.0.11 verified), `727dd39` (navigation research), then the commit adding this file.
 - Last game run: `session_2026-10-01_10-23-24.log` (short: load, config, pause menu; no errors, 44 hooks). Francesco pressed V in the Underground Facility: nothing happens on a first playthrough.
-- No navigation code exists yet. Every name the design uses is recorded in `docs/class-index.md` with its source; the meanings marked "to verify" there are what the first runs measure.
+- **0.0.12 diagnostic verified in game (1 Oct 2026, 12:04 session)**: F5 dumps, walk trace, change log and V capture all work; results in `docs/NAVIGATION-DESIGN.md` section 6 (game units = Unity x 100, Y down, facing in degrees, 600-unit grid, doors are `NNd_MM` event boxes, keyboard does not show in padcheck, V is gated before the input check, gate candidate flag 3712).
 
 ## Francesco's decisions
 

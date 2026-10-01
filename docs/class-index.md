@@ -252,6 +252,7 @@ Used in 0.0.12 by `Systems/Navigation/FieldState.cs` (prefix and postfix on `fld
 | `Il2Cpp.dds3GlobalWork` | static, Proxy; Ref BetterNewGamePlus patches the last two | `DDS3_GBWK`, `NewGame2_SYS_ENDING0` .. `NewGame2_SYS_ENDING7`, `NewGame2_SYS_ZENSHO_ALL`, `NewGame2_EV_ZENSYO_ALL`, `NewGame2_endcnt`, `NewGame2Push()`, `NewGame2Pop()`. `NewGame2_endcnt` is short, the others int |
 | `Il2Cpp.dds3ConfigMain` | static, Proxy; Ref AnalyzeBosses reads `cfgGetBit(9)` | `cfgGetBit(uint Type)` returns int (postfix logs calls during the V capture) |
 | First person (Log, 1 Oct 2026 10:23 session) | Francesco | V (`FD_Subjectivity`) does nothing on a first playthrough: locked to New Game+. Unlock plan: `docs/NAVIGATION-DESIGN.md` section 5. |
+| Meanings measured (Log, 1 Oct 2026 12:04 session) | 0.0.12 diagnostic | See `docs/NAVIGATION-DESIGN.md` section 6: units, axes, facing, `gKeyInputDir`, `mode2D`, `Attr`, door event names, auto-map offsets, empty name tables, first-person gate candidates. |
 
 ## MelonLoader 0.6.1 API used by the mod
 
