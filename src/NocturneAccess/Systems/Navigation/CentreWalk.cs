@@ -25,7 +25,7 @@ namespace NocturneAccess.Systems.Navigation
         private const long TimeoutMs = 10000;
         private const long TurnWaitMs = 1500;
 
-        private enum Phase { None, Side, Ahead, TurnOut, Back, TurnBack }
+        private enum Phase { None, Align, Side, Ahead, TurnOut, Back, TurnBack }
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static Phase _phase = Phase.None;
@@ -33,6 +33,7 @@ namespace NocturneAccess.Systems.Navigation
         private static int _facing0, _turnTo, _stall;
         private static long _startMs, _phaseMs;
         private static bool _blocked;
+        private static bool _alignPressed;
 
         internal static bool Active => _phase != Phase.None;
 
@@ -46,10 +47,11 @@ namespace NocturneAccess.Systems.Navigation
             _stall = 0;
             _blocked = false;
             _startMs = _phaseMs = Clock.ElapsedMilliseconds;
-            _phase = Phase.Side;
+            _alignPressed = false;
+            _phase = OffSquare(gb) > 2 ? Phase.Align : Phase.Side;
             Offsets(gb, out float along, out float left);
             Log.Info($"[Nav:Blob] Centring from {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)} to {FieldData.F(_cx)} {FieldData.F(_cz)}, " +
-                     $"facing {_facing0}: {FieldData.F(along)} ahead, {FieldData.F(left)} to the left.");
+                     $"facing {_facing0}: {FieldData.F(along)} ahead, {FieldData.F(left)} to the left{(_phase == Phase.Align ? $", facing {FieldData.F(gb.PlayerKakudo)} not square" : "")}.");
         }
 
         internal static void Cancel(string why)
@@ -65,13 +67,15 @@ namespace NocturneAccess.Systems.Navigation
         /// One field update, before the game reads the pads. Returns null while running, else true when centred or
         /// false when it could not get there.
         /// </summary>
-        internal static bool? Step(fldGlobalWork_t gb)
+        internal static bool? Step(fldGlobalWork_t gb, bool gameMoved)
         {
             if (!Active)
                 return null;
             PadInput.ReleaseAll();
             long now = Clock.ElapsedMilliseconds;
             float moved = Math.Abs(gb.playerX - _lastX) + Math.Abs(gb.playerZ - _lastZ);
+            // A move can only be blocked when the game read the keys last tick (movement routine ran, no turn delay).
+            bool counts = gameMoved && fldPlayer.gFldPlayerSyukanDly == 0;
             _lastX = gb.playerX;
             _lastZ = gb.playerZ;
             if (now - _startMs > TimeoutMs)
@@ -80,10 +84,31 @@ namespace NocturneAccess.Systems.Navigation
             Offsets(gb, out float along, out float left);
             switch (_phase)
             {
+                case Phase.Align:
+                    // A diagonal facing (kept from third person): one tick of pad R, the game's own D turn, which snaps to 90.
+                    if (!_alignPressed)
+                    {
+                        if (fldPlayer.gFldPlayerSyukanDly == 0)
+                        {
+                            PadInput.Hold(SDF_PADMAP.SDF_PADMAP_R, true);
+                            _alignPressed = true;
+                            _phaseMs = now;
+                        }
+                    }
+                    else if (OffSquare(gb) <= 2 && Eased(gb) && fldPlayer.gFldPlayerSyukanDly == 0)
+                    {
+                        _facing0 = GridSense.Normalize90(gb.PlayerKakudoGoal);
+                        Log.Info($"[Nav:Blob] Centring: facing squared to {_facing0}.");
+                        Enter(Phase.Side);
+                    }
+                    else if (now - _phaseMs > TurnWaitMs)
+                        return Finish(gb, "the facing could not be squared");
+                    return null;
+
                 case Phase.Side:
                     if (Math.Abs(left) <= Tolerance)
                         Enter(Phase.Ahead);
-                    else if (Stalled(moved))
+                    else if (Stalled(moved, counts))
                     {
                         _blocked = true;
                         Log.Info("[Nav:Blob] Centring: side step blocked.");
@@ -98,7 +123,7 @@ namespace NocturneAccess.Systems.Navigation
                         return Finish(gb, "done");
                     if (along > 0)
                     {
-                        if (Stalled(moved))
+                        if (Stalled(moved, counts))
                         {
                             _blocked = true;
                             return Finish(gb, "blocked ahead");
@@ -120,7 +145,7 @@ namespace NocturneAccess.Systems.Navigation
                     // The facing is now reversed, so "along" counts towards the centre behind the original facing.
                     if (along <= Tolerance)
                         TurnRound(Phase.TurnBack, _facing0);
-                    else if (Stalled(moved))
+                    else if (Stalled(moved, counts))
                     {
                         _blocked = true;
                         Log.Info("[Nav:Blob] Centring: walk back blocked.");
@@ -150,8 +175,10 @@ namespace NocturneAccess.Systems.Navigation
             left = ex * lx + ez * lz;
         }
 
-        private static bool Stalled(float moved)
+        private static bool Stalled(float moved, bool counts)
         {
+            if (!counts)
+                return false;
             if (moved >= 1f)
             {
                 _stall = 0;
@@ -180,9 +207,15 @@ namespace NocturneAccess.Systems.Navigation
         {
             if (GridSense.Normalize90(gb.PlayerKakudoGoal) != _turnTo || fldPlayer.gFldPlayerSyukanDly != 0)
                 return false;
-            float diff = Math.Abs(((gb.PlayerKakudo - gb.PlayerKakudoGoal) % 360 + 540) % 360 - 180);
-            return diff <= 2;
+            return Eased(gb);
         }
+
+        private static bool Eased(fldGlobalWork_t gb)
+            => Math.Abs(((gb.PlayerKakudo - gb.PlayerKakudoGoal) % 360 + 540) % 360 - 180) <= 2;
+
+        /// <summary>Degrees between the facing goal and the nearest multiple of 90.</summary>
+        private static float OffSquare(fldGlobalWork_t gb)
+            => Math.Abs(((gb.PlayerKakudoGoal - GridSense.Normalize90(gb.PlayerKakudoGoal)) % 360 + 540) % 360 - 180);
 
         private static bool Finish(fldGlobalWork_t gb, string how)
         {

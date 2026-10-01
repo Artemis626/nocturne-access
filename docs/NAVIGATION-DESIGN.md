@@ -352,3 +352,23 @@ How it ends:
 - **Stops:** a move blocked for 4 ticks, the area changing, exploring stopping, or 10 s.
 - **Speech:** the result with the full view, which becomes the baseline for later changes. Examples: "Centred. North: wall ahead, opening left, wall right." and "Blocked, not centred. …". The turns it makes are not announced separately.
 - **Log:** `[Nav:Blob] Centring from .. to .., facing ..: .. ahead, .. to the left`, `Centring: turning round to ..`, `Centring done / blocked ahead / timed out ..: now .., off by .., .. ms: centred | not centred`, `Centring stopped: ..`.
+
+## 14. Results of the 0.0.18 test and two fixes (0.0.19, 1 Oct 2026)
+
+Log `session_2026-10-01_14-52-11.log`, recording of the same run. Francesco: "Very good run, I think the implementation feels and looks great (for a low vision player)."
+
+**Centring (F3) succeeded 23 times out of 25:**
+
+- side offsets of 30 to 240 units, corrected in 100 to 330 ms;
+- twice with the centre behind (turn round, walk back, turn back, 1.6 s each), ending 8 to 11 units from the centre;
+- "Centring works in first person only." in the Healing Room.
+
+The two failures, both fixed in 0.0.19 (not yet tested):
+
+- **14:54:12, F3 during the Soul's dialogue.** `fldPlayerCalc` keeps running during dialogue, but the first-person movement routine does not, so nothing moved and the side step counted as blocked.
+  - `FieldState` now counts `fldPlayerCalc_Nml_syukan` runs (`SyukanCount`, prefix).
+  - F3 is ignored, with a log line only, while the routine did not run in the last tick.
+  - A move counts as blocked only on ticks where the game read the keys: the routine ran and `gFldPlayerSyukanDly` was 0.
+- **14:55:29, a diagonal facing.** After switching from third person, first person kept the diagonal facing `PlayerKakudo` -135. The game's turn round then went to a different square direction than the mod expected ("the turn round did not happen").
+  - `CentreWalk` now first squares a facing more than 2 degrees off a multiple of 90, with one tick of pad R (the game's D turn: -135 - 50 snaps to -180), and continues from the new facing.
+  - Log: `facing .. not square`, `Centring: facing squared to ..`.

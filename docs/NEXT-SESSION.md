@@ -35,7 +35,8 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | 0.0.12 to 0.0.15 | Navigation diagnostics (F5, trace), first person in memory (V), pad injection | Verified 1 Oct 2026 (12:04 to 13:13 sessions) |
 | **0.0.16** | Blobber mode version 1 (F4) | Tested 1 Oct 13:39: forward grid steps good; input takeover and step refusals rejected by Francesco. Redesign in `docs/NAVIGATION-DESIGN.md` section 11 |
 | **0.0.17** | Blobber mode version 2: game keys untouched, W release snaps to the next square, cues at square centres, NPC boxes not walls | Verified 1 Oct 14:31: "a significant improvement" (Francesco); section 12 and 13 |
-| **0.0.18** | F3 centring key (walk to the centre of the current square with the game's own moves) | Built 1 Oct 2026, **not yet tested in game**; section 13 |
+| **0.0.18** | F3 centring key (walk to the centre of the current square with the game's own moves) | Verified 1 Oct 14:52 (23 of 25; Francesco: "feels and looks great") |
+| **0.0.19** | Centring fixes: ignored during dialogue, diagonal facing squared first | Built 1 Oct 2026, not yet tested; section 14 |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 

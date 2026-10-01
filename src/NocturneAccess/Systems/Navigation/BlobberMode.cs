@@ -68,6 +68,7 @@ namespace NocturneAccess.Systems.Navigation
         // F3 (centring), requested in OnUpdate and started at the next field update
         private const long CentreRequestMs = 500;
         private static long _centreRequestMs = long.MinValue / 2;
+        private static int _lastSyukan;
 
         internal static bool Enabled => _enabled;
 
@@ -156,19 +157,27 @@ namespace NocturneAccess.Systems.Navigation
 
             float x = gb.playerX, z = gb.playerZ;
             float moveX = _havePrev ? x - _prevX : 0, moveZ = _havePrev ? z - _prevZ : 0;
+            // Did the game's first-person movement routine run last tick? Not during dialogue and events.
+            bool gameMoved = FieldState.SyukanCount != _lastSyukan;
+            _lastSyukan = FieldState.SyukanCount;
             ReadKeys();
 
             if (TakeCentreRequest())
             {
-                StopSnap("centring");
-                CentreWalk.Start(gb, _cell);
+                if (!gameMoved)
+                    Log.Info("[Nav:Blob] Centring ignored: the game is not taking movement (dialogue or event).");
+                else
+                {
+                    StopSnap("centring");
+                    CentreWalk.Start(gb, _cell);
+                }
             }
             if (CentreWalk.Active && (_realU || _otherKey.Length > 0))
                 CentreWalk.Cancel(_realU ? "W pressed" : $"pad {_otherKey} pressed");
 
             if (CentreWalk.Active)
             {
-                bool? centred = CentreWalk.Step(gb);
+                bool? centred = CentreWalk.Step(gb, gameMoved);
                 if (centred.HasValue)
                     SpeakCentred(gb, centred.Value);
                 else

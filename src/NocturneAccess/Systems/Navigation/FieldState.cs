@@ -32,12 +32,20 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>fldPlayerCalc calls since start; the probe reads differences.</summary>
         internal static int CalcCount { get; private set; }
 
+        /// <summary>
+        /// fldPlayerCalc_Nml_syukan (first-person movement) calls since start. It does not run during dialogue and events
+        /// although fldPlayerCalc does (0.0.18 log, the Soul's dialogue): a change means the game took movement.
+        /// </summary>
+        internal static int SyukanCount { get; private set; }
+
         internal static void Install()
         {
             Patcher.Prefix("Navigation", typeof(fldPlayer), nameof(fldPlayer.fldPlayerCalc), Type.EmptyTypes,
                 AccessTools.Method(typeof(FieldState), nameof(BeforeCalc)));
             Patcher.Postfix("Navigation", typeof(fldPlayer), nameof(fldPlayer.fldPlayerCalc), Type.EmptyTypes,
                 AccessTools.Method(typeof(FieldState), nameof(AfterCalc)));
+            Patcher.Prefix("Navigation", typeof(fldPlayer), nameof(fldPlayer.fldPlayerCalc_Nml_syukan), Type.EmptyTypes,
+                AccessTools.Method(typeof(FieldState), nameof(BeforeSyukan)));
         }
 
         internal static void Tick()
@@ -61,6 +69,8 @@ namespace NocturneAccess.Systems.Navigation
                     Log.Error($"[Nav] Blobber update failed: {ex}");
             }
         }
+
+        private static void BeforeSyukan() => SyukanCount++;
 
         private static void AfterCalc()
         {
