@@ -4,7 +4,7 @@ Rewritten 1 Oct 2026, evening, at the end of the second navigation chat (version
 
 Read `CLAUDE.md` first (binding rules), then this file, then:
 
-- `docs/PATHFINDING.md`: points of interest, walking map, auto-walk; every test result and fix, sections 1 to 7;
+- `docs/PATHFINDING.md`: points of interest, walking map, auto-walk; every test result and fix, sections 1 to 8;
 - `docs/NAVIGATION-DESIGN.md` sections 6 to 14: blobber mode, first person, the game's input and code;
 - `docs/class-index.md` "Field navigation";
 - `docs/KEYS.md`;
@@ -12,7 +12,7 @@ Read `CLAUDE.md` first (binding rules), then this file, then:
 
 ## Where things stand
 
-- **Installed: 0.0.25**, built 1 Oct 2026, **not yet tested in game**. 0.0.24 fixed the prologue test (`PATHFINDING.md` section 6); its basement test (20:20) showed a hidden NPC listed as a Soul and a spin next to it, fixed in 0.0.25, which also adds **spoken directions on End** (section 7).
+- **Installed: 0.0.26**, built 1 Oct 2026, **not yet tested in game**. 0.0.25 (hidden NPCs left out, directions on End) was played at length at 20:37: Francesco finds the systems "mature enough for a low-vision player to progress through the game with only minor friction" and is now playing through, reporting bugs and missing features. 0.0.26: End speaks only when pressed; Home turns to a door even right at it (section 8).
 - **Verified in game:**
 
 | Feature | Versions | Result |
@@ -23,11 +23,12 @@ Read `CLAUDE.md` first (binding rules), then this file, then:
 | Points of interest and auto-walk in the Healing Room | 0.0.20 to 0.0.22 | "Worked perfectly" |
 | Basement and Medical Center: first-person walks with the game's own turns, named doors | 0.0.23 | Several walks arrived |
 | Basement walks to the Terminal door and a Soul, `OldHitDoor` / `OldHitInf` arrival | 0.0.24 | Arrived (20:20) |
+| Hidden NPCs left out; long walks in field 45; event interruptions | 0.0.25 | Verified (20:37) |
 
   Blobber mode version 2 keeps every game key; releasing W carries the walk on to the next square's centre; cues speak only changes and never block. The 0.0.23 walks also exposed the problems fixed in 0.0.24.
-- **Next test (0.0.25):**
-  - basement: Page Up must no longer offer "Soul, 2 metres" next to the corridor junction (the hidden `npc_hoji_01`);
-  - End with a Soul or door selected: directions while walking with the game's keys, "Arrived." at the end; the same in a fixed-camera room (key directions on screen);
+- **Next test (0.0.26), during normal play:**
+  - End: one sentence per press, nothing while walking;
+  - Home in a fixed-camera room standing at the door facing away: the player turns, then "Arrived." and "Open Door";
   - still from 0.0.24:
   - redo Francesco's prologue route;
   - the stairwell of the Medical Center: Page Up should say "Door, …, upstairs", and Home should climb the stairs;
@@ -45,7 +46,7 @@ Read `CLAUDE.md` first (binding rules), then this file, then:
   - Hidden NPCs (object inactive) are left out, and their collision boxes do not block the walking map.
   - Only reachable points are listed; others on another floor are marked "upstairs" or "downstairs".
 - **`WalkGrid`:** 30-unit cells with up to 3 floor heights each. It has a reachability flood and Dijkstra (8 directions in third person, 4 in first person), with a wall-distance cost and a turn penalty.
-- **`RouteGuide` (End):** the same route, spoken instead of walked: first person relative to the facing ("Turn left, 12 metres, then right."), fixed camera as the key direction on screen ("Up, 5 metres, then left."). Planned again every 250 ms while moving; spoken when the direction changes and when the player stops. The player walks; the mod presses nothing.
+- **`RouteGuide` (End):** the same route, spoken instead of walked, **once per press** (Francesco: running announcements cluttered the wall and corridor cues): first person relative to the facing ("Turn left, 12 metres, then right."), fixed camera as the key direction on screen ("Up, 5 metres, then left."). The player walks; the mod presses nothing.
 - **`AutoWalk` (Home):**
   - Third person: camera-relative pads, chosen again every tick.
   - First person: the game's own 90-degree turns (pad L / R / D, one tick each), then pad U to each run's end.
@@ -62,13 +63,13 @@ Read `CLAUDE.md` first (binding rules), then this file, then:
   - Q / E are not snapped. S as a step back: not now.
 - **Cues never block or refuse input**; they speak only changes.
 - **F3 centring** walks to the centre of the current square with the game's own moves.
-- **Points of interest:** Page Up / Page Down / Home, then Enter as usual. **End gives spoken directions** instead of walking (Francesco, 0.0.24 test: "the way Pokemon Access or my Suikoden mod does"). NPCs that are not Souls are listed as "Person". **Single keys, not Shift or Ctrl combinations**; Shift+F6 is a debug key.
+- **Points of interest:** Page Up / Page Down / Home, then Enter as usual. **End gives spoken directions** instead of walking, **only when pressed** (Francesco, 0.0.25 play session: movement cues come first). NPCs that are not Souls are listed as "Person". **Single keys, not Shift or Ctrl combinations**; Shift+F6 is a debug key.
 - **The mod never presses confirm**: the player decides to talk, open or examine.
 - **Read-only IL2CPP analysis of `GameAssembly.dll`** is a standard tool (never `smt3hd.exe`).
 
 ## Open problems, in order
 
-1. Test 0.0.25 (above). Ask Francesco how the directions sound: wording, how often, compass or relative.
+1. Francesco plays through the game and reports bugs and missing features: read each session's log, fix, record here. Test 0.0.26 (above).
 2. **Story triggers on routes.** A walk through an `NNeve` volume stops at the event. Should routes avoid them (risk: blocking progress), or walk on after the event? Ask Francesco.
 3. **Locked doors and doors behind walls:** the reach test (95 units) is a measured rule. A dump with `gEvnRngBox` sizes for doors that never fire would make it exact.
 4. **Longer routes across areas:** through doors, using the auto-map sub-blocks as a room graph (`NAVIGATION-DESIGN` section 2.4).

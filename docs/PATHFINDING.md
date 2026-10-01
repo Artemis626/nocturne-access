@@ -267,3 +267,23 @@ Francesco went back to the basement (field 15 area 5). Log `session_2026-10-01_2
 
 - Directions in fixed-camera rooms name keys from the camera at the moment they are spoken; the camera pans while walking. To check in a test.
 - Blobber mode carries a released W on to the next 6-metre square centre, which can overshoot a turn the directions announced; the directions then re-plan.
+
+## 8. A long play session with 0.0.25 (0.0.26, 1 Oct 2026)
+
+Francesco played on through several battles and new areas (field 45, areas 29 and 30), log `session_2026-10-01_20-37-37.log`, no recording. No errors. His verdict: the systems are "mature enough for a low-vision player to progress through the game with only minor friction"; he will keep playing and report bugs and missing features.
+
+### What worked
+
+- Hidden NPCs: the basement list no longer offers `npc_hoji_01`.
+- Auto-walk in field 45: item boxes, a Soul and doors, walks up to 53 m, all "Arrived." with the game's prompt.
+- Three walks were ended by story events: "Walk interrupted by an event." each time.
+
+### What went wrong
+
+1. **Directions on End: too much speech.** They spoke every change while walking ("Turn right to face it", "Turn round to face it", then "Turn round, 2 / 5 / 10 / 13 / 15 metres" as he walked away). Francesco: remove the running announcements, keep the route updated silently, speak only when End is pressed, so the wall and corridor cues come first.
+2. **"Arrived." with the back to a door.** In the Healing Room (field 15 area 16, fixed camera) the player stood 39 units from door 01d_01 facing away from it. `OldHitDoor` was the door, and the facing check was skipped under 80 units, so Home said "Walking to door, here. Arrived." seven times and never turned; the game shows "Open Door" only when facing the door.
+
+### Fixes (0.0.26, not yet tested)
+
+- **End speaks once, from where the player stands**: the route is planned at the press (a few milliseconds), so it is always current. "Turn left, 12 metres, then right." In reach: "In reach." or "In reach. Turn left to face it.". Nothing is spoken while walking.
+- **Door facing:** the facing check is skipped only within 15 units of a door (80 for people and boxes), so Home turns the player to the door first.

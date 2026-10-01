@@ -42,6 +42,9 @@ namespace NocturneAccess.Systems.Navigation
         private const long RequestMs = 500;
         private const int IdleTicks = 3;        // the movement routine did not run: an event or dialogue took over
         private const float FacingMinDistance = 80f;
+        // A door's prompt needs the facing even right at it: in the Healing Room (field 15 area 16) the player stood 39 units
+        // from door 01d_01 facing away from it; "Arrived." without a turn gave no "Open Door" (20:37 session).
+        private const float DoorFacingMinDistance = 15f;
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static readonly Queue<string> Pending = new Queue<string>();
@@ -141,7 +144,7 @@ namespace NocturneAccess.Systems.Navigation
             float flat = (float)Math.Sqrt((_target.X - x) * (_target.X - x) + (_target.Z - z) * (_target.Z - z));
             if (InReach(_target, flat))
             {
-                if (flat < FacingMinDistance || Facing(gb, toTarget) || ++_facing > FaceTicks)
+                if (flat < (_target.IsDoorLike ? DoorFacingMinDistance : FacingMinDistance) || Facing(gb, toTarget) || ++_facing > FaceTicks)
                 {
                     Stop($"the game's hit index is the target{(_facing > FaceTicks ? " (facing not reached)" : "")}", "Arrived.");
                     return;
@@ -244,7 +247,6 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
             CentreWalk.Cancel("auto-walk");
-            RouteGuide.Stop("auto-walk", null);
             _target = poi;
             _area = gb.areaID;
             _firstPerson = gb.cammode == 0 && FirstPersonView.On;

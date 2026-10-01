@@ -137,7 +137,7 @@ namespace NocturneAccess.Core
             KeyPoiWalk = keys.CreateEntry("PoiWalk", "Home", "Walk to point of interest key",
                 "Walks to the selected point of interest through the game's own movement (fixed-camera rooms and first person). Any movement key stops it. Enter (the game's confirm) then interacts as usual.");
             KeyPoiGuide = keys.CreateEntry("PoiGuide", "End", "Directions to point of interest key",
-                "Speaks directions to the selected point of interest and updates them as you walk with the game's own keys (first person: ahead, left, right; fixed-camera rooms: the key direction on screen). Press again to stop.");
+                "Speaks directions from where you stand to the selected point of interest (first person: ahead, left, right; fixed-camera rooms: the key direction on screen). Press again for new directions as you go.");
 
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);

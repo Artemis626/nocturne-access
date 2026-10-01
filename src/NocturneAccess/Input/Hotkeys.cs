@@ -51,7 +51,7 @@ namespace NocturneAccess.Input
             Add("next point of interest", Config.KeyPoiNext, KeyCode.PageUp, () => PointsOfInterest.Cycle(1));
             Add("previous point of interest", Config.KeyPoiPrevious, KeyCode.PageDown, () => PointsOfInterest.Cycle(-1));
             Add("walk to point of interest", Config.KeyPoiWalk, KeyCode.Home, AutoWalk.Request);
-            Add("directions to point of interest", Config.KeyPoiGuide, KeyCode.End, RouteGuide.Toggle);
+            Add("directions to point of interest", Config.KeyPoiGuide, KeyCode.End, RouteGuide.Speak);
         }
 
         internal static void Update()

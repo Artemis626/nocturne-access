@@ -42,7 +42,8 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.22** | Only reachable points of interest are listed (the item box and door of the unconnected room west of the Healing Room are left out) | Verified 1 Oct 19:07 ("worked very well"); arrival needed facing (fixed in 0.0.23) |
 | **0.0.23** | Basement: doors named with the game's place names (Terminal, Healing Room, Elevator), Souls, first-person auto-walk with the game's turns, facing at arrival | Tested 1 Oct 19:57 in the prologue (field 11, Medical Center): several walks arrived; an event, a door behind a wall, a stale hit index, the stairwell's second floor and event volumes listed as doors went wrong (section 6) |
 | **0.0.24** | Fixes: walk ends on events, multi-level walking map (stairs, "upstairs"), arrival through `OldHitDoor`, doors behind walls left out, list duplicates merged, door cue within 45 degrees | Built 1 Oct 2026, **not yet tested in game**; `docs/PATHFINDING.md` section 6 |
-| **0.0.25** | Basement test of 0.0.24: hidden NPCs (inactive object) left out of the list and the walking map, no spin next to a person, start off the route allowed; **End: spoken directions** to the selected point | Built 1 Oct 2026, **not yet tested in game**; `docs/PATHFINDING.md` section 7 |
+| **0.0.25** | Basement test of 0.0.24: hidden NPCs (inactive object) left out of the list and the walking map, no spin next to a person, start off the route allowed; **End: spoken directions** to the selected point | Played 20:37: hidden NPC gone, walks fine; End too talkative | 
+| **0.0.26** | End speaks directions only when pressed; Home turns to a door even right at it | Built 1 Oct 2026, **not yet tested in game**; `docs/PATHFINDING.md` section 8 |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 
@@ -63,7 +64,7 @@ Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:0
 
 ## Open problems and next steps (in order)
 
-**1 Oct 2026, evening: navigation continues from `docs/HANDOFF-PATHFINDING.md` (rewritten): test 0.0.25 (End directions in the basement and a fixed-camera room; the 0.0.24 stairs and events still untested), then the open problems listed there.**
+**1 Oct 2026, evening: navigation continues from `docs/HANDOFF-PATHFINDING.md` (rewritten): Francesco is playing through the game with 0.0.26 and reports bugs and missing features: read each session's log, fix, record (`docs/HANDOFF-PATHFINDING.md`), then the open problems listed there.**
 
 **1 Oct 2026, end of the first navigation chat: continue navigation from `docs/HANDOFF-PATHFINDING.md` (rewritten): blobber mode must keep the game's own controls, snap only movement, and never block on cues; fixed-camera rooms get points of interest with auto-walk later.**
 
