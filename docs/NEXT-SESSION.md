@@ -30,7 +30,8 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | 0.0.7 | Save/load Yes/No and file list; speech order (terminal race) | Verified in game (16:49 session) |
 | 0.0.8 | Title and config Yes/No, location names, config screen (title cue removed in 0.0.9) | Verified in game (20:07 session) |
 | 0.0.9 | Combat version 1: start, command menu, banner, HP changes, F2 status | Verified over the whole prologue (20:44 session) |
-| **0.0.10** | Interaction prompts, name entry, elevator order, battle targets, Stats and level-up | **Tested 22:05: prompts and Stats summary work; party pick, pre-filled names and name buttons missing; battle targets and level-up untested** |
+| 0.0.10 | Interaction prompts, name entry, elevator order, battle targets, Stats and level-up | Tested 22:05: prompts and Stats summary work; party pick, pre-filled names and name buttons missing; battle targets and level-up untested |
+| **0.0.11** | Party pick, Stats race, pre-filled names, prompt dedupe, name button diagnostic | **Verified 1 Oct 2026 (09:47 session); level-up allocation verified too** |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 

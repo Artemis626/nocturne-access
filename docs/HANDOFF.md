@@ -264,6 +264,18 @@ What 0.0.2 adds:
 
 **Phase 2 step 1 verified in game with 0.0.4 (30 Sep 2026, 15:48 session, controller, console hidden):** every dialogue page spoken whole with the speaker named (Hijiri, Soul); narration pages ("> There is a large cylinder. What will you do?") spoken without a stale name; the "> End the game?" Yes/No choice announced ("Choice, 2 options. No, 2 of 2") and every cursor move read. No garbled speech; the 30-second log snapshots worked. Pause-menu screens mapped (class-index).
 
+**0.0.11 tested (1 Oct 2026, `session_2026-10-01_09-47-54.log`): everything built works; Francesco calls the scaffolding reliable enough to play by ear, and moves on to navigation.** 44 hooks, no errors. Verified in the log:
+
+- Party pick: "STATS. Art, 1 of 1"; back from Stats the pick is announced again ("Pause menu gives way to the Party pick"); cancel says "COMMAND MENU. Stats, 5 of 6".
+- Stats summary includes the race ("Artemis Soul, Fiend. Level 3 ...") from `raceText_e`.
+- **Level-up allocation verified** (first time): summary with "1 point left" after "> You leveled up!", cursor moves "Str 4" .. "Luc 3", "Agi 4. 0 points left", then the Yes/No.
+- Pre-filled name: "Enter a name." then "Family: Takao. Given: Yuko. capital A".
+- "Open Door" spoken once per approach (no doubles in four approaches).
+- Battle targets with two Kodama: "Jirae Kodama 1", "Jirae Kodama 2"; the survivor is "Jirae Kodama".
+- Name buttons: Francesco did not move onto them. The diagnostic showed `Nme_Draw_EFGIS.cursor_str` holds **the path of the object under the cursor** ("namelist/name_alpabet/name_alphabet_box/namelist_box01/Text_letter01TM"), the likely source for the buttons too; `funccursorPos`, `box_num`, `letter_num` never changed (not live); `functionImage` sits at the forward button's position. Still open.
+
+**Next (Francesco, 1 Oct 2026): navigation and pathfinding in 3D dungeons (not the overworld yet), analysis first, no code.** See `docs/NAVIGATION-DESIGN.md`.
+
 **0.0.10 tested (30 Sep 2026, 22:05 session, `session_2026-09-30_22-05-36.log`; Francesco asked for analysis only, no code, this session).** 44 hooks, no errors. Francesco's report and the log:
 
 1. **Interaction prompts work perfectly** ("Open Door", "Talk"). Minor: a prompt is sometimes spoken twice within 100 ms (22:08:15.401 and .493, 22:09:26.633 and .725), likely the write and the reshow check both marking it pending.
