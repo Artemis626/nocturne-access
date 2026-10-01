@@ -14,7 +14,7 @@ Written 1 Oct 2026 at the end of the menus-and-battle chat, for the chat that st
 - Scope: **3D dungeons only**, not the world map (he has not reached it).
 - Order: the plan in `docs/NAVIGATION-DESIGN.md` section 4: diagnostic run, first-person unlock and input proof of concept, read-only aids (where am I, wall sense, scanner), grid and A* with spoken directions, blobber mode and auto-walk.
 - **Blobber mode is a toggle, on by default**, switched with one key, so later areas (curved or open geometry) and personal preference can fall back to free movement.
-- Still to ask him when it comes up: S as step back or turn around; speech per step (changes only, or a short description every step); the toggle key (F3 and F4 are free; F1 repeat, F2 battle status, F5 navigation dump (debug, 0.0.12), F6 dump, F7 probe, F8 status are taken; F9 to F12 reserved).
+- Still to ask him when it comes up: S as step back or turn around; speech per step (changes only, or a short description every step); the toggle key (F3 and F4 hold the temporary step and turn tests (0.0.13) and are the candidates; F1 repeat, F2 battle status, F5 navigation dump (debug, 0.0.12), F6 dump, F7 probe, F8 status are taken; F9 to F12 reserved).
 
 ## Must do: force-unlock first person
 

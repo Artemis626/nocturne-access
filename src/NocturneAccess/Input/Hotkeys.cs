@@ -42,6 +42,8 @@ namespace NocturneAccess.Input
             Add("dump UI", Config.KeyDumpUi, KeyCode.F6, UiTreeDumper.Dump);
             Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle);
             Add("navigation dump", Config.KeyNavDump, KeyCode.F5, NavDump.Dump);
+            Add("step test", Config.KeyStepTest, KeyCode.F3, MoveTest.StepTest);
+            Add("turn test", Config.KeyTurnTest, KeyCode.F4, MoveTest.TurnTest);
         }
 
         internal static void Update()

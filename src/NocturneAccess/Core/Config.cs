@@ -36,6 +36,8 @@ namespace NocturneAccess.Core
         // Navigation
         internal static MelonPreferences_Entry<bool> NavDiagnostics { get; private set; }
         internal static MelonPreferences_Entry<int> NavTraceIntervalMs { get; private set; }
+        internal static MelonPreferences_Entry<bool> UnlockFirstPerson { get; private set; }
+        internal static MelonPreferences_Entry<int> FirstPersonFlag { get; private set; }
 
         // Keys (names are UnityEngine.KeyCode values, e.g. F8, Backslash, Alpha1)
         internal static MelonPreferences_Entry<string> KeyRepeat { get; private set; }
@@ -44,6 +46,8 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyDumpUi { get; private set; }
         internal static MelonPreferences_Entry<string> KeyToggleProbe { get; private set; }
         internal static MelonPreferences_Entry<string> KeyNavDump { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyStepTest { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyTurnTest { get; private set; }
 
         // Debug
         internal static MelonPreferences_Entry<bool> VerboseLogging { get; private set; }
@@ -92,6 +96,10 @@ namespace NocturneAccess.Core
                 "Development: logs the player's position, facing and input while exploring, place and event changes, and the story flags checked when V (Toggle POV) is pressed. Needs a restart.");
             NavTraceIntervalMs = navigation.CreateEntry("TraceIntervalMs", 250, "Trace interval (ms)",
                 "With Diagnostics on: at most one position line per this many milliseconds, only when something changed.");
+            UnlockFirstPerson = navigation.CreateEntry("UnlockFirstPerson", true, "Unlock first person",
+                "Lets V (Toggle POV) switch to first person on a first playthrough. In memory only: the save is never changed. Needs a restart.");
+            FirstPersonFlag = navigation.CreateEntry("FirstPersonFlag", 3712, "First-person story flag",
+                "Development: the story flag that locks first person (found by the 0.0.12 diagnostic). Needs a restart.");
 
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);
@@ -107,6 +115,10 @@ namespace NocturneAccess.Core
                 "Debug: pauses or resumes the text probe (only when Probe = true).");
             KeyNavDump = keys.CreateEntry("NavDump", "F5", "Navigation dump key",
                 "Debug: writes the navigation data of the current area (position, place names, walls, auto-map, people, boxes, event volumes) to UserData/NocturneAccess/NavDumps, with a summary in Latest.log.");
+            KeyStepTest = keys.CreateEntry("StepTest", "F3", "Step test key",
+                "Debug, temporary: presses the game's forward action for half a second, then says how far the player moved.");
+            KeyTurnTest = keys.CreateEntry("TurnTest", "F4", "Turn test key",
+                "Debug, temporary: presses the game's turn-right action until the player or camera turned 90 degrees, then says how far.");
 
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);
