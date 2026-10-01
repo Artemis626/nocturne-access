@@ -52,7 +52,7 @@ Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:0
 
 ## Open problems and next steps (in order)
 
-**Francesco, 1 Oct 2026: 0.0.11 verified; navigation now comes first (3D dungeons, not the world map). Read `docs/NAVIGATION-DESIGN.md`. Next session: Francesco reads the design and decides (blobber mode as main play or a toggle, S as step back or turn around, the toggle key); then step 1 of its plan, the read-only diagnostic run.**
+**Francesco, 1 Oct 2026: 0.0.11 verified; navigation now comes first (3D dungeons, not the world map), in a new chat: start with `docs/HANDOFF-PATHFINDING.md`. Decided: blobber mode is a toggle, on by default. First person (V) is locked to New Game+ and must be unlocked in memory first (`docs/NAVIGATION-DESIGN.md` section 5).**
 
 1. Navigation, `docs/NAVIGATION-DESIGN.md` section 4: diagnostic run, input proof of concept, read-only aids, grid and A*, blobber mode.
 2. Name entry control buttons: read `Nme_Draw_EFGIS.cursor_str` (path under the cursor) while Francesco visits forward, back, delete, done.

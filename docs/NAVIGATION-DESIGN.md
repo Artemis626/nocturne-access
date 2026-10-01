@@ -6,7 +6,7 @@ Written 1 Oct 2026 for Francesco, analysis only (no code). Scope: 3D dungeons (f
 
 - **The game exposes everything a navigation system needs as data**: the player's position and facing, the area and place it is in with the game's own place names, every wall and floor polygon of the loaded area, the auto-map's room graph with icons and explored flags, every NPC, item box and event volume (doors, triggers) with positions.
 - **Movement can be driven natively.** NocturneModernController injects the game's own logical actions (`FD_Turn_Left` / `FD_Turn_Right`) through `SteamInputAssign.padcheck` and confirmed it live in dungeons. The game's collision, doors and events then behave exactly as with a real key.
-- **First person is not a New Game+ unlock in this version**: "Toggle POV" (`FD_Subjectivity`) is bound to V by default on the game's own keyboard config screen, and the field code has a separate first-person movement routine (`fldPlayerCalc_Nml_syukan`, "syukan" = subjective view). What it allows (walking or only looking) must be tested.
+- **First person exists but is locked to New Game+** (Francesco, 1 Oct 2026: V, "Toggle POV" (`FD_Subjectivity`), does nothing on a first playthrough). The field code has a separate first-person movement routine (`fldPlayerCalc_Nml_syukan`, "syukan" = subjective view). The mod must unlock it (section 5); what it allows (walking or only looking) is tested after that.
 - **A blobber mode is feasible**, as a layer over the free 3D movement rather than a rewrite of it: the mod lays a grid on the game's own collision, walks the player cell to cell with injected input, and turns in 90 degree steps. A* on that grid then matches every instruction exactly ("forward 3, turn right, forward 2"). The main risk is geometry that is not grid-shaped (diagonal or curved rooms, later Amala areas); the design below handles it with waypoint cells instead of a strict tile map.
 
 ## 2. What the game gives us
@@ -119,10 +119,27 @@ Risks and answers:
 
 ## 4. Plan (each step ends with a test run)
 
-1. **Diagnostic run, read only (next session).** A key dumps the navigation data to the log: player position, facing, `cammode`, IDs and resolved place names; counts and samples of collision polygons with their face flags; auto-map areas, sub-blocks and icons; NPCs, boxes and event volumes with names and positions. Francesco walks a known route in Shinjuku Medical Center, turns in place, presses V (first person) and tries walking in it, and opens a door.
-2. **Input proof of concept.** Inject `CMN_UpFront` for 0.5 s and `FD_Turn_Right` until 90 degrees, only while exploring; confirm collision and doors behave natively, in third and first person.
+1. **Diagnostic run, read only (next session).** A key dumps the navigation data to the log: player position, facing, `cammode`, IDs and resolved place names; counts and samples of collision polygons with their face flags; auto-map areas, sub-blocks and icons; NPCs, boxes and event volumes with names and positions. Francesco walks a known route in Shinjuku Medical Center, turns in place, presses V once so the first-person gate is logged (section 5, step 1), and opens a door.
+2. **First-person unlock (section 5, step 2), then input proof of concept.** Inject `CMN_UpFront` for 0.5 s and `FD_Turn_Right` until 90 degrees, only while exploring; confirm collision and doors behave natively, in third and first person.
 3. **Read-only aids** (3.1 items 1 to 3): where am I, wall sense, scanner. Useful alone, and they validate the geometry reading.
 4. **Grid and A*** with spoken directions (no auto-walk).
 5. **Blobber mode** with step moves, then auto-walk.
 
-Decisions for Francesco: blobber mode as the main way to play or as a toggle next to free movement; S as step back or turn around; how much speech per step; which F-key toggles the mode (F3, F4, F5 are free).
+**Decisions (Francesco, 1 Oct 2026):** blobber mode is a **toggle, on by default**, switched with one key, so later areas and personal preference can fall back to free movement. Still open: S as step back or turn around; how much speech per step; the toggle key (F3, F4, F5 are free).
+
+## 5. Unlocking first person (New Game+ only)
+
+Francesco's test (1 Oct 2026, `session_2026-10-01_10-23-24.log`): pressing V in the Underground Facility on a first playthrough does nothing; the game keeps first person for New Game+. The mod unlocks it in memory only, never in the save.
+
+Leads (Proxy and Ref):
+
+- `EventBit.evtBitCheck(int no)` (bool), `evtBitOn(int)`, `evtBitOff(int)`: the game's story-flag check. The MIT reference mod EarlyCompendium unlocks the Compendium early with a Harmony postfix on `evtBitCheck` that returns true for flag 40 only; nothing is written to the save. Same technique here.
+- `dds3GlobalWork` (static): `NewGame2_SYS_ENDING0` .. `NewGame2_SYS_ENDING7`, `NewGame2_SYS_ZENSHO_ALL`, `NewGame2_EV_ZENSYO_ALL` (int: likely the flag numbers of "ending N seen"), `NewGame2_endcnt` (short: endings count), `NewGame2Push()`, `NewGame2Pop()`. Reference BetterNewGamePlus patches the last two.
+- `dds3ConfigMain.cfgGetBit(uint)`: config bits (Ref AnalyzeBosses reads `cfgGetBit(9)`), a possible second gate.
+
+Method (two short runs):
+
+1. **Find the gate.** Postfix on `evtBitCheck` that logs each flag number checked (with its result) during the field update right after V is pressed, plus the values of the `NewGame2_*` fields at load. The flag that answers false only at that moment is the gate. If no flag is checked, log `NewGame2_endcnt` and `cfgGetBit` calls the same way.
+2. **Force it, narrowly.** Return true for that flag only while `fldPlayer.fldPlayerCalc` runs (a prefix sets a flag, the postfix clears it), so other New Game+ content (bosses, items, Dante) stays locked. If the gate is a field (`NewGame2_endcnt`), set it in the prefix and restore it in the postfix. Never call `evtBitOn` (it would be saved). A config option `[NocturneAccess_Navigation] UnlockFirstPerson = true`.
+
+Then test: V switches to first person; walk, turn, open a door; note what A and D do.

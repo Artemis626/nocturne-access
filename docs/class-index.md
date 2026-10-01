@@ -246,6 +246,9 @@ Full tables with meanings and what is still to verify: `docs/NAVIGATION-DESIGN.m
 | `Il2Cpp.fldEveHit` | static, Proxy | `gEvnRng`, `gEvnRngNum`, `gEve`, `gEveNum` (`fldResHead_t`: `resourceName`, `sisei.pos`, `resourceLink.data[].name`, `areaname`), `gEvnRngBox` (`putevebox_s`), `gProgramEveHit` |
 | `Il2Cpp.SIActionName` | enum, Proxy | `CMN_UpFront`, `CMN_DownBack`, `CMN_Left`, `CMN_Right`, `CMN_EnterAction`, `FD_Turn_Left`, `FD_Turn_Right`, `FD_Return_Front`, `FD_Subjectivity` (keyboard V, "Toggle POV"), `FD_Automap` |
 | `Il2Cpp.SteamInputAssign` | Ref (NocturneModernController, live-confirmed for `FD_Turn_*`) | `padcheck(int pad, SIActionName action, SIPressType type)`; postfix to add a logical press. `SIPressType.DOWN = 0`, `TRIG = 1`, `REP = 2` |
+| `Il2Cpp.EventBit` | static, Proxy; Ref EarlyCompendium patches `evtBitCheck` | `evtBitCheck(int no)` (bool), `evtBitOn(int)`, `evtBitOff(int)`, `CheckUnlock(int)` |
+| `Il2Cpp.dds3GlobalWork` | static, Proxy; Ref BetterNewGamePlus patches the last two | `DDS3_GBWK`, `NewGame2_SYS_ENDING0` .. `NewGame2_SYS_ENDING7`, `NewGame2_SYS_ZENSHO_ALL`, `NewGame2_EV_ZENSYO_ALL`, `NewGame2_endcnt`, `NewGame2Push()`, `NewGame2Pop()` |
+| First person (Log, 1 Oct 2026 10:23 session) | Francesco | V (`FD_Subjectivity`) does nothing on a first playthrough: locked to New Game+. Unlock plan: `docs/NAVIGATION-DESIGN.md` section 5. |
 
 ## MelonLoader 0.6.1 API used by the mod
 

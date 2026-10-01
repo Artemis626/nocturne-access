@@ -11,7 +11,14 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 2. `docs/HANDOFF.md`: project source of truth (roadmap, per-version state and test results, known issues).
 3. `docs/class-index.md`: every verified class, method, field and UI path, with its source.
 4. `docs/KEYS.md` (mod keys, reserved keys, game bindings) and `docs/TEXT-HOOKING-HANDOFF.md` (Francesco's Suikoden design notes the readers follow).
-5. `docs/NAVIGATION-DESIGN.md`: the navigation research and the blobber-mode design (current focus).
+5. **Current focus, navigation:** `docs/HANDOFF-PATHFINDING.md` (start here in a navigation chat: state, Francesco's decisions, the first-person unlock), then `docs/NAVIGATION-DESIGN.md` (research and blobber-mode design).
+
+## Current focus: navigation and pathfinding (from 1 Oct 2026)
+
+- 3D dungeons only (not the world map). Plan in `docs/NAVIGATION-DESIGN.md` section 4, one step per test run.
+- Blobber mode (cell steps, 90 degree turns, A* that matches the moves) is a **toggle, on by default**; free movement stays one key away.
+- First person (V, `FD_Subjectivity`) is locked to New Game+: the mod unlocks it **in memory only** (narrow `EventBit.evtBitCheck` postfix during `fldPlayer.fldPlayerCalc`, never `evtBitOn`, nothing saved).
+- Movement is driven only through the game's logical input (`SteamInputAssign.padcheck` postfix), only while exploring, at normal speed, so the game's collision, doors and events stay in charge. Never move the player by writing positions.
 
 ## Binding rules
 

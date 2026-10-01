@@ -264,6 +264,8 @@ What 0.0.2 adds:
 
 **Phase 2 step 1 verified in game with 0.0.4 (30 Sep 2026, 15:48 session, controller, console hidden):** every dialogue page spoken whole with the speaker named (Hijiri, Soul); narration pages ("> There is a large cylinder. What will you do?") spoken without a stale name; the "> End the game?" Yes/No choice announced ("Choice, 2 options. No, 2 of 2") and every cursor move read. No garbled speech; the 30-second log snapshots worked. Pause-menu screens mapped (class-index).
 
+**1 Oct 2026, 10:23 session (`session_2026-10-01_10-23-24.log`, short, no errors):** Francesco pressed V (Toggle POV) in the Underground Facility: nothing happens, first person is locked to New Game+. Decisions: blobber mode as a toggle, on by default; navigation continues in a new chat from `docs/HANDOFF-PATHFINDING.md`. Unlock plan (event-flag postfix, memory only): `docs/NAVIGATION-DESIGN.md` section 5.
+
 **0.0.11 tested (1 Oct 2026, `session_2026-10-01_09-47-54.log`): everything built works; Francesco calls the scaffolding reliable enough to play by ear, and moves on to navigation.** 44 hooks, no errors. Verified in the log:
 
 - Party pick: "STATS. Art, 1 of 1"; back from Stats the pick is announced again ("Pause menu gives way to the Party pick"); cancel says "COMMAND MENU. Stats, 5 of 6".
