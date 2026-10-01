@@ -9,6 +9,7 @@ Written 1 Oct 2026 at the end of the menus-and-battle chat, for the chat that st
 - Last game run: `session_2026-10-01_10-23-24.log` (short: load, config, pause menu; no errors, 44 hooks). Francesco pressed V in the Underground Facility: nothing happens on a first playthrough.
 - **0.0.12 diagnostic verified in game (1 Oct 2026, 12:04 session)**: F5 dumps, walk trace, change log and V capture all work; results in `docs/NAVIGATION-DESIGN.md` section 6 (game units = Unity x 100, Y down, facing in degrees, 600-unit grid, doors are `NNd_MM` event boxes, keyboard does not show in padcheck, V is gated before the input check, gate candidate flag 3712).
 - **0.0.13 and 0.0.14 (1 Oct, 12:43 and 12:57)**: injected `padcheck` forward and stick replay did not move the player; `FD_Turn_Right` orbits the camera; forcing flags 3712 and 3715 did not unlock V. **Then the game's code was read** (`docs/NAVIGATION-DESIGN.md` section 8): flag 2800 is the first-person view, flags 2208 / 2225 the lock, 3712 / 3715 are Dante/Raidou and death-check flags; walking reads pad buttons. **0.0.15** (`FirstPersonView`, `PadInput`) is built on that, not yet tested.
+- **0.0.15 verified in game (1 Oct, 13:13)**: V gives first person (native 90-degree turns, side steps, continuous walking while held); F3 moved 435 units in first person through `PadInput`. Fixed-camera rooms (`cammode` 1 or 3, e.g. the Healing Room) force third person by design; options in `docs/NAVIGATION-DESIGN.md` section 9, **Francesco to choose**.
 
 ## Francesco's decisions
 
