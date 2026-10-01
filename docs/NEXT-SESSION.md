@@ -32,6 +32,8 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | 0.0.9 | Combat version 1: start, command menu, banner, HP changes, F2 status | Verified over the whole prologue (20:44 session) |
 | 0.0.10 | Interaction prompts, name entry, elevator order, battle targets, Stats and level-up | Tested 22:05: prompts and Stats summary work; party pick, pre-filled names and name buttons missing; battle targets and level-up untested |
 | **0.0.11** | Party pick, Stats race, pre-filled names, prompt dedupe, name button diagnostic | **Verified 1 Oct 2026 (09:47 session); level-up allocation verified too** |
+| 0.0.12 to 0.0.15 | Navigation diagnostics (F5, trace), first person in memory (V), pad injection | Verified 1 Oct 2026 (12:04 to 13:13 sessions) |
+| **0.0.16** | Blobber mode version 1 (F4) | Tested 1 Oct 13:39: forward grid steps good; input takeover and step refusals rejected by Francesco. Redesign in `docs/NAVIGATION-DESIGN.md` section 11 |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 
@@ -51,6 +53,8 @@ Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:0
 6. Test the level-up allocation (cursor row, value changes, points left) at the first battle.
 
 ## Open problems and next steps (in order)
+
+**1 Oct 2026, end of the first navigation chat: continue navigation from `docs/HANDOFF-PATHFINDING.md` (rewritten): blobber mode must keep the game's own controls, snap only movement, and never block on cues; fixed-camera rooms get points of interest with auto-walk later.**
 
 **Francesco, 1 Oct 2026: 0.0.11 verified; navigation now comes first (3D dungeons, not the world map), in a new chat: start with `docs/HANDOFF-PATHFINDING.md`. Decided: blobber mode is a toggle, on by default. First person (V) is locked to New Game+ and must be unlocked in memory first (`docs/NAVIGATION-DESIGN.md` section 5).**
 

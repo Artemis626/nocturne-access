@@ -1,46 +1,45 @@
-# Handoff: navigation and pathfinding (new chat)
+# Handoff: navigation and pathfinding
 
-Written 1 Oct 2026 at the end of the menus-and-battle chat, for the chat that starts navigation. Read `CLAUDE.md` first (binding rules), then this file, then `docs/NAVIGATION-DESIGN.md` (the research and the design), `docs/class-index.md` section "Field navigation", `docs/KEYS.md`.
+Rewritten 1 Oct 2026 at the end of the first navigation chat (versions 0.0.12 to 0.0.16), for the next chat. Read `CLAUDE.md` first (binding rules), then this file, then `docs/NAVIGATION-DESIGN.md` sections 6 to 11 (measured facts, the game's code, test results, Francesco's decisions), `docs/class-index.md` section "Field navigation", `docs/KEYS.md`, `tools/native/README.md`.
 
 ## Where things stand
 
-- Mod version **0.0.11**, verified in game (1 Oct 2026, 09:47 session): dialogue, choices, every menu screen met so far, save/load, config, name entry (letters and pre-filled names), Stats and level-up, interaction prompts, location names, combat version 1. Francesco calls it reliable enough to play the prologue by ear.
-- Last commits: `6498be9` (0.0.11 verified), `727dd39` (navigation research), then the commit adding this file.
-- Last game run: `session_2026-10-01_10-23-24.log` (short: load, config, pause menu; no errors, 44 hooks). Francesco pressed V in the Underground Facility: nothing happens on a first playthrough.
-- **0.0.12 diagnostic verified in game (1 Oct 2026, 12:04 session)**: F5 dumps, walk trace, change log and V capture all work; results in `docs/NAVIGATION-DESIGN.md` section 6 (game units = Unity x 100, Y down, facing in degrees, 600-unit grid, doors are `NNd_MM` event boxes, keyboard does not show in padcheck, V is gated before the input check, gate candidate flag 3712).
-- **0.0.13 and 0.0.14 (1 Oct, 12:43 and 12:57)**: injected `padcheck` forward and stick replay did not move the player; `FD_Turn_Right` orbits the camera; forcing flags 3712 and 3715 did not unlock V. **Then the game's code was read** (`docs/NAVIGATION-DESIGN.md` section 8): flag 2800 is the first-person view, flags 2208 / 2225 the lock, 3712 / 3715 are Dante/Raidou and death-check flags; walking reads pad buttons. **0.0.15** (`FirstPersonView`, `PadInput`) is built on that, not yet tested.
-- **0.0.15 verified in game (1 Oct, 13:13)**: V gives first person (native 90-degree turns, side steps, continuous walking while held); F3 moved 435 units in first person through `PadInput`. Fixed-camera rooms (`cammode` 1 or 3, e.g. the Healing Room) force third person by design; options in `docs/NAVIGATION-DESIGN.md` section 9, **Francesco to choose**.
-- **0.0.16 built (not yet tested)**: blobber mode version 1, F4 (`docs/NAVIGATION-DESIGN.md` section 10). Francesco chose option 1 for fixed-camera rooms and speech only on changes; S step back postponed.
+- Installed and committed: **0.0.16** (`e6f5db5`), tested 1 Oct 13:39. Its blobber mode handles input in a way Francesco has rejected (see below). **It is on at start; F4 turns it off.** The next build replaces it.
+- Verified in game across 0.0.12 to 0.0.16 (logs `session_2026-10-01_12-04`, `12-43`, `12-57`, `13-13`, `13-39`; recordings in `%USERPROFILE%\Videos\Captures`):
+  - Diagnostics: F5 dump to `UserData/NocturneAccess/NavDumps`, `[Nav:Trace]` / `[Nav:Change]` / `[Nav:Gate]` / `[Nav:Blob]` log lines (config `[NocturneAccess_Navigation] Diagnostics`).
+  - **First person on a first playthrough, in memory only** (`FirstPersonView`): V toggles it, "First person" / "Third person" spoken; the game's flag 2800 is answered, never written.
+  - **Pad injection** (`PadInput`, postfixes on `DDS3_ORGMAP_PRESS` / `DDS3_PADCHECK_PRESS` inside `fldPlayerCalc`): pad U moves the player through the game's own movement code; no crash.
+  - **Grid-snapped forward steps in first-person corridors** (600-unit cells): ends within one tick of the cell centre, drift under 2 units, door cues before doors, the game's "Open Door" prompt after.
+- Not working as designed in 0.0.16: injected A / D (they are the game's turns), step refusals near walls (blocked talking to the Soul and nearly all movement in the Healing Room).
 
-## Francesco's decisions
+## Francesco's decisions (all in force)
 
-- Scope: **3D dungeons only**, not the world map (he has not reached it).
-- Order: the plan in `docs/NAVIGATION-DESIGN.md` section 4: diagnostic run, first-person unlock and input proof of concept, read-only aids (where am I, wall sense, scanner), grid and A* with spoken directions, blobber mode and auto-walk.
-- **Blobber mode is a toggle, on by default**, switched with one key, so later areas (curved or open geometry) and personal preference can fall back to free movement.
-- Still to ask him when it comes up: S as step back or turn around; speech per step (changes only, or a short description every step); the toggle key (F3 and F4 hold the temporary step and turn tests (0.0.13) and are the candidates; F1 repeat, F2 battle status, F5 navigation dump (debug, 0.0.12), F6 dump, F7 probe, F8 status are taken; F9 to F12 reserved).
+- Scope: **3D dungeons only**, not the world map.
+- **Blobber mode is a toggle (F4), on by default.**
+- **Blobber mode never changes the game's input.** First-person controls stay exactly the game's own: W / S forward and back, A / D 90-degree turns, Q / E side steps, V view, confirm to interact. Only **movement itself** is snapped to the grid (ending on cell centres, useful at intersections).
+- **Audio cues never block input**: describe walls, openings, doors (speak only changes), but never refuse or cancel a movement; the game's collision decides.
+- **Fixed-camera rooms** (`cammode` 1 or 3; the Healing Room): later, a **points-of-interest system with auto-walk**. Until then, the game's own controls there. They are a small part of the dungeons.
+- S as step back: a sound idea, **not now**.
+- **IL2CPP read-only analysis** of `GameAssembly.dll` is to be used consistently and safely alongside runtime tests (never `smt3hd.exe`; read the file offline, never load or run it).
 
-## Must do: force-unlock first person
+## Next build (design in `docs/NAVIGATION-DESIGN.md` section 11 "Consequences")
 
-**First person ("Toggle POV", V, logical action `FD_Subjectivity`) is locked to New Game+.** Francesco confirmed V does nothing on his save. The blobber mode is designed around the first-person view, so the mod has to "bruteforce" its availability, in memory only:
+1. Strip from `BlobberMode`: hiding pad L / R, the mod-facing layer and its Q / E handling, step refusals and "Wall." on blocked steps.
+2. Grid snap without hiding the key: the game walks while W is held; on release, keep pad U pressed until the next cell centre (or until the game's collision stops the player). Confirm with Francesco before extending to S and Q / E.
+3. Cues after movements and after the game's own turns, only changes. Wall test at the next cell centre with the player radius (60) instead of the whole segment; NPC and item boxes (`Attr` 0x80) reported apart later ("person"), not as walls.
+4. Fixed-camera rooms: blobber movement off, game controls untouched.
+5. Then, per the plan: read-only aids (where am I, scanner), points of interest with auto-walk, grid A*.
 
-1. Find the gate: Harmony postfix on `EventBit.evtBitCheck(int no)` logging the flags checked during the field update right after V is pressed, plus the `dds3GlobalWork.NewGame2_*` values (`NewGame2_SYS_ENDING0..7`, `NewGame2_endcnt`). If no flag is checked, look at `NewGame2_endcnt` and `dds3ConfigMain.cfgGetBit`.
-2. Force it narrowly: return true for that flag only while `fldPlayer.fldPlayerCalc` runs (prefix sets a flag, postfix clears it), so other New Game+ content stays locked. Never call `evtBitOn` (it would be saved). Config `[NocturneAccess_Navigation] UnlockFirstPerson = true`.
+## Key facts (details and sources in NAVIGATION-DESIGN sections 6 to 11)
 
-Precedent: the MIT reference mod `research/refs/MatthiewNocturne/EarlyCompendium` unlocks the Compendium with exactly this postfix (flag 40). Details: `docs/NAVIGATION-DESIGN.md` section 5.
-
-## Key facts for the first runs
-
-- Exploring = `fldPlayer.fldPlayerCalc` ran within the last 100 ms (Ref NocturneModernController, used by four of its mods).
-- Player: `fldGlobal.fldGb.playerX/Y/Z`, `PlayerKakudo` (unit and zero direction to measure), `fieldID`, `areaID`, `blockID`, `AmSBlock`, `AmFloor`, `cammode`.
-- Walls: `fldHit.gfldCollision` (`collision_s[]`, count `gfldCollsionNum`) with face flags in `pFace` (`fldResCollisionPolyFace_t`: `Basyo`, `Amap0`, `Amap1`, `Myuka`); the game's segment test `fldHit.fldHitChkCamera(eye, target, ref hit)`.
-- Room graph: `fldAutoMap.pfldAmArea` (areas, sub-blocks with boxes, icons).
-- Entities: `fld_Npc.fldNpc`, `fldTakaraWork_tag`, `fldEveHit.gEvnRng` / `gEve` (event volumes with names, positions, links).
-- Place names: `fldGlobal.area_name`, `basyo_name`, `floor_name` (game text).
-- Moving the player: postfix on `SteamInputAssign.padcheck(int, SIActionName, SIPressType)` turning the result true for `FD_Turn_Left` / `FD_Turn_Right` (live-confirmed by the Ref) and, to test, `CMN_UpFront`. Only while exploring; normal speed only (thin door volumes can be skipped above 1.6 times speed, per the Ref).
+- Game units = Unity x 100; **Y points down**; +Z north, +X east; `PlayerKakudo` in degrees, 0 south, 90 east, 180 north, 270 west (negative values in first person: normalise modulo 360).
+- Field update `fldPlayer.fldPlayerCalc` runs 30 times a second; walking 29 units per tick. It uses `fldPlayerCalc_Nml_syukan` (first person) when flag 2800 is on **and** `fldGb.cammode` is 0; cammode 1 or 3 always third person; the camera has the same gate.
+- First-person lock: flag 2208 or 2225 (both off on Francesco's save), checked in `fldProcess.ProcSequence`. **Never force 3712 / 3715** (Dante/Raidou, death check).
+- Keyboard input arrives as pad buttons in `dds3PadManager.dds3PadMap[1][0]`: first person reads `DDS3_PADCHECK_PRESS` (U, D, L, R with cip 0; L1, R1 with cip 1), third person `DDS3_ORGMAP_PRESS`. Neither `padcheck` nor `GetPadAnalog` carries the keyboard.
+- Geometry: axis-aligned, 600-unit corridors centred on multiples of 600 in the Underground Facility; doors are `fldEveHit.gEvnRng` type 10 named `NNd_MM`; place-name tables are empty in this build, the location banner names rooms (and the room behind a door, when entering its volume).
 
 ## Working rules that matter most here
 
-- One system per session, commit at every working state, and read the logs yourself after every run (`bash tools/log-summary.sh`, archive in `smt3hd/UserData/NocturneAccess/Logs`).
-- Never invent names: anything not in `docs/class-index.md` is looked up in `research/decomp` or `research/refs` and recorded before use.
-- Spoken text: game strings where they exist (place names, prompts); the mod's own short words for categories ("door", "box", "person", "wall"), never invented names.
+- One system per session unless Francesco asks for more; commit at every working state; read the logs yourself after every run (`bash tools/log-summary.sh`, archive in `smt3hd/UserData/NocturneAccess/Logs`); look at Francesco's recordings with ffmpeg frame extraction when he makes one.
+- Never invent names: anything not in `docs/class-index.md` is looked up in `research/decomp`, `research/native` (Cpp2IL names and addresses) or `research/refs` and recorded before use.
 - Give Francesco exact test steps and what he should hear; every reply uses Markdown headings.

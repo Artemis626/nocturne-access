@@ -16,7 +16,8 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 ## Current focus: navigation and pathfinding (from 1 Oct 2026)
 
 - 3D dungeons only (not the world map). Plan in `docs/NAVIGATION-DESIGN.md` section 4, one step per test run.
-- Blobber mode (cell steps, 90 degree turns, A* that matches the moves) is a **toggle, on by default**; free movement stays one key away.
+- Blobber mode (F4) is a **toggle, on by default**. It **never changes the game's input**: first-person controls stay the game's own (W / S, A / D 90-degree turns, Q / E side steps, V, confirm); only movement itself is snapped to the grid (cell centres). Audio cues (walls, openings, doors; only changes) **never block or refuse input**: the game's collision decides.
+- Fixed-camera rooms (`cammode` 1 or 3) keep the game's own controls; they will get a points-of-interest system with auto-walk later. S as step back: not now.
 - First person (V) is locked on a first playthrough (game flags 2208 / 2225; the view itself is flag 2800). The mod keeps its own first-person state **in memory only**: it answers `evtBitCheck(2800)` while on and never writes the flag (`FirstPersonView`, `docs/NAVIGATION-DESIGN.md` section 8). Never force flags 3712 / 3715 (Dante/Raidou, death check).
 - Movement is driven only through the game's own input checks: walking as pad buttons (`dds3PadManager.DDS3_ORGMAP_PRESS` / `DDS3_PADCHECK_PRESS` postfixes, `PadInput`), camera turns as logical actions (`SteamInputAssign.padcheck`, `InputInjector`); only during the field update, at normal speed, so the game's collision, doors and events stay in charge. Never move the player by writing positions.
 
@@ -30,7 +31,7 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 - One system per session unless Francesco asks for more; commit at every working state, saying what was verified in game. Update `docs/HANDOFF.md` and `docs/NEXT-SESSION.md` at session end.
 - When Francesco says "session is done", read the logs, record what was verified, then continue from the open problems. When he says not to code, only analyse and document.
 - Keyboard first; mod keys stay in the function-key range (F9 to F11 belong to Nocturne Graphics Configurator, F12 to Steam).
-- Never touch or inspect `smt3hd.exe` (Denuvo). Read-only offline disassembly of `GameAssembly.dll` is allowed for research (`tools/native/README.md`).
+- Never touch or inspect `smt3hd.exe` (Denuvo). **Use read-only IL2CPP analysis of `GameAssembly.dll` consistently** (Francesco, 1 Oct 2026: it often beats runtime guessing): read the file offline, never load or run it (`tools/native/README.md`, `tools/native/dis.sh`).
 - Francesco launches with `--melonloader.hideconsole` (NVDA otherwise reads the console).
 - Commit messages end with the attribution line given by the environment.
 
@@ -48,7 +49,8 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 - `Systems/Dialogue/`: `DialogueReader` (pages with speaker), `ChoiceReader` (dialogue choices via `itfMesManager.ChangeSelection`).
 - `Systems/Menus/`: `MenuReader` (spec-driven menus whose highlighted item carries a font material: title, pause and submenus, terminal, battle commands, title/config/name Yes/No), `AnnouncementReader` (prompts, location banner, interaction prompt; options `FollowsDialogue`, `Reshow`), `SaveListReader`, `SaveChoiceReader`, `ConfigReader`, `NameEntryReader`, `StatusReader`.
 - `Systems/Battle/BattleReader.cs`: start, banner, targets (`nbTarSelProcess.GetTarSelProcessData().nowform`), HP changes, results, F2 status.
-- `Input/Hotkeys.cs`: F1 repeat (most recent reader), F2 battle status, F6 dump, F7 probe toggle, F8 mod status.
+- `Systems/Navigation/`: `FieldState` (exploring signal, prefix runs the per-tick navigation), `FieldData`, `CollisionCache`, `GridSense` (wall and door cues), `FirstPersonView` (flag 2800 in memory), `PadInput` (the game's pad buttons: read, hide, press), `BlobberMode`, `InputInjector` (`padcheck` actions), `AnalogInput` (stick telemetry). `Capture/NavProbe.cs`, `Capture/NavDump.cs`: navigation diagnostics.
+- `Input/Hotkeys.cs`: F1 repeat (most recent reader), F2 battle status, F4 blobber mode, F5 navigation dump, F6 dump, F7 probe toggle, F8 mod status.
 
 ## Lessons that apply everywhere
 

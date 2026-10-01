@@ -243,3 +243,28 @@ Francesco's decisions (1 Oct 2026, after 0.0.15): fixed-camera rooms use **optio
 - Checked in the code: no routine called inside `fldPlayerCalc` other than the two movement routines reads the pad (`fldPlayerCalcHasigo` ladders, `_Hit`, `_WarpRun`, `ForUnity`, `MirChk`), so hiding W cannot break them.
 - Log tag `[Nav:Blob]`: every step with distance, drift across the axis, ticks, the pads used, and in fixed-camera rooms the camera yaw and the game's facing goal (a warning if it differs from the wanted facing). The trace now lists the real pad buttons pressed (`pads`), to identify the Q / E buttons.
 - Known limits: the 600 grid fits the corridors; rooms whose walls sit on 300 offsets (Healing Room, x -6000..-4800) get steps that end at a wall (spoken "Wall"). Third-person steps curve while the game eases the facing (drift logged). Gamepad sticks bypass blobber mode (keyboard first).
+
+## 11. Results of the 0.0.16 test and Francesco's revised design (1 Oct 2026, session 13:39, recording `2026-10-01 13-41-36.mp4`)
+
+### What the run showed (log `session_2026-10-01_13-39-*.log`)
+
+- **Forward steps in first-person corridors worked**: 580 to 667 units per step (20 to 23 ticks), ending within one tick of the 600 grid, drift across the axis under 2 units. "Door ahead" was spoken before both doors; the step into a door stopped at the door wall and the game's "Open Door" prompt followed. Holding W chained steps.
+- **First-person native controls (from the trace's real pad buttons)**: W / S = pad U / D (forward, back, continuous); **A / D = pad L / R = the game's 90-degree turns** (not side steps); **Q / E = pad L1 / R1 = side steps** (continuous). 0.0.16 assumed A / D were side steps: its injected "step left / right" turned the player instead, moved 0, and was reported as a blocked step ("Wall."), several times per press.
+- **Refusing steps blocked play**: a step was refused whenever the segment one full cell ahead crossed any vertical collision polygon. NPC boxes (the Soul, `Attr` 0x80, 100 x 100) and room furniture count, so Francesco could not walk up to the Soul in the corridor to talk to it, and in the Healing Room (fixed camera) nearly every step was refused ("Wall."): he turned blobber mode off and used his sight to leave. The game's facing goal always matched the wanted facing in the mod-facing layer (no warning logged), so the pad choice from the camera yaw was right; the refusals were the problem.
+- No errors; 58 hooks.
+
+### Francesco's decisions (1 Oct 2026), replacing section 10's input handling
+
+1. **Blobber mode must not change the game's input.** First-person controls stay exactly the game's own (W / S, A / D turns, Q / E side steps, V, confirm). The only change is the handling of **movement itself**: a forward (and later backward and side) movement is snapped to the grid, ending on the next cell centre; especially useful at intersections. To re-test.
+2. **Audio cues describe walls and limits but never block input**: "wall ahead", "opening left", "door ahead" and so on stay (speak only changes), but no step is refused or cancelled because of them; the game's collision decides. This keeps interaction with things against walls (the Soul) possible.
+3. **Fixed-camera rooms** (`cammode` 1 or 3): no blobber movement there. The plan is a **points-of-interest system with auto-walk** (choose a target such as a door, a person, a box; the mod walks there through the game's input). Fixed-camera rooms are a small part of the dungeons, so this can come later. Until then the game's own controls apply unchanged in those rooms.
+4. S as a step back: sound idea, **not now**.
+5. IL2CPP read-only analysis (`tools/native`) is to be used consistently, safely, alongside runtime tests.
+
+### Consequences for the next build (design, not yet implemented)
+
+- Remove from `BlobberMode`: the pad L / R hiding and injection (they are turns), the mod-facing layer and Q / E handling, the step refusal and the "Wall." on blocked steps, and the speech queue entries that came from refusals.
+- Keep: first-person auto-on, speech only on changes after a movement and after the game's own turns, door cues, logs.
+- **Grid-snapped forward movement without hiding the key**: let the game walk while W is held (native), and when W is released, keep pad U pressed until the next cell centre (or until the game's collision stops the player), so every walk ends on a cell centre. This changes only movement, not input: tapping W still moves at least to the next centre. Option to discuss with Francesco if needed: the same for S (pad D) and Q / E side steps (pad L1 / R1, continuous) once the forward behaviour is confirmed.
+- In fixed-camera rooms: blobber movement off (the game's own third-person controls), cues limited to the facing and the location banner, until the points-of-interest system exists.
+- Open technical point: wall cues should ignore NPC and item-box boxes (`Attr` 0x80) as "wall" and report them separately later ("person ahead"), and furniture in rooms needs a better test than "anything within one cell" (probe a point at the cell centre with the player radius 60 instead of the whole segment).

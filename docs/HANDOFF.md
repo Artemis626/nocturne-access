@@ -224,6 +224,8 @@ Open questions for Phase 0:
 
 ## Current state
 
+**1 Oct 2026, navigation (0.0.12 to 0.0.16):** diagnostics, first person on a first playthrough held in memory (flag 2800, never saved), the game's pad buttons as the movement input, and grid-snapped forward steps are verified in game. Blobber mode version 1 took over A / D and refused steps near walls; Francesco rejected that (keep the game's controls, snap only movement, cues never block; points of interest with auto-walk for fixed-camera rooms later). Read-only IL2CPP analysis of `GameAssembly.dll` is now a standard tool (`tools/native`). State and next steps: `docs/HANDOFF-PATHFINDING.md`; facts: `docs/NAVIGATION-DESIGN.md` sections 6 to 11.
+
 Updated 30 Sep 2026, end of session 1.
 
 **Phase 1: gate passed in substance (30 Sep 2026).** Probe session 1 ran from the title screen through the Conception prologue to the first save at the Shinjuku Medical Center terminal. All 34 hooks patched, 0 failed; no crash. Log archived as `UserData/NocturneAccess/Logs/session_2026-09-30_14-07-16.log`; condensed transcript via `tools/probe-transcript.pl` (kept in `research/`). Every screen visited is mapped in `docs/class-index.md` (UI object paths).
