@@ -2,7 +2,7 @@
 
 ## Mod keys
 
-Keys are set in `UserData/NocturneAccess.cfg`, section `[NocturneAccess_Keys]`, using Unity `KeyCode` names such as `F8`, `Backslash` or `Alpha1`. Edit the file while the game is closed.
+Keys are set in `UserData/NocturneAccess.cfg`, section `[NocturneAccess_Keys]`, using Unity `KeyCode` names such as `F8`, `Backslash` or `Alpha1`, optionally after modifiers (`Shift+F5`, `Ctrl+F5`; since 0.0.20 a plain key does not fire while Shift, Ctrl or Alt is held). Edit the file while the game is closed.
 
 | Key | Action | Since |
 | --- | --- | --- |
@@ -14,7 +14,10 @@ Keys are set in `UserData/NocturneAccess.cfg`, section `[NocturneAccess_Keys]`, 
 | F6 | Debug: write every text currently visible on screen to the log | 0.0.2 |
 | F4 | Blobber mode on or off (on at start). In first person it keeps every game key as it is and only snaps walking to squares: when W is let go, the walk carries on to the centre of the next square (a tap of W walks one square). Says what changed on reaching each square ("Opening left.", "Wall ahead.", "Door ahead.") and the facing after a turn ("North, wall ahead."). Never refuses a move. Nothing in fixed-camera rooms or third person. | 0.0.16, version 2 in 0.0.17 |
 | F3 | Blobber mode, first person: walk to the centre of the current square through the game's own moves (side step, then forward; turns round with S and back when the centre is behind), then says "Centred." with the facing and the three sides, for example "Centred. North: wall ahead, opening left, wall right.". Any movement key stops it. | 0.0.18 |
-| F5 | Debug: navigation dump. Writes the current area's navigation data (position, facing, place names, collision polygons, auto-map, people, item boxes, event volumes, input and story-flag tables) to `UserData/NocturneAccess/NavDumps/navdump_[time].txt`, with a summary in the log. Says "Navigation data saved." May move to a modifier combination when navigation needs more keys. | 0.0.12 |
+| F5 | Next point of interest in the area (door, person, item box), nearest first: kind, distance in metres, compass direction, position in the list ("Person, 5 metres, south. 2 of 4."). | 0.0.20 |
+| Shift+F5 | Previous point of interest. | 0.0.20 |
+| Ctrl+F5 | Walk to the selected point of interest through the game's own movement (fixed-camera rooms and third person for now): "Walking to person, 5 metres, south.", then "Arrived." (the game speaks its own prompt), "Near the person.", "Blocked." or "No path.". Any movement key stops it ("Auto-walk stopped."). Never presses confirm. | 0.0.20 |
+| Shift+F6 | Debug: navigation dump (was F5 until 0.0.19). Writes the current area's navigation data (position, facing, place names, collision polygons, auto-map, people, item boxes, event volumes, points of interest, the walkability grid as a map, input and story-flag tables) to `UserData/NocturneAccess/NavDumps/navdump_[time].txt`, with a summary in the log. Says "Navigation data saved.". | 0.0.12, Shift+F6 since 0.0.20 |
 
 ## Reserved keys
 

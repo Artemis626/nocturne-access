@@ -28,7 +28,10 @@ namespace NocturneAccess.Input
         {
             public string Name;
             public KeyCode Key;
+            public bool Shift, Ctrl, Alt;
             public Action Action;
+
+            public string Text => (Ctrl ? "Ctrl+" : "") + (Alt ? "Alt+" : "") + (Shift ? "Shift+" : "") + Key;
         }
 
         private static readonly List<Binding> Bindings = new List<Binding>();
@@ -42,9 +45,12 @@ namespace NocturneAccess.Input
             Add("battle status", Config.KeyBattleStatus, KeyCode.F2, BattleReader.SpeakStatus);
             Add("dump UI", Config.KeyDumpUi, KeyCode.F6, UiTreeDumper.Dump);
             Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle);
-            Add("navigation dump", Config.KeyNavDump, KeyCode.F5, NavDump.Dump);
+            Add("navigation dump", Config.KeyNavDump, KeyCode.F6, NavDump.Dump, shift: true);
             Add("blobber mode", Config.KeyBlobber, KeyCode.F4, BlobberMode.Toggle);
             Add("centre on the square", Config.KeyCentre, KeyCode.F3, BlobberMode.RequestCentre);
+            Add("next point of interest", Config.KeyPoiNext, KeyCode.F5, () => PointsOfInterest.Cycle(1));
+            Add("previous point of interest", Config.KeyPoiPrevious, KeyCode.F5, () => PointsOfInterest.Cycle(-1), shift: true);
+            Add("walk to point of interest", Config.KeyPoiWalk, KeyCode.F5, AutoWalk.Request, ctrl: true);
         }
 
         internal static void Update()
@@ -52,12 +58,23 @@ namespace NocturneAccess.Input
             if (_disabled)
                 return;
 
+            bool shift = false, ctrl = false, alt = false;
+            bool modifiersRead = false;
             foreach (Binding binding in Bindings)
             {
                 bool pressed;
                 try
                 {
                     pressed = UnityInput.GetKeyDown(binding.Key);
+                    if (pressed && !modifiersRead)
+                    {
+                        shift = UnityInput.GetKey(KeyCode.LeftShift) || UnityInput.GetKey(KeyCode.RightShift);
+                        ctrl = UnityInput.GetKey(KeyCode.LeftControl) || UnityInput.GetKey(KeyCode.RightControl);
+                        alt = UnityInput.GetKey(KeyCode.LeftAlt) || UnityInput.GetKey(KeyCode.RightAlt);
+                        modifiersRead = true;
+                    }
+                    // Modifiers must match exactly: plain F5 does not fire while Shift is held.
+                    pressed = pressed && shift == binding.Shift && ctrl == binding.Ctrl && alt == binding.Alt;
                 }
                 catch (Exception ex)
                 {
@@ -72,12 +89,12 @@ namespace NocturneAccess.Input
 
                 try
                 {
-                    Log.Debug($"Key {binding.Key} ({binding.Name})");
+                    Log.Debug($"Key {binding.Text} ({binding.Name})");
                     binding.Action();
                 }
                 catch (Exception ex)
                 {
-                    Log.Error($"Key {binding.Key} ({binding.Name}) failed: {ex}");
+                    Log.Error($"Key {binding.Text} ({binding.Name}) failed: {ex}");
                 }
             }
         }
@@ -121,24 +138,47 @@ namespace NocturneAccess.Input
             SpeechManager.Say($"Nocturne Access running. Speech through {SpeechManager.BackendName}.", interrupt: true, force: true);
         }
 
-        private static void Add(string name, MelonPreferences_Entry<string> entry, KeyCode fallback, Action action)
+        private static void Add(string name, MelonPreferences_Entry<string> entry, KeyCode fallback, Action action,
+            bool shift = false, bool ctrl = false, bool alt = false)
         {
-            KeyCode key = ParseKey(entry, fallback);
-            if (key == KeyCode.None)
+            var binding = new Binding { Name = name, Key = fallback, Shift = shift, Ctrl = ctrl, Alt = alt, Action = action };
+            if (!Parse(entry.Value, binding))
+            {
+                Log.Warn($"Unknown key '{entry.Value}' for {entry.Identifier}, using {binding.Text}.");
+                binding.Key = fallback;
+                binding.Shift = shift;
+                binding.Ctrl = ctrl;
+                binding.Alt = alt;
+            }
+            if (binding.Key == KeyCode.None)
                 return;
 
-            Bindings.Add(new Binding { Name = name, Key = key, Action = action });
-            Log.Info($"Hotkeys: {name} = {key}.");
+            Bindings.Add(binding);
+            Log.Info($"Hotkeys: {name} = {binding.Text}.");
         }
 
-        private static KeyCode ParseKey(MelonPreferences_Entry<string> entry, KeyCode fallback)
+        /// <summary>A Unity KeyCode name, optionally after modifiers: "F5", "Shift+F5", "Ctrl+Shift+F6".</summary>
+        private static bool Parse(string value, Binding binding)
         {
-            string value = entry.Value?.Trim();
-            if (!string.IsNullOrEmpty(value) && Enum.TryParse(value, true, out KeyCode key))
-                return key;
-
-            Log.Warn($"Unknown key '{entry.Value}' for {entry.Identifier}, using {fallback}.");
-            return fallback;
+            string[] parts = (value ?? "").Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length == 0 || !Enum.TryParse(parts[parts.Length - 1], true, out KeyCode key))
+                return false;
+            bool shift = false, ctrl = false, alt = false;
+            for (int i = 0; i < parts.Length - 1; i++)
+            {
+                switch (parts[i].ToLowerInvariant())
+                {
+                    case "shift": shift = true; break;
+                    case "ctrl": case "control": ctrl = true; break;
+                    case "alt": alt = true; break;
+                    default: return false;
+                }
+            }
+            binding.Key = key;
+            binding.Shift = shift;
+            binding.Ctrl = ctrl;
+            binding.Alt = alt;
+            return true;
         }
     }
 }

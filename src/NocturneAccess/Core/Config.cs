@@ -50,6 +50,9 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyNavDump { get; private set; }
         internal static MelonPreferences_Entry<string> KeyBlobber { get; private set; }
         internal static MelonPreferences_Entry<string> KeyCentre { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyPoiNext { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyPoiPrevious { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyPoiWalk { get; private set; }
 
         // Debug
         internal static MelonPreferences_Entry<bool> VerboseLogging { get; private set; }
@@ -119,12 +122,19 @@ namespace NocturneAccess.Core
                 "Debug: writes every text currently visible on screen to Latest.log.");
             KeyToggleProbe = keys.CreateEntry("ToggleProbe", "F7", "Toggle probe key",
                 "Debug: pauses or resumes the text probe (only when Probe = true).");
-            KeyNavDump = keys.CreateEntry("NavDump", "F5", "Navigation dump key",
+            // "NavigationDump" (Shift+F6) replaces the 0.0.12 entry "NavDump" (F5), so saved configs pick up the new default.
+            KeyNavDump = keys.CreateEntry("NavigationDump", "Shift+F6", "Navigation dump key",
                 "Debug: writes the navigation data of the current area (position, place names, walls, auto-map, people, boxes, event volumes) to UserData/NocturneAccess/NavDumps, with a summary in Latest.log.");
             KeyBlobber = keys.CreateEntry("Blobber", "F4", "Blobber mode key",
                 "Turns blobber mode on or off. In first person every game key stays as it is; letting go of W carries the walk on to the centre of the next square, and changes around the player are spoken.");
             KeyCentre = keys.CreateEntry("Centre", "F3", "Centre key",
                 "Blobber mode, first person: walks to the centre of the current square through the game's own movement, then says the facing and the walls around.");
+            KeyPoiNext = keys.CreateEntry("PoiNext", "F5", "Next point of interest key",
+                "Selects the next door, person or item box of the area, nearest first, and says its distance and compass direction.");
+            KeyPoiPrevious = keys.CreateEntry("PoiPrevious", "Shift+F5", "Previous point of interest key",
+                "Selects the previous point of interest.");
+            KeyPoiWalk = keys.CreateEntry("PoiWalk", "Ctrl+F5", "Walk to point of interest key",
+                "Walks to the selected point of interest through the game's own movement (fixed-camera rooms and third person for now). Any movement key stops it.");
 
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);

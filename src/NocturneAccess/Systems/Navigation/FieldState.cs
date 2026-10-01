@@ -62,6 +62,7 @@ namespace NocturneAccess.Systems.Navigation
             try
             {
                 BlobberMode.BeforeCalc();
+                AutoWalk.BeforeCalc();
             }
             catch (Exception ex)
             {

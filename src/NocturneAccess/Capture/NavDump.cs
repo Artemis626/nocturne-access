@@ -65,6 +65,7 @@ namespace NocturneAccess.Capture
             Section("NPCs", () => DumpNpcs(s));
             Section("Item boxes", () => DumpBoxes(s));
             Section("Event volumes", () => DumpEvents(s));
+            Section("Points of interest and walk grid", () => DumpWalkGrid(s));
             Section("Input and flags", DumpInputAndFlags);
 
             string path = "";
@@ -331,6 +332,22 @@ namespace NocturneAccess.Capture
         private static string Xyz(fldAmXYZ_t p) => p == null ? "null" : $"{F(p.x)} {F(p.y)} {F(p.z)}";
 
         // ---- NPCs and item boxes ----
+
+        /// <summary>The points of interest and the walkability grid as a map (docs/PATHFINDING.md section 2.4).</summary>
+        private static void DumpWalkGrid(PlayerSnapshot s)
+        {
+            List<Poi> pois = PointsOfInterest.Build(s.X, s.Z);
+            Both($"points of interest: {pois.Count}");
+            foreach (Poi p in pois)
+                Both($"  gEvnRng {p.Index} {p.Label} {Q(p.ResName)} at {F(p.X)} {F(p.Z)} d {F(p.Distance)}: {PointsOfInterest.Describe(s.X, s.Z, p.X, p.Z)}");
+            if (!WalkGrid.Ensure(s.FieldId, s.AreaId, s.X, s.Y, s.Z))
+            {
+                Both("walk grid: no floor here");
+                return;
+            }
+            Both($"walk grid {WalkGrid.Width} x {WalkGrid.Height} (map in the file)");
+            FileOnly(WalkGrid.AsciiMap(s.X, s.Z, pois.Select(p => (p.X, p.Z, p.Kind == PoiKind.Door ? 'D' : p.Kind == PoiKind.Person ? 'P' : 'B'))));
+        }
 
         private static void DumpNpcs(PlayerSnapshot s)
         {
