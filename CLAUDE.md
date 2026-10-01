@@ -11,7 +11,7 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 2. `docs/HANDOFF.md`: project source of truth (roadmap, per-version state and test results, known issues).
 3. `docs/class-index.md`: every verified class, method, field and UI path, with its source.
 4. `docs/KEYS.md` (mod keys, reserved keys, game bindings) and `docs/TEXT-HOOKING-HANDOFF.md` (Francesco's Suikoden design notes the readers follow).
-5. **Current focus, navigation:** `docs/HANDOFF-PATHFINDING.md` (start here in a navigation chat: state, Francesco's decisions, the first-person unlock), then `docs/NAVIGATION-DESIGN.md` (research and blobber-mode design).
+5. **Current focus, navigation:** `docs/HANDOFF-PATHFINDING.md` (start here in a navigation chat: state, Francesco's decisions, the first-person unlock), then `docs/PATHFINDING.md` (points of interest, walking map, auto-walk: every test and fix) and `docs/NAVIGATION-DESIGN.md` (research, blobber mode, the game's input and code).
 
 ## Current focus: navigation and pathfinding (from 1 Oct 2026)
 
