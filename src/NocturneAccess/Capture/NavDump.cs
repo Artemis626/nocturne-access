@@ -17,7 +17,7 @@ using static NocturneAccess.Systems.Navigation.FieldData;
 namespace NocturneAccess.Capture
 {
     /// <summary>
-    /// F5 (debug): writes the navigation data of the loaded field, read only, to
+    /// Shift+F6 (debug; F5 until 0.0.19): writes the navigation data of the loaded field, read only, to
     /// UserData/NocturneAccess/NavDumps/navdump_[time].txt, and a summary to Latest.log as [Nav:Dump] lines.
     /// Sections: player and camera, place names, New Game+ statics, collision polygons with their face flags,
     /// auto-map areas, sub-blocks and icons, NPCs, item boxes, event volumes, and the input and story-flag

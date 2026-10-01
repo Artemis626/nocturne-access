@@ -31,7 +31,7 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 - **Every reply uses Markdown headings** (NVDA navigation).
 - One system per session unless Francesco asks for more; commit at every working state, saying what was verified in game. Update `docs/HANDOFF.md` and `docs/NEXT-SESSION.md` at session end.
 - When Francesco says "session is done", read the logs, record what was verified, then continue from the open problems. When he says not to code, only analyse and document.
-- Keyboard first; mod keys stay in the function-key range (F9 to F11 belong to Nocturne Graphics Configurator, F12 to Steam).
+- Keyboard first; mod keys stay in the function-key range (F9 to F11 belong to Nocturne Graphics Configurator, F12 to Steam), except Page Up, Page Down and Home for points of interest (Francesco, 1 Oct 2026). **Prefer single keys: Francesco dislikes Shift or Ctrl combinations in accessibility mods**; keep combinations for debug keys only (Shift+F6).
 - Never touch or inspect `smt3hd.exe` (Denuvo). **Use read-only IL2CPP analysis of `GameAssembly.dll` consistently** (Francesco, 1 Oct 2026: it often beats runtime guessing): read the file offline, never load or run it (`tools/native/README.md`, `tools/native/dis.sh`).
 - Francesco launches with `--melonloader.hideconsole` (NVDA otherwise reads the console).
 - Commit messages end with the attribution line given by the environment.
@@ -50,8 +50,8 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 - `Systems/Dialogue/`: `DialogueReader` (pages with speaker), `ChoiceReader` (dialogue choices via `itfMesManager.ChangeSelection`).
 - `Systems/Menus/`: `MenuReader` (spec-driven menus whose highlighted item carries a font material: title, pause and submenus, terminal, battle commands, title/config/name Yes/No), `AnnouncementReader` (prompts, location banner, interaction prompt; options `FollowsDialogue`, `Reshow`), `SaveListReader`, `SaveChoiceReader`, `ConfigReader`, `NameEntryReader`, `StatusReader`.
 - `Systems/Battle/BattleReader.cs`: start, banner, targets (`nbTarSelProcess.GetTarSelProcessData().nowform`), HP changes, results, F2 status.
-- `Systems/Navigation/`: `FieldState` (exploring signal, prefix runs the per-tick navigation), `FieldData`, `CollisionCache`, `GridSense` (wall and door cues), `FirstPersonView` (flag 2800 in memory), `PadInput` (the game's pad buttons: read, press; never hides a key), `BlobberMode`, `CentreWalk` (F3), `PointsOfInterest` (F5), `WalkGrid` (walkability grid and search), `AutoWalk` (Ctrl+F5), `InputInjector` (`padcheck` actions), `AnalogInput` (stick telemetry). `Capture/NavProbe.cs`, `Capture/NavDump.cs`: navigation diagnostics.
-- `Input/Hotkeys.cs`: F1 repeat (most recent reader), F2 battle status, F3 centre on the square, F4 blobber mode, F5 / Shift+F5 next / previous point of interest, Ctrl+F5 walk to it, F6 UI dump, Shift+F6 navigation dump, F7 probe toggle, F8 mod status. Keys accept modifiers (`Shift+`, `Ctrl+`, `Alt+`), matched exactly.
+- `Systems/Navigation/`: `FieldState` (exploring signal, prefix runs the per-tick navigation), `FieldData`, `CollisionCache`, `GridSense` (wall and door cues), `FirstPersonView` (flag 2800 in memory), `PadInput` (the game's pad buttons: read, press; never hides a key), `BlobberMode`, `CentreWalk` (F3), `PointsOfInterest` (Page Up / Down), `WalkGrid` (walkability grid and search), `AutoWalk` (Home), `InputInjector` (`padcheck` actions), `AnalogInput` (stick telemetry). `Capture/NavProbe.cs`, `Capture/NavDump.cs`: navigation diagnostics.
+- `Input/Hotkeys.cs`: F1 repeat (most recent reader), F2 battle status, F3 centre on the square, F4 blobber mode, Page Up / Page Down next / previous point of interest, Home walk to it, F6 UI dump, Shift+F6 navigation dump, F7 probe toggle, F8 mod status. Keys accept modifiers (`Shift+`, `Ctrl+`, `Alt+`), matched exactly.
 
 ## Lessons that apply everywhere
 

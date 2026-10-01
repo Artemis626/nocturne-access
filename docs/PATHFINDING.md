@@ -65,7 +65,7 @@ Three parts, each logged so a run can be checked from the log alone.
 ### 2.1 Points of interest (`PointsOfInterest`): works everywhere in the 3D field
 
 - Built from `gEvnRng` (section 1) when asked, sorted by distance.
-- **F5:** next point of interest. **Shift+F5:** previous.
+- **Page Up:** next point of interest. **Page Down:** previous. (0.0.20 had F5 / Shift+F5; Francesco asked for single keys, 0.0.21.)
   - Speech: the kind, the distance in metres (game units / 100), and the compass direction from the player.
   - Example: "Person, 5 metres, south. 2 of 4."
   - Compass: north = +Z, as on the game's own compass (`NAVIGATION-DESIGN` section 7).
@@ -87,7 +87,7 @@ Three parts, each logged so a run can be checked from the log alone.
 
 ### 2.3 Auto-walk (`AutoWalk`): fixed-camera rooms first
 
-- **Ctrl+F5:** walk to the selected point of interest. In first person it says "Auto-walk works in fixed-camera rooms for now." (first person needs its own steering with turns).
+- **Home** (Inizio): walk to the selected point of interest; then Enter interacts as usual. In first person it says "Auto-walk works in fixed-camera rooms for now." (first person needs its own steering with turns).
 - **Every field update**, before the game reads the pads, it holds the pad combination whose camera-relative bearing is nearest the current run's world direction. Mapping: U = camera yaw, R +90, D +180, L +270, diagonals in between; compass bearing = 180 - `PlayerKakudo`.
 - **Moving between runs:** it switches to the next run when the player is within 20 units of the run's end, to allow for the facing easing.
 - **Re-planning:** it plans again from the current position when the player is more than 90 units off the run, or has not moved for 8 ticks (curves, slides along furniture). At most 6 times, then it says "Blocked."

@@ -48,9 +48,9 @@ namespace NocturneAccess.Input
             Add("navigation dump", Config.KeyNavDump, KeyCode.F6, NavDump.Dump, shift: true);
             Add("blobber mode", Config.KeyBlobber, KeyCode.F4, BlobberMode.Toggle);
             Add("centre on the square", Config.KeyCentre, KeyCode.F3, BlobberMode.RequestCentre);
-            Add("next point of interest", Config.KeyPoiNext, KeyCode.F5, () => PointsOfInterest.Cycle(1));
-            Add("previous point of interest", Config.KeyPoiPrevious, KeyCode.F5, () => PointsOfInterest.Cycle(-1), shift: true);
-            Add("walk to point of interest", Config.KeyPoiWalk, KeyCode.F5, AutoWalk.Request, ctrl: true);
+            Add("next point of interest", Config.KeyPoiNext, KeyCode.PageUp, () => PointsOfInterest.Cycle(1));
+            Add("previous point of interest", Config.KeyPoiPrevious, KeyCode.PageDown, () => PointsOfInterest.Cycle(-1));
+            Add("walk to point of interest", Config.KeyPoiWalk, KeyCode.Home, AutoWalk.Request);
         }
 
         internal static void Update()
@@ -73,7 +73,7 @@ namespace NocturneAccess.Input
                         alt = UnityInput.GetKey(KeyCode.LeftAlt) || UnityInput.GetKey(KeyCode.RightAlt);
                         modifiersRead = true;
                     }
-                    // Modifiers must match exactly: plain F5 does not fire while Shift is held.
+                    // Modifiers must match exactly: plain F6 does not fire while Shift is held.
                     pressed = pressed && shift == binding.Shift && ctrl == binding.Ctrl && alt == binding.Alt;
                 }
                 catch (Exception ex)

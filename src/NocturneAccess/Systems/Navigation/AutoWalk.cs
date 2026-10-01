@@ -13,7 +13,7 @@ namespace NocturneAccess.Systems.Navigation
 {
     /// <summary>
     /// Walks the player to the selected point of interest in third person (fixed-camera rooms first; docs/PATHFINDING.md
-    /// section 2.3). Ctrl+F5 asks; the walk starts at the next field update.
+    /// section 2.3). Home asks; the walk starts at the next field update.
     ///
     /// Every field update, before the game reads the pads (FieldState prefix), it holds the pad combination whose
     /// camera-relative bearing is nearest the wanted world direction: fldPlayerCalc_Nml reads DDS3_ORGMAP_PRESS U, D, L,
@@ -61,7 +61,7 @@ namespace NocturneAccess.Systems.Navigation
 
         internal static bool Active => _active;
 
-        /// <summary>Ctrl+F5 (OnUpdate).</summary>
+        /// <summary>Home (OnUpdate).</summary>
         internal static void Request() => _requestMs = Clock.ElapsedMilliseconds;
 
         /// <summary>OnUpdate: queued speech; a walk stops when the field update stops (battle, event, menu).</summary>
@@ -176,7 +176,7 @@ namespace NocturneAccess.Systems.Navigation
             Poi poi = PointsOfInterest.Current(gb.playerX, gb.playerZ);
             if (poi == null)
             {
-                Say("Select a point of interest first, with F5.");
+                Say("Select a point of interest first, with Page Up.");
                 return;
             }
             if (!WalkGrid.Ensure(gb.fieldID, gb.areaID, gb.playerX, gb.playerY, gb.playerZ))

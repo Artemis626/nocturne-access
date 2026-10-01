@@ -29,7 +29,7 @@ namespace NocturneAccess.Capture
     /// - [Nav:Gate]: pressing V (or padcheck answering true for FD_Subjectivity) starts a 1 s capture of every
     ///   EventBit.evtBitCheck and dds3ConfigMain.cfgGetBit call, compared with the calls seen outside captures.
     ///   The checks of the frame before the trigger are included, since the game may read V before OnUpdate.
-    /// The F5 dump (NavDump) adds the baseline tables.
+    /// The Shift+F6 dump (NavDump) adds the baseline tables.
     /// </summary>
     internal static class NavProbe
     {

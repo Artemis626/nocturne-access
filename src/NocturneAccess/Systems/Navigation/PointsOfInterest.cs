@@ -30,7 +30,7 @@ namespace NocturneAccess.Systems.Navigation
     /// - people: an NPC index (box npcIdx) whose fld_Npc.fldNpc entry is not Type 999;
     /// - item boxes: box TakaraIdx 0 or more, or an NPC of Type 999 ("itembox1").
     /// Story triggers ("NNeve_MM") are invisible and left out. The game has no names for these (empty name tables), so the
-    /// mod says its own category words. F5 / Shift+F5 move the selection (nearest first) and speak kind, distance in
+    /// mod says its own category words. Page Up / Page Down move the selection (nearest first) and speak kind, distance in
     /// metres (game units / 100) and compass direction (north = +Z, the game's compass).
     /// </summary>
     internal static class PointsOfInterest
@@ -83,7 +83,7 @@ namespace NocturneAccess.Systems.Navigation
             return list.OrderBy(q => q.Distance).ToList();
         }
 
-        /// <summary>F5 (+1) / Shift+F5 (-1).</summary>
+        /// <summary>Page Up (+1) / Page Down (-1).</summary>
         internal static void Cycle(int step)
         {
             fldGlobalWork_t gb = fldGlobal.fldGb;

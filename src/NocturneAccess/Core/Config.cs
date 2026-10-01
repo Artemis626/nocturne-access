@@ -129,12 +129,12 @@ namespace NocturneAccess.Core
                 "Turns blobber mode on or off. In first person every game key stays as it is; letting go of W carries the walk on to the centre of the next square, and changes around the player are spoken.");
             KeyCentre = keys.CreateEntry("Centre", "F3", "Centre key",
                 "Blobber mode, first person: walks to the centre of the current square through the game's own movement, then says the facing and the walls around.");
-            KeyPoiNext = keys.CreateEntry("PoiNext", "F5", "Next point of interest key",
+            KeyPoiNext = keys.CreateEntry("PoiNext", "PageUp", "Next point of interest key",
                 "Selects the next door, person or item box of the area, nearest first, and says its distance and compass direction.");
-            KeyPoiPrevious = keys.CreateEntry("PoiPrevious", "Shift+F5", "Previous point of interest key",
+            KeyPoiPrevious = keys.CreateEntry("PoiPrevious", "PageDown", "Previous point of interest key",
                 "Selects the previous point of interest.");
-            KeyPoiWalk = keys.CreateEntry("PoiWalk", "Ctrl+F5", "Walk to point of interest key",
-                "Walks to the selected point of interest through the game's own movement (fixed-camera rooms and third person for now). Any movement key stops it.");
+            KeyPoiWalk = keys.CreateEntry("PoiWalk", "Home", "Walk to point of interest key",
+                "Walks to the selected point of interest through the game's own movement (fixed-camera rooms and third person for now). Any movement key stops it. Enter (the game's confirm) then interacts as usual.");
 
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);
