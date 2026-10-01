@@ -224,7 +224,7 @@ Open questions for Phase 0:
 
 ## Current state
 
-**1 Oct 2026, navigation (0.0.12 to 0.0.16):** diagnostics, first person on a first playthrough held in memory (flag 2800, never saved), the game's pad buttons as the movement input, and grid-snapped forward steps are verified in game. Blobber mode version 1 took over A / D and refused steps near walls; Francesco rejected that (keep the game's controls, snap only movement, cues never block; points of interest with auto-walk for fixed-camera rooms later). Read-only IL2CPP analysis of `GameAssembly.dll` is now a standard tool (`tools/native`). State and next steps: `docs/HANDOFF-PATHFINDING.md`; facts: `docs/NAVIGATION-DESIGN.md` sections 6 to 11.
+**1 Oct 2026, navigation (0.0.12 to 0.0.16):** diagnostics, first person on a first playthrough held in memory (flag 2800, never saved), the game's pad buttons as the movement input, and grid-snapped forward steps are verified in game. Blobber mode version 1 took over A / D and refused steps near walls; Francesco rejected that (keep the game's controls, snap only movement, cues never block; points of interest with auto-walk for fixed-camera rooms later). Read-only IL2CPP analysis of `GameAssembly.dll` is now a standard tool (`tools/native`). State and next steps: `docs/HANDOFF-PATHFINDING.md`; facts: `docs/NAVIGATION-DESIGN.md` sections 6 to 11. **0.0.17** (second navigation chat, not yet tested): blobber mode version 2 keeps every game key and only carries a released W walk on to the next square's centre; reading the first-person routine showed that S turns the player round (not back) and that W with A or D walks diagonally (section 12).
 
 Updated 30 Sep 2026, end of session 1.
 

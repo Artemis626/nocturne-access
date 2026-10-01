@@ -249,7 +249,7 @@ Francesco's decisions (1 Oct 2026, after 0.0.15): fixed-camera rooms use **optio
 ### What the run showed (log `session_2026-10-01_13-39-*.log`)
 
 - **Forward steps in first-person corridors worked**: 580 to 667 units per step (20 to 23 ticks), ending within one tick of the 600 grid, drift across the axis under 2 units. "Door ahead" was spoken before both doors; the step into a door stopped at the door wall and the game's "Open Door" prompt followed. Holding W chained steps.
-- **First-person native controls (from the trace's real pad buttons)**: W / S = pad U / D (forward, back, continuous); **A / D = pad L / R = the game's 90-degree turns** (not side steps); **Q / E = pad L1 / R1 = side steps** (continuous). 0.0.16 assumed A / D were side steps: its injected "step left / right" turned the player instead, moved 0, and was reported as a blocked step ("Wall."), several times per press.
+- **First-person native controls (from the trace's real pad buttons)**: W = pad U (forward, continuous); S = pad D (**correction, section 12: S turns the player round 180 degrees**, it does not walk back); **A / D = pad L / R = the game's 90-degree turns** (not side steps); **Q / E = pad L1 / R1 = side steps** (continuous). 0.0.16 assumed A / D were side steps: its injected "step left / right" turned the player instead, moved 0, and was reported as a blocked step ("Wall."), several times per press.
 - **Refusing steps blocked play**: a step was refused whenever the segment one full cell ahead crossed any vertical collision polygon. NPC boxes (the Soul, `Attr` 0x80, 100 x 100) and room furniture count, so Francesco could not walk up to the Soul in the corridor to talk to it, and in the Healing Room (fixed camera) nearly every step was refused ("Wall."): he turned blobber mode off and used his sight to leave. The game's facing goal always matched the wanted facing in the mod-facing layer (no warning logged), so the pad choice from the camera yaw was right; the refusals were the problem.
 - No errors; 58 hooks.
 
@@ -268,3 +268,45 @@ Francesco's decisions (1 Oct 2026, after 0.0.15): fixed-camera rooms use **optio
 - **Grid-snapped forward movement without hiding the key**: let the game walk while W is held (native), and when W is released, keep pad U pressed until the next cell centre (or until the game's collision stops the player), so every walk ends on a cell centre. This changes only movement, not input: tapping W still moves at least to the next centre. Option to discuss with Francesco if needed: the same for S (pad D) and Q / E side steps (pad L1 / R1, continuous) once the forward behaviour is confirmed.
 - In fixed-camera rooms: blobber movement off (the game's own third-person controls), cues limited to the facing and the location banner, until the points-of-interest system exists.
 - Open technical point: wall cues should ignore NPC and item-box boxes (`Attr` 0x80) as "wall" and report them separately later ("person ahead"), and furniture in rooms needs a better test than "anything within one cell" (probe a point at the cell centre with the player radius 60 instead of the whole segment).
+
+## 12. The first-person routine read in code, and blobber mode version 2 (0.0.17, 1 Oct 2026)
+
+### What `fldPlayerCalc_Nml_syukan` does with the keys (native, RVA 0x2064C60, `research/native/syukan.asm`)
+
+- Once per field tick it reads, in this order: `DDS3_PADCHECK_PRESS` L (4), R (5), U (6), D (7) with cip 0, then RD (3), L1 (8), R1 (10) with cip 1 (plus some `DDS3_PADCHECK_TRIG` of L1 and R1).
+- **It skips reading the keys while `fldPlayer.gFldPlayerSyukanDly` is above 0.** That static sits at offset 0xD4 of `fldPlayer`'s statics (declaration order in the Cpp2IL dummy; `fldPlayerCalc` clears `playerRun` at 0x5C, which confirms the layout). Every turn sets it to 2 and it counts down later. Inputs are also cleared while `dds3KernelMain.UIDispCheck(0)` is false or a pending counter runs. So the keys the game *saw* are not a reliable record of the keys *held*; the mod reads them itself (below).
+- What each key does:
+  - **U alone walks forward.**
+  - **D alone (S) turns the player round:** the facing goal `fldPlayer.fldCamKakudoGoal` = `fldPlayerCalc360_4(facing + 140)`, which snaps to multiples of 90, so +180. Confirmed in the 13:39 log: pad D at 13:40:54 and 13:41:18, position unchanged, `PlayerKakudo` easing through a half turn.
+  - **L or R alone turn by -50 / +50, snapped to 90.**
+  - **RD with L1 or R1 also turns** (a gamepad combination).
+  - **L1 / R1 alone side-step.**
+  - **Combinations walk diagonally:** U with L or R walks at 45 degrees to the facing (constant 45), D with L or R at 135 degrees (constant 135).
+- Consequence: if the mod holds pad U while the player presses A or D, the game walks diagonally instead of turning. Any snap must end before the game reads the keys whenever another movement key is down.
+- `DDS3_PADCHECK_PRESS` (RVA 0x222BD70) only reads: `dds3ConfigMainSteam.GetConfigPadMap`, then `dds3ConfigGamePadSteam.GetGamePadPadMap` and `dds3ConfigKeyBoardSteam.GetKeyBoardPadMap`. The keyboard map writes to the pad buffer only for R2 (11), which the mod never asks. The mod can therefore ask the same question the game asks, a moment earlier, without side effects.
+
+### Blobber mode version 2 (0.0.17, not yet tested in game)
+
+Implements Francesco's decisions of section 11.
+
+- **Active only in first person** (`cammode` 0 and first person on). Fixed-camera rooms, third person and the world map get nothing from blobber mode. It still switches first person on where the game allows it, unless the player turned it off with V.
+- **No key is hidden or replaced.** `PadInput` lost its suppression. Every key keeps the game's meaning: W walks, S turns round, A / D turn, Q / E side-step, V switches the view.
+- **Grid snap on releasing W.** At the start of every field update (`FieldState` prefix, before the game reads the keys), `BlobberMode` reads the real keys with `PadInput.Real` (`DDS3_PADCHECK_PRESS`, same buttons and cip as the game; the mod's own postfix ignores these calls).
+  - If W was down last tick and is up now, and the last tick moved the player straight ahead (at least 1 unit along the facing, sideways under 30 % of that), the mod holds pad U until the next multiple of 600 along the facing.
+  - No snap when the player is already within half a tick (14.5) of a centre, after a diagonal walk, or after walking into a wall.
+  - The snap ends:
+    - within half a tick of the centre;
+    - when the game stops the player (3 ticks without moving: collision, a door wall, an NPC);
+    - after 3 s;
+    - on a view, area or facing change, or when exploring stops;
+    - **at once, before the game reads the keys, when the player presses W again or any of A, D, S, Q, E** (pad L, R, D, L1, R1, RD).
+  - A tap of W therefore walks one full cell. Walking into a wall leaves the player where the game stopped them (no back-step, per the design).
+- **Cues, never blocking, only changes:**
+  - When the player reaches a cell centre along the direction of motion (walking, snapping or side-stepping; within 15 units, or passing it), the mod speaks what changed ahead, left and right since the last cue ("Opening left.", "Wall ahead.", "Door ahead."). Each cell speaks once until the player reaches another.
+  - After the game's own turn has finished easing, it speaks the facing and what is ahead ("North, wall ahead.").
+- **Wall test:** `GridSense` keeps the segment test (from the player to one cell away, vertical polygons at chest height), but NPC and item-box boxes (`Attr` 0x80) no longer count as walls. That is what made "wall" appear in front of the Soul. Reporting people and boxes separately is for later.
+- **Log** `[Nav:Blob]`:
+  - `Snap: W released at ...`, `Snap done / stopped by the game / timed out: moved ... drift ... ticks`, `Snap stopped: <why>`;
+  - `W released, no snap: ...`;
+  - `Centre x z: ahead .., left .., right ..`;
+  - every spoken cue (`Say:`).

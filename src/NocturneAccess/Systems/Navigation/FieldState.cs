@@ -53,7 +53,6 @@ namespace NocturneAccess.Systems.Navigation
             InPlayerCalc = true;
             try
             {
-                PadInput.BeginTick();
                 BlobberMode.BeforeCalc();
             }
             catch (Exception ex)

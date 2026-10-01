@@ -34,6 +34,7 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.11** | Party pick, Stats race, pre-filled names, prompt dedupe, name button diagnostic | **Verified 1 Oct 2026 (09:47 session); level-up allocation verified too** |
 | 0.0.12 to 0.0.15 | Navigation diagnostics (F5, trace), first person in memory (V), pad injection | Verified 1 Oct 2026 (12:04 to 13:13 sessions) |
 | **0.0.16** | Blobber mode version 1 (F4) | Tested 1 Oct 13:39: forward grid steps good; input takeover and step refusals rejected by Francesco. Redesign in `docs/NAVIGATION-DESIGN.md` section 11 |
+| **0.0.17** | Blobber mode version 2: game keys untouched, W release snaps to the next square, cues at square centres, NPC boxes not walls | Built 1 Oct 2026, **not yet tested in game**; `docs/NAVIGATION-DESIGN.md` section 12 |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 

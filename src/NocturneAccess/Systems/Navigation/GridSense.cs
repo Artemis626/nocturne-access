@@ -23,7 +23,8 @@ namespace NocturneAccess.Systems.Navigation
     /// Walls and doors around the player, from the game's own data (docs/NAVIGATION-DESIGN.md sections 6 and 9):
     /// - Walls: vertical collision polygons (|normal.y| &lt; 0.2) whose height span covers the player's chest
     ///   (game Y points down; floors at 0, walls 0 to -400). Each is reduced to its segment in X and Z.
-    ///   NPC and item-box boxes (Attr 0x80) count as walls: the player cannot walk through them.
+    ///   NPC and item-box boxes (Attr 0x80, 100 x 100 around people and boxes) are not walls: in 0.0.16 they made the
+    ///   cue say "wall" in front of the Soul. They are to be reported apart later ("person", "box").
     /// - Doors: fldEveHit.gEvnRng entries of type 10 named "NNd_MM" (the "Open Door" volumes, 0.0.12).
     ///   Doors are closed walls in the collision, so a door within one cell wins over the wall behind it.
     /// A side is a Wall when the segment from the player to one cell away crosses a wall.
@@ -33,6 +34,7 @@ namespace NocturneAccess.Systems.Navigation
         private const float ChestHeight = 100f;   // above the floor, game units (Y down)
         private const float DoorReachExtra = 100f;
         private const float DoorHalfWidth = 250f;
+        private const uint NpcBoxAttr = 0x80;
         private static readonly Regex DoorName = new Regex(@"^\d+d_\d+$");
 
         private struct Seg { public float Ax, Az, Bx, Bz; }
@@ -126,7 +128,7 @@ namespace NocturneAccess.Systems.Navigation
             float chest = playerY - ChestHeight;
             foreach (CollisionPoly p in CollisionCache.Polys)
             {
-                if (Math.Abs(p.Normal.y) >= 0.2f || p.Points.Length < 2)
+                if (Math.Abs(p.Normal.y) >= 0.2f || p.Points.Length < 2 || (p.Attr & NpcBoxAttr) != 0)
                     continue;
                 float minY = float.MaxValue, maxY = float.MinValue;
                 foreach (Vector4 v in p.Points)

@@ -12,7 +12,7 @@ Keys are set in `UserData/NocturneAccess.cfg`, section `[NocturneAccess_Keys]`, 
 | F8 | Status: says "Nocturne Access running. Speech through NVDA." | 0.0.1 |
 | F7 | Debug: pause or resume the text probe (only when `Probe = true` in `[NocturneAccess_Debug]`) | 0.0.2 |
 | F6 | Debug: write every text currently visible on screen to the log | 0.0.2 |
-| F4 | Blobber mode on or off (on at start). 0.0.16 behaviour (to be replaced, Francesco 1 Oct 2026): W walks one square; it also takes over A / D and refuses steps near walls, which is wrong. Target design: the game's own controls untouched, only movement snapped to squares, cues that never block. | 0.0.16 |
+| F4 | Blobber mode on or off (on at start). In first person it keeps every game key as it is and only snaps walking to squares: when W is let go, the walk carries on to the centre of the next square (a tap of W walks one square). Says what changed on reaching each square ("Opening left.", "Wall ahead.", "Door ahead.") and the facing after a turn ("North, wall ahead."). Never refuses a move. Nothing in fixed-camera rooms or third person. | 0.0.16, version 2 in 0.0.17 |
 | F5 | Debug: navigation dump. Writes the current area's navigation data (position, facing, place names, collision polygons, auto-map, people, item boxes, event volumes, input and story-flag tables) to `UserData/NocturneAccess/NavDumps/navdump_[time].txt`, with a summary in the log. Says "Navigation data saved." May move to a modifier combination when navigation needs more keys. | 0.0.12 |
 
 ## Reserved keys
@@ -30,7 +30,7 @@ Keys other software already uses. The mod must not bind these by default.
 
 ## First-person controls (the game's own, measured 1 Oct 2026)
 
-In first person (V) the game reads: W / S = pad U / D, forward and back while held; A / D = pad L / R, a 90-degree turn per press; Q / E = pad L1 / R1, side steps while held. Blobber mode must leave these unchanged.
+In first person (V) the game reads (log 1 Oct 2026 and its code, `docs/NAVIGATION-DESIGN.md` section 12): W = pad U, forward while held; **S = pad D, turn round (180 degrees)**; A / D = pad L / R, a 90-degree turn per press; Q / E = pad L1 / R1, side steps while held; W or S together with A or D walk diagonally (45 or 135 degrees to the facing). Blobber mode must leave these unchanged.
 
 ## Game keyboard bindings
 

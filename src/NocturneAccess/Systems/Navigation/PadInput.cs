@@ -8,35 +8,30 @@ using NocturneAccess.Core;
 namespace NocturneAccess.Systems.Navigation
 {
     /// <summary>
-    /// The game's own pad buttons (SDF_PADMAP) during the field update: reads the player's real presses, can hide some
-    /// from the game, and can press buttons, so walking goes through the game's movement code, collision, doors and
-    /// events exactly as with a real key.
+    /// The game's own pad buttons (SDF_PADMAP) during the field update: reads the player's real presses and can press
+    /// buttons, so walking goes through the game's movement code, collision, doors and events exactly as with a real key.
+    /// It never hides a real press (Francesco, 1 Oct 2026: blobber mode must not change the game's input).
     ///
-    /// Disassembly of GameAssembly.dll (docs/NAVIGATION-DESIGN.md section 8): fldPlayerCalc_Nml (third person) reads
-    /// walking from dds3PadManager.DDS3_ORGMAP_PRESS(L 4, R 5, U 6, D 7, cip 0); fldPlayerCalc_Nml_syukan (first person)
-    /// from DDS3_PADCHECK_PRESS(L, R, U, D, cip 0). Both read the raw pad buffer dds3PadManager.dds3PadMap[1][0] through
-    /// the game's button mapping, which is where the keyboard arrives (0.0.15: pad U held 500 ms walked 435 units).
+    /// Disassembly of GameAssembly.dll (docs/NAVIGATION-DESIGN.md sections 8 and 12): fldPlayerCalc_Nml (third person)
+    /// reads walking from dds3PadManager.DDS3_ORGMAP_PRESS(L 4, R 5, U 6, D 7, cip 0); fldPlayerCalc_Nml_syukan (first
+    /// person) from DDS3_PADCHECK_PRESS(L, R, U, D, cip 0) and (RD, L1, R1, cip 1). Both read the raw pad buffer
+    /// dds3PadManager.dds3PadMap[1][0] through the game's button mapping, which is where the keyboard arrives.
+    /// DDS3_PADCHECK_PRESS only reads (dds3ConfigMainSteam.GetConfigPadMap, then the gamepad and keyboard maps; the
+    /// keyboard map writes only for R2, never read here), so Real can ask it the same question the game will ask.
     ///
     /// Postfixes on DDS3_ORGMAP_PRESS and DDS3_PADCHECK_PRESS act only while fldPlayer.fldPlayerCalc runs
-    /// (FieldState.InPlayerCalc): menus, battles and events never see a hidden or injected press. Per call:
-    /// 1. a true answer is recorded as the player's real press of that button this tick;
-    /// 2. a suppressed button answers false (blobber mode takes W, A, D over);
-    /// 3. a held button answers true.
-    /// BeginTick (called from FieldState before each field update) turns the last tick's real presses into
-    /// Down and Pressed (new this tick). [NocturneAccess_Navigation] PadInjection = false disables the hooks.
+    /// (FieldState.InPlayerCalc): menus, battles and events never see an injected press. A true answer is noted for
+    /// the trace; a held button answers true. [NocturneAccess_Navigation] PadInjection = false disables the hooks.
     /// </summary>
     internal static class PadInput
     {
         internal const int Buttons = (int)SDF_PADMAP.SDF_PADMAP_COUNT;
 
         private static readonly bool[] Held = new bool[Buttons];
-        private static readonly bool[] Suppressed = new bool[Buttons];
-        private static readonly bool[] RealThisTick = new bool[Buttons];
-        private static readonly bool[] Down = new bool[Buttons];
-        private static readonly bool[] Pressed = new bool[Buttons];
         private static readonly bool[] TraceSeen = new bool[Buttons];
         private static bool _anyHeld;
-        private static bool _anySuppressed;
+        private static bool _readingReal;
+        private static bool _realFailed;
 
         internal static bool Installed { get; private set; }
 
@@ -58,22 +53,30 @@ namespace NocturneAccess.Systems.Navigation
             Installed = a || b;
         }
 
-        /// <summary>Start of a field update: the previous tick's real presses become Down / Pressed.</summary>
-        internal static void BeginTick()
+        /// <summary>
+        /// The player's real press of a button, asked exactly as fldPlayerCalc_Nml_syukan asks it
+        /// (DDS3_PADCHECK_PRESS), without the mod's held buttons. False if the call ever fails.
+        /// </summary>
+        internal static bool Real(SDF_PADMAP button, int cip)
         {
-            for (int i = 0; i < Buttons; i++)
+            if (_realFailed)
+                return false;
+            _readingReal = true;
+            try
             {
-                Pressed[i] = RealThisTick[i] && !Down[i];
-                Down[i] = RealThisTick[i];
-                if (RealThisTick[i])
-                    TraceSeen[i] = true;
-                RealThisTick[i] = false;
+                return dds3PadManager.DDS3_PADCHECK_PRESS(button, cip);
+            }
+            catch (Exception ex)
+            {
+                _realFailed = true;
+                Log.Warn($"[Nav] Reading the game's pad buttons failed; blobber mode cannot see keys: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                _readingReal = false;
             }
         }
-
-        internal static bool IsDown(SDF_PADMAP b) => Down[(int)b];
-
-        internal static bool WasPressed(SDF_PADMAP b) => Pressed[(int)b];
 
         internal static void Hold(SDF_PADMAP button, bool on)
         {
@@ -88,21 +91,6 @@ namespace NocturneAccess.Systems.Navigation
         {
             Array.Clear(Held, 0, Held.Length);
             _anyHeld = false;
-        }
-
-        internal static void Suppress(SDF_PADMAP button, bool on)
-        {
-            int b = (int)button;
-            if ((uint)b >= Buttons)
-                return;
-            Suppressed[b] = on;
-            _anySuppressed = Array.IndexOf(Suppressed, true) >= 0;
-        }
-
-        internal static void SuppressNone()
-        {
-            Array.Clear(Suppressed, 0, Suppressed.Length);
-            _anySuppressed = false;
         }
 
         /// <summary>Buttons the player really pressed since the last call (for the trace), then reset.</summary>
@@ -123,18 +111,14 @@ namespace NocturneAccess.Systems.Navigation
 
         private static void AfterPress(SDF_PADMAP __0, ref bool __result)
         {
-            if (!FieldState.InPlayerCalc)
+            if (_readingReal || !FieldState.InPlayerCalc)
                 return;
             int b = (int)__0;
             if ((uint)b >= Buttons)
                 return;
             if (__result)
-            {
-                RealThisTick[b] = true;
-                if (_anySuppressed && Suppressed[b])
-                    __result = false;
-            }
-            if (_anyHeld && Held[b] && !__result)
+                TraceSeen[b] = true;
+            else if (_anyHeld && Held[b])
             {
                 __result = true;
                 Injected++;
