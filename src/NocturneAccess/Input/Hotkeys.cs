@@ -46,6 +46,7 @@ namespace NocturneAccess.Input
             Add("dump UI", Config.KeyDumpUi, KeyCode.F6, UiTreeDumper.Dump);
             Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle);
             Add("navigation dump", Config.KeyNavDump, KeyCode.F6, NavDump.Dump, shift: true);
+            Add("battle dump", Config.KeyBattleDump, KeyCode.F2, BattleDump.Dump, shift: true);
             Add("blobber mode", Config.KeyBlobber, KeyCode.F4, BlobberMode.Toggle);
             Add("centre on the square", Config.KeyCentre, KeyCode.F3, BlobberMode.RequestCentre);
             Add("next point of interest", Config.KeyPoiNext, KeyCode.PageUp, () => PointsOfInterest.Cycle(1));

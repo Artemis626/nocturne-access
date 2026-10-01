@@ -48,6 +48,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyDumpUi { get; private set; }
         internal static MelonPreferences_Entry<string> KeyToggleProbe { get; private set; }
         internal static MelonPreferences_Entry<string> KeyNavDump { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyBattleDump { get; private set; }
         internal static MelonPreferences_Entry<string> KeyBlobber { get; private set; }
         internal static MelonPreferences_Entry<string> KeyCentre { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiNext { get; private set; }
@@ -118,7 +119,7 @@ namespace NocturneAccess.Core
             KeyStatus = keys.CreateEntry("Status", "F8", "Status key",
                 "Speaks whether the mod is running and which speech backend it uses.");
             KeyBattleStatus = keys.CreateEntry("BattleStatus", "F2", "Battle status key",
-                "In battle: Press Turns, then every enemy and party member with HP and MP.");
+                "In battle: whose turn it is and the press turns left, then every enemy and party member with HP and MP.");
             KeyDumpUi = keys.CreateEntry("DumpUi", "F6", "Dump UI key",
                 "Debug: writes every text currently visible on screen to Latest.log.");
             KeyToggleProbe = keys.CreateEntry("ToggleProbe", "F7", "Toggle probe key",
@@ -126,6 +127,8 @@ namespace NocturneAccess.Core
             // "NavigationDump" (Shift+F6) replaces the 0.0.12 entry "NavDump" (F5), so saved configs pick up the new default.
             KeyNavDump = keys.CreateEntry("NavigationDump", "Shift+F6", "Navigation dump key",
                 "Debug: writes the navigation data of the current area (position, place names, walls, auto-map, people, boxes, event volumes) to UserData/NocturneAccess/NavDumps, with a summary in Latest.log.");
+            KeyBattleDump = keys.CreateEntry("BattleDump", "Shift+F2", "Battle dump key",
+                "Debug: writes the battle data of this moment (turn, press turns, every unit with level, status, skills and buffs, formation, target selection) to UserData/NocturneAccess/BattleDumps, with a summary in Latest.log.");
             KeyBlobber = keys.CreateEntry("Blobber", "F4", "Blobber mode key",
                 "Turns blobber mode on or off. In first person every game key stays as it is; letting go of W carries the walk on to the centre of the next square, and changes around the player are spoken.");
             KeyCentre = keys.CreateEntry("Centre", "F3", "Centre key",

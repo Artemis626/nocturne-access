@@ -12,7 +12,7 @@ Read `CLAUDE.md` first (binding rules), then this file, then:
 
 ## Where things stand
 
-- **Installed: 0.0.27**, built 1 Oct 2026, **not yet tested in game** (section 9: elevator floor banner, volume heights from their boxes so Pixie is listed, walks end in front of doors and on a line with people, blobber square centres per area). 0.0.26 was played at 21:31 through the Medical Center 1F and 2F to the annex gate: about 30 walks arrived, End one sentence per press. 0.0.25 (hidden NPCs left out, directions on End) was played at length at 20:37: Francesco finds the systems "mature enough for a low-vision player to progress through the game with only minor friction" and is now playing through, reporting bugs and missing features. 0.0.26: End speaks only when pressed; Home turns to a door even right at it (section 8).
+- **Installed: 0.0.28** (battle work, `docs/HANDOFF.md`; navigation: the square offset takes the middle of the near-best range). 0.0.27 verified at 22:14 (section 9: elevator floor banner, volume heights from their boxes so Pixie is listed, walks end in front of doors and on a line with people, blobber square centres per area). 0.0.26 was played at 21:31 through the Medical Center 1F and 2F to the annex gate: about 30 walks arrived, End one sentence per press. 0.0.25 (hidden NPCs left out, directions on End) was played at length at 20:37: Francesco finds the systems "mature enough for a low-vision player to progress through the game with only minor friction" and is now playing through, reporting bugs and missing features. 0.0.26: End speaks only when pressed; Home turns to a door even right at it (section 8).
 - **Verified in game:**
 
 | Feature | Versions | Result |
@@ -25,6 +25,7 @@ Read `CLAUDE.md` first (binding rules), then this file, then:
 | Basement walks to the Terminal door and a Soul, `OldHitDoor` / `OldHitInf` arrival | 0.0.24 | Arrived (20:20) |
 | Hidden NPCs left out; long walks in field 45; event interruptions | 0.0.25 | Verified (20:37) |
 | End on demand; Home at doors; the Medical Center 1F and 2F | 0.0.26 | Verified (21:31) |
+| Elevator floor banner; walks in front of doors; square centres per area (2F offset 300) | 0.0.27 | Verified (22:14) |
 
   Blobber mode version 2 keeps every game key; releasing W carries the walk on to the next square's centre; cues speak only changes and never block. The 0.0.23 walks also exposed the problems fixed in 0.0.24.
 - **Next test (0.0.27), during normal play:**

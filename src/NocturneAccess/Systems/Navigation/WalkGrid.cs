@@ -284,6 +284,16 @@ namespace NocturneAccess.Systems.Navigation
                 }
             if (best < zeroScore * 1.1f)
                 ox = oz = 0f;
+            else
+            {
+                // Wall distances are capped (NearRange), so near the best offset the score is flat: take the middle of the
+                // run of offsets within 3 % of the best, on each axis. The 2F (field 15 area 3) gave 300 on one build and
+                // 240 on another (22:14 session); the corridor's middle is 300.
+                float bx = ox, bz = oz;
+                float mx = PlateauMiddle(bx, best, cell, steps, o => LatticeScore(o, bz, cell));
+                oz = PlateauMiddle(bz, best, cell, steps, o => LatticeScore(mx, o, cell));
+                ox = mx;
+            }
             _latticeBuild = _builds;
             _latticeCell = cell;
             _latticeX = ox;
@@ -291,6 +301,19 @@ namespace NocturneAccess.Systems.Navigation
             Log.Info($"[Nav:Walk] Square centres for field {field} area {area}: offset {FieldData.F(ox)} {FieldData.F(oz)} " +
                      $"(score {FieldData.F(best)}, offset 0 scores {FieldData.F(zeroScore)}), {clock.ElapsedMilliseconds} ms.");
         }
+
+        /// <summary>The middle of the run of offsets around 'at' (stepping CellSize, wrapping at cell) scoring within 3 % of best.</summary>
+        private static float PlateauMiddle(float at, float best, float cell, int steps, Func<float, float> score)
+        {
+            int lo = 0, hi = 0;
+            while (lo > -steps / 2 && score(Wrap(at + (lo - 1) * CellSize, cell)) >= best * 0.97f)
+                lo--;
+            while (hi < steps / 2 && score(Wrap(at + (hi + 1) * CellSize, cell)) >= best * 0.97f)
+                hi++;
+            return Wrap(at + (lo + hi) / 2 * CellSize, cell);
+        }
+
+        private static float Wrap(float o, float cell) => ((o % cell) + cell) % cell;
 
         private static float LatticeScore(float ox, float oz, float cell)
         {

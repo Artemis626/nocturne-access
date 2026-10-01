@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Il2CppTMPro;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
+using NocturneAccess.Systems.Battle;
 
 namespace NocturneAccess.Systems.Menus
 {
@@ -45,6 +46,7 @@ namespace NocturneAccess.Systems.Menus
             public bool Reshow;                   // closed while an item keeps the highlight: announce it when shown again
             public string YieldTo;                // stay silent while this menu has a visible highlighted item
             public bool ReannounceOnTitle;        // a new screen title re-announces the current item
+            public Func<string> OpeningPrefix;    // said before the item when the menu opens, if not empty
         }
 
         private sealed class Slot
@@ -120,6 +122,7 @@ namespace NocturneAccess.Systems.Menus
                 Item = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bmenu/[^/]+/bmenu_command/bmenu_command(?<slot>\d\d)/bmenu_text01TM$", RegexOptions.Compiled),
                 Highlight = "<material=\"TMC01\">",
                 Description = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bhelp_window/text_mask/TextTM$", RegexOptions.Compiled),
+                OpeningPrefix = BattleReader.TurnAnnouncement,   // "Pixie's turn" (22:14 session: the acting unit was never said)
             },
             // Yes/No prompts outside dialogue (16:49 session): highlighted option TMC08, other TMC22.
             // Their questions are prompts (AnnouncementReader), so the options queue behind them.
@@ -355,6 +358,12 @@ namespace NocturneAccess.Systems.Menus
                 item = $"Choice, {visible.Count} options. {item}";
 
             var parts = new List<string>();
+            if (opening && state.Spec.OpeningPrefix != null)
+            {
+                string prefix = state.Spec.OpeningPrefix();
+                if (!string.IsNullOrEmpty(prefix))
+                    parts.Add(prefix);
+            }
             if (state.Title.Length > 0 && state.Title != state.LastTitleSpoken)
             {
                 parts.Add(state.Title);

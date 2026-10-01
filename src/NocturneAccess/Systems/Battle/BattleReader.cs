@@ -83,6 +83,9 @@ namespace NocturneAccess.Systems.Battle
         private static long _lastVisibilityPoll;
         private static string _lastData = "";
         private static int _errors;
+        private static int _battleNo;
+        private static string _lastTurnKey = "";
+        private static int _enemySlots;   // enemy formindex slots in use this battle: survivors keep their slot when others fall
 
         // Banner
         private static bool _bannerRequested;
@@ -232,6 +235,9 @@ namespace NocturneAccess.Systems.Battle
             _started = false;
             _resultsShown = false;
             Units.Clear();
+            _battleNo++;
+            _lastTurnKey = "";
+            _enemySlots = 0;
             NameCounts.Clear();
             _lastData = "";
             Log.Info($"{Tag} Battle UI up.");
@@ -368,19 +374,32 @@ namespace NocturneAccess.Systems.Battle
                 if (!string.IsNullOrEmpty(PanelNames[form]))
                     ReadUnit(form, speakChanges, seen);
             }
-            int enemies = Math.Min(Math.Max((int)data.enemypcnt, 0), MaxEnemies);
-            for (int k = 0; k < enemies; k++)
-                ReadUnit(FirstEnemy + k, speakChanges, seen);
+            // Enemies keep their formindex when others fall while enemypcnt counts the living (22:14 session: with Pretas 1
+            // and 2 dead, enemypcnt 1 and Preta 3 at formindex 6 was no longer read, so its target and damage had no HP).
+            // Read every slot up to the highest one used this battle; a fallen enemy's slot returns null.
+            int living = Math.Min(Math.Max((int)data.enemypcnt, 0), MaxEnemies);
+            int found = 0;
+            for (int k = 0; k < MaxEnemies; k++)
+            {
+                if (k >= _enemySlots && found >= living)
+                    break;   // further slots only while fewer living enemies were found than enemypcnt says (a newcomer)
+                if (ReadUnit(FirstEnemy + k, speakChanges, seen))
+                {
+                    found++;
+                    _enemySlots = Math.Max(_enemySlots, k + 1);
+                }
+            }
 
             foreach (int gone in Units.Keys.Where(k => !seen.Contains(k)).ToList())
                 Units.Remove(gone);
         }
 
-        private static void ReadUnit(int form, bool speakChanges, HashSet<int> seen)
+        /// <summary>Reads one formindex; false when the slot is empty or fallen (null).</summary>
+        private static bool ReadUnit(int form, bool speakChanges, HashSet<int> seen)
         {
             datUnitWork_t w = nbMainProcess.nbGetUnitWorkFromFormindex(form);
             if (w == null || w.maxhp == 0)
-                return;
+                return false;
             seen.Add(form);
 
             if (!Units.TryGetValue(form, out Unit u) || u.Id != w.id)
@@ -388,7 +407,7 @@ namespace NocturneAccess.Systems.Battle
                 u = new Unit { Form = form, Id = w.id, Hp = w.hp, MaxHp = w.maxhp, Mp = w.mp, MaxMp = w.maxmp, Name = form < PartySlots ? PanelNames[form] : NameOf(w.id) };
                 Number(u);
                 Units[form] = u;
-                return;
+                return true;
             }
 
             int oldHp = u.Hp;
@@ -401,6 +420,7 @@ namespace NocturneAccess.Systems.Battle
                 string who = DisplayName(u);
                 SpeechManager.Say(u.Hp == 0 ? $"{who}, 0 HP." : $"{who}, HP {u.Hp} of {u.MaxHp}.", interrupt: false, force: true);
             }
+            return true;
         }
 
         private static string NameOf(ushort id)
@@ -450,6 +470,46 @@ namespace NocturneAccess.Systems.Battle
             Log.Info($"{DataTag} {line}");
         }
 
+        // ---- Whose turn ----
+
+        /// <summary>
+        /// "Pixie's turn", for the battle command menu's opening line (MenuReader OpeningPrefix), read from
+        /// nbMainProcessData_t.activeunit at that moment: the formindex of the unit choosing its action (0 to 3 the
+        /// party; it changed 50 ms before Pixie's menu opened, 22:14 session). Said once per unit and press-turn state,
+        /// so backing out of a submenu does not repeat it, while a unit acting again after an extra press turn does.
+        /// </summary>
+        internal static string TurnAnnouncement()
+        {
+            if (!_active)
+                return "";
+            nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
+            if (d == null || d.activeunit < 0 || d.activeunit >= PartySlots)
+                return "";
+            int form = d.activeunit;
+            string key = $"{_battleNo}/{d.turn}/{form}/{d.press4_p}/{d.press4_ten}";
+            if (key == _lastTurnKey)
+                return "";
+            _lastTurnKey = key;
+            string name = !string.IsNullOrEmpty(PanelNames[form]) ? PanelNames[form]
+                : Units.TryGetValue(form, out Unit u) ? u.Name : "";
+            if (name.Length == 0)
+                return "";
+            Log.Info($"{Tag} Turn: formindex {form} ({name}), press4_p {d.press4_p}, press4_ten {d.press4_ten}.");
+            return $"{name}'s turn";
+        }
+
+        /// <summary>"2 press turns left, 1 full and 1 half." (press4_ten all icons, press4_p the full ones; a blinking icon is half a turn).</summary>
+        private static string PressTurns(nbMainProcessData_t d)
+        {
+            int total = Math.Max((int)d.press4_ten, 0);
+            int full = Math.Min(Math.Max((int)d.press4_p, 0), total);
+            int half = total - full;
+            string left = total == 1 ? "1 press turn left" : $"{total} press turns left";
+            if (half == 0)
+                return left + ".";
+            return $"{left}: {full} full and {half} half.";
+        }
+
         // ---- Status key ----
 
         /// <summary>F2: Press Turns, enemies, then the party, all from game data.</summary>
@@ -461,22 +521,30 @@ namespace NocturneAccess.Systems.Battle
                 return;
             }
 
+            // Short sentences, each ending in a full stop, so the screen reader pauses between them (Francesco, 22:14 session:
+            // "Press turns: 1 full, 1 blinking" ran together and was unclear).
             ReadUnits(speakChanges: false);
             var parts = new List<string>();
             nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
             if (d != null)
             {
-                int full = d.press4_p;
-                int blinking = Math.Max(d.press4_ten - d.press4_p, 0);
-                parts.Add(blinking > 0 ? $"Press turns: {full} full, {blinking} blinking" : $"Press turns: {full}");
+                string side = d.activeunit >= FirstEnemy ? "Enemy turn. " : "";
+                if (d.activeunit >= 0 && d.activeunit < PartySlots && !string.IsNullOrEmpty(PanelNames[d.activeunit]))
+                    side = $"{PanelNames[d.activeunit]}'s turn. ";
+                parts.Add(side + Capital(PressTurns(d)));
             }
-            foreach (Unit u in Units.Values.Where(u => u.Form >= FirstEnemy).OrderBy(u => u.Form))
-                parts.Add($"{DisplayName(u)}, HP {u.Hp} of {u.MaxHp}");
+            List<Unit> enemies = Units.Values.Where(u => u.Form >= FirstEnemy && u.Hp > 0).OrderBy(u => u.Form).ToList();
+            parts.Add(enemies.Count == 1 ? "1 enemy." : $"{enemies.Count} enemies.");
+            foreach (Unit u in enemies)
+                parts.Add($"{DisplayName(u)}: HP {u.Hp} of {u.MaxHp}.");
+            parts.Add("Party.");
             foreach (Unit u in Units.Values.Where(u => u.Form < FirstEnemy).OrderBy(u => u.Form))
-                parts.Add($"{DisplayName(u)}, HP {u.Hp} of {u.MaxHp}, MP {u.Mp} of {u.MaxMp}");
+                parts.Add($"{DisplayName(u)}: HP {u.Hp} of {u.MaxHp}, MP {u.Mp} of {u.MaxMp}.");
             LogData(force: true);
-            SpeechManager.Say(string.Join(". ", parts) + ".", interrupt: true, force: true);
+            SpeechManager.Say(string.Join(" ", parts), interrupt: true, force: true);
         }
+
+        private static string Capital(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
 
         private static bool IsVisible(TMP_Text component)
         {

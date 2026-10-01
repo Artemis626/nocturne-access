@@ -8,7 +8,8 @@ Keys are set in `UserData/NocturneAccess.cfg`, section `[NocturneAccess_Keys]`, 
 | --- | --- | --- |
 | V | The game's Toggle POV. Since 0.0.15 the mod makes it work on a first playthrough (in memory only) and says "First person" or "Third person". | 0.0.15 |
 | F1 | Repeat whichever came last: the menu item (with position and description), the save or load file, the save Yes/No with its prompt, the config row, the name being entered, the Stats summary, or the dialogue page with its speaker (plus the highlighted option while a choice is open) | 0.0.3, menus 0.0.5, save screen 0.0.7, config 0.0.8, name entry and Stats 0.0.10 |
-| F2 | In battle: Press Turns (full and blinking), then each enemy with HP, then each party member with HP and MP, from game data. Outside battle: "Not in battle." | 0.0.9 |
+| F2 | In battle, in short sentences: whose turn it is and the press turns left ("Pixie's turn. 2 press turns left: 1 full and 1 half."), the number of enemies and each living enemy with HP, then "Party." and each member with HP and MP, from game data. Outside battle: "Not in battle." | 0.0.9; wording 0.0.28 |
+| Shift+F2 | Debug: battle dump. Writes the battle data of this moment (turn, phase, press turns, every formindex with level, HP, MP, status, stats, skills with names, buffs, the formation and the target selection) to `UserData/NocturneAccess/BattleDumps`, with the same lines in the log as `[Battle:Dump]`. "Battle data saved." | 0.0.28 |
 | F8 | Status: says "Nocturne Access running. Speech through NVDA." | 0.0.1 |
 | F7 | Debug: pause or resume the text probe (only when `Probe = true` in `[NocturneAccess_Debug]`) | 0.0.2 |
 | F6 | Debug: write every text currently visible on screen to the log | 0.0.2 |
