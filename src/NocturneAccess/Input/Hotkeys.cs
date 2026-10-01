@@ -44,6 +44,7 @@ namespace NocturneAccess.Input
             Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle);
             Add("navigation dump", Config.KeyNavDump, KeyCode.F5, NavDump.Dump);
             Add("blobber mode", Config.KeyBlobber, KeyCode.F4, BlobberMode.Toggle);
+            Add("centre on the square", Config.KeyCentre, KeyCode.F3, BlobberMode.RequestCentre);
         }
 
         internal static void Update()

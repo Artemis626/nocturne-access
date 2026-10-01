@@ -310,3 +310,45 @@ Implements Francesco's decisions of section 11.
   - `W released, no snap: ...`;
   - `Centre x z: ahead .., left .., right ..`;
   - every spoken cue (`Say:`).
+
+## 13. Results of the 0.0.17 test, Francesco's answers, and the centring key (0.0.18, 1 Oct 2026)
+
+### What the run showed (log `session_2026-10-01_14-31-50.log`, recording `2026-10-01 14-33-52.mp4`)
+
+Francesco: "a significant improvement over the last". No errors.
+
+- **Snaps:** every snap after releasing W ended on the 600 grid ("done", 87 to 551 units, drift under 2). W pressed again stopped a snap at once; Q (L1) during a snap stopped it before the game read the key. Walking into a wall left no extra movement ("W released, no snap: last move 0").
+- **Cues at centres were right on the corridors:** "Wall ahead, opening left, opening right." at the T junction, "Opening right.", "Wall left, wall right.", "Door ahead, door left." in front of the Healing Room doors. They also fired during side steps.
+- **The Soul:** reached and talked to with no refusal (14:34:53).
+- **Healing Room** (`cammode` 1): "Grid snap off: cammode 1"; nothing from the mod. First person and the snap came back in the corridor.
+- **Collision slides the player sideways in first person too** (Francesco, from the recording: "items like the bed skew the movement path for a few steps"). The hospital gurneys standing in the corridors are such objects.
+  - 14:34:02: walking north from x -5404, the player slid 35 units sideways.
+  - 14:36:49 (blobber mode off): walking north from x -5236, the player slid 163 units east over 1.5 s while W was held, along an obstacle at z about -4050.
+  - The first-person routine shares the game's collision response with third person: blocked moves slide along angled shapes.
+- **Small steady drift:** about 0.4 to 1.3 units across the axis per 600-unit step (x went from -4193 to -4197 over three steps). Snaps don't correct it, so it adds up slowly.
+
+### Francesco's answers (1 Oct 2026)
+
+1. Q / E side steps do **not** snap to centres, at least for now.
+2. Instead, a **centring key**: one press walks the player to the exact centre of the current grid square. It fixes slides (the gurney) and drift without changing normal movement.
+3. "Person ahead" and similar cues: not now; later, with real pathfinding. **Next session: pathfinding, including a first attempt at points of interest with auto-walk in fixed-camera rooms.**
+
+### Centring key (0.0.18, not yet tested in game)
+
+F3 (`[NocturneAccess_Keys] Centre`, `CentreWalk`), in blobber mode, first person only. Elsewhere it says "Centring works in first person only.", or "Blobber mode is off.".
+
+The target is the nearest grid point, `round(x / 600) * 600`, `round(z / 600) * 600`. The mod holds the game's own pads, one decision per field update before the game reads them:
+
+1. **Sideways:** L1 (the Q side step, left) or R1 (E, right) until the player is within 14.5 units of the centre line.
+2. **Along the facing:**
+   - If the centre is ahead, U (W).
+   - If it is behind, the game has no backward walk in first person: D for one tick (S, turn round), U back to the centre, then D again to restore the facing.
+   - Each turn waits until `PlayerKakudo` has reached the goal and `fldPlayer.gFldPlayerSyukanDly` is 0, so the game reads keys again.
+
+How it ends:
+
+- **Accuracy:** "Exact" means within 14.5 units on both axes (walking moves 29 per tick). Positions are never written.
+- **Interruption:** any movement key (W, A, D, S, Q, E) cancels it before the game reads the key.
+- **Stops:** a move blocked for 4 ticks, the area changing, exploring stopping, or 10 s.
+- **Speech:** the result with the full view, which becomes the baseline for later changes. Examples: "Centred. North: wall ahead, opening left, wall right." and "Blocked, not centred. …". The turns it makes are not announced separately.
+- **Log:** `[Nav:Blob] Centring from .. to .., facing ..: .. ahead, .. to the left`, `Centring: turning round to ..`, `Centring done / blocked ahead / timed out ..: now .., off by .., .. ms: centred | not centred`, `Centring stopped: ..`.

@@ -49,6 +49,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyToggleProbe { get; private set; }
         internal static MelonPreferences_Entry<string> KeyNavDump { get; private set; }
         internal static MelonPreferences_Entry<string> KeyBlobber { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyCentre { get; private set; }
 
         // Debug
         internal static MelonPreferences_Entry<bool> VerboseLogging { get; private set; }
@@ -121,7 +122,9 @@ namespace NocturneAccess.Core
             KeyNavDump = keys.CreateEntry("NavDump", "F5", "Navigation dump key",
                 "Debug: writes the navigation data of the current area (position, place names, walls, auto-map, people, boxes, event volumes) to UserData/NocturneAccess/NavDumps, with a summary in Latest.log.");
             KeyBlobber = keys.CreateEntry("Blobber", "F4", "Blobber mode key",
-                "Turns blobber mode on or off: W and the side keys move exactly one square, first person where the game allows it, the mod's own facing in fixed-camera rooms.");
+                "Turns blobber mode on or off. In first person every game key stays as it is; letting go of W carries the walk on to the centre of the next square, and changes around the player are spoken.");
+            KeyCentre = keys.CreateEntry("Centre", "F3", "Centre key",
+                "Blobber mode, first person: walks to the centre of the current square through the game's own movement, then says the facing and the walls around.");
 
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);

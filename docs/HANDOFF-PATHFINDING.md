@@ -4,7 +4,7 @@ Rewritten 1 Oct 2026 at the end of the first navigation chat (versions 0.0.12 to
 
 ## Where things stand
 
-- Installed: **0.0.17** (1 Oct 2026, second navigation chat): blobber mode version 2 per Francesco's decisions, **not yet tested in game**. Design and the code reading behind it: `docs/NAVIGATION-DESIGN.md` section 12. 0.0.16 (`e6f5db5`, tested 13:39) had the rejected input takeover.
+- Installed: **0.0.18** (1 Oct 2026, second navigation chat), **not yet tested in game**: adds the F3 centring key (`CentreWalk`, section 13). **0.0.17** (blobber mode version 2, section 12) was tested at 14:31 and is "a significant improvement" (Francesco): every snap ends on the grid, cues are right at junctions, the Soul can be reached. Found: collision with objects (corridor gurneys) slides the player sideways in first person too. 0.0.16 (`e6f5db5`, tested 13:39) had the rejected input takeover.
 - Verified in game across 0.0.12 to 0.0.16 (logs `session_2026-10-01_12-04`, `12-43`, `12-57`, `13-13`, `13-39`; recordings in `%USERPROFILE%\Videos\Captures`):
   - Diagnostics: F5 dump to `UserData/NocturneAccess/NavDumps`, `[Nav:Trace]` / `[Nav:Change]` / `[Nav:Gate]` / `[Nav:Blob]` log lines (config `[NocturneAccess_Navigation] Diagnostics`).
   - **First person on a first playthrough, in memory only** (`FirstPersonView`): V toggles it, "First person" / "Third person" spoken; the game's flag 2800 is answered, never written.
@@ -31,12 +31,9 @@ Rewritten 1 Oct 2026 at the end of the first navigation chat (versions 0.0.12 to
 
 ## Next
 
-1. Test 0.0.17 with Francesco (taps, holds, intersections, walking up to the Soul, A / D / S / Q / E during a snap). Read the `[Nav:Blob]` lines.
-2. Questions for Francesco after the test:
-   - snap side steps (Q / E) too;
-   - bump into a wall leaves the player off-centre; a back-step to the centre would be movement he did not ask for, so ask first;
-   - speak people and boxes ahead ("person ahead").
-3. Then, per the plan: read-only aids (where am I, scanner), points of interest with auto-walk (fixed-camera rooms), grid A*.
+1. Test 0.0.18: F3 after a gurney slide, after walking into an end wall (centre behind: turn round, walk, turn back), when already centred, and pressing a key during it. Read the `[Nav:Blob] Centring` lines.
+2. Francesco's answers (1 Oct 2026, section 13): Q / E stay unsnapped for now; "person ahead" and similar cues later, with pathfinding.
+3. **Next session (Francesco): pathfinding**, including a first attempt at **points of interest with auto-walk in fixed-camera rooms**. Then read-only aids (where am I, scanner) and grid A* per the plan.
 
 ## Key facts (details and sources in NAVIGATION-DESIGN sections 6 to 11)
 

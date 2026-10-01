@@ -25,6 +25,9 @@ namespace NocturneAccess.Systems.Navigation
     ///
     /// Speech (only changes): when the player reaches a cell centre while moving, what changed ahead, left and right
     /// (wall, opening, door); after the game's own turn, the facing and what is ahead.
+    ///
+    /// F3 (RequestCentre, Francesco 1 Oct 2026): CentreWalk walks to the centre of the current cell with the game's own
+    /// moves (after collision slid the player off the grid), then speaks "Centred." with the facing and all three sides.
     /// </summary>
     internal static class BlobberMode
     {
@@ -62,6 +65,10 @@ namespace NocturneAccess.Systems.Navigation
         private static long _cueCell = long.MinValue;
         private static int _area = int.MinValue, _field = int.MinValue;
 
+        // F3 (centring), requested in OnUpdate and started at the next field update
+        private const long CentreRequestMs = 500;
+        private static long _centreRequestMs = long.MinValue / 2;
+
         internal static bool Enabled => _enabled;
 
         internal static void Init()
@@ -81,6 +88,7 @@ namespace NocturneAccess.Systems.Navigation
             _enabled = !_enabled;
             FirstPersonView.ClearUserChoice();
             StopSnap("toggled");
+            CentreWalk.Cancel("blobber mode toggled");
             _firstPerson = false;
             _haveView = false;
             Log.Info($"[Nav] Blobber mode {(_enabled ? "on" : "off")}.");
@@ -108,6 +116,7 @@ namespace NocturneAccess.Systems.Navigation
             if (gb.fieldID < 10)
             {
                 Leave("world map");
+                RefuseCentre();
                 return;
             }
 
@@ -116,6 +125,7 @@ namespace NocturneAccess.Systems.Navigation
                 _field = gb.fieldID;
                 _area = gb.areaID;
                 StopSnap("area change");
+                CentreWalk.Cancel("area change");
                 _haveView = false;
                 _havePrev = false;
                 _facingSpoken = -1;
@@ -131,6 +141,7 @@ namespace NocturneAccess.Systems.Navigation
             if (gb.cammode != 0 || !FirstPersonView.On)
             {
                 Leave(gb.cammode != 0 ? $"cammode {gb.cammode}" : "third person");
+                RefuseCentre();
                 return;
             }
             if (!_firstPerson)
@@ -147,13 +158,32 @@ namespace NocturneAccess.Systems.Navigation
             float moveX = _havePrev ? x - _prevX : 0, moveZ = _havePrev ? z - _prevZ : 0;
             ReadKeys();
 
-            if (_snapping)
-                ContinueSnap(gb);
-            else if (_prevRealU && !_realU && _otherKey.Length == 0)
-                TryStartSnap(gb, moveX, moveZ);
+            if (TakeCentreRequest())
+            {
+                StopSnap("centring");
+                CentreWalk.Start(gb, _cell);
+            }
+            if (CentreWalk.Active && (_realU || _otherKey.Length > 0))
+                CentreWalk.Cancel(_realU ? "W pressed" : $"pad {_otherKey} pressed");
 
-            AnnounceTurn(gb);
-            CueAtCentre(gb, moveX, moveZ);
+            if (CentreWalk.Active)
+            {
+                bool? centred = CentreWalk.Step(gb);
+                if (centred.HasValue)
+                    SpeakCentred(gb, centred.Value);
+                else
+                    _facingSpoken = GridSense.Normalize90(gb.PlayerKakudoGoal);   // its own turns are not announced
+            }
+            else
+            {
+                if (_snapping)
+                    ContinueSnap(gb);
+                else if (_prevRealU && !_realU && _otherKey.Length == 0)
+                    TryStartSnap(gb, moveX, moveZ);
+
+                AnnounceTurn(gb);
+                CueAtCentre(gb, moveX, moveZ);
+            }
 
             _prevRealU = _realU;
             _prevX = x;
@@ -165,6 +195,7 @@ namespace NocturneAccess.Systems.Navigation
         {
             if (!_firstPerson)
                 return;
+            CentreWalk.Cancel(why);
             StopSnap(why);
             _firstPerson = false;
             _haveView = false;
@@ -285,6 +316,8 @@ namespace NocturneAccess.Systems.Navigation
         {
             if (_snapping && !FieldState.IsExploring)
                 StopSnap("no longer exploring");
+            if (CentreWalk.Active && !FieldState.IsExploring)
+                CentreWalk.Cancel("no longer exploring");
         }
 
         /// <summary>After the game's own turn (A, D, S) has finished easing: the facing and what is ahead.</summary>
@@ -322,7 +355,7 @@ namespace NocturneAccess.Systems.Navigation
             if (!atCentre)
                 return;
 
-            long cell = ((long)Math.Round(x / _cell) << 32) ^ (uint)(int)Math.Round(z / _cell);
+            long cell = CellKey(x, z);
             if (cell == _cueCell)
                 return;
             _cueCell = cell;
@@ -337,6 +370,47 @@ namespace NocturneAccess.Systems.Navigation
             if (change.Length > 0)
                 Say(change);
         }
+
+        /// <summary>F3 (OnUpdate): walk to the centre of the current cell at the next field update (CentreWalk).</summary>
+        internal static void RequestCentre()
+        {
+            if (!_enabled)
+            {
+                SpeechManager.Say("Blobber mode is off.", interrupt: true);
+                return;
+            }
+            _centreRequestMs = Clock.ElapsedMilliseconds;
+        }
+
+        private static bool TakeCentreRequest()
+        {
+            bool fresh = Clock.ElapsedMilliseconds - _centreRequestMs <= CentreRequestMs;
+            _centreRequestMs = long.MinValue / 2;
+            return fresh;
+        }
+
+        private static void RefuseCentre()
+        {
+            if (TakeCentreRequest())
+                Say("Centring works in first person only.");
+        }
+
+        /// <summary>End of a centring walk: the result and the full view, which becomes the baseline for later changes.</summary>
+        private static void SpeakCentred(fldGlobalWork_t gb, bool centred)
+        {
+            int facing = GridSense.Normalize90(gb.PlayerKakudoGoal);
+            CellView v = GridSense.Look(gb.playerX, gb.playerY, gb.playerZ, facing, _cell);
+            _view = v;
+            _viewFacing = facing;
+            _haveView = true;
+            _facingSpoken = facing;
+            _cueCell = CellKey(gb.playerX, gb.playerZ);
+            string view = $"{Cap(GridSense.FacingName(facing))}: {Describe(v.Ahead, "ahead")}, {Describe(v.Left, "left")}, {Describe(v.Right, "right")}.";
+            Say((centred ? "Centred. " : "Blocked, not centred. ") + view);
+        }
+
+        private static long CellKey(float x, float z)
+            => ((long)Math.Round(x / _cell) << 32) ^ (uint)(int)Math.Round(z / _cell);
 
         private static string Changes(CellView v, int facing)
         {
