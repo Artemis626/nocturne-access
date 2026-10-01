@@ -493,6 +493,9 @@ namespace NocturneAccess.Capture
             FileOnly("padcheck, every action:");
             foreach (string line in NavProbe.PadcheckLines(onlyInteresting: false))
                 FileOnly("  " + line);
+            Both("analog channels asked (dds3PadManager.GetPadAnalog):");
+            foreach (string line in AnalogInput.ChannelLines())
+                Both("  " + line);
 
             DumpChecks("evtBitCheck", NavProbe.EvtBits, annotate: true);
             DumpChecks("cfgGetBit", NavProbe.CfgBits, annotate: false);

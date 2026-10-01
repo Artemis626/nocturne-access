@@ -10,7 +10,8 @@ namespace NocturneAccess.Capture
 {
     /// <summary>
     /// Input proof of concept (docs/NAVIGATION-DESIGN.md section 4 step 2), debug keys:
-    /// - Step test (F3): holds CMN_UpFront through InputInjector for 500 ms.
+    /// - Step test (F3): replays the forward stick profile AnalogInput learned while the player walked forward by
+    ///   hand, for 500 ms (0.0.13: padcheck(CMN_UpFront) did not move the player).
     /// - Turn test (F4): holds FD_Turn_Right until PlayerKakudo or the camera yaw has changed by 90 degrees,
     ///   at most 1500 ms.
     /// Both run only while exploring and stop at once if exploring stops (battle, event, menu). Each result is
@@ -32,7 +33,16 @@ namespace NocturneAccess.Capture
         private static PlayerSnapshot _start;
         private static string _atRelease = "";
 
-        internal static void StepTest() => Start("Step test", SIActionName.CMN_UpFront);
+        internal static void StepTest()
+        {
+            if (!AnalogInput.HasForwardProfile)
+            {
+                Log.Info("[Nav:Test] Step test: no forward profile yet (walk forward with your own key first).");
+                SpeechManager.Say("Step test: walk forward with W first, then try again.", interrupt: true, force: true);
+                return;
+            }
+            Start("Step test", SIActionName.CMN_UpFront);
+        }
 
         internal static void TurnTest() => Start("Turn test", SIActionName.FD_Turn_Right);
 
@@ -53,10 +63,13 @@ namespace NocturneAccess.Capture
             _name = name;
             _action = action;
             _startMs = Clock.ElapsedMilliseconds;
-            _injectedAtStart = InputInjector.Injected;
-            InputInjector.Hold(action, true);
+            _injectedAtStart = Injected();
+            if (IsStep)
+                AnalogInput.StartForward();
+            else
+                InputInjector.Hold(action, true);
             _phase = Phase.Holding;
-            Log.Info($"[Nav:Test] {name}: holding {action}. Start {Describe(_start)}");
+            Log.Info($"[Nav:Test] {name}: {(IsStep ? "replaying stick " + AnalogInput.ForwardProfileText : "holding " + action)}. Start {Describe(_start)}");
         }
 
         internal static void Tick()
@@ -68,6 +81,7 @@ namespace NocturneAccess.Capture
             if (!FieldState.IsExploring)
             {
                 InputInjector.ReleaseAll();
+                AnalogInput.Stop();
                 _phase = Phase.Idle;
                 Log.Info($"[Nav:Test] {_name}: stopped, no longer exploring.");
                 return;
@@ -84,9 +98,12 @@ namespace NocturneAccess.Capture
                 if (!done)
                     return;
 
-                InputInjector.Hold(_action, false);
+                if (IsStep)
+                    AnalogInput.Stop();
+                else
+                    InputInjector.Hold(_action, false);
                 _releaseMs = now;
-                _atRelease = $"after {now - _startMs} ms, {InputInjector.Injected - _injectedAtStart} injected answers: {Describe(s)}";
+                _atRelease = $"after {now - _startMs} ms, {Injected() - _injectedAtStart} injected answers: {Describe(s)}";
                 _phase = Phase.Settling;
                 return;
             }
@@ -108,6 +125,10 @@ namespace NocturneAccess.Capture
                 : $"Turn test: facing {Math.Round(turned)} degrees, camera {Math.Round(camTurned)} degrees.";
             SpeechManager.Say(spoken, interrupt: true, force: true);
         }
+
+        private static bool IsStep => _action == SIActionName.CMN_UpFront;
+
+        private static long Injected() => IsStep ? AnalogInput.Injected : InputInjector.Injected;
 
         /// <summary>Signed difference b - a in degrees, wrapped to -180..180.</summary>
         private static float AngleDelta(float a, float b)

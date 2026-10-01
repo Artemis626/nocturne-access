@@ -187,3 +187,12 @@ Source: `session_2026-10-01_12-04-33.log` and `UserData/NocturneAccess/NavDumps/
 - **`FD_Subjectivity` is never asked for**, before or after V: the gate sits before the input check.
 - Inside `fldPlayerCalc` the game checks exactly two story flags, both false: **3712 once per field tick** and 2800 three times per tick (2800 is also checked outside). `cfgGetBit(4)` is checked occasionally. `NewGame2_*` statics are all 0 on a first playthrough.
 - Candidate gate: **flag 3712** (one check per tick, the shape of `if (flag && padcheck(FD_Subjectivity))`); 2800 second.
+
+## 7. Results of the 0.0.13 input test (1 Oct 2026, session 12:43, with Francesco's OBS recording)
+
+Source: `session_2026-10-01_12-43-*.log` (Latest.log 12:46) and `%USERPROFILE%\Videos\Captures\2026-10-01 12-45-29.mp4` (frames read with ffmpeg).
+
+- **Compass (bottom right of the dungeon HUD)**: N up, green arrow = player facing, purple cone = camera view. It confirms **game +Z = north, +X = east**. `PlayerKakudo` 0 = south, 90 = east, 180 = north, 270 = west; compass bearing = Unity yaw = (180 - `PlayerKakudo`) mod 360.
+- **Step test failed**: 15 injected `padcheck(CMN_UpFront, DOWN)` answers in 500 ms, the player did not move (`gKeyInputDir` stayed -1). Walking does not come from `padcheck`. Next lead: `dds3PadManager.GetPadAnalog` (left stick channel), learned from Francesco's own W press in 0.0.14.
+- **Turn test**: `padcheck(FD_Turn_Right, DOWN)` injection works, but in third person it **orbits the camera only** (player facing unchanged), smoothly at about 105 degrees per second with about 10 degrees of easing after release: each test ended at 98 to 101 degrees, so the compass cone stopped between cardinal points (what Francesco saw). Turning the player in third person means walking in a direction; in first person `FD_Turn_*` is still to test.
+- **V still locked**: flag 3712 answered true inside `fldPlayerCalc` (2289 times), and the game then started checking **flag 3715** once per tick (false). `FD_Subjectivity` was still never asked. The gate is a chain: 0.0.14 forces 3712 and 3715 and auto-adds up to 4 further new flags.
