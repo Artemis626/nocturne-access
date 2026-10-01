@@ -17,8 +17,8 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 
 - 3D dungeons only (not the world map). Plan in `docs/NAVIGATION-DESIGN.md` section 4, one step per test run.
 - Blobber mode (cell steps, 90 degree turns, A* that matches the moves) is a **toggle, on by default**; free movement stays one key away.
-- First person (V, `FD_Subjectivity`) is locked to New Game+: the mod unlocks it **in memory only** (narrow `EventBit.evtBitCheck` postfix during `fldPlayer.fldPlayerCalc`, never `evtBitOn`, nothing saved).
-- Movement is driven only through the game's logical input (`SteamInputAssign.padcheck` postfix), only while exploring, at normal speed, so the game's collision, doors and events stay in charge. Never move the player by writing positions.
+- First person (V) is locked on a first playthrough (game flags 2208 / 2225; the view itself is flag 2800). The mod keeps its own first-person state **in memory only**: it answers `evtBitCheck(2800)` while on and never writes the flag (`FirstPersonView`, `docs/NAVIGATION-DESIGN.md` section 8). Never force flags 3712 / 3715 (Dante/Raidou, death check).
+- Movement is driven only through the game's own input checks: walking as pad buttons (`dds3PadManager.DDS3_ORGMAP_PRESS` / `DDS3_PADCHECK_PRESS` postfixes, `PadInput`), camera turns as logical actions (`SteamInputAssign.padcheck`, `InputInjector`); only during the field update, at normal speed, so the game's collision, doors and events stay in charge. Never move the player by writing positions.
 
 ## Binding rules
 
@@ -30,7 +30,7 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 - One system per session unless Francesco asks for more; commit at every working state, saying what was verified in game. Update `docs/HANDOFF.md` and `docs/NEXT-SESSION.md` at session end.
 - When Francesco says "session is done", read the logs, record what was verified, then continue from the open problems. When he says not to code, only analyse and document.
 - Keyboard first; mod keys stay in the function-key range (F9 to F11 belong to Nocturne Graphics Configurator, F12 to Steam).
-- Never touch or inspect `smt3hd.exe` (Denuvo).
+- Never touch or inspect `smt3hd.exe` (Denuvo). Read-only offline disassembly of `GameAssembly.dll` is allowed for research (`tools/native/README.md`).
 - Francesco launches with `--melonloader.hideconsole` (NVDA otherwise reads the console).
 - Commit messages end with the attribution line given by the environment.
 

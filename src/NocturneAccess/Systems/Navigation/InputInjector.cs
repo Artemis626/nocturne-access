@@ -20,9 +20,6 @@ namespace NocturneAccess.Systems.Navigation
 
         internal static long Injected { get; private set; }
 
-        /// <summary>True once the game has asked padcheck about FD_Subjectivity (V): the first-person gate is open.</summary>
-        internal static bool SubjectivityAsked { get; private set; }
-
         internal static void Install()
         {
             Patcher.Postfix("Navigation input", typeof(SteamInputAssign), nameof(SteamInputAssign.padcheck),
@@ -47,8 +44,6 @@ namespace NocturneAccess.Systems.Navigation
 
         private static void AfterPadcheck(int __0, SIActionName __1, SIPressType __2, ref bool __result)
         {
-            if (__1 == SIActionName.FD_Subjectivity && !SubjectivityAsked)
-                SubjectivityAsked = true;
             if (!_any || __result || __0 != 0 || __2 != SIPressType.DOWN)
                 return;
             int a = (int)__1;

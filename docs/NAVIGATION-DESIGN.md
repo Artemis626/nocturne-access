@@ -196,3 +196,24 @@ Source: `session_2026-10-01_12-43-*.log` (Latest.log 12:46) and `%USERPROFILE%\V
 - **Step test failed**: 15 injected `padcheck(CMN_UpFront, DOWN)` answers in 500 ms, the player did not move (`gKeyInputDir` stayed -1). Walking does not come from `padcheck`. Next lead: `dds3PadManager.GetPadAnalog` (left stick channel), learned from Francesco's own W press in 0.0.14.
 - **Turn test**: `padcheck(FD_Turn_Right, DOWN)` injection works, but in third person it **orbits the camera only** (player facing unchanged), smoothly at about 105 degrees per second with about 10 degrees of easing after release: each test ended at 98 to 101 degrees, so the compass cone stopped between cardinal points (what Francesco saw). Turning the player in third person means walking in a direction; in first person `FD_Turn_*` is still to test.
 - **V still locked**: flag 3712 answered true inside `fldPlayerCalc` (2289 times), and the game then started checking **flag 3715** once per tick (false). `FD_Subjectivity` was still never asked. The gate is a chain: 0.0.14 forces 3712 and 3715 and auto-adds up to 4 further new flags.
+
+## 8. Read from the game's code (1 Oct 2026, after the 0.0.14 test)
+
+0.0.14 (session 12:57): flags 3712 and 3715 forced, no further flag appeared, V still never read; the stick channels (`GetPadAnalog`) never moved while Francesco walked with W or the arrow keys. Runtime probing had stopped converging, so the field update was read directly: a read-only disassembly of `GameAssembly.dll` (never `smt3hd.exe`), with method names from MelonLoader's own Cpp2IL output (`[Address(RVA)]` on every method). Tools and method: `tools/native/README.md`.
+
+### First person
+
+- `fldPlayer.fldPlayerCalc` (RVA 0x206CCD0): `if (evtBitCheck(2800)) fldPlayerCalc_Nml_syukan(); else fldPlayerCalc_Nml();`. **Flag 2800 is the first-person state**, not a lock. `fldCamera.fldCamMain`, `calcCamMiwatasi`, `fldPlayer.fldPlayerOn` and `fldPlayerCalcForUnity` read it too.
+- `fldProcess.ProcSequence` (RVA 0x21FCE20, around 0x21FE374) is the only code that switches it:
+  `if ((evtBitCheck(2208) || evtBitCheck(2225)) && fldProcCheckFlag(0x40) == 1 && DDS3_PADCHECK_TRIG(R3, 1) && dds3KernelMain.UIDispCheck(0)) toggle flag 2800 (evtBitOn / evtBitOff)`.
+  **The real lock is flag 2208 or 2225** (both false on Francesco's save; checked every frame outside `fldPlayerCalc`, which is why 0.0.12 missed them). V is bound to pad map R3 with cip 1.
+- **Flags 3712 and 3715 are not about first person**: 3712 is the Dante/Raidou mode flag (`cmpTest.cmpDbgDanteMode` sets it, `cmpDbgRaidouMode` clears it; `datDevilName.Get`, `datRaceName.raidoCheck`, `nbCameraDANTE_*` read it), and the pair 3712, 3715 is checked by `datCalc.datCheckDying`. 0.0.13 and 0.0.14 forced them inside `fldPlayerCalc` (in memory only); 0.0.15 removes that.
+- Design (0.0.15, `FirstPersonView`): the game's own toggle would write flag 2800 into the save. The mod keeps its own state, answers true to every `evtBitCheck(2800)` while it is on, and never writes the flag. V (Unity key) or the game's own `DDS3_PADCHECK_TRIG(R3, 1)` toggles it while exploring; the mod says "First person" / "Third person". If the game itself calls `evtBitOn(2800)` (its gate open), the mod's toggle steps aside; if it calls `evtBitOff(2800)`, the mod's state follows.
+
+### Walking
+
+- `fldPlayerCalc_Nml` (third person, RVA 0x205EA20) reads `GetPadAnalog(0, 0, 0/1, cip)` (left stick) and **`DDS3_ORGMAP_PRESS(L 4, R 5, U 6, D 7, cip 0)`**, plus `DDS3_PADCHECK_PRESS(RD 3, L1 8, R1 10, cip 1)`.
+- `fldPlayerCalc_Nml_syukan` (first person, RVA 0x2064C60) reads **`DDS3_PADCHECK_PRESS(L, R, U, D, cip 0)`**, then PRESS / TRIG of L1 (8), R1 (10), RD (3) and others with cip 1 (turning or strafing to measure).
+- `DDS3_ORGMAP_PRESS` checks `dds3PadManager.dds3PadMap[1][0]` at the gamepad index (`dds3ConfigGamePadSteam.GetGamePadSDFMAP`), then the keyboard map (`dds3ConfigKeyBoardSteam.GetKeyBoardPadMap`) over the same buffer; `DDS3_PADCHECK_PRESS` goes through `dds3ConfigMainSteam.GetConfigPadMap` over the same buffer. **The keyboard arrives as pad buttons**, which is why `padcheck` and `GetPadAnalog` never saw it.
+- Design (0.0.15, `PadInput`): Harmony postfixes on `DDS3_ORGMAP_PRESS` and `DDS3_PADCHECK_PRESS` answer true for a held `SDF_PADMAP` button, only inside `fldPlayerCalc`. NocturneModernController's startup crash came from a raw native hook (`NativeHook` with its own delegate) on `DDS3_PADCHECK_PRESS`, not from Harmony; its mods call `DDS3_PADCHECK_PRESS` directly without trouble. Config `PadInjection = false` turns the hooks off.
+- `SteamInputAssign.padcheck(FD_Turn_*)` (0.0.13) stays the camera-orbit path in third person.

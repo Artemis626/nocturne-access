@@ -6,12 +6,13 @@ Keys are set in `UserData/NocturneAccess.cfg`, section `[NocturneAccess_Keys]`, 
 
 | Key | Action | Since |
 | --- | --- | --- |
+| V | The game's Toggle POV. Since 0.0.15 the mod makes it work on a first playthrough (in memory only) and says "First person" or "Third person". | 0.0.15 |
 | F1 | Repeat whichever came last: the menu item (with position and description), the save or load file, the save Yes/No with its prompt, the config row, the name being entered, the Stats summary, or the dialogue page with its speaker (plus the highlighted option while a choice is open) | 0.0.3, menus 0.0.5, save screen 0.0.7, config 0.0.8, name entry and Stats 0.0.10 |
 | F2 | In battle: Press Turns (full and blinking), then each enemy with HP, then each party member with HP and MP, from game data. Outside battle: "Not in battle." | 0.0.9 |
 | F8 | Status: says "Nocturne Access running. Speech through NVDA." | 0.0.1 |
 | F7 | Debug: pause or resume the text probe (only when `Probe = true` in `[NocturneAccess_Debug]`) | 0.0.2 |
 | F6 | Debug: write every text currently visible on screen to the log | 0.0.2 |
-| F3 | Debug, temporary (0.0.13): step test. Since 0.0.14 it replays the stick input learned while you walked forward with W, for half a second, then says "Step test: moved N." or "did not move." (before any W walk: "walk forward with W first") Will become a navigation key later. | 0.0.13 |
+| F3 | Debug, temporary (0.0.13): step test. Since 0.0.15 it presses the game's up button (pad U, the path W takes) for half a second, then says "Step test: moved N." or "did not move." Will become a navigation key later. | 0.0.13 |
 | F4 | Debug, temporary (0.0.13): turn test. Presses the game's turn-right action (`FD_Turn_Right`) until the player or camera turned 90 degrees (at most 1.5 s), then says both angles. Will become a navigation key later. | 0.0.13 |
 | F5 | Debug: navigation dump. Writes the current area's navigation data (position, facing, place names, collision polygons, auto-map, people, item boxes, event volumes, input and story-flag tables) to `UserData/NocturneAccess/NavDumps/navdump_[time].txt`, with a summary in the log. Says "Navigation data saved." May move to a modifier combination when navigation needs more keys. | 0.0.12 |
 

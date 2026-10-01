@@ -37,9 +37,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<bool> NavDiagnostics { get; private set; }
         internal static MelonPreferences_Entry<int> NavTraceIntervalMs { get; private set; }
         internal static MelonPreferences_Entry<bool> UnlockFirstPerson { get; private set; }
-        internal static MelonPreferences_Entry<string> FirstPersonFlags { get; private set; }
-        internal static MelonPreferences_Entry<bool> FirstPersonAutoChain { get; private set; }
-        internal static MelonPreferences_Entry<string> FirstPersonChainIgnore { get; private set; }
+        internal static MelonPreferences_Entry<bool> PadInjection { get; private set; }
 
         // Keys (names are UnityEngine.KeyCode values, e.g. F8, Backslash, Alpha1)
         internal static MelonPreferences_Entry<string> KeyRepeat { get; private set; }
@@ -99,13 +97,9 @@ namespace NocturneAccess.Core
             NavTraceIntervalMs = navigation.CreateEntry("TraceIntervalMs", 250, "Trace interval (ms)",
                 "With Diagnostics on: at most one position line per this many milliseconds, only when something changed.");
             UnlockFirstPerson = navigation.CreateEntry("UnlockFirstPerson", true, "Unlock first person",
-                "Lets V (Toggle POV) switch to first person on a first playthrough. In memory only: the save is never changed. Needs a restart.");
-            FirstPersonFlags = navigation.CreateEntry("FirstPersonFlags", "3712,3715", "First-person story flags",
-                "Development: the chain of story flags that locks first person (0.0.12 and 0.0.13 diagnostics), comma-separated. Needs a restart.");
-            FirstPersonAutoChain = navigation.CreateEntry("FirstPersonAutoChain", true, "First-person auto-chain",
-                "Development: until the game asks for V, also unlock up to 4 further flags it checks during the field update. Needs a restart.");
-            FirstPersonChainIgnore = navigation.CreateEntry("FirstPersonChainIgnore", "2800", "Auto-chain ignore list",
-                "Development: flags the field update checks normally, never added by the auto-chain. Needs a restart.");
+                "Lets V (Toggle POV) switch to first person on a first playthrough. Held in memory only: the game's first-person flag is never written, so saves are unchanged. Needs a restart.");
+            PadInjection = navigation.CreateEntry("PadInjection", true, "Pad injection",
+                "Lets the mod press the game's own pad buttons during the field update (step test, later blobber moves). Turn off if the game crashes at start. Needs a restart.");
 
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);
@@ -122,7 +116,7 @@ namespace NocturneAccess.Core
             KeyNavDump = keys.CreateEntry("NavDump", "F5", "Navigation dump key",
                 "Debug: writes the navigation data of the current area (position, place names, walls, auto-map, people, boxes, event volumes) to UserData/NocturneAccess/NavDumps, with a summary in Latest.log.");
             KeyStepTest = keys.CreateEntry("StepTest", "F3", "Step test key",
-                "Debug, temporary: after you have walked forward with W, replays that stick input for half a second, then says how far the player moved.");
+                "Debug, temporary: presses the game's up button for half a second, then says how far the player moved.");
             KeyTurnTest = keys.CreateEntry("TurnTest", "F4", "Turn test key",
                 "Debug, temporary: presses the game's turn-right action until the player or camera turned 90 degrees, then says how far.");
 

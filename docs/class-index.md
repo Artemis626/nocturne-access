@@ -8,6 +8,7 @@ Sources:
 - **Loader**: `MelonLoader/net6/MelonLoader.dll` (0.6.1), read with ilspycmd.
 - **Log**: a line in `MelonLoader/Latest.log`.
 - **Repo**: a reference repository, not yet checked against this build.
+- **Native**: read-only disassembly of `GameAssembly.dll` (never `smt3hd.exe`), named with MelonLoader's Cpp2IL output (`[Address(RVA)]`); method in `tools/native/README.md`.
 
 Game version at time of verification: 1.0.4 (Latest.log).
 
@@ -252,6 +253,10 @@ Used in 0.0.12 by `Systems/Navigation/FieldState.cs` (prefix and postfix on `fld
 | `Il2Cpp.dds3GlobalWork` | static, Proxy; Ref BetterNewGamePlus patches the last two | `DDS3_GBWK`, `NewGame2_SYS_ENDING0` .. `NewGame2_SYS_ENDING7`, `NewGame2_SYS_ZENSHO_ALL`, `NewGame2_EV_ZENSYO_ALL`, `NewGame2_endcnt`, `NewGame2Push()`, `NewGame2Pop()`. `NewGame2_endcnt` is short, the others int |
 | `Il2Cpp.dds3ConfigMain` | static, Proxy; Ref AnalyzeBosses reads `cfgGetBit(9)` | `cfgGetBit(uint Type)` returns int (postfix logs calls during the V capture) |
 | `Il2Cpp.dds3PadManager` | static, Proxy; Ref NocturneModernController patches it (AnalogChannelTelemetry, NativeRightStickCameraPatch) | `GetPadAnalog(int padno, int stick_lr, int xy, int cip_no = 0)` returns byte, centre 128; the field camera reads `(0, 1, 0/1, 1)` (Ref). Used from 0.0.14 by `AnalogInput` (postfix: telemetry, learned forward profile, replay while exploring) |
+| `dds3PadManager.DDS3_ORGMAP_PRESS(SDF_PADMAP id, int cip_no = 0)`, `DDS3_PADCHECK_PRESS(SDF_PADMAP, int)`, `DDS3_PADCHECK_TRIG(SDF_PADMAP, int)`, static `dds3PadMap` (`byte[][][]`) | Proxy; Native (RVAs 0x222B9A0, 0x222BD70, 0x222C0E0) | Walking input: third person `DDS3_ORGMAP_PRESS(L, R, U, D, 0)`, first person `DDS3_PADCHECK_PRESS(L, R, U, D, 0)`; both read `dds3PadMap[1][0]`. V = `DDS3_PADCHECK_TRIG(R3, 1)`. Postfixes in `PadInput` (0.0.15); `FirstPersonView` calls `DDS3_PADCHECK_TRIG(R3, 1)` |
+| `Il2Cpplibsdf_H.SDF_PADMAP` | enum, Proxy | `RL 0, RR 1, RU 2, RD 3, L 4, R 5, U 6, D 7, L1 8, L2 9, R1 10, R2 11, START 12, SELECT 13, L3 14, R3 15, COUNT 16` |
+| `fldProcess.ProcSequence(dds3ProcessID_t)`, `fldProcess.fldProcCheckFlag(uint)`, `dds3KernelMain.UIDispCheck(int)` | Proxy; Native (RVA 0x21FCE20) | The only first-person toggle: needs flag 2208 or 2225, `fldProcCheckFlag(0x40)`, V trigger, UI shown; toggles flag 2800. Not called by the mod |
+| Story flags (Native, 1 Oct 2026) | `EventBit` | **2800** = first-person view on (read by `fldPlayerCalc`, `fldCamMain`); **2208, 2225** = first-person lock (either unlocks); **3712** = Dante/Raidou mode, **3712 + 3715** read by `datCalc.datCheckDying`: never force |
 | First person (Log, 1 Oct 2026 10:23 session) | Francesco | V (`FD_Subjectivity`) does nothing on a first playthrough: locked to New Game+. Unlock plan: `docs/NAVIGATION-DESIGN.md` section 5. |
 | Meanings measured (Log, 1 Oct 2026 12:04 session) | 0.0.12 diagnostic | See `docs/NAVIGATION-DESIGN.md` section 6: units, axes, facing, `gKeyInputDir`, `mode2D`, `Attr`, door event names, auto-map offsets, empty name tables, first-person gate candidates. |
 
