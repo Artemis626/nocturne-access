@@ -53,6 +53,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyPoiNext { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiPrevious { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiWalk { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyPoiGuide { get; private set; }
 
         // Debug
         internal static MelonPreferences_Entry<bool> VerboseLogging { get; private set; }
@@ -134,7 +135,9 @@ namespace NocturneAccess.Core
             KeyPoiPrevious = keys.CreateEntry("PoiPrevious", "PageDown", "Previous point of interest key",
                 "Selects the previous point of interest.");
             KeyPoiWalk = keys.CreateEntry("PoiWalk", "Home", "Walk to point of interest key",
-                "Walks to the selected point of interest through the game's own movement (fixed-camera rooms and third person for now). Any movement key stops it. Enter (the game's confirm) then interacts as usual.");
+                "Walks to the selected point of interest through the game's own movement (fixed-camera rooms and first person). Any movement key stops it. Enter (the game's confirm) then interacts as usual.");
+            KeyPoiGuide = keys.CreateEntry("PoiGuide", "End", "Directions to point of interest key",
+                "Speaks directions to the selected point of interest and updates them as you walk with the game's own keys (first person: ahead, left, right; fixed-camera rooms: the key direction on screen). Press again to stop.");
 
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);

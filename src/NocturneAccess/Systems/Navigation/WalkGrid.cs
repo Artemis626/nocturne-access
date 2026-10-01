@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using Il2Cpp;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
+using Il2Cppfield_H;
 using NocturneAccess.Core;
 using UnityEngine;
 
@@ -60,6 +63,9 @@ namespace NocturneAccess.Systems.Navigation
         private static readonly List<int> LastPath = new List<int>();
         private static bool[] _reach = Array.Empty<bool>();
         private static int _reachStart = -1, _reachBuild = -1, _builds;
+        private static readonly List<(float x, float z)> HiddenNpcs = new List<(float x, float z)>();
+        private static int _hiddenKey;
+        private const float NpcBoxReach = 80f;   // an NPC box is 100 x 100 around the NPC's position
 
         internal static int Width => _w;
         internal static int Height => _h;
@@ -68,10 +74,52 @@ namespace NocturneAccess.Systems.Navigation
         internal static bool Ensure(int field, int area, float px, float py, float pz)
         {
             CollisionCache.Refresh(field, area);
-            if (_version == CollisionCache.Version && _field == field && _area == area && Contains(px, pz))
+            int hidden = ReadHiddenNpcs();
+            if (_version == CollisionCache.Version && _field == field && _area == area && _hiddenKey == hidden && Contains(px, pz))
                 return _w > 0;
+            _hiddenKey = hidden;
             Build(field, area, px, py, pz);
             return _w > 0;
+        }
+
+        /// <summary>
+        /// Positions of the NPCs whose object is inactive (PointsOfInterest.Shown): their collision boxes (Attr 0x80) stay in
+        /// the collision copy but do not stop the player (basement npc_hoji_01, 0.0.24 test). Returns a key that changes when
+        /// the set changes, so the grid is rebuilt when the story shows or hides someone.
+        /// </summary>
+        private static int ReadHiddenNpcs()
+        {
+            HiddenNpcs.Clear();
+            Il2CppReferenceArray<fldNpc_tag> npcs = fld_Npc.fldNpc;
+            int n = npcs == null ? 0 : Math.Min(fld_Npc.fldNpcNum, npcs.Length);
+            int key = 17;
+            for (int i = 0; i < n; i++)
+            {
+                fldNpc_tag e = npcs[i];
+                if (e == null || PointsOfInterest.Shown(e))
+                    continue;
+                HiddenNpcs.Add((e.x, e.z));
+                key = key * 31 + i + 1;
+            }
+            return key;
+        }
+
+        private static bool HiddenNpcBox(CollisionPoly p)
+        {
+            if ((p.Attr & 0x80) == 0 || HiddenNpcs.Count == 0)
+                return false;
+            float cx = 0, cz = 0;
+            foreach (Vector4 v in p.Points)
+            {
+                cx += v.x;
+                cz += v.z;
+            }
+            cx /= p.Points.Length;
+            cz /= p.Points.Length;
+            foreach ((float x, float z) in HiddenNpcs)
+                if (Math.Abs(cx - x) <= NpcBoxReach && Math.Abs(cz - z) <= NpcBoxReach)
+                    return true;
+            return false;
         }
 
         private static void Build(int field, int area, float px, float py, float pz)
@@ -101,7 +149,7 @@ namespace NocturneAccess.Systems.Navigation
                         minZ = Math.Min(minZ, v.z); maxZ = Math.Max(maxZ, v.z);
                     }
                 }
-                else if (Math.Abs(p.Normal.y) < 0.2f)
+                else if (Math.Abs(p.Normal.y) < 0.2f && !HiddenNpcBox(p))
                 {
                     float lo = float.MaxValue, hi = float.MinValue;
                     foreach (Vector4 v in p.Points)

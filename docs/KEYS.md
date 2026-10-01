@@ -17,6 +17,7 @@ Keys are set in `UserData/NocturneAccess.cfg`, section `[NocturneAccess_Keys]`, 
 | Page Up | Next point of interest in the area (door, person, item box; since 0.0.23 doors carry the game's own room name when it has one, "Healing Room door", "Terminal door", and Souls are called "Soul"), nearest first: kind, distance in metres, compass direction, position in the list ("Person, 5 metres, south. 2 of 4."). | 0.0.20 (F5), Page Up since 0.0.21 |
 | Page Down | Previous point of interest. | 0.0.20 (Shift+F5), Page Down since 0.0.21 |
 | Home (Inizio on an Italian keyboard) | Walk to the selected point of interest through the game's own movement (fixed-camera rooms and third person; first person since 0.0.23, with the game's own turns; it ends facing the target): "Walking to person, 5 metres, south.", then "Arrived." (the game speaks its own prompt), "Near the person.", "Blocked." or "No path.". Any movement key stops it ("Auto-walk stopped."). Never presses confirm: Enter (the game's confirm) interacts as usual. | 0.0.20 (Ctrl+F5), Home since 0.0.21 |
+| End (Fine on an Italian keyboard) | Directions to the selected point of interest, updated as you walk with the game's own keys: "Directions to Soul, 15 metres, west.", then in first person "Turn left, 12 metres, then right." / "Ahead, 12 metres, then right.", in fixed-camera rooms the key direction on screen ("Up, 5 metres, then left."). Spoken when the direction changes and when you stop. "Arrived." in reach and facing; otherwise "Turn left to face it.". End again: "Directions off.". Home or an area change ends it. | 0.0.25 |
 | Shift+F6 | Debug: navigation dump (was F5 until 0.0.19). Writes the current area's navigation data (position, facing, place names, collision polygons, auto-map, people, item boxes, event volumes, points of interest, the walkability grid as a map, input and story-flag tables) to `UserData/NocturneAccess/NavDumps/navdump_[time].txt`, with a summary in the log. Says "Navigation data saved.". | 0.0.12, Shift+F6 since 0.0.20 |
 
 ## Reserved keys
@@ -58,7 +59,7 @@ Defaults read from the game's own CONFIG > KEYBOARD+MOUSE screen by the probe (U
 | Skill Help On/Off | H |
 | Auto Battle, Fast Forward Text, Toggle Scroll | Tab |
 
-**No function key is used by the game.** F1 to F12 are free apart from the reserved keys above (F9 to F11 Graphics Configurator, F12 Steam), so the mod's own keys should stay in the function-key range, plus modifiers if needed. Page Up, Page Down and Home are not game bindings either; Francesco chose them for points of interest (1 Oct 2026) and prefers single keys to Shift or Ctrl combinations.
+**No function key is used by the game.** F1 to F12 are free apart from the reserved keys above (F9 to F11 Graphics Configurator, F12 Steam), so the mod's own keys should stay in the function-key range, plus modifiers if needed. Page Up, Page Down, Home and End are not game bindings either; Francesco chose them for points of interest (1 Oct 2026) and prefers single keys to Shift or Ctrl combinations.
 
 NocturneModernController binds only P on the keyboard (its other controls are gamepad).
 

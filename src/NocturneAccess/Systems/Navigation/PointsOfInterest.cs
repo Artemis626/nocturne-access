@@ -100,8 +100,10 @@ namespace NocturneAccess.Systems.Navigation
                 else if (box != null && box.npcIdx >= 0 && box.npcIdx < npcCount && npcs[box.npcIdx] != null)
                 {
                     fldNpc_tag npc = npcs[box.npcIdx];
-                    kind = npc.Type == 999 ? PoiKind.ItemBox : PoiKind.Person;
                     GameObject obj = npc.fldObj;
+                    if (!Shown(npc))
+                        continue;   // a hidden NPC the story has not placed yet (basement npc_hoji_01, 0.0.24 test)
+                    kind = npc.Type == 999 ? PoiKind.ItemBox : PoiKind.Person;
                     soul = obj != null && (obj.name ?? "").StartsWith("shinentai", StringComparison.Ordinal);
                 }
                 if (kind == null)
@@ -135,6 +137,17 @@ namespace NocturneAccess.Systems.Navigation
                 kept.Add(q);
             }
             return kept.OrderBy(q => q.Distance).ToList();
+        }
+
+        /// <summary>
+        /// Whether an NPC is in the world: its object (fldNpc_tag.fldObj) is active. The basement keeps npc_hoji_01 (hojiID
+        /// 1, a Soul model) with its object inactive: the game never fires its hit, its collision box (Attr 0x80) does not stop
+        /// the player, and walking to it ended in a spin (0.0.24 test).
+        /// </summary>
+        internal static bool Shown(fldNpc_tag npc)
+        {
+            GameObject obj = npc?.fldObj;
+            return obj != null && obj.activeInHierarchy;
         }
 
         private static bool Near(Poi a, Poi b, float d) => (a.X - b.X) * (a.X - b.X) + (a.Z - b.Z) * (a.Z - b.Z) <= d * d;

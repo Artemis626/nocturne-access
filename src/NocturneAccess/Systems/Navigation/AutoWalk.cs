@@ -63,6 +63,7 @@ namespace NocturneAccess.Systems.Navigation
         private static List<PathRun> _runs;
         private static int _run, _replans, _still, _approach, _facing, _area, _combo = -1, _turns, _idle, _moveCount;
         private static bool _correcting;
+        private static float _startSlack;   // how far the player stood off the first run at planning (start cell away from a blocked spot)
         private static float _lastX, _lastZ;
         private static long _startMs, _turnMs = long.MinValue / 2;
 
@@ -138,7 +139,7 @@ namespace NocturneAccess.Systems.Navigation
 
             float toTarget = Bearing(x, z, _target.X, _target.Z);
             float flat = (float)Math.Sqrt((_target.X - x) * (_target.X - x) + (_target.Z - z) * (_target.Z - z));
-            if (InReach(flat))
+            if (InReach(_target, flat))
             {
                 if (flat < FacingMinDistance || Facing(gb, toTarget) || ++_facing > FaceTicks)
                 {
@@ -151,7 +152,7 @@ namespace NocturneAccess.Systems.Navigation
 
             if (_run >= _runs.Count)
             {
-                Approach(gb, x, z, toTarget);
+                Approach(gb, x, z, toTarget, flat);
                 return;
             }
 
@@ -168,7 +169,7 @@ namespace NocturneAccess.Systems.Navigation
                 if (_run >= _runs.Count)
                 {
                     Log.Info($"[Nav:Walk] Goal cell reached at {FieldData.F(x)} {FieldData.F(z)}; approaching the {_target.InSentence}.");
-                    Approach(gb, x, z, toTarget);
+                    Approach(gb, x, z, toTarget, flat);
                     return;
                 }
                 r = _runs[_run];
@@ -177,7 +178,7 @@ namespace NocturneAccess.Systems.Navigation
                 cross = (x - r.Ax) * uz - (z - r.Az) * ux;
             }
 
-            if (Math.Abs(cross) > OffPathLimit || (_still >= StillTicks && !Turning(gb)))
+            if (Math.Abs(cross) > OffPathLimit + (_run == 0 ? _startSlack : 0f) || (_still >= StillTicks && !Turning(gb)))
             {
                 Replan(gb, Math.Abs(cross) > OffPathLimit ? $"{FieldData.F(cross)} off the run" : $"still for {_still} ticks");
                 return;
@@ -212,12 +213,12 @@ namespace NocturneAccess.Systems.Navigation
         /// gFldEveRngIdx or OldHitInf, which can keep an old value after the player walked away (0.0.23 test: 7 long after
         /// the elevator door), so the distance is checked too.
         /// </summary>
-        private static bool InReach(float flat)
+        internal static bool InReach(Poi target, float flat)
         {
-            int i = _target.Index;
-            if (_target.Kind == PoiKind.Door)
+            int i = target.Index;
+            if (target.Kind == PoiKind.Door)
                 return fldEveHit.OldHitDoor == i || (fldEveHit.gFldEveRngIdx == i && flat <= 150f);
-            if (_target.Kind == PoiKind.Place)
+            if (target.Kind == PoiKind.Place)
                 return (fldEveHit.OldHitDoor == i || fldEveHit.gFldEveRngIdx == i) && flat <= 250f;
             return (fldEveHit.OldHitInf == i || fldEveHit.gFldEveRngIdx == i) && flat <= 350f;
         }
@@ -243,6 +244,7 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
             CentreWalk.Cancel("auto-walk");
+            RouteGuide.Stop("auto-walk", null);
             _target = poi;
             _area = gb.areaID;
             _firstPerson = gb.cammode == 0 && FirstPersonView.On;
@@ -283,6 +285,12 @@ namespace NocturneAccess.Systems.Navigation
             _correcting = false;
             _combo = -1;
             _lastX = gb.playerX;
+            _startSlack = 0f;
+            if (_runs.Count > 0)
+            {
+                Dir(_runs[0].Dir, out float sx, out float sz);
+                _startSlack = Math.Abs((gb.playerX - _runs[0].Ax) * sz - (gb.playerZ - _runs[0].Az) * sx);
+            }
             _lastZ = gb.playerZ;
             Log.Info($"[Nav:Walk] Plan ({why}, {(_firstPerson ? "first person" : "third person")}) from {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)} " +
                      $"to {_target.Label} {_target.ResName} (gEvnRng {_target.Index}) at {FieldData.F(_target.X)} {FieldData.F(_target.Z)}: " +
@@ -304,10 +312,14 @@ namespace NocturneAccess.Systems.Navigation
                 Stop("no path on re-plan", "No path.");
         }
 
-        /// <summary>After the goal cell: straight at the target so the game's hit check can fire (doors: into the volume).</summary>
-        private static void Approach(fldGlobalWork_t gb, float x, float z, float toTarget)
+        /// <summary>
+        /// After the goal cell: straight at the target so the game's hit check can fire (doors: into the volume). A person or box
+        /// closer than FacingMinDistance without the hit will not give one (the game's talk ball has a radius of 160 to 180):
+        /// turning on there only spins, as the bearing flips round the target (0.0.24 test, hidden NPC npc_hoji_01).
+        /// </summary>
+        private static void Approach(fldGlobalWork_t gb, float x, float z, float toTarget, float flat)
         {
-            if (++_approach > ApproachTicks || (_approach > 5 && _still >= 5 && !Turning(gb)))
+            if (++_approach > ApproachTicks || (_approach > 5 && _still >= 5 && !Turning(gb)) || (_firstPerson && !_target.IsDoorLike && flat < FacingMinDistance && !Turning(gb)))
             {
                 Stop($"approach ended at {FieldData.F(x)} {FieldData.F(z)} without the game's hit (gFldEveRngIdx {fldEveHit.gFldEveRngIdx})",
                      $"Near the {_target.InSentence}.");

@@ -228,3 +228,42 @@ Francesco tested outside the basement on purpose, "to test the waters in an unte
 
 - Story triggers are not avoided by the search: a walk through one stops at the event. Avoiding them could block progress, since many are where the story continues. Ask Francesco.
 - Not yet verified that the stairwell's floors connect as ramps in the grid (the dump of this run would show it: Shift+F6 in the stairwell).
+
+## 7. The basement test of 0.0.24 and the fixes (0.0.25, 1 Oct 2026)
+
+Francesco went back to the basement (field 15 area 5). Log `session_2026-10-01_20-20-33.log`, short session. No errors.
+
+### What worked
+
+- First-person walks to the Terminal door (16 m, two of the game's turns) and to the Soul `01npc_01` (17 m) ended "Arrived." with the game's own prompts ("Open Door", "Talk").
+- `OldHitDoor` and `OldHitInf` reset on leaving, as expected.
+
+### What went wrong, and why
+
+1. **A Soul that cannot be talked to.** The nearest point, "Soul, 2 metres, south-west", was `npc_hoji_01` at -7379 -4352. Its object `shinentai(Clone)` is **inactive** (`active False` in the 12:07 dumps, `hojiID` 1): the story has not placed it. The game never fired its hit; the player walked onto its spot (19 units from it).
+2. **The spin.** Within 20 units of the target the bearing to it flips with every small move, so the approach turned R, R, D, D before giving up with "Near the Soul." (Francesco's recording: spinning, then stopping).
+3. **"Blocked." at once from there.** The hidden NPC's collision box (Attr 0x80, polygons #199 to #202, 100 x 100 around it) stays in the collision copy although it does not stop the player. The walking map blocked those cells, so the start cell was 129 units from the player, and the first tick counted that as "off the run": six re-plans in 200 ms, then "Blocked.".
+
+### Fixes (0.0.25, not yet tested)
+
+- **Hidden NPCs:** `PointsOfInterest.Shown` = the NPC's `fldObj` is active. Hidden NPCs are not listed, and `WalkGrid` ignores Attr 0x80 polygons within 80 units of one. The grid is rebuilt when the set of hidden NPCs changes (the story shows someone).
+- **Approach:** a person or item box closer than 80 units without the game's hit ends the walk ("Near the …") instead of turning; doors are unchanged (their hit fires within about 25 units).
+- **Start off the route:** the first run allows the player's starting distance from it on top of the 90-unit limit.
+- **People:** non-Soul NPCs were already listed as "Person"; none existed in the tested areas (the station attendant of field 11 is a story trigger, `01eve_15`, not an NPC).
+
+### Directions (End, Francesco's request)
+
+"An alternative to auto-walk: A* movement with directions … mapped to the key End", updated "on every step done by the player, the way Pokemon Access or my Suikoden mod does". `RouteGuide`:
+
+- End selects directions to the selected point of interest: "Directions to Soul, 15 metres, west."; End again: "Directions off.".
+- The route is the auto-walk's (`WalkGrid.Plan`, 4 directions in first person, 8 in fixed-camera rooms), planned again every 250 ms while the player moves. The player walks with the game's own keys; the mod presses nothing.
+- First person, relative to the facing: "Turn left, 12 metres, then right.", "Ahead, 12 metres, then right.", "Turn round, 4 metres.".
+- Fixed-camera rooms, the key direction on screen (from the camera yaw, as auto-walk picks its pads): "Up, 5 metres, then left.".
+- Spoken when the direction changes (at once, also while walking: a turn is due) and when the player stops (400 ms) with a new distance. Leading runs shorter than 60 units (a half-cell jog onto the grid) are skipped.
+- In reach: "Arrived." when facing the target, else "Turn left to face it." (fixed camera: "Left to face it."). An area change or Home ends it; Page Up / Page Down move it to the new selection.
+- Log lines `[Nav:Guide]`.
+
+### Still open
+
+- Directions in fixed-camera rooms name keys from the camera at the moment they are spoken; the camera pans while walking. To check in a test.
+- Blobber mode carries a released W on to the next 6-metre square centre, which can overshoot a turn the directions announced; the directions then re-plan.
