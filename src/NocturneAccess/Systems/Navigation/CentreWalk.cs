@@ -37,10 +37,10 @@ namespace NocturneAccess.Systems.Navigation
 
         internal static bool Active => _phase != Phase.None;
 
-        internal static void Start(fldGlobalWork_t gb, float cell)
+        internal static void Start(fldGlobalWork_t gb, float cell, float ox, float oz)
         {
-            _cx = (float)Math.Round(gb.playerX / cell) * cell;
-            _cz = (float)Math.Round(gb.playerZ / cell) * cell;
+            _cx = (float)Math.Round((gb.playerX - ox) / cell) * cell + ox;   // the area's square centres (WalkGrid.Lattice)
+            _cz = (float)Math.Round((gb.playerZ - oz) / cell) * cell + oz;
             _facing0 = GridSense.Normalize90(gb.PlayerKakudoGoal);
             _lastX = gb.playerX;
             _lastZ = gb.playerZ;

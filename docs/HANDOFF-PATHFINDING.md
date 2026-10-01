@@ -4,7 +4,7 @@ Rewritten 1 Oct 2026, evening, at the end of the second navigation chat (version
 
 Read `CLAUDE.md` first (binding rules), then this file, then:
 
-- `docs/PATHFINDING.md`: points of interest, walking map, auto-walk; every test result and fix, sections 1 to 8;
+- `docs/PATHFINDING.md`: points of interest, walking map, auto-walk; every test result and fix, sections 1 to 9;
 - `docs/NAVIGATION-DESIGN.md` sections 6 to 14: blobber mode, first person, the game's input and code;
 - `docs/class-index.md` "Field navigation";
 - `docs/KEYS.md`;
@@ -12,7 +12,7 @@ Read `CLAUDE.md` first (binding rules), then this file, then:
 
 ## Where things stand
 
-- **Installed: 0.0.26**, built 1 Oct 2026, **not yet tested in game**. 0.0.25 (hidden NPCs left out, directions on End) was played at length at 20:37: Francesco finds the systems "mature enough for a low-vision player to progress through the game with only minor friction" and is now playing through, reporting bugs and missing features. 0.0.26: End speaks only when pressed; Home turns to a door even right at it (section 8).
+- **Installed: 0.0.27**, built 1 Oct 2026, **not yet tested in game** (section 9: elevator floor banner, volume heights from their boxes so Pixie is listed, walks end in front of doors and on a line with people, blobber square centres per area). 0.0.26 was played at 21:31 through the Medical Center 1F and 2F to the annex gate: about 30 walks arrived, End one sentence per press. 0.0.25 (hidden NPCs left out, directions on End) was played at length at 20:37: Francesco finds the systems "mature enough for a low-vision player to progress through the game with only minor friction" and is now playing through, reporting bugs and missing features. 0.0.26: End speaks only when pressed; Home turns to a door even right at it (section 8).
 - **Verified in game:**
 
 | Feature | Versions | Result |
@@ -24,11 +24,14 @@ Read `CLAUDE.md` first (binding rules), then this file, then:
 | Basement and Medical Center: first-person walks with the game's own turns, named doors | 0.0.23 | Several walks arrived |
 | Basement walks to the Terminal door and a Soul, `OldHitDoor` / `OldHitInf` arrival | 0.0.24 | Arrived (20:20) |
 | Hidden NPCs left out; long walks in field 45; event interruptions | 0.0.25 | Verified (20:37) |
+| End on demand; Home at doors; the Medical Center 1F and 2F | 0.0.26 | Verified (21:31) |
 
   Blobber mode version 2 keeps every game key; releasing W carries the walk on to the next square's centre; cues speak only changes and never block. The 0.0.23 walks also exposed the problems fixed in 0.0.24.
-- **Next test (0.0.26), during normal play:**
-  - End: one sentence per press, nothing while walking;
-  - Home in a fixed-camera room standing at the door facing away: the player turns, then "Arrived." and "Open Door";
+- **Next test (0.0.27), during normal play:**
+  - the elevator: "> Select a floor." with no floor after it, then the options;
+  - Home to doors approached along the wall: the walk ends straight in front, facing the door;
+  - blobber mode in the 2F corridors: snaps and F3 end in the middle ("Centred."); log line "Square centres ... offset 300 ...";
+  - a talk event like Pixie should be in the Pages list (Francesco's name for the Page Up / Page Down list);
   - still from 0.0.24:
   - redo Francesco's prologue route;
   - the stairwell of the Medical Center: Page Up should say "Door, …, upstairs", and Home should climb the stairs;
@@ -69,7 +72,7 @@ Read `CLAUDE.md` first (binding rules), then this file, then:
 
 ## Open problems, in order
 
-1. Francesco plays through the game and reports bugs and missing features: read each session's log, fix, record here. Test 0.0.26 (above).
+1. Francesco plays through the game and reports bugs and missing features: read each session's log, fix, record here. Test 0.0.27 (above).
 2. **Story triggers on routes.** A walk through an `NNeve` volume stops at the event. Should routes avoid them (risk: blocking progress), or walk on after the event? Ask Francesco.
 3. **Locked doors and doors behind walls:** the reach test (95 units) is a measured rule. A dump with `gEvnRngBox` sizes for doors that never fire would make it exact.
 4. **Longer routes across areas:** through doors, using the auto-map sub-blocks as a room graph (`NAVIGATION-DESIGN` section 2.4).

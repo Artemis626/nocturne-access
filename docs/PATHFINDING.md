@@ -287,3 +287,27 @@ Francesco played on through several battles and new areas (field 45, areas 29 an
 
 - **End speaks once, from where the player stands**: the route is planned at the press (a few milliseconds), so it is always current. "Turn left, 12 metres, then right." In reach: "In reach." or "In reach. Turn left to face it.". Nothing is spoken while walking.
 - **Door facing:** the facing check is skipped only within 15 units of a door (80 for people and boxes), so Home turns the player to the door first.
+
+## 9. Medical Center 1F and 2F, the annex gate (0.0.27, 1 Oct 2026)
+
+A long play session with 0.0.26 (log `session_2026-10-01_21-31-52.log`, no recording): from the basement up the elevator to the Medical Center 1F and 2F (field 15, areas 0, 3, 7, 10, 11, 15) and the annex gate (area 2). No errors. About 30 walks, every one "Arrived." with the game's prompt; End gave one sentence per press. Francesco now calls the Page Up / Page Down list the **Pages list**.
+
+### What went wrong, and why
+
+1. **Elevator: a floor spoken as if selectable.** On entering, the elevator requests "> Select a floor." and the location banner shows the current floor ("Ｂ1"), written 200 ms before the question's lines. The banner waited for the dialogue page (`FollowsDialogue`) and was spoken right after it, 6 s before the options open (after Enter): "> Select a floor. Ｂ1". The banner on arriving at the new floor comes with no dialogue page.
+2. **Pixie at the annex gate was not in the Pages list.** Her "Talk" is event volume `01eve_01` (type 10, a Place by the "Security System" place pad next to it), centre at y 200, below the floor at 0 (doors: -100). The list tested reachability at the centre + 100 = 300, outside the grid's 200 band: "not reachable, left out". The game's box test is three-dimensional: `fldEveHit_ChkBoxIn` (RVA 0x243E030) checks the position against six face planes, so her box spans the floor where Francesco stood.
+3. **Doors: arrival beside the door.** A door volume is 300 wide and 100 deep. Walking along the wall towards its centre, the game's hit fires at the volume's edge, up to 150 beside the door, and the walk ended there facing along the wall at a slant (`01d_02` 22 to the side, `01d_05` 27; most walks approach from the side).
+4. **Blobber squares off-centre on 1F and 2F.** The square centres were multiples of 600 everywhere. The 2F corridor at x 1860 to 2340 runs between walls at 1800 and 2400: its centre, 2100, is half a square off, and the centres 1800 and 2400 are in the walls. Every snap stopped against a wall ("Snap stopped by the game: moved 422 of 482") and F3 said "Blocked, not centred" five times; Francesco switched blobber mode off to walk the corridor.
+
+### Fixes (0.0.27, not yet tested)
+
+- **Elevator:** a location banner of 3 characters or fewer that had to wait for a dialogue page is not spoken (`AnnouncementReader` option `DropAfterQuestion`, logged). Area names and the banner on arrival are spoken as before.
+- **Volume heights:** `PointsOfInterest` reads each volume's box corners (`gEvnRngBox.vtx`). The floor to walk to (`Poi.FloorY`) is the player's height when it lies within the box's height span (±50), else the box bottom (the stairwell's 1F door seen from 2F stays downstairs). Without a box (people), the old rule. Reachability, "upstairs" / "downstairs", auto-walk and End use it.
+- **Door fronts:** a door or place volume with a horizontal facing (`gEvnRngBox.boxnml`, pointing out to the walkable side: basement doors checked against the corridors) is approached at the point 30 units straight out of its centre. Its hit counts only within 45 units of that line (or at the end of the route), and the player then faces into the door. Third person and first person; End uses the same route.
+- **People in first person:** the route ends on one of the four compass lines through the person, 150 units out (inside the game's talk radius of 160 to 180), the shortest of the four, so the last turn faces them squarely. Third person keeps the nearest reachable cell at least 120 away.
+- **Square centres per area:** `WalkGrid.Lattice` picks the offset (steps of 30 below 600) whose square centres lie furthest from walls on walkable floor over the whole area; offset 0 (the basement) is kept unless another is 10 % better. Blobber snaps, centre cues and F3 use it. Logged as `[Nav:Walk] Square centres for field F area A: offset X Z`.
+
+### Still open
+
+- Pixie is listed under the place pad's name ("Security System"), not as a person: event volumes carry no speaker. A Shift+F6 dump at such an event would show whether anything names it.
+- The lattice offset is one per area; an area whose corridors are centred differently in different parts would need a local centre (from the walls on both sides).

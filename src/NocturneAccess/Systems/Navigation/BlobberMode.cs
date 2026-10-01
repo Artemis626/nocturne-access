@@ -39,6 +39,7 @@ namespace NocturneAccess.Systems.Navigation
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static readonly Queue<string> Pending = new Queue<string>();
         private static float _cell = 600f;
+        private static float _ox, _oz;   // this area's square centres: ox + k * cell, oz + m * cell (WalkGrid.Lattice)
         private static bool _enabled;
         private static bool _firstPerson;
 
@@ -145,6 +146,7 @@ namespace NocturneAccess.Systems.Navigation
                 RefuseCentre();
                 return;
             }
+            WalkGrid.Lattice(gb.fieldID, gb.areaID, gb.playerX, gb.playerY, gb.playerZ, _cell, out _ox, out _oz);
             if (!_firstPerson)
             {
                 _firstPerson = true;
@@ -169,7 +171,7 @@ namespace NocturneAccess.Systems.Navigation
                 else
                 {
                     StopSnap("centring");
-                    CentreWalk.Start(gb, _cell);
+                    CentreWalk.Start(gb, _cell, _ox, _oz);
                 }
             }
             if (CentreWalk.Active && (_realU || _otherKey.Length > 0))
@@ -247,7 +249,8 @@ namespace NocturneAccess.Systems.Navigation
 
             float x = gb.playerX, z = gb.playerZ;
             float along = x * dx + z * dz;
-            float nearest = (float)Math.Round(along / _cell) * _cell;
+            float oa = _ox * dx + _oz * dz;   // the lattice offset along the facing (dx, dz are 0 or 1 in size)
+            float nearest = (float)Math.Round((along - oa) / _cell) * _cell + oa;
             if (Math.Abs(along - nearest) <= HalfTick)
             {
                 Log.Info($"[Nav:Blob] W released at a cell centre ({FieldData.F(x)} {FieldData.F(z)}): no snap.");
@@ -256,7 +259,7 @@ namespace NocturneAccess.Systems.Navigation
 
             _dx = dx;
             _dz = dz;
-            _target = (float)Math.Ceiling(along / _cell) * _cell - along;
+            _target = (float)Math.Ceiling((along - oa) / _cell) * _cell + oa - along;
             _startX = x;
             _startZ = z;
             _snapFacing = facing;
@@ -366,7 +369,8 @@ namespace NocturneAccess.Systems.Navigation
             bool alongX = Math.Abs(moveX) >= Math.Abs(moveZ);
             float c = alongX ? x : z;
             float c0 = c - (alongX ? moveX : moveZ);
-            float centre = (float)Math.Round(c / _cell) * _cell;
+            float o = alongX ? _ox : _oz;
+            float centre = (float)Math.Round((c - o) / _cell) * _cell + o;
             float a = c0 - centre, b = c - centre;
             bool atCentre = Math.Abs(b) <= CentreTolerance || (a < 0 && b > 0) || (a > 0 && b < 0);
             if (!atCentre)
@@ -427,7 +431,7 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         private static long CellKey(float x, float z)
-            => ((long)Math.Round(x / _cell) << 32) ^ (uint)(int)Math.Round(z / _cell);
+            => ((long)Math.Round((x - _ox) / _cell) << 32) ^ (uint)(int)Math.Round((z - _oz) / _cell);
 
         private static string Changes(CellView v, int facing)
         {

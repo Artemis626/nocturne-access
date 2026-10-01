@@ -45,6 +45,10 @@ namespace NocturneAccess.Systems.Navigation
         // A door's prompt needs the facing even right at it: in the Healing Room (field 15 area 16) the player stood 39 units
         // from door 01d_01 facing away from it; "Arrived." without a turn gave no "Open Door" (20:37 session).
         private const float DoorFacingMinDistance = 15f;
+        private const float FrontDistance = 30f;     // the point in front of a door the route aims at (the player stops about 25 out)
+        private const float FrontLateral = 45f;      // a door's hit counts only this close to the line straight out of its centre
+        private const float AxisReach = 150f;        // first person: a person is approached on a compass line, this far (talk ball radius 160 to 180)
+        private const float AimTolerance = 45f;
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static readonly Queue<string> Pending = new Queue<string>();
@@ -142,14 +146,19 @@ namespace NocturneAccess.Systems.Navigation
 
             float toTarget = Bearing(x, z, _target.X, _target.Z);
             float flat = (float)Math.Sqrt((_target.X - x) * (_target.X - x) + (_target.Z - z) * (_target.Z - z));
-            if (InReach(_target, flat))
+            float face = FaceBearing(_target, x, z);
+            // A door's hit fires at the edge of its 300-wide volume: walking along the wall, that is beside the door. Only in front
+            // of it (or at the end of the route) does it count.
+            bool inFront = Lateral(_target, x, z) <= FrontLateral || _run >= _runs.Count;
+            if (InReach(_target, flat) && inFront)
             {
-                if (flat < (_target.IsDoorLike ? DoorFacingMinDistance : FacingMinDistance) || Facing(gb, toTarget) || ++_facing > FaceTicks)
+                bool noFacing = !_target.HasFront && flat < (_target.IsDoorLike ? DoorFacingMinDistance : FacingMinDistance);
+                if (noFacing || Facing(gb, face) || ++_facing > FaceTicks)
                 {
                     Stop($"the game's hit index is the target{(_facing > FaceTicks ? " (facing not reached)" : "")}", "Arrived.");
                     return;
                 }
-                FaceTowards(gb, toTarget);
+                FaceTowards(gb, face);
                 return;
             }
 
@@ -263,12 +272,77 @@ namespace NocturneAccess.Systems.Navigation
             Say($"Walking to {poi.InSentence}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}.");
         }
 
+        /// <summary>
+        /// The route to a point of interest, shared with RouteGuide (End). Where the walk should end:
+        /// - a door with a facing (gEvnRngBox.boxnml): straight in front of it, FrontDistance out. Its volume is 300 wide, so
+        ///   aiming at the centre from along the wall ended the walk at the volume's edge, beside the door (21:31 session);
+        /// - a person or box in first person: on one of the four compass lines through it, AxisReach away, so the last turn
+        ///   faces it squarely (the shortest of the four routes that ends within AimTolerance of its point);
+        /// - otherwise the reachable cell nearest the target, at least 120 from a person or box (outside its 100 x 100 box).
+        /// The goal must lie within the target's ReachRadius (people: of the axis point's target). Null if there is no route.
+        /// </summary>
+        internal static List<PathRun> Route(fldGlobalWork_t gb, Poi target, bool firstPerson, out float gx, out float gz, out string aim)
+        {
+            float px = gb.playerX, py = gb.playerY, pz = gb.playerZ;
+            List<PathRun> runs;
+            if (target.HasFront)
+            {
+                aim = "in front";
+                runs = WalkGrid.Plan(px, py, pz, target.X + target.NX * FrontDistance, target.FloorY, target.Z + target.NZ * FrontDistance, 0f, firstPerson, out gx, out gz);
+                if (runs != null && Dist(gx, gz, target.X, target.Z) <= target.ReachRadius)
+                    return runs;
+            }
+            else if (firstPerson && !target.IsDoorLike)
+            {
+                List<PathRun> best = null;
+                float bestLength = float.MaxValue, bx = 0, bz = 0;
+                string bestAim = "";
+                for (int d = 0; d < 4; d++)
+                {
+                    float ax = target.X + (d == 1 ? AxisReach : d == 3 ? -AxisReach : 0f);
+                    float az = target.Z + (d == 0 ? AxisReach : d == 2 ? -AxisReach : 0f);
+                    List<PathRun> r = WalkGrid.Plan(px, py, pz, ax, target.FloorY, az, 0f, true, out float cx, out float cz);
+                    if (r == null || Dist(cx, cz, ax, az) > AimTolerance)
+                        continue;
+                    float length = r.Sum(q => q.Length);
+                    if (length < bestLength)
+                    {
+                        bestLength = length;
+                        best = r;
+                        bx = cx;
+                        bz = cz;
+                        bestAim = new[] { "north", "east", "south", "west" }[d] + " of it";
+                    }
+                }
+                if (best != null)
+                {
+                    gx = bx;
+                    gz = bz;
+                    aim = bestAim;
+                    return best;
+                }
+            }
+            aim = "nearest";
+            runs = WalkGrid.Plan(px, py, pz, target.X, target.FloorY, target.Z, target.IsDoorLike ? 0f : 120f, firstPerson, out gx, out gz);
+            if (runs != null && Dist(gx, gz, target.X, target.Z) > target.ReachRadius)
+                return null;
+            return runs;
+        }
+
+        /// <summary>The compass bearing the player should face at the end: into a door (against its facing), else towards the target.</summary>
+        internal static float FaceBearing(Poi target, float x, float z)
+            => target.HasFront ? Bearing(0f, 0f, -target.NX, -target.NZ) : Bearing(x, z, target.X, target.Z);
+
+        /// <summary>Distance along a door's wall from the point straight in front of its centre (0 without a facing).</summary>
+        internal static float Lateral(Poi target, float x, float z)
+            => target.HasFront ? Math.Abs((x - target.X) * target.NZ - (z - target.Z) * target.NX) : 0f;
+
+        private static float Dist(float ax, float az, float bx, float bz) => (float)Math.Sqrt((ax - bx) * (ax - bx) + (az - bz) * (az - bz));
+
         private static bool Plan(fldGlobalWork_t gb, string why)
         {
             var clock = Stopwatch.StartNew();
-            float minDist = _target.IsDoorLike ? 0f : 120f;   // outside a person's or box's 100 x 100 box
-            float floorY = _target.IsDoorLike ? _target.Y + 100f : _target.Y;   // a door's volume centre is about 100 above its floor
-            _runs = WalkGrid.Plan(gb.playerX, gb.playerY, gb.playerZ, _target.X, floorY, _target.Z, minDist, _firstPerson, out float gx, out float gz);
+            _runs = Route(gb, _target, _firstPerson, out float gx, out float gz, out string aim);
             if (_runs != null && Math.Sqrt((gx - _target.X) * (gx - _target.X) + (gz - _target.Z) * (gz - _target.Z)) > _target.ReachRadius)
             {
                 Log.Info($"[Nav:Walk] Plan ({why}): the nearest reachable cell {FieldData.F(gx)} {FieldData.F(gz)} is too far from {_target.Label} {_target.ResName}.");
@@ -296,7 +370,7 @@ namespace NocturneAccess.Systems.Navigation
             _lastZ = gb.playerZ;
             Log.Info($"[Nav:Walk] Plan ({why}, {(_firstPerson ? "first person" : "third person")}) from {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)} " +
                      $"to {_target.Label} {_target.ResName} (gEvnRng {_target.Index}) at {FieldData.F(_target.X)} {FieldData.F(_target.Z)}: " +
-                     $"goal cell {FieldData.F(gx)} {FieldData.F(gz)}, {_runs.Count} runs [{string.Join(", ", _runs.Select(r => $"{r.Bearing}:{FieldData.F(r.Length)}"))}], " +
+                     $"goal cell {FieldData.F(gx)} {FieldData.F(gz)} ({aim}), {_runs.Count} runs [{string.Join(", ", _runs.Select(r => $"{r.Bearing}:{FieldData.F(r.Length)}"))}], " +
                      $"{clock.ElapsedMilliseconds} ms.");
             return true;
         }
@@ -327,6 +401,8 @@ namespace NocturneAccess.Systems.Navigation
                      $"Near the {_target.InSentence}.");
                 return;
             }
+            if (_target.HasFront && Lateral(_target, x, z) <= FrontLateral)
+                toTarget = FaceBearing(_target, x, z);   // in front of a door: straight into it
             if (_firstPerson)
             {
                 float square = Square(toTarget);

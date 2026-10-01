@@ -52,21 +52,19 @@ namespace NocturneAccess.Systems.Navigation
             float flat = (float)Math.Sqrt((target.X - x) * (target.X - x) + (target.Z - z) * (target.Z - z));
             float toTarget = Mod360((float)(Math.Atan2(target.X - x, target.Z - z) * 180.0 / Math.PI));
 
-            if (AutoWalk.InReach(target, flat))
+            if (AutoWalk.InReach(target, flat) && AutoWalk.Lateral(target, x, z) <= 45f)
             {
-                if (Math.Abs(Diff(180 - gb.PlayerKakudo, toTarget)) <= FacingTolerance)
+                float face = AutoWalk.FaceBearing(target, x, z);
+                if (Math.Abs(Diff(180 - gb.PlayerKakudo, face)) <= FacingTolerance)
                     return "In reach.";
-                string turn = firstPerson ? Relative(gb, Square(toTarget)) : Key(toTarget, yaw);
+                string turn = firstPerson ? Relative(gb, Square(face)) : Key(face, yaw);
                 return $"In reach. {Capital(turn)} to face it.";
             }
 
-            float minDist = target.IsDoorLike ? 0f : 120f;   // as AutoWalk.Plan
-            float floorY = target.IsDoorLike ? target.Y + 100f : target.Y;
             if (!WalkGrid.Ensure(gb.fieldID, gb.areaID, gb.playerX, gb.playerY, gb.playerZ))
                 return "No path.";
-            List<PathRun> runs = WalkGrid.Plan(gb.playerX, gb.playerY, gb.playerZ, target.X, floorY, target.Z, minDist, firstPerson,
-                out float gx, out float gz);
-            if (runs == null || Math.Sqrt((gx - target.X) * (gx - target.X) + (gz - target.Z) * (gz - target.Z)) > target.ReachRadius)
+            List<PathRun> runs = AutoWalk.Route(gb, target, firstPerson, out float gx, out float gz, out string aim);
+            if (runs == null)
                 return "No path from here.";
 
             // Remaining length of each run from the player; drop tiny leading runs.

@@ -65,6 +65,8 @@ namespace NocturneAccess.Systems.Navigation
         private static int _reachStart = -1, _reachBuild = -1, _builds;
         private static readonly List<(float x, float z)> HiddenNpcs = new List<(float x, float z)>();
         private static int _hiddenKey;
+        private static int _latticeBuild = -1;
+        private static float _latticeCell, _latticeX, _latticeZ;
         private const float NpcBoxReach = 80f;   // an NPC box is 100 x 100 around the NPC's position
 
         internal static int Width => _w;
@@ -246,6 +248,69 @@ namespace NocturneAccess.Systems.Navigation
             }
             Log.Info($"[Nav:Walk] Grid for field {field} area {area}: {_w} x {_h} cells of {CellSize} from {FieldData.F(_x0)} {FieldData.F(_z0)}, " +
                      $"{floors.Count} floors, {walls.Count} walls, {walkable} walkable places, {multi} cells with more than one level, {clock.ElapsedMilliseconds} ms.");
+        }
+
+        /// <summary>
+        /// Where blobber mode's square centres lie in this area: the offset (ox, oz), in steps of CellSize below the square
+        /// size, whose centres (ox + k * cell, oz + m * cell) sit furthest from walls on walkable floor, summed over the area
+        /// (WalkGrid near distances). The basement's corridors are centred on multiples of 600 (offset 0, verified); the
+        /// Medical Center 2F corridor runs between walls at x 1800 and 2400, so its centre 2100 lies half a square off and
+        /// every snap and F3 there ended against a wall (21:31 session). Offset 0 is kept unless another is 10 % better.
+        /// </summary>
+        internal static void Lattice(int field, int area, float px, float py, float pz, float cell, out float ox, out float oz)
+        {
+            ox = oz = 0f;
+            if (!Ensure(field, area, px, py, pz))
+                return;
+            if (_latticeBuild == _builds && _latticeCell == cell)
+            {
+                ox = _latticeX;
+                oz = _latticeZ;
+                return;
+            }
+            var clock = Stopwatch.StartNew();
+            int steps = Math.Max(1, (int)Math.Round(cell / CellSize));
+            float zeroScore = LatticeScore(0f, 0f, cell), best = zeroScore;
+            for (int a = 0; a < steps; a++)
+                for (int b = 0; b < steps; b++)
+                {
+                    float s = LatticeScore(a * CellSize, b * CellSize, cell);
+                    if (s > best)
+                    {
+                        best = s;
+                        ox = a * CellSize;
+                        oz = b * CellSize;
+                    }
+                }
+            if (best < zeroScore * 1.1f)
+                ox = oz = 0f;
+            _latticeBuild = _builds;
+            _latticeCell = cell;
+            _latticeX = ox;
+            _latticeZ = oz;
+            Log.Info($"[Nav:Walk] Square centres for field {field} area {area}: offset {FieldData.F(ox)} {FieldData.F(oz)} " +
+                     $"(score {FieldData.F(best)}, offset 0 scores {FieldData.F(zeroScore)}), {clock.ElapsedMilliseconds} ms.");
+        }
+
+        private static float LatticeScore(float ox, float oz, float cell)
+        {
+            float score = 0f;
+            float x0 = _x0 - CellSize / 2, z0 = _z0 - CellSize / 2;
+            float xs = (float)Math.Ceiling((x0 - ox) / cell) * cell + ox, zs = (float)Math.Ceiling((z0 - oz) / cell) * cell + oz;
+            for (float z = zs; z < z0 + _h * CellSize; z += cell)
+                for (float x = xs; x < x0 + _w * CellSize; x += cell)
+                {
+                    int i = (int)Math.Round((x - _x0) / CellSize), j = (int)Math.Round((z - _z0) / CellSize);
+                    if (i < 0 || j < 0 || i >= _w || j >= _h)
+                        continue;
+                    int c = j * _w + i;
+                    float bestNear = 0f;
+                    for (int l = 0; l < _count[c]; l++)
+                        if (_state[c * Layers + l] == 1)
+                            bestNear = Math.Max(bestNear, _near[c * Layers + l]);
+                    score += bestNear;
+                }
+            return score;
         }
 
         /// <summary>

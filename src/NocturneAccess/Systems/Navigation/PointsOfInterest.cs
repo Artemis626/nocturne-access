@@ -23,6 +23,9 @@ namespace NocturneAccess.Systems.Navigation
         public bool Reachable = true;   // false: no walkable cell within ReachRadius can be reached from the player (another room)
         public string Name = "";        // the game's place name for a door (FldNameData.GetBasyoName), or ""
         public bool Soul;               // a person whose model is "shinentai" (the game's speaker name for them is "Soul")
+        public float FloorY;            // the floor height to walk to: the player's height inside the volume's height span (gEvnRngBox.vtx), else its bottom; without a box Y + 100 for doors, Y for others
+        public float NX, NZ;            // a door's facing (gEvnRngBox.boxnml, pointing out to the side the player stands on), or 0 0
+        public bool HasFront => NX * NX + NZ * NZ > 0.25f;
 
         public string Label => Kind == PoiKind.Door ? (Name.Length > 0 ? Name + " door" : "Door")
             : Kind == PoiKind.Place ? Name
@@ -109,6 +112,8 @@ namespace NocturneAccess.Systems.Navigation
                 if (kind == null)
                     continue;
 
+                VolumeSpan(box, gb.playerY, out float floorY, out float nx, out float nz);
+                bool doorLike = kind == PoiKind.Door || kind == PoiKind.Place;
                 list.Add(new Poi
                 {
                     Index = i,
@@ -119,6 +124,9 @@ namespace NocturneAccess.Systems.Navigation
                     X = p.x,
                     Y = p.y,
                     Z = p.z,
+                    FloorY = float.IsNaN(floorY) ? (doorLike ? p.y + 100f : p.y) : floorY,
+                    NX = doorLike ? nx : 0f,
+                    NZ = doorLike ? nz : 0f,
                     Distance = (float)Math.Sqrt((p.x - px) * (p.x - px) + (p.z - pz) * (p.z - pz)),
                 });
             }
@@ -133,7 +141,7 @@ namespace NocturneAccess.Systems.Navigation
                 if (kept.Any(d => d.Kind == q.Kind && Near(d, q, 20f) && Math.Abs(d.Y - q.Y) < 50f))
                     continue;
                 if (grid)
-                    q.Reachable = WalkGrid.ReachableNear(px, py, pz, q.X, q.IsDoorLike ? q.Y + 100f : q.Y, q.Z, q.ReachRadius);
+                    q.Reachable = WalkGrid.ReachableNear(px, py, pz, q.X, q.FloorY, q.Z, q.ReachRadius);
                 kept.Add(q);
             }
             return kept.OrderBy(q => q.Distance).ToList();
@@ -148,6 +156,42 @@ namespace NocturneAccess.Systems.Navigation
         {
             GameObject obj = npc?.fldObj;
             return obj != null && obj.activeInHierarchy;
+        }
+
+        /// <summary>
+        /// From a volume's box corners (gEvnRngBox.vtx; all zero for people): the player's height when it lies in the box's height span, else the box bottom (NaN without a box), and its horizontal facing (boxnml; basement doors point out to the corridor).
+        /// The annex gate's Pixie volume 01eve_01 has its centre at y 200, below the floor (doors: -100), and was left out as
+        /// unreachable while the game fired its "Talk" from the floor at y 0 (21:31 session).
+        /// </summary>
+        private static void VolumeSpan(putevebox_s box, float playerY, out float floorY, out float nx, out float nz)
+        {
+            floorY = float.NaN;
+            nx = nz = 0f;
+            if (box == null)
+                return;
+            Vector4 n = box.boxnml;
+            float len = (float)Math.Sqrt(n.x * n.x + n.z * n.z);
+            if (len > 0.5f && Math.Abs(n.y) < 0.5f)
+            {
+                nx = n.x / len;
+                nz = n.z / len;
+            }
+            Il2CppStructArray<Vector4> vtx = box.vtx;
+            if (vtx == null || vtx.Length == 0)
+                return;
+            float lo = float.MaxValue, hi = float.MinValue, spread = 0f;
+            for (int k = 0; k < vtx.Length; k++)
+            {
+                Vector4 v = vtx[k];
+                lo = Math.Min(lo, v.y);
+                hi = Math.Max(hi, v.y);
+                spread += Math.Abs(v.x) + Math.Abs(v.z);
+            }
+            if (spread < 1f)
+                return;   // no box (size 0 0 0)
+            // Y points down: hi is the bottom of the box. Inside the span the game's hit can fire where the player stands; outside
+            // it the floor is under the box (the stairwell's 1F door seen from 2F must stay downstairs).
+            floorY = playerY >= lo - 50f && playerY <= hi + 50f ? playerY : hi;
         }
 
         private static bool Near(Poi a, Poi b, float d) => (a.X - b.X) * (a.X - b.X) + (a.Z - b.Z) * (a.Z - b.Z) <= d * d;
@@ -267,7 +311,7 @@ namespace NocturneAccess.Systems.Navigation
                 text += $", {Compass[(int)Math.Round(bearing / 45.0) % 8]}";
             }
             // Y points down; a door's volume centre is about 100 above its floor, a person's or box's position on it.
-            float above = py - (p.IsDoorLike ? p.Y + 100f : p.Y);
+            float above = py - p.FloorY;
             if (above > 150f)
                 text += ", upstairs";
             else if (above < -150f)

@@ -19,6 +19,10 @@ namespace NocturneAccess.Systems.Menus
     /// - FollowsDialogue: waits, at most SpeechOrder.MaxHoldMs, while a dialogue page is due. The location
     ///   banner is written right after the elevator's "> Select a floor." is requested, 300 ms before that
     ///   question's lines (20:44 session), and was spoken first.
+    /// - DropAfterQuestion: a short text (3 characters or fewer) that had to wait for a dialogue page is not spoken: the
+    ///   elevator writes the current floor ("Ｂ1", "2Ｆ") as the location banner with "> Select a floor.", and spoken after the
+    ///   question it sounded like a selectable option 6 s before the options open (Francesco, 21:31 session). The banner on
+    ///   arriving at the new floor comes without a dialogue page and is spoken. Area names are longer and are spoken.
     /// - Reshow: spoken again every time the component reappears, even without a new write. The
     ///   interaction prompt ("Talk", "Open Door") is hidden when nothing is in reach and its text is only
     ///   written when the wording changes (20:44 session), so visibility is watched every 100 ms.
@@ -39,6 +43,7 @@ namespace NocturneAccess.Systems.Menus
             None = 0,
             FollowsDialogue = 1,
             Reshow = 2,
+            DropAfterQuestion = 4,
         }
 
         private static readonly Dictionary<string, Options> Paths = new Dictionary<string, Options>
@@ -60,7 +65,7 @@ namespace NocturneAccess.Systems.Menus
             // Name entry: "Enter a name.", "Enter a nickname." (20:44 session).
             ["Canvas_UI/nameUI_oubei(Clone)/nameinput/nameannounce/stretch/TextTM"] = Options.None,
             // Location name, written when arriving: "Underground Facility", "Terminal", "1Ｆ" (16:49 session).
-            ["Canvas_UI/fieldUI/flocation/stretch/TextTM"] = Options.FollowsDialogue,
+            ["Canvas_UI/fieldUI/flocation/stretch/TextTM"] = Options.FollowsDialogue | Options.DropAfterQuestion,
             // Interaction prompt: "Talk", "Examine", "Open Door", "Enter", "Exit" (20:44 session).
             ["Canvas_UI/fieldUI/fannounce/guidetext/TextTM"] = Options.Reshow | Options.FollowsDialogue,
         };
@@ -74,6 +79,7 @@ namespace NocturneAccess.Systems.Menus
             public long ChangedAt;
             public bool Pending;
             public bool WasVisible;
+            public bool WaitedForDialogue;
         }
 
         private static readonly List<Entry> Entries = new List<Entry>();
@@ -149,9 +155,19 @@ namespace NocturneAccess.Systems.Menus
                         {
                             if ((e.Options & Options.FollowsDialogue) != 0 && DialogueReader.PageDue
                                 && now - e.ChangedAt < SpeechOrder.MaxHoldMs)
+                            {
+                                e.WaitedForDialogue = true;
                                 continue;   // let the dialogue page go first
+                            }
+                            bool waited = e.WaitedForDialogue;
+                            e.WaitedForDialogue = false;
                             e.Pending = false;
                             e.Spoken = e.Text;
+                            if (waited && (e.Options & Options.DropAfterQuestion) != 0 && e.Text.Trim().Length <= 3)
+                            {
+                                Log.Info($"{Tag} \"{e.Text}\" written with a dialogue page: the floor the elevator is on, not spoken.");
+                                continue;
+                            }
                             SpeechManager.Say(e.Text, interrupt: false, force: true);
                         }
                         else if (now - e.ChangedAt > WaitForVisibleMs)
