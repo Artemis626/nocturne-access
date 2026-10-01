@@ -336,10 +336,10 @@ namespace NocturneAccess.Capture
         /// <summary>The points of interest and the walkability grid as a map (docs/PATHFINDING.md section 2.4).</summary>
         private static void DumpWalkGrid(PlayerSnapshot s)
         {
-            List<Poi> pois = PointsOfInterest.Build(s.X, s.Z);
+            List<Poi> pois = fldGlobal.fldGb == null ? new List<Poi>() : PointsOfInterest.Build(fldGlobal.fldGb);
             Both($"points of interest: {pois.Count}");
             foreach (Poi p in pois)
-                Both($"  gEvnRng {p.Index} {p.Label} {Q(p.ResName)} at {F(p.X)} {F(p.Z)} d {F(p.Distance)}: {PointsOfInterest.Describe(s.X, s.Z, p.X, p.Z)}");
+                Both($"  gEvnRng {p.Index} {p.Label} {Q(p.ResName)} at {F(p.X)} {F(p.Z)} d {F(p.Distance)}: {PointsOfInterest.Describe(s.X, s.Z, p.X, p.Z)}{(p.Reachable ? "" : ", not reachable from here")}");
             if (!WalkGrid.Ensure(s.FieldId, s.AreaId, s.X, s.Y, s.Z))
             {
                 Both("walk grid: no floor here");

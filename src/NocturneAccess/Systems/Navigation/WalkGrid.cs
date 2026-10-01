@@ -47,6 +47,8 @@ namespace NocturneAccess.Systems.Navigation
         private static int _w, _h;
         private static byte[] _cell = Array.Empty<byte>();   // 0 no floor, 1 walkable, 2 blocked
         private static readonly List<int> LastPath = new List<int>();
+        private static bool[] _reach = Array.Empty<bool>();
+        private static int _reachStart = -1, _reachBuild = -1, _builds;
 
         internal static int Width => _w;
         internal static int Height => _h;
@@ -65,6 +67,7 @@ namespace NocturneAccess.Systems.Navigation
         {
             var clock = Stopwatch.StartNew();
             _version = CollisionCache.Version;
+            _builds++;
             _field = field;
             _area = area;
             _floorY = py;
@@ -277,6 +280,58 @@ namespace NocturneAccess.Systems.Navigation
                         }
                     }
             return best;
+        }
+
+        /// <summary>
+        /// Whether a walkable cell within radius of (x, z) can be reached from (px, pz): a flood over the grid from the
+        /// player's cell (same moves as Plan), cached until the grid or the player's cell changes. Points of interest in
+        /// other rooms of the same area (0.0.21 test: the item box and door 01d_01 west of the Healing Room) fail this.
+        /// </summary>
+        internal static bool ReachableNear(float px, float pz, float x, float z, float radius)
+        {
+            int start = NearestWalkable(px, pz, 6);
+            if (start < 0)
+                return false;
+            if (start != _reachStart || _reach.Length != _cell.Length || _reachBuild != _builds)
+                Flood(start);
+
+            int r = (int)Math.Ceiling(radius / CellSize);
+            int ci = (int)Math.Round((x - _x0) / CellSize), cj = (int)Math.Round((z - _z0) / CellSize);
+            for (int j = cj - r; j <= cj + r; j++)
+                for (int i = ci - r; i <= ci + r; i++)
+                {
+                    if (i < 0 || j < 0 || i >= _w || j >= _h || !_reach[j * _w + i])
+                        continue;
+                    float dx = _x0 + i * CellSize - x, dz = _z0 + j * CellSize - z;
+                    if (dx * dx + dz * dz <= radius * radius)
+                        return true;
+                }
+            return false;
+        }
+
+        private static void Flood(int start)
+        {
+            _reach = new bool[_cell.Length];
+            _reachStart = start;
+            _reachBuild = _builds;
+            var queue = new Queue<int>();
+            _reach[start] = true;
+            queue.Enqueue(start);
+            while (queue.Count > 0)
+            {
+                int cur = queue.Dequeue();
+                int ci = cur % _w, cj = cur / _w;
+                for (int s = 0; s < 8; s++)
+                {
+                    int ni = ci + Dx[s], nj = cj + Dz[s];
+                    if (!Walkable(ni, nj) || _reach[nj * _w + ni])
+                        continue;
+                    if (Dx[s] != 0 && Dz[s] != 0 && (!Walkable(ci + Dx[s], cj) || !Walkable(ci, cj + Dz[s])))
+                        continue;
+                    _reach[nj * _w + ni] = true;
+                    queue.Enqueue(nj * _w + ni);
+                }
+            }
         }
 
         private static bool Walkable(int i, int j) => i >= 0 && j >= 0 && i < _w && j < _h && _cell[j * _w + i] == 1;

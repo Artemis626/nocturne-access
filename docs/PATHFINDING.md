@@ -119,3 +119,28 @@ Three parts, each logged so a run can be checked from the log alone.
 3. Auto-walk in first person (corridors): steering with the game's own 90-degree turns and the snap.
 4. Longer routes across areas: the auto-map's sub-blocks as a room graph (`NAVIGATION-DESIGN` section 2.4), doors as links.
 5. "Person ahead" and similar cues in blobber mode (Francesco: with pathfinding).
+
+## 4. Results of the 0.0.21 test and the reachability filter (0.0.22, 1 Oct 2026)
+
+Log `session_2026-10-01_15-20-43.log`, dump `navdump_2026-10-01_15-25-07.txt`, recording of the same run. Francesco: "The implementation is already quite solid, the auto walking worked perfectly." Other game screens checked in the same run still read correctly: title, config tabs, load, save, the cylinder choice, Hijiri's dialogue, the command menu and Stats.
+
+**Walks** (no re-plans needed):
+
+- **To the Soul:** one run south. The game's hit index fired after 425 ms: "Arrived.", then the game's "Talk".
+- **To the entrance door:** four runs. "Arrived." after 766 ms, then "Open Door".
+- **Leaving and coming back** worked both ways.
+- **Pad choice:** the pads chosen from the panning camera (yaw 314 to 333) were always within 18 degrees of the wanted direction, and the game snapped to it.
+
+**The problem:** Page Up also listed the item box (51 m west) and door `01d_01` (36 m west). `gEvnRng` covers the whole area (16), and the area includes a separate room west of the Healing Room that cannot be reached from it:
+
+- the live grid shows that room as an unconnected block, with `01d_01` in its north wall;
+- the item box lies beyond the grid's west edge, with no loaded floor there.
+
+The walk to the item box went to the nearest reachable cell, at the Healing Room's west wall, and ended "Near the item box." The live grid map matched the offline rebuild (`tools/navgrid.pl`) cell for cell.
+
+**Fix (0.0.22, not yet tested):**
+
+- Every point of interest is marked reachable when a walkable cell within its reach radius can be reached from the player's cell (`WalkGrid.ReachableNear`: a flood with the same moves as the search, cached until the grid or the player's cell changes). The radius is 150 for doors and 250 for people and boxes; the Soul's goal cell was 135 away.
+- Page Up and Page Down list only reachable points; the log lists all of them, marking the others "not reachable, left out". When the area has no grid, all points are listed.
+- A walk whose nearest reachable cell is farther than the reach radius says "No path." instead of walking to a wall.
+- The navigation dump marks unreachable points "not reachable from here".

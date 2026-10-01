@@ -173,7 +173,7 @@ namespace NocturneAccess.Systems.Navigation
                 Say("Auto-walk works in fixed-camera rooms and third person for now.");
                 return;
             }
-            Poi poi = PointsOfInterest.Current(gb.playerX, gb.playerZ);
+            Poi poi = PointsOfInterest.Current(gb);
             if (poi == null)
             {
                 Say("Select a point of interest first, with Page Up.");
@@ -202,6 +202,11 @@ namespace NocturneAccess.Systems.Navigation
             var clock = Stopwatch.StartNew();
             float minDist = _target.Kind == PoiKind.Door ? 0f : 120f;   // outside a person's or box's 100 x 100 box
             _runs = WalkGrid.Plan(gb.playerX, gb.playerZ, _target.X, _target.Z, minDist, out float gx, out float gz);
+            if (_runs != null && Math.Sqrt((gx - _target.X) * (gx - _target.X) + (gz - _target.Z) * (gz - _target.Z)) > _target.ReachRadius)
+            {
+                Log.Info($"[Nav:Walk] Plan ({why}): the nearest reachable cell {FieldData.F(gx)} {FieldData.F(gz)} is too far from {_target.Label} {_target.ResName}.");
+                _runs = null;
+            }
             if (_runs == null)
             {
                 Log.Info($"[Nav:Walk] Plan ({why}): no reachable cell towards {_target.Label} {_target.ResName} at {FieldData.F(_target.X)} {FieldData.F(_target.Z)}.");

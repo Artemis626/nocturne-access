@@ -20,8 +20,13 @@ namespace NocturneAccess.Systems.Navigation
         public string ResName = "";
         public float X, Z;
         public float Distance;
+        public bool Reachable = true;   // false: no walkable cell within ReachRadius can be reached from the player (another room)
 
         public string Label => Kind == PoiKind.Door ? "Door" : Kind == PoiKind.Person ? "Person" : "Item box";
+
+        /// <summary>How close a reachable cell must be: a door sits in its wall (goal cells about 75 away), a person or a box in
+        /// furniture (the Soul's goal cell was 135 away, 0.0.21 test).</summary>
+        public float ReachRadius => Kind == PoiKind.Door ? 150f : 250f;
     }
 
     /// <summary>
@@ -43,9 +48,14 @@ namespace NocturneAccess.Systems.Navigation
 
         internal static Poi Selected { get; private set; }
 
-        /// <summary>The current area's points of interest, nearest first.</summary>
-        internal static List<Poi> Build(float px, float pz)
+        /// <summary>
+        /// The current area's points of interest, nearest first, each marked Reachable from the player through the walk
+        /// grid (all marked reachable when there is no grid here).
+        /// </summary>
+        internal static List<Poi> Build(fldGlobalWork_t gb)
         {
+            float px = gb.playerX, pz = gb.playerZ;
+            bool grid = WalkGrid.Ensure(gb.fieldID, gb.areaID, px, gb.playerY, pz);
             var list = new List<Poi>();
             Il2CppReferenceArray<fldResHead_t> ranges = fldEveHit.gEvnRng;
             Il2CppReferenceArray<putevebox_s> boxes = fldEveHit.gEvnRngBox;
@@ -79,6 +89,9 @@ namespace NocturneAccess.Systems.Navigation
                     Z = p.z,
                     Distance = (float)Math.Sqrt((p.x - px) * (p.x - px) + (p.z - pz) * (p.z - pz)),
                 });
+                Poi added = list[list.Count - 1];
+                if (grid)
+                    added.Reachable = WalkGrid.ReachableNear(px, pz, added.X, added.Z, added.ReachRadius);
             }
             return list.OrderBy(q => q.Distance).ToList();
         }
@@ -99,9 +112,10 @@ namespace NocturneAccess.Systems.Navigation
                 _selected = -1;
             }
 
-            List<Poi> list = Build(gb.playerX, gb.playerZ);
-            Log.Info($"[Nav:Poi] {list.Count} in field {gb.fieldID} area {gb.areaID}: " +
-                     string.Join("; ", list.Select(q => $"{q.Index} {q.Label} {q.ResName} at {FieldData.F(q.X)} {FieldData.F(q.Z)} d {FieldData.F(q.Distance)}")));
+            List<Poi> all = Build(gb);
+            Log.Info($"[Nav:Poi] {all.Count} in field {gb.fieldID} area {gb.areaID}: " +
+                     string.Join("; ", all.Select(q => $"{q.Index} {q.Label} {q.ResName} at {FieldData.F(q.X)} {FieldData.F(q.Z)} d {FieldData.F(q.Distance)}{(q.Reachable ? "" : " (not reachable, left out)")}")));
+            List<Poi> list = all.Where(q => q.Reachable).ToList();
             if (list.Count == 0)
             {
                 Selected = null;
@@ -118,12 +132,11 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         /// <summary>The selected point of interest, re-read from the game's list (null if none or the area changed).</summary>
-        internal static Poi Current(float px, float pz)
+        internal static Poi Current(fldGlobalWork_t gb)
         {
-            fldGlobalWork_t gb = fldGlobal.fldGb;
             if (gb == null || gb.fieldID != _field || gb.areaID != _area || _selected < 0)
                 return null;
-            return Build(px, pz).FirstOrDefault(q => q.Index == _selected);
+            return Build(gb).FirstOrDefault(q => q.Index == _selected && q.Reachable);
         }
 
         /// <summary>"5 metres, south-east".</summary>
