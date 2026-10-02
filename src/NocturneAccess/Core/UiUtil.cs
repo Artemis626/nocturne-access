@@ -10,6 +10,32 @@ namespace NocturneAccess.Core
         private const int MaxDepth = 16;
         private const int MaxLoggedChars = 600;
 
+        /// <summary>Whether a UI component is shown (its object active in the hierarchy). False for null or destroyed objects.</summary>
+        internal static bool IsVisible(Component component)
+        {
+            try
+            {
+                return component != null && component.gameObject.activeInHierarchy;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>Whether a game object is shown (active in the hierarchy). False for null or destroyed objects.</summary>
+        internal static bool IsVisible(GameObject obj)
+        {
+            try
+            {
+                return obj != null && obj.activeInHierarchy;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         /// <summary>Hierarchy path such as "Canvas/mesWindow/mes_textTM", root first.</summary>
         internal static string PathOf(Transform transform)
         {

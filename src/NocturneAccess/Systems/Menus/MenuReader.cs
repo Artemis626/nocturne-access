@@ -288,7 +288,7 @@ namespace NocturneAccess.Systems.Menus
                     if (state.PendingSlot >= 0 && now - state.LastChange >= SettleMs)
                         TryAnnounce(state, now);
                     else if (poll && state.Current >= 0 && state.PendingSlot < 0
-                             && (!IsVisible(state.CurrentComponent)
+                             && (!UiUtil.IsVisible(state.CurrentComponent)
                                  || (state.Spec.CloseWhenUnhighlighted && !state.Slots.Values.Any(s => s.Highlighted))))
                         Close(state);
                     else if (poll && state.Spec.Reshow && state.Current < 0 && state.PendingSlot < 0)
@@ -311,7 +311,7 @@ namespace NocturneAccess.Systems.Menus
             }
 
             // Built while hidden: wait until it is shown.
-            if (!IsVisible(slot.Component))
+            if (!UiUtil.IsVisible(slot.Component))
             {
                 if (now - state.PendingSince > WaitForVisibleMs)
                     state.PendingSlot = -1;
@@ -350,7 +350,7 @@ namespace NocturneAccess.Systems.Menus
                 other.Yielded = true;
 
             List<int> visible = state.Slots
-                .Where(kv => kv.Value.Text.Length > 0 && IsVisible(kv.Value.Component))
+                .Where(kv => kv.Value.Text.Length > 0 && UiUtil.IsVisible(kv.Value.Component))
                 .Select(kv => kv.Key)
                 .OrderBy(k => k)
                 .ToList();
@@ -388,14 +388,14 @@ namespace NocturneAccess.Systems.Menus
         }
 
         private static bool HasVisibleHighlight(MenuState state)
-            => state.Slots.Values.Any(s => s.Highlighted && IsVisible(s.Component));
+            => state.Slots.Values.Any(s => s.Highlighted && UiUtil.IsVisible(s.Component));
 
         /// <summary>Closed while an item kept the highlight (a screen covered it): announce it when it is shown again.</summary>
         private static void Reshow(MenuState state, long now)
         {
             foreach (KeyValuePair<int, Slot> kv in state.Slots)
             {
-                if (!kv.Value.Highlighted || !IsVisible(kv.Value.Component))
+                if (!kv.Value.Highlighted || !UiUtil.IsVisible(kv.Value.Component))
                     continue;
                 state.PendingSlot = kv.Key;
                 state.PendingText = kv.Value.Text;
@@ -412,18 +412,6 @@ namespace NocturneAccess.Systems.Menus
             state.CurrentComponent = null;
             state.LastTitleSpoken = "";
             Log.Info($"{Tag} {state.Spec.Name} closed.");
-        }
-
-        private static bool IsVisible(TMP_Text component)
-        {
-            try
-            {
-                return component != null && component.gameObject.activeInHierarchy;
-            }
-            catch
-            {
-                return false;
-            }
         }
     }
 }

@@ -204,7 +204,7 @@ namespace NocturneAccess.Systems.Battle
         {
             if (_pendingBanner == null)
                 return;
-            if (!IsVisible(_bannerComponent))
+            if (!UiUtil.IsVisible(_bannerComponent))
             {
                 if (now - _pendingSince > BannerWaitMs)
                     _pendingBanner = null;
@@ -377,7 +377,7 @@ namespace NocturneAccess.Systems.Battle
                 if (now - _lastVisibilityPoll >= VisibilityPollMs)
                 {
                     _lastVisibilityPoll = now;
-                    bool visible = IsVisible(_partyPanel);
+                    bool visible = UiUtil.IsVisible(_partyPanel);
                     if (visible)
                     {
                         _seenVisible = true;
@@ -716,7 +716,7 @@ namespace NocturneAccess.Systems.Battle
                 string side = d.activeunit >= FirstEnemy ? "Enemy turn. " : "";
                 if (d.activeunit >= 0 && d.activeunit < PartySlots && !string.IsNullOrEmpty(PanelNames[d.activeunit]))
                     side = $"{PanelNames[d.activeunit]}'s turn. ";
-                parts.Add(side + Capital(PressTurns(d)));
+                parts.Add(side + TextUtil.Capitalize(PressTurns(d)));
             }
             foreach (Unit u in Units.Values.Where(u => u.Form < FirstEnemy).OrderBy(u => u.Form))
                 parts.Add($"{DisplayName(u)}: HP {u.Hp} of {u.MaxHp}, MP {u.Mp} of {u.MaxMp}.");
@@ -762,18 +762,5 @@ namespace NocturneAccess.Systems.Battle
             return $"{level}HP {unit.Hp} of {unit.MaxHp}. MP {unit.Mp} of {unit.MaxMp}.";
         }
 
-        private static string Capital(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
-
-        private static bool IsVisible(TMP_Text component)
-        {
-            try
-            {
-                return component != null && component.gameObject.activeInHierarchy;
-            }
-            catch
-            {
-                return false;
-            }
-        }
     }
 }

@@ -64,15 +64,35 @@ namespace NocturneAccess.Systems.Navigation
             _lastCalcMs = Clock.ElapsedMilliseconds;
             CalcCount++;
             InPlayerCalc = true;
+            // Each system guarded on its own: one failing must not stop the other's update. Pad buttons held by a system
+            // that failed are let go, so a repeating error cannot leave the player walking on their own.
             try
             {
                 BlobberMode.BeforeCalc();
+            }
+            catch (Exception ex)
+            {
+                PadInput.ReleaseAll();
+                if (++_errors <= 3)
+                    Log.Error($"[Nav] Blobber update failed: {ex}");
+            }
+            try
+            {
                 AutoWalk.BeforeCalc();
             }
             catch (Exception ex)
             {
+                PadInput.ReleaseAll();
+                try
+                {
+                    AutoWalk.Stop("error", null);
+                }
+                catch
+                {
+                    // Nothing may reach the game's field update from this prefix.
+                }
                 if (++_errors <= 3)
-                    Log.Error($"[Nav] Blobber update failed: {ex}");
+                    Log.Error($"[Nav] Auto-walk update failed: {ex}");
             }
         }
 

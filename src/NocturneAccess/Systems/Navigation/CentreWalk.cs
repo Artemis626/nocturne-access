@@ -211,11 +211,11 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         private static bool Eased(fldGlobalWork_t gb)
-            => Math.Abs(((gb.PlayerKakudo - gb.PlayerKakudoGoal) % 360 + 540) % 360 - 180) <= 2;
+            => Math.Abs(Angles.Diff(gb.PlayerKakudo, gb.PlayerKakudoGoal)) <= 2;
 
         /// <summary>Degrees between the facing goal and the nearest multiple of 90.</summary>
         private static float OffSquare(fldGlobalWork_t gb)
-            => Math.Abs(((gb.PlayerKakudoGoal - GridSense.Normalize90(gb.PlayerKakudoGoal)) % 360 + 540) % 360 - 180);
+            => Math.Abs(Angles.Diff(gb.PlayerKakudoGoal, GridSense.Normalize90(gb.PlayerKakudoGoal)));
 
         private static bool Finish(fldGlobalWork_t gb, string how)
         {

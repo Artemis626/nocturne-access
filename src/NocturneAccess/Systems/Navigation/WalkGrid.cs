@@ -61,6 +61,10 @@ namespace NocturneAccess.Systems.Navigation
         private static byte[] _state = Array.Empty<byte>();     // per node: 1 walkable, 2 blocked
         private static float[] _near = Array.Empty<float>();    // per node: distance to the nearest wall, capped
         private static readonly List<int> LastPath = new List<int>();
+        private static float[] _dist = Array.Empty<float>();      // Plan's working arrays, reused
+        private static int[] _from = Array.Empty<int>();
+        private static sbyte[] _dir = Array.Empty<sbyte>();
+        private static readonly PriorityQueue<int, float> Open = new PriorityQueue<int, float>();
         private static bool[] _reach = Array.Empty<bool>();
         private static int _reachStart = -1, _reachBuild = -1, _builds;
         private static readonly List<(float x, float z)> HiddenNpcs = new List<(float x, float z)>();
@@ -349,17 +353,23 @@ namespace NocturneAccess.Systems.Navigation
             if (start < 0)
                 return null;
 
+            // The search arrays are kept between calls (about 1.4 MB in the basement, and a walk to a person plans up to
+            // four times); they are reset here, so every search starts from the same state as with new arrays.
             int n = _state.Length;
-            var dist = new float[n];
-            var from = new int[n];
-            var dir = new sbyte[n];
-            for (int k = 0; k < n; k++)
+            if (_dist.Length != n)
             {
-                dist[k] = float.MaxValue;
-                from[k] = -1;
-                dir[k] = -1;
+                _dist = new float[n];
+                _from = new int[n];
+                _dir = new sbyte[n];
             }
-            var open = new PriorityQueue<int, float>();
+            float[] dist = _dist;
+            int[] from = _from;
+            sbyte[] dir = _dir;
+            Array.Fill(dist, float.MaxValue);
+            Array.Fill(from, -1);
+            Array.Fill(dir, (sbyte)-1);
+            PriorityQueue<int, float> open = Open;
+            open.Clear();
             dist[start] = 0;
             open.Enqueue(start, 0);
             while (open.TryDequeue(out int cur, out float d))

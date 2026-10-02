@@ -238,7 +238,7 @@ namespace NocturneAccess.Systems.Menus
             for (int i = 0; i < announce.Length; i++)
             {
                 TextMeshProUGUI line = announce[i];
-                if (IsVisible(line))
+                if (UiUtil.IsVisible(line))
                 {
                     string text = TextOf(line);
                     if (text.Length > 0)
@@ -283,7 +283,7 @@ namespace NocturneAccess.Systems.Menus
             {
                 TextMeshProUGUI o = options[i];
                 string name = o == null ? "null" : o.gameObject.name;
-                parts.Add($"{i} = {name} \"{TextOf(o)}\"{(IsVisible(o) ? "" : " (hidden)")}");
+                parts.Add($"{i} = {name} \"{TextOf(o)}\"{(UiUtil.IsVisible(o) ? "" : " (hidden)")}");
             }
             return string.Join(", ", parts);
         }
@@ -293,7 +293,7 @@ namespace NocturneAccess.Systems.Menus
             int count = 0;
             for (int i = 0; i < options.Length; i++)
             {
-                if (IsVisible(options[i]) && TextOf(options[i]).Length > 0)
+                if (UiUtil.IsVisible(options[i]) && TextOf(options[i]).Length > 0)
                     count++;
             }
             return count;
@@ -303,7 +303,7 @@ namespace NocturneAccess.Systems.Menus
         {
             for (int i = 0; i < options.Length; i++)
             {
-                if (IsVisible(options[i]))
+                if (UiUtil.IsVisible(options[i]))
                     return true;
             }
             return false;
@@ -325,18 +325,6 @@ namespace NocturneAccess.Systems.Menus
             catch
             {
                 return "unreadable";
-            }
-        }
-
-        private static bool IsVisible(Component component)
-        {
-            try
-            {
-                return component != null && component.gameObject.activeInHierarchy;
-            }
-            catch
-            {
-                return false;
             }
         }
     }

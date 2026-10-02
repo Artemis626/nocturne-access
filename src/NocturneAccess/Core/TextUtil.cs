@@ -67,6 +67,9 @@ namespace NocturneAccess.Core
         }
 
         /// <summary>Removes every rich-text tag and collapses whitespace and line breaks.</summary>
+        /// <summary>The text with its first letter in capitals ("turn left" to "Turn left").</summary>
+        internal static string Capitalize(string s) => string.IsNullOrEmpty(s) ? s ?? "" : char.ToUpperInvariant(s[0]) + s.Substring(1);
+
         internal static string Clean(string raw)
         {
             if (string.IsNullOrEmpty(raw))

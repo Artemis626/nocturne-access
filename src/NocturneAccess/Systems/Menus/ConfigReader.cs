@@ -176,7 +176,7 @@ namespace NocturneAccess.Systems.Menus
                     _lastSliderPoll = now;
                     // Only rows where a slider was found (none were in the 20:08 session), and only while shown:
                     // polling a row of a closed screen touched a destroyed object (NullReferenceException at 20:12:25).
-                    if (_current.HasSlider && _current.Value.Length == 0 && _current.Keys.Count == 0 && IsVisible(_current.TitleComponent))
+                    if (_current.HasSlider && _current.Value.Length == 0 && _current.Keys.Count == 0 && UiUtil.IsVisible(_current.TitleComponent))
                     {
                         string slider = SliderValue(_current);
                         if (slider.Length > 0 && slider != _spokenValue)
@@ -187,7 +187,7 @@ namespace NocturneAccess.Systems.Menus
                 if (_current != null && !_dirty && now - _lastVisibilityPoll >= VisibilityPollMs)
                 {
                     _lastVisibilityPoll = now;
-                    if (!IsVisible(_current.TitleComponent))
+                    if (!UiUtil.IsVisible(_current.TitleComponent))
                     {
                         _current = null;
                         _currentTab = null;
@@ -206,7 +206,7 @@ namespace NocturneAccess.Systems.Menus
         private static void Evaluate(long now)
         {
             Row row = Rows.Values
-                .Where(r => r.Highlighted && r.Title.Length > 0 && IsVisible(r.TitleComponent))
+                .Where(r => r.Highlighted && r.Title.Length > 0 && UiUtil.IsVisible(r.TitleComponent))
                 .OrderByDescending(r => r.HighlightedAt)
                 .FirstOrDefault();
             if (row == null)
@@ -282,7 +282,7 @@ namespace NocturneAccess.Systems.Menus
         {
             return Rows.Values
                 .Where(r => r.Tab == tab && r.Title.Length > 0 && !r.Id.StartsWith("category", StringComparison.Ordinal)
-                            && IsVisible(r.TitleComponent))
+                            && UiUtil.IsVisible(r.TitleComponent))
                 .OrderBy(r => SiblingIndex(r))
                 .ToList();
         }
@@ -334,18 +334,6 @@ namespace NocturneAccess.Systems.Menus
                 return Math.Round(v).ToString(CultureInfo.InvariantCulture);
             }
             return "";
-        }
-
-        private static bool IsVisible(TMP_Text component)
-        {
-            try
-            {
-                return component != null && component.gameObject.activeInHierarchy;
-            }
-            catch
-            {
-                return false;
-            }
         }
     }
 }

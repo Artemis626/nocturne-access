@@ -8,6 +8,7 @@ using Il2Cpplibsdf_H;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
 using UnityEngine;
+using static NocturneAccess.Systems.Navigation.Angles;
 
 namespace NocturneAccess.Systems.Navigation
 {
@@ -512,12 +513,6 @@ namespace NocturneAccess.Systems.Navigation
             return "";
         }
 
-        /// <summary>Compass bearing from (x, z) to (tx, tz): 0 north (+Z), 90 east (+X).</summary>
-        private static float Bearing(float x, float z, float tx, float tz)
-            => Mod360((float)(Math.Atan2(tx - x, tz - z) * 180.0 / Math.PI));
-
-        private static float Square(float bearing) => Mod360((float)Math.Round(bearing / 90.0) * 90f);
-
         /// <summary>World unit vector of a path direction (0 north = +Z, clockwise).</summary>
         private static void Dir(int dir, out float ux, out float uz)
         {
@@ -525,12 +520,6 @@ namespace NocturneAccess.Systems.Navigation
             ux = (float)Math.Round(Math.Sin(a), 6);
             uz = (float)Math.Round(Math.Cos(a), 6);
         }
-
-        private static float Diff(float a, float b) => ((a - b) % 360 + 540) % 360 - 180;
-
-        private static float Mod360(float a) => (a % 360 + 360) % 360;
-
-        private static int Mod360(int a) => (a % 360 + 360) % 360;
 
         internal static void Stop(string why, string speech)
         {

@@ -30,12 +30,20 @@ namespace NocturneAccess.Core
 
         internal static string Folder => Path.Combine(MelonEnvironment.UserDataDirectory, "NocturneAccess", "Logs");
 
+        // The archive file of this session, worked out once: Process.GetCurrentProcess() returns a new handle each call,
+        // and it was called (and never disposed) on every 30-second snapshot.
+        private static string _target;
+
         private static string Target
         {
             get
             {
-                DateTime started = Process.GetCurrentProcess().StartTime;
-                return Path.Combine(Folder, $"session_{started:yyyy-MM-dd_HH-mm-ss}.log");
+                if (_target == null)
+                {
+                    using (Process self = Process.GetCurrentProcess())
+                        _target = Path.Combine(Folder, $"session_{self.StartTime:yyyy-MM-dd_HH-mm-ss}.log");
+                }
+                return _target;
             }
         }
 

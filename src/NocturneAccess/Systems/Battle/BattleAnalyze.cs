@@ -56,7 +56,7 @@ namespace NocturneAccess.Systems.Battle
         /// <summary>Called every frame by the battle reader.</summary>
         internal static void Tick()
         {
-            if (_shown && !_pending && !(Texts.TryGetValue(NamePath, out var shown) && IsVisible(shown.Component)))
+            if (_shown && !_pending && !(Texts.TryGetValue(NamePath, out var shown) && UiUtil.IsVisible(shown.Component)))
             {
                 // Closed: forget the texts, so analyzing the same enemy again is spoken again.
                 _shown = false;
@@ -65,7 +65,7 @@ namespace NocturneAccess.Systems.Battle
             }
             if (!_pending || Clock.ElapsedMilliseconds - _changedAt < SettleMs)
                 return;
-            if (!Texts.TryGetValue(NamePath, out var name) || !IsVisible(name.Component))
+            if (!Texts.TryGetValue(NamePath, out var name) || !UiUtil.IsVisible(name.Component))
             {
                 if (Clock.ElapsedMilliseconds - _changedAt > 2000)
                     _pending = false;
@@ -76,7 +76,7 @@ namespace NocturneAccess.Systems.Battle
 
             string race = Visible(RacePath);
             string attribute = Speakable(Visible(AttributePath));
-            List<string> skills = Texts.Where(kv => kv.Key.StartsWith(SkillPrefix, StringComparison.Ordinal) && IsVisible(kv.Value.Component) && kv.Value.Text.Length > 0)
+            List<string> skills = Texts.Where(kv => kv.Key.StartsWith(SkillPrefix, StringComparison.Ordinal) && UiUtil.IsVisible(kv.Value.Component) && kv.Value.Text.Length > 0)
                 .OrderBy(kv => kv.Key, StringComparer.Ordinal)
                 .Select(kv => kv.Value.Text)
                 .ToList();
@@ -98,7 +98,7 @@ namespace NocturneAccess.Systems.Battle
         }
 
         private static string Visible(string path)
-            => Texts.TryGetValue(path, out var t) && IsVisible(t.Component) ? t.Text : "";
+            => Texts.TryGetValue(path, out var t) && UiUtil.IsVisible(t.Component) ? t.Text : "";
 
         /// <summary>"Null: Dark • Weak: Light/Magic" as two sentences: the bullet becomes a full stop, so the reader pauses.</summary>
         private static string Speakable(string attribute)
@@ -107,18 +107,6 @@ namespace NocturneAccess.Systems.Battle
                 return "";
             string text = string.Join(". ", attribute.Split('•').Select(s => s.Trim()).Where(s => s.Length > 0));
             return text.EndsWith(".") ? text : text + ".";
-        }
-
-        private static bool IsVisible(TMP_Text component)
-        {
-            try
-            {
-                return component != null && component.gameObject.activeInHierarchy;
-            }
-            catch
-            {
-                return false;
-            }
         }
     }
 }

@@ -151,7 +151,7 @@ namespace NocturneAccess.Systems.Menus
 
                     if (e.Pending && now - e.ChangedAt >= SettleMs)
                     {
-                        if (IsVisible(e.Component))
+                        if (UiUtil.IsVisible(e.Component))
                         {
                             if ((e.Options & Options.FollowsDialogue) != 0 && DialogueReader.PageDue
                                 && now - e.ChangedAt < SpeechOrder.MaxHoldMs)
@@ -175,7 +175,7 @@ namespace NocturneAccess.Systems.Menus
                             e.Pending = false;
                         }
                     }
-                    else if (poll && e.Spoken.Length > 0 && !IsVisible(e.Component))
+                    else if (poll && e.Spoken.Length > 0 && !UiUtil.IsVisible(e.Component))
                     {
                         // Hidden again: forget it, so the same prompt written later counts as new.
                         e.Spoken = "";
@@ -193,7 +193,7 @@ namespace NocturneAccess.Systems.Menus
         /// <summary>A Reshow component that has just become visible is spoken again with its current text.</summary>
         private static void CheckReshow(Entry e, long now)
         {
-            bool visible = IsVisible(e.Component);
+            bool visible = UiUtil.IsVisible(e.Component);
             if (visible && !e.WasVisible)
             {
                 string text = TextUtil.Clean(e.Component.text);
@@ -212,18 +212,6 @@ namespace NocturneAccess.Systems.Menus
                 e.Pending = false;
             }
             e.WasVisible = visible;
-        }
-
-        private static bool IsVisible(TMP_Text component)
-        {
-            try
-            {
-                return component != null && component.gameObject.activeInHierarchy;
-            }
-            catch
-            {
-                return false;
-            }
         }
     }
 }

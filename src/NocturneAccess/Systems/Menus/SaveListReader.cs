@@ -138,7 +138,7 @@ namespace NocturneAccess.Systems.Menus
                 else if (now - _lastPoll >= VisibilityPollMs)
                 {
                     _lastPoll = now;
-                    if (_current >= 0 && _pending < 0 && !IsVisible(_currentComponent))
+                    if (_current >= 0 && _pending < 0 && !UiUtil.IsVisible(_currentComponent))
                     {
                         _current = -1;
                         _currentComponent = null;
@@ -156,7 +156,7 @@ namespace NocturneAccess.Systems.Menus
         private static void TryAnnounce(long now)
         {
             // The list is built while hidden: wait until it is shown.
-            if (!IsVisible(_pendingComponent))
+            if (!UiUtil.IsVisible(_pendingComponent))
             {
                 if (now - _pendingSince > WaitForVisibleMs)
                     _pending = -1;
@@ -231,15 +231,15 @@ namespace NocturneAccess.Systems.Menus
         }
 
         /// <summary>A number the screen is showing: the CounterCtr's value when its object is visible.</summary>
-        private static int? Shown(CounterCtr counter) => IsVisible(counter) ? counter.value : (int?)null;
+        private static int? Shown(CounterCtr counter) => UiUtil.IsVisible(counter) ? counter.value : (int?)null;
 
-        private static string ShownText(TMP_Text component) => IsVisible(component) ? TextUtil.Clean(component.text) : "";
+        private static string ShownText(TMP_Text component) => UiUtil.IsVisible(component) ? TextUtil.Clean(component.text) : "";
 
         private static string Raw(CounterCtr counter)
         {
             if (counter == null)
                 return "none";
-            return $"{counter.value}{(IsVisible(counter) ? "" : " hidden")}{(counter.blank ? " blank" : "")}";
+            return $"{counter.value}{(UiUtil.IsVisible(counter) ? "" : " hidden")}{(counter.blank ? " blank" : "")}";
         }
 
         private static string PlayTime(saveFileUI file)
@@ -251,18 +251,6 @@ namespace NocturneAccess.Systems.Menus
             for (int i = 0; i < parts.Length; i++)
                 values.Add(Raw(parts[i]));
             return string.Join(", ", values);
-        }
-
-        private static bool IsVisible(Component component)
-        {
-            try
-            {
-                return component != null && component.gameObject.activeInHierarchy;
-            }
-            catch
-            {
-                return false;
-            }
         }
     }
 }

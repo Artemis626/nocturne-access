@@ -24,6 +24,7 @@ namespace NocturneAccess.Core
         private static readonly List<(string Name, Func<string, Handler> Classify)> Classifiers = new List<(string, Func<string, Handler>)>();
         private static readonly Dictionary<int, Handler> Cache = new Dictionary<int, Handler>();
         private static int _errors;
+        private const int MaxCached = 20000;
 
         internal static void Register(string name, Func<string, Handler> classifier) => Classifiers.Add((name, classifier));
 
@@ -46,6 +47,13 @@ namespace NocturneAccess.Core
                 int id = __instance.GetInstanceID();
                 if (!Cache.TryGetValue(id, out Handler handler))
                 {
+                    // The game makes new UI copies ("(Clone)") for every battle, save screen and menu, each with new IDs,
+                    // so the cache would grow all session. Starting over only costs one classification per component.
+                    if (Cache.Count >= MaxCached)
+                    {
+                        Log.Info($"[Text] Classification cache reached {MaxCached} components: cleared.");
+                        Cache.Clear();
+                    }
                     handler = Classify(__instance);
                     Cache[id] = handler;
                 }

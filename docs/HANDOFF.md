@@ -406,3 +406,14 @@ Francesco plans a debug and efficiency pass over everything so far. Where the wo
 - **Battle menu cursor:** `BattleSkills.CostOfActing` looks the item up by name among the actor's skills (`datSkillName.Get` per skill) at each cursor move.
 - **Logs:** `[Nav:Trace]` every 250 ms while exploring, `[Battle:Data]` on change, `[Probe:*]` only with `Probe = true`.
 - **Known rough edges:** `BattleReader` is about 780 lines (banner, targets, sides, press turns, units, results, F2 / F3); `AutoWalk` about 550; the `MenuSpec` list in `MenuReader` grows per screen.
+
+**0.0.30, cleanup and debug pass (2 Oct 2026, no change in what the mod says or does).** Applied:
+
+- Shared helpers: `UiUtil.IsVisible` (was copied in 9 readers), `Navigation/Angles` (`Diff`, `Mod360`, `Square`, `Bearing`, copied in `AutoWalk`, `RouteGuide`, `BlobberMode`, `CentreWalk`), `TextUtil.Capitalize` (3 copies). Same arithmetic, same results.
+- `ModMain.OnUpdate`: each system's update runs guarded (`[Update] <name> failed`, logged 3 times per system), so one exception no longer skips the others for that frame.
+- `FieldState`: blobber mode and auto-walk guarded separately; on an exception the pad buttons are let go (and the walk ends), so a repeating error cannot leave the player walking.
+- `LogArchive`: the session file name is worked out once (`Process.GetCurrentProcess()` was called and never disposed every 30 s).
+- `TmpRouter`: the per-component classification cache is cleared at 20 000 entries (new UI copies every battle and save screen made it grow all session).
+- `WalkGrid.Plan`: the search arrays and queue are reused between calls (reset each time), instead of about 1.4 MB allocated per search.
+
+Proposed, waiting for Francesco: see the reply of 2 Oct 2026 (split `BattleReader`, share the two dump writers, prune `AnnouncementReader` entries, trim per-tick work in `WalkGrid.Ensure`).

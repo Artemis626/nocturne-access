@@ -93,7 +93,7 @@ namespace NocturneAccess.Systems.Menus
 
             try
             {
-                bool visible = IsVisible(_anchor);
+                bool visible = UiUtil.IsVisible(_anchor);
                 if (!visible)
                 {
                     if (_open)
@@ -105,7 +105,7 @@ namespace NocturneAccess.Systems.Menus
                     return;
                 }
 
-                bool levelUp = IsVisible(_ui.lvUpBase);
+                bool levelUp = UiUtil.IsVisible(_ui.lvUpBase);
 
                 // The race is written after the name (22:05 session: "Fiend" missing from the summary), and
                 // switching character (L/R) rewrites both: wait until they have been stable a moment.
@@ -207,7 +207,7 @@ namespace NocturneAccess.Systems.Menus
             float bestDistance = float.MaxValue;
             for (int i = 0; i < labels.Length; i++)
             {
-                if (!IsVisible(labels[i]))
+                if (!UiUtil.IsVisible(labels[i]))
                     continue;
                 float d = Math.Abs(labels[i].transform.position.y - y);
                 if (d < bestDistance)
@@ -235,7 +235,7 @@ namespace NocturneAccess.Systems.Menus
             Il2CppReferenceArray<TextMeshProUGUI> labels = _ui.TextStatus;
             for (int i = 0; labels != null && i < labels.Length; i++)
             {
-                if (IsVisible(labels[i]))
+                if (UiUtil.IsVisible(labels[i]))
                     stats.Add(StatText(i, StatValue(i) ?? int.MinValue));
             }
             if (stats.Count > 0)
@@ -294,7 +294,7 @@ namespace NocturneAccess.Systems.Menus
                 "MP " + Counters(_ui.ObjNowMp) + "/" + Counters(_ui.ObjMaxMp),
                 "points " + Counters(_ui.ObjPoint),
                 "bonus " + Counters(_ui.ObjBonus),
-                $"levelup {IsVisible(_ui.lvUpBase)}",
+                $"levelup {UiUtil.IsVisible(_ui.lvUpBase)}",
             };
             Il2CppReferenceArray<GameObject> objects = _ui.ObjStatus;
             for (int i = 0; objects != null && i < objects.Length; i++)
@@ -312,7 +312,7 @@ namespace NocturneAccess.Systems.Menus
             return values.Count > 0 ? "[" + string.Join(", ", values) + "]" : "[no counter]";
         }
 
-        private static string Text(TMP_Text component) => IsVisible(component) ? TextUtil.Clean(component.text) : "";
+        private static string Text(TMP_Text component) => UiUtil.IsVisible(component) ? TextUtil.Clean(component.text) : "";
 
         private static void Say(string text, bool interrupt)
         {
@@ -321,30 +321,6 @@ namespace NocturneAccess.Systems.Menus
             LastUtterance = text;
             LastUtteranceAt = Environment.TickCount64;
             SpeechManager.Say(text, interrupt: interrupt, force: true);
-        }
-
-        private static bool IsVisible(Component component)
-        {
-            try
-            {
-                return component != null && component.gameObject.activeInHierarchy;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static bool IsVisible(GameObject obj)
-        {
-            try
-            {
-                return obj != null && obj.activeInHierarchy;
-            }
-            catch
-            {
-                return false;
-            }
         }
     }
 }

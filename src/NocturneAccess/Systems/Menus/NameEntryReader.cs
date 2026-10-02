@@ -219,7 +219,7 @@ namespace NocturneAccess.Systems.Menus
                     PollLetters(now);
                     PollMode(now);
                     LogButtonData(now);
-                    bool confirmVisible = IsVisible(_confirmTitle);
+                    bool confirmVisible = UiUtil.IsVisible(_confirmTitle);
                     if (confirmVisible && !_confirmWasVisible && !_confirmPending && !_confirmSpoken)
                     {
                         _confirmPending = true;   // shown again after "No": no new write, so watch it
@@ -228,13 +228,13 @@ namespace NocturneAccess.Systems.Menus
                     _confirmWasVisible = confirmVisible;
                 }
 
-                if (_confirmPending && now - _confirmAt >= ConfirmSettleMs && IsVisible(_confirmTitle))
+                if (_confirmPending && now - _confirmAt >= ConfirmSettleMs && UiUtil.IsVisible(_confirmTitle))
                     AnnounceConfirmation();
 
                 if (now - _lastClosePoll >= ClosePollMs)
                 {
                     _lastClosePoll = now;
-                    if (_confirmSpoken && !IsVisible(_confirmTitle))
+                    if (_confirmSpoken && !UiUtil.IsVisible(_confirmTitle))
                         _confirmSpoken = false;   // back to editing, or done
                     if (!AnyVisible())
                     {
@@ -254,7 +254,7 @@ namespace NocturneAccess.Systems.Menus
 
         private static void AnnounceCursor(long now)
         {
-            if (!IsVisible(_pendingCursor))
+            if (!UiUtil.IsVisible(_pendingCursor))
                 return;
             bool first = !_cursorAnnounced;
             // The cursor starts blinking about 200 ms before "Enter a name." is written (20:44 session).
@@ -329,7 +329,7 @@ namespace NocturneAccess.Systems.Menus
             bool quiet = now - _openedAt < OpeningQuietMs;   // letters filled in when the screen opens (Yuko's default name)
             foreach (Letter l in Inputs.Values)
             {
-                string text = IsVisible(l.Component) ? TextUtil.Clean(l.Component.text) : l.Last;
+                string text = UiUtil.IsVisible(l.Component) ? TextUtil.Clean(l.Component.text) : l.Last;
                 if (text == l.Last)
                     continue;
                 string old = l.Last;
@@ -347,7 +347,7 @@ namespace NocturneAccess.Systems.Menus
         {
             foreach (KeyValuePair<int, TMP_Text> kv in Modes)
             {
-                if (!IsVisible(kv.Value) || kv.Key == _mode)
+                if (!UiUtil.IsVisible(kv.Value) || kv.Key == _mode)
                     continue;
                 bool first = _mode < 0;
                 _mode = kv.Key;
@@ -399,7 +399,7 @@ namespace NocturneAccess.Systems.Menus
             foreach (IGrouping<int, (string Field, int Index, TMP_Text Component)> slot in
                      ConfirmLetters.Where(c => c.Field == field).GroupBy(c => c.Index).OrderBy(g => g.Key))
             {
-                string letter = slot.Where(c => IsVisible(c.Component)).Select(c => TextUtil.Clean(c.Component.text))
+                string letter = slot.Where(c => UiUtil.IsVisible(c.Component)).Select(c => TextUtil.Clean(c.Component.text))
                                     .FirstOrDefault(t => t.Length > 0) ?? "";
                 sb.Append(letter);
             }
@@ -410,7 +410,7 @@ namespace NocturneAccess.Systems.Menus
         private static string TypedWord(string field)
         {
             var sb = new StringBuilder();
-            foreach (Letter l in Inputs.Values.Where(l => l.Field == field && IsVisible(l.Component)).OrderBy(l => l.Index))
+            foreach (Letter l in Inputs.Values.Where(l => l.Field == field && UiUtil.IsVisible(l.Component)).OrderBy(l => l.Index))
                 sb.Append(TextUtil.Clean(l.Component.text));
             return sb.ToString();
         }
@@ -429,7 +429,7 @@ namespace NocturneAccess.Systems.Menus
         }
 
         private static string LabelText(string key)
-            => Labels.TryGetValue(key, out TMP_Text c) && IsVisible(c) ? TextUtil.Clean(c.text) : "";
+            => Labels.TryGetValue(key, out TMP_Text c) && UiUtil.IsVisible(c) ? TextUtil.Clean(c.text) : "";
 
         private static void Say(string text, bool interrupt)
         {
@@ -439,21 +439,9 @@ namespace NocturneAccess.Systems.Menus
 
         private static bool AnyVisible()
         {
-            if (IsVisible(_cursorComponent) || IsVisible(_confirmTitle))
+            if (UiUtil.IsVisible(_cursorComponent) || UiUtil.IsVisible(_confirmTitle))
                 return true;
-            return Inputs.Values.Any(l => IsVisible(l.Component)) || Modes.Values.Any(IsVisible);
-        }
-
-        private static bool IsVisible(TMP_Text component)
-        {
-            try
-            {
-                return component != null && component.gameObject.activeInHierarchy;
-            }
-            catch
-            {
-                return false;
-            }
+            return Inputs.Values.Any(l => UiUtil.IsVisible(l.Component)) || Modes.Values.Any(m => UiUtil.IsVisible(m));
         }
     }
 }

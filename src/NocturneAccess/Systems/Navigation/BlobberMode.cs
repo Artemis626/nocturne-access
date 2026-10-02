@@ -346,7 +346,7 @@ namespace NocturneAccess.Systems.Navigation
             int goal = GridSense.Normalize90(gb.PlayerKakudoGoal);
             if (goal == _facingSpoken)
                 return;
-            float diff = Math.Abs(((gb.PlayerKakudo - gb.PlayerKakudoGoal) % 360 + 540) % 360 - 180);
+            float diff = Math.Abs(Angles.Diff(gb.PlayerKakudo, gb.PlayerKakudoGoal));
             if (diff > 2)
                 return;
             _facingSpoken = goal;
@@ -354,7 +354,7 @@ namespace NocturneAccess.Systems.Navigation
             _view = v;
             _viewFacing = goal;
             _haveView = true;
-            Say($"{Cap(GridSense.FacingName(goal))}, {Describe(v.Ahead, "ahead")}.");
+            Say($"{TextUtil.Capitalize(GridSense.FacingName(goal))}, {Describe(v.Ahead, "ahead")}.");
         }
 
         /// <summary>
@@ -426,7 +426,7 @@ namespace NocturneAccess.Systems.Navigation
             _haveView = true;
             _facingSpoken = facing;
             _cueCell = CellKey(gb.playerX, gb.playerZ);
-            string view = $"{Cap(GridSense.FacingName(facing))}: {Describe(v.Ahead, "ahead")}, {Describe(v.Left, "left")}, {Describe(v.Right, "right")}.";
+            string view = $"{TextUtil.Capitalize(GridSense.FacingName(facing))}: {Describe(v.Ahead, "ahead")}, {Describe(v.Left, "left")}, {Describe(v.Right, "right")}.";
             Say((centred ? "Centred. " : "Blocked, not centred. ") + view);
         }
 
@@ -436,12 +436,12 @@ namespace NocturneAccess.Systems.Navigation
         private static string Changes(CellView v, int facing)
         {
             if (!_haveView || _viewFacing != facing)
-                return Cap(Describe(v.Ahead, "ahead")) + ".";
+                return TextUtil.Capitalize(Describe(v.Ahead, "ahead")) + ".";
             var parts = new List<string>();
             if (v.Ahead != _view.Ahead) parts.Add(Describe(v.Ahead, "ahead"));
             if (v.Left != _view.Left) parts.Add(Describe(v.Left, "left"));
             if (v.Right != _view.Right) parts.Add(Describe(v.Right, "right"));
-            return parts.Count == 0 ? "" : Cap(string.Join(", ", parts)) + ".";
+            return parts.Count == 0 ? "" : TextUtil.Capitalize(string.Join(", ", parts)) + ".";
         }
 
         private static string Describe(SideKind k, string where)
@@ -460,6 +460,5 @@ namespace NocturneAccess.Systems.Navigation
             Pending.Enqueue(text);
         }
 
-        private static string Cap(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
     }
 }

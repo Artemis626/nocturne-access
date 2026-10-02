@@ -20,7 +20,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.29";
+        internal const string ModVersion = "0.0.30";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
@@ -69,26 +69,46 @@ namespace NocturneAccess.Core
             Log.Info($"[Scene] Initialized: {sceneName} (build index {buildIndex})");
         }
 
+        // Every system updated each frame, in this order. Each one runs guarded, so an exception in one cannot skip the
+        // others for that frame, and a repeating one is logged a few times instead of every frame.
+        private static readonly (string Name, System.Action Tick)[] Updates =
+        {
+            ("hotkeys", Hotkeys.Update),
+            ("dialogue", DialogueReader.Tick),
+            ("menus", MenuReader.Tick),
+            ("announcements", AnnouncementReader.Tick),
+            ("save list", SaveListReader.Tick),
+            ("save choice", SaveChoiceReader.Tick),
+            ("config", ConfigReader.Tick),
+            ("name entry", NameEntryReader.Tick),
+            ("status", StatusReader.Tick),
+            ("battle", BattleReader.Tick),
+            ("field state", FieldState.Tick),
+            ("first person", FirstPersonView.Tick),
+            ("navigation probe", NavProbe.Tick),
+            ("blobber exploring", BlobberMode.CheckExploring),
+            ("blobber", BlobberMode.Tick),
+            ("auto-walk", AutoWalk.Tick),
+            ("log archive", LogArchive.Tick),
+            ("probes", Probes.Tick),
+        };
+
+        private static readonly int[] UpdateErrors = new int[Updates.Length];
+
         public override void OnUpdate()
         {
-            Hotkeys.Update();
-            DialogueReader.Tick();
-            MenuReader.Tick();
-            AnnouncementReader.Tick();
-            SaveListReader.Tick();
-            SaveChoiceReader.Tick();
-            ConfigReader.Tick();
-            NameEntryReader.Tick();
-            StatusReader.Tick();
-            BattleReader.Tick();
-            FieldState.Tick();
-            FirstPersonView.Tick();
-            NavProbe.Tick();
-            BlobberMode.CheckExploring();
-            BlobberMode.Tick();
-            AutoWalk.Tick();
-            LogArchive.Tick();
-            Probes.Tick();
+            for (int i = 0; i < Updates.Length; i++)
+            {
+                try
+                {
+                    Updates[i].Tick();
+                }
+                catch (System.Exception ex)
+                {
+                    if (++UpdateErrors[i] <= 3)
+                        Log.Error($"[Update] {Updates[i].Name} failed: {ex}");
+                }
+            }
         }
 
         public override void OnDeinitializeMelon()

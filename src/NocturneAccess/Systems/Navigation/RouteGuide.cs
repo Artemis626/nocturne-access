@@ -5,6 +5,7 @@ using Il2Cppfield_H;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
 using UnityEngine;
+using static NocturneAccess.Systems.Navigation.Angles;
 
 namespace NocturneAccess.Systems.Navigation
 {
@@ -50,7 +51,7 @@ namespace NocturneAccess.Systems.Navigation
             bool firstPerson = gb.cammode == 0 && FirstPersonView.On;
             float x = gb.playerX, z = gb.playerZ, yaw = CameraYaw();
             float flat = (float)Math.Sqrt((target.X - x) * (target.X - x) + (target.Z - z) * (target.Z - z));
-            float toTarget = Mod360((float)(Math.Atan2(target.X - x, target.Z - z) * 180.0 / Math.PI));
+            float toTarget = Bearing(x, z, target.X, target.Z);
 
             if (AutoWalk.InReach(target, flat) && AutoWalk.Lateral(target, x, z) <= 45f)
             {
@@ -58,7 +59,7 @@ namespace NocturneAccess.Systems.Navigation
                 if (Math.Abs(Diff(180 - gb.PlayerKakudo, face)) <= FacingTolerance)
                     return "In reach.";
                 string turn = firstPerson ? Relative(gb, Square(face)) : Key(face, yaw);
-                return $"In reach. {Capital(turn)} to face it.";
+                return $"In reach. {TextUtil.Capitalize(turn)} to face it.";
             }
 
             if (!WalkGrid.Ensure(gb.fieldID, gb.areaID, gb.playerX, gb.playerY, gb.playerZ))
@@ -92,7 +93,7 @@ namespace NocturneAccess.Systems.Navigation
             if (legs.Count > 1)
                 then = firstPerson ? TurnWord(Mod360(legs[1].bearing - first.bearing)) : Key(legs[1].bearing, yaw);
             int metres = Math.Max(1, (int)Math.Round(first.length / 100f));
-            return $"{Capital(word)}, {metres} {(metres == 1 ? "metre" : "metres")}{(then.Length > 0 ? ", then " + then : "")}.";
+            return $"{TextUtil.Capitalize(word)}, {metres} {(metres == 1 ? "metre" : "metres")}{(then.Length > 0 ? ", then " + then : "")}.";
         }
 
         /// <summary>First person: a compass bearing (multiple of 90) relative to the facing: "ahead", "turn right", "turn round", "turn left".</summary>
@@ -118,13 +119,5 @@ namespace NocturneAccess.Systems.Navigation
             GameObject cam = fldCamera.fldCameraObj;
             return cam != null ? cam.transform.eulerAngles.y : 0f;
         }
-
-        private static string Capital(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
-
-        private static float Square(float bearing) => Mod360((float)Math.Round(bearing / 90.0) * 90f);
-
-        private static float Diff(float a, float b) => ((a - b) % 360 + 540) % 360 - 180;
-
-        private static float Mod360(float a) => (a % 360 + 360) % 360;
     }
 }
