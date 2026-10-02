@@ -60,7 +60,10 @@ namespace NocturneAccess.Systems.Navigation
             int count = fldHit.gfldCollsionNum;
             IntPtr ptr = array == null ? IntPtr.Zero : array.Pointer;
             if (!force && ptr == _arrayPtr && count == _count && field == _field && area == _area)
+            {
+                RefreshSwitches(field, area, rebuilt: false);
                 return false;
+            }
 
             _arrayPtr = ptr;
             _count = count;
@@ -89,7 +92,61 @@ namespace NocturneAccess.Systems.Navigation
                     break;
                 }
             }
+            RefreshSwitches(field, area, rebuilt: true);
             return true;
+        }
+
+        // ---- The game's own switches ----
+
+        // fldHit.fldHitChkUnit (read offline, 2 Oct 2026) skips a polygon when fldGlobal.fldGbChkHit(fieldID, areaID + 1,
+        // blockID) is not 0, or, for hojiID above 0, when fldGbChkNpc(fieldID, areaID + 1, hojiID) is not 0. The annex gate
+        // (field 15 area 2, block 1, x 250 to 350 across the walkway) stays in the collision copy after the Annex Gate Pass
+        // opens it; the walking map took it for a wall, so the Soul and the door past it were "not reachable" (13:58 session).
+        private static readonly HashSet<int> OffBlocks = new HashSet<int>(), OffHojis = new HashSet<int>();
+        private static readonly HashSet<int> Seen = new HashSet<int>();
+        private static readonly System.Diagnostics.Stopwatch Clock = System.Diagnostics.Stopwatch.StartNew();
+        private static long _switchReadMs = long.MinValue / 2;
+        private static string _switchKey = "";
+        private const long SwitchPollMs = 500;
+
+        /// <summary>The game ignores this polygon now (its block's hit is off, or its held NPC is not placed).</summary>
+        internal static bool SwitchedOff(CollisionPoly p)
+            => OffBlocks.Contains(p.BlockId) || (p.HojiId > 0 && OffHojis.Contains(p.HojiId));
+
+        /// <summary>
+        /// Asks the game's two checks for every block and hoji id in the copy: after a rebuild at once, otherwise at most every
+        /// SwitchPollMs. A change counts as a collision change (Version), so the walking map and the wall cues refresh.
+        /// </summary>
+        private static void RefreshSwitches(int field, int area, bool rebuilt)
+        {
+            long now = Clock.ElapsedMilliseconds;
+            if (!rebuilt && now - _switchReadMs < SwitchPollMs)
+                return;
+            _switchReadMs = now;
+            OffBlocks.Clear();
+            OffHojis.Clear();
+            try
+            {
+                Seen.Clear();
+                foreach (CollisionPoly p in Items)
+                    if (Seen.Add(p.BlockId) && fldGlobal.fldGbChkHit(field, area + 1, p.BlockId) != 0)
+                        OffBlocks.Add(p.BlockId);
+                Seen.Clear();
+                foreach (CollisionPoly p in Items)
+                    if (p.HojiId > 0 && Seen.Add(p.HojiId) && fldGlobal.fldGbChkNpc(field, area + 1, p.HojiId) != 0)
+                        OffHojis.Add(p.HojiId);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[Nav] Collision switches could not be read: {ex.Message}");
+            }
+            string key = $"blocks off [{string.Join(" ", OffBlocks)}], held NPCs off [{string.Join(" ", OffHojis)}]";
+            if (key == _switchKey)
+                return;
+            _switchKey = key;
+            if (!rebuilt)
+                Version++;
+            Log.Info($"[Nav] Collision switches in field {field} area {area}: {key}.");
         }
 
         private static CollisionPoly Copy(int index, collision_s c)

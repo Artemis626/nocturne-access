@@ -246,7 +246,7 @@ Francesco went back to the basement (field 15 area 5). Log `session_2026-10-01_2
 
 ### Fixes (0.0.25, not yet tested)
 
-- **Hidden NPCs:** `PointsOfInterest.Shown` = the NPC's `fldObj` is active. Hidden NPCs are not listed, and `WalkGrid` ignores Attr 0x80 polygons within 80 units of one. The grid is rebuilt when the set of hidden NPCs changes (the story shows someone); blobber mode's per-frame call checks the set at most every 500 ms (0.0.31).
+- **Hidden NPCs:** `PointsOfInterest.Shown` = the NPC's `fldObj` is active. Hidden NPCs are not listed, and `WalkGrid` ignores Attr 0x80 polygons within 80 units of one. The grid is rebuilt when the set of hidden NPCs changes (the story shows someone); blobber mode's per-frame call checks the set at most every 500 ms (0.0.31). An NPC with no field object at all is a talking demon and is listed as "Demon" (0.0.34). Collision the game itself ignores (`fldGbChkHit` per block, `fldGbChkNpc` per hoji id, as `fldHit.fldHitChkUnit` does) is left out of the walking map and the wall cues: the annex gate after the Annex Gate Pass (0.0.34).
 - **Approach:** a person or item box closer than 80 units without the game's hit ends the walk ("Near the …") instead of turning; doors are unchanged (their hit fires within about 25 units).
 - **Start off the route:** the first run allows the player's starting distance from it on top of the 90-unit limit.
 - **People:** non-Soul NPCs were already listed as "Person"; none existed in the tested areas (the station attendant of field 11 is a story trigger, `01eve_15`, not an NPC).

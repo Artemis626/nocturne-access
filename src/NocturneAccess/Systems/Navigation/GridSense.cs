@@ -128,7 +128,7 @@ namespace NocturneAccess.Systems.Navigation
             float chest = playerY - ChestHeight;
             foreach (CollisionPoly p in CollisionCache.Polys)
             {
-                if (Math.Abs(p.Normal.y) >= 0.2f || p.Points.Length < 2 || (p.Attr & NpcBoxAttr) != 0)
+                if (Math.Abs(p.Normal.y) >= 0.2f || p.Points.Length < 2 || (p.Attr & NpcBoxAttr) != 0 || CollisionCache.SwitchedOff(p))
                     continue;
                 float minY = float.MaxValue, maxY = float.MinValue;
                 foreach (Vector4 v in p.Points)

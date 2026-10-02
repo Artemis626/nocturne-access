@@ -48,6 +48,8 @@ namespace NocturneAccess.Systems.Menus
             public bool ReannounceOnTitle;        // a new screen title re-announces the current item
             public Func<string> OpeningPrefix;    // said before the item when the menu opens, if not empty
             public Func<string, string> ItemDetail;   // said after the item's text (a skill's cost), if not empty
+            public bool NoPosition;               // one slot shows the current choice: no "1 of 1"
+            public bool LinesAreSentences;        // description lines are separate statements, not one wrapped sentence
         }
 
         private sealed class Slot
@@ -125,6 +127,18 @@ namespace NocturneAccess.Systems.Menus
                 Description = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bhelp_window/text_mask/TextTM$", RegexOptions.Compiled),
                 ItemDetail = BattleSkills.CostOfActing,          // "Lunge, 4 HP": the cost is drawn as images (2 Oct 2026)
                 OpeningPrefix = BattleReader.TurnAnnouncement,   // "Pixie's turn" (22:14 session: the acting unit was never said)
+            },
+            new MenuSpec
+            {
+                // Magatama (13:51 session, 2 Oct 2026): one name slot shows the magatama under the cursor (TMC19), with its
+                // notes ("Imparts Physical skills", "Normal resistance"); the stat bonuses are images.
+                Name = "Magatama",
+                Item = new Regex(@"^Canvas_UI/magUI\(Clone\)/(?<slot>magname)_base/TextTM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC19\">",
+                TitlePath = "Canvas_UI/magUI(Clone)/magtitle_window/TextTM",
+                Description = new Regex(@"^Canvas_UI/magUI\(Clone\)/magnote/Text(?<line>\d\d)TM$", RegexOptions.Compiled),
+                NoPosition = true,
+                LinesAreSentences = true,
             },
             // Yes/No prompts outside dialogue (16:49 session): highlighted option TMC08, other TMC22.
             // Their questions are prompts (AnnouncementReader), so the options queue behind them.
@@ -361,7 +375,7 @@ namespace NocturneAccess.Systems.Menus
             int position = visible.IndexOf(state.Current) + 1;
             string detail = state.Spec.ItemDetail?.Invoke(slot.Text) ?? "";
             string named = detail.Length > 0 ? $"{slot.Text}, {detail}" : slot.Text;
-            string item = position > 0 ? $"{named}, {position} of {visible.Count}" : named;
+            string item = position > 0 && !state.Spec.NoPosition ? $"{named}, {position} of {visible.Count}" : named;
             if (opening && state.Spec.IsChoice)
                 item = $"Choice, {visible.Count} options. {item}";
 
@@ -379,7 +393,9 @@ namespace NocturneAccess.Systems.Menus
             }
             parts.Add(item);
 
-            string description = string.Join(" ", state.Description.Where(d => !string.IsNullOrEmpty(d)));
+            string description = string.Join(state.Spec.LinesAreSentences ? ". " : " ", state.Description.Where(d => !string.IsNullOrEmpty(d)));
+            if (state.Spec.LinesAreSentences && description.Length > 0)
+                description += ".";
             if (description.Length > 0)
                 parts.Add(description);
 

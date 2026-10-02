@@ -23,16 +23,17 @@ namespace NocturneAccess.Systems.Navigation
         public bool Reachable = true;   // false: no walkable cell within ReachRadius can be reached from the player (another room)
         public string Name = "";        // the game's place name for a door (FldNameData.GetBasyoName), or ""
         public bool Soul;               // a person whose model is "shinentai" (the game's speaker name for them is "Soul")
+        public bool Demon;              // a person with no field object: a demon, whose model is not a field object (the game's speaker name is "Demon")
         public float FloorY;            // the floor height to walk to: the player's height inside the volume's height span (gEvnRngBox.vtx), else its bottom; without a box Y + 100 for doors, Y for others
         public float NX, NZ;            // a door's facing (gEvnRngBox.boxnml, pointing out to the side the player stands on), or 0 0
         public bool HasFront => NX * NX + NZ * NZ > 0.25f;
 
         public string Label => Kind == PoiKind.Door ? (Name.Length > 0 ? Name + " door" : "Door")
             : Kind == PoiKind.Place ? Name
-            : Kind == PoiKind.Person ? (Soul ? "Soul" : "Person") : "Item box";
+            : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
 
         /// <summary>The label inside a sentence: game names and "Soul" keep their capitals, the mod's own words do not.</summary>
-        public string InSentence => Name.Length > 0 || Soul ? Label : Label.ToLowerInvariant();
+        public string InSentence => Name.Length > 0 || Soul || Demon ? Label : Label.ToLowerInvariant();
 
         /// <summary>Doors only: the in-reach check uses fldEveHit.OldHitDoor, which resets on leaving the volume (gFldEveRngIdx does not).</summary>
         public bool IsDoorLike => Kind == PoiKind.Door || Kind == PoiKind.Place;
@@ -50,7 +51,7 @@ namespace NocturneAccess.Systems.Navigation
     ///   a small horizontal polygon with Attr 0x1000 and a Basyo number (area 5: Terminal, Healing Room, Elevator), the
     ///   polygon that makes the location banner name the room when the player steps into the door volume;
     /// - people: an NPC index (box npcIdx) whose fld_Npc.fldNpc entry is not Type 999; "Soul" when its object is
-    ///   "shinentai(Clone)" (the speaker name the game shows for them);
+    ///   "shinentai(Clone)" (the speaker name the game shows for them), "Demon" when it has no object;
     /// - item boxes: box TakaraIdx 0 or more, or an NPC of Type 999 ("itembox1").
     /// Other story triggers ("NNeve_MM") are invisible and left out. Unnamed things get the mod's own category words. Page Up / Page Down move the selection (nearest first) and speak kind, distance in
     /// metres (game units / 100) and compass direction (north = +Z, the game's compass).
@@ -94,6 +95,7 @@ namespace NocturneAccess.Systems.Navigation
                 Vector4 p = h.sisei.pos;
                 string placeName = h.resourceType == 10 ? PlaceName(gb.fieldID, pads, p.x, p.y, p.z) : "";
                 bool soul = false;
+                bool demon = false;
                 if (h.resourceType == 10 && DoorName.IsMatch(name))
                     kind = PoiKind.Door;
                 else if (h.resourceType == 10 && EventName.IsMatch(name) && placeName.Length > 0)
@@ -108,6 +110,7 @@ namespace NocturneAccess.Systems.Navigation
                         continue;   // a hidden NPC the story has not placed yet (basement npc_hoji_01, 0.0.24 test)
                     kind = npc.Type == 999 ? PoiKind.ItemBox : PoiKind.Person;
                     soul = obj != null && (obj.name ?? "").StartsWith("shinentai", StringComparison.Ordinal);
+                    demon = obj == null;
                 }
                 if (kind == null)
                     continue;
@@ -121,6 +124,7 @@ namespace NocturneAccess.Systems.Navigation
                     ResName = name,
                     Name = kind == PoiKind.Door || kind == PoiKind.Place ? placeName : "",
                     Soul = soul,
+                    Demon = demon,
                     X = p.x,
                     Y = p.y,
                     Z = p.z,
@@ -152,10 +156,15 @@ namespace NocturneAccess.Systems.Navigation
         /// 1, a Soul model) with its object inactive: the game never fires its hit, its collision box (Attr 0x80) does not stop
         /// the player, and walking to it ended in a spin (0.0.24 test).
         /// </summary>
+        /// An NPC with no object at all is shown: the talking demons of the annex (14:07 and 14:30 sessions, 2 Oct 2026:
+        /// "01npc_01" in area 12, "01npc_02" in area 13, "02npc_01"; tType 1, tCamera 2, fldObj null) were left out as hidden,
+        /// while the game spoke them as "Demon".
         internal static bool Shown(fldNpc_tag npc)
         {
-            GameObject obj = npc?.fldObj;
-            return obj != null && obj.activeInHierarchy;
+            if (npc == null)
+                return false;
+            GameObject obj = npc.fldObj;
+            return obj == null || obj.activeInHierarchy;
         }
 
         /// <summary>

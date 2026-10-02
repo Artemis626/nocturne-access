@@ -180,7 +180,7 @@ namespace NocturneAccess.Systems.Navigation
                         minZ = Math.Min(minZ, v.z); maxZ = Math.Max(maxZ, v.z);
                     }
                 }
-                else if (Math.Abs(p.Normal.y) < 0.2f && !HiddenNpcBox(p))
+                else if (Math.Abs(p.Normal.y) < 0.2f && !HiddenNpcBox(p) && !CollisionCache.SwitchedOff(p))
                 {
                     float lo = float.MaxValue, hi = float.MinValue;
                     foreach (Vector4 v in p.Points)
