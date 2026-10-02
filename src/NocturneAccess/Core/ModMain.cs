@@ -20,7 +20,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.34";
+        internal const string ModVersion = "0.0.35";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
@@ -51,6 +51,7 @@ namespace NocturneAccess.Core
             InputInjector.Install();
             AnalogInput.Install();
             PadInput.Install();
+            ExploredDoors.Install();
             BlobberMode.Init();
             NavProbe.Install();
             Probes.Install();
@@ -88,6 +89,7 @@ namespace NocturneAccess.Core
             ("field state", FieldState.Tick),
             ("first person", FirstPersonView.Tick),
             ("navigation probe", NavProbe.Tick),
+            ("explored doors", ExploredDoors.Tick),
             ("blobber exploring", BlobberMode.CheckExploring),
             ("blobber", BlobberMode.Tick),
             ("auto-walk", AutoWalk.Tick),

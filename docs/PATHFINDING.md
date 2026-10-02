@@ -311,3 +311,7 @@ A long play session with 0.0.26 (log `session_2026-10-01_21-31-52.log`, no recor
 
 - Pixie is listed under the place pad's name ("Security System"), not as a person: event volumes carry no speaker. A Shift+F6 dump at such an event would show whether anything names it.
 - The lattice offset is one per area; an area whose corridors are centred differently in different parts would need a local centre (from the walls on both sides).
+
+## Explored doors and empty item boxes (0.0.35, not yet tested)
+
+Plan and decisions: `docs/EXPLORED-DOORS-PLAN.md`. `ExploredDoors` marks a door gone through (both sides) from `fldEveHit.OldHitDoor` and the area change, one list per save file (`UserData/NocturneAccess/Explored/fileNN.txt`); only generic doors (no place name) say "explored". An item box whose `fld_Npc.gfldTakaraWork` entry has left phase 0 says "empty". Page Up / Page Down: "Door, explored, 12 metres, west. 3 of 6."; Home: "Walking to explored door, ..."; End: "Explored door. Ahead, ...". List order, distances and walks are unchanged.

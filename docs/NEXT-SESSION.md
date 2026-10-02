@@ -52,8 +52,22 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.32** | Item and skill lists read (cursor from the game, counts, costs, "unavailable", descriptions); Stats adds skills, skills to learn and affinities | Tested 13:20: every entry read as the first row (cursor fields swapped); elevator left out of B1 (walking map window) |
 | **0.0.33** | Fixes: list row from `Shift`; "Empty." for an empty list; the walking map keeps whole areas that fit (elevator back in B1) | Verified 2 Oct 13:45 (lists, Stats skills, elevator) |
 | **0.0.34** | Talking demons listed ("Demon"); the walking map and wall cues follow the game's own collision switches (annex gate open after the pass); Magatama screen read | Partly tested 2 Oct 14:48: demons listed, collision switches read; gate, demon talk and Magatama not reached |
+| **0.0.35** | `docs/EXPLORED-DOORS-PLAN.md` items 1 to 3: generic doors gone through say "explored" (Page Up / Page Down, Home, End), kept per save file in `UserData/NocturneAccess/Explored/fileNN.txt`; item boxes the game has opened say "empty" | Built 2 Oct 2026, **not yet tested in game**; test steps below |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
+
+## 0.0.35 test (explored doors, empty boxes)
+
+What to check in the log: `[Nav:Explored]` lines (`File N loaded`, `... marked (left through it ...)`, `... marked (came in through it ...)`, `Saved to file N (method)`), the Page Up list lines (`[Nav:Poi]`, with "explored" / "empty"), and that `[Patch] Explored doors` shows 4 patched.
+
+1. Load your save. The log says `File N loaded: 0 explored doors` (the first time).
+2. In the annex, go through a plain door ("Door", not Terminal, Healing Room or Elevator) and come back the same way.
+3. Page Up to that door: "Door, explored, ...". On the other side, the door you came in by says "explored" too.
+4. Home on it: "Walking to explored door, ...". End: "Explored door. Ahead, ...".
+5. Terminal, Healing Room and Elevator never say "explored".
+6. An item box you have opened: "Item box, empty, ..." before walking to it; one not yet opened says only "Item box". Open a new one, Page Up again: now "empty".
+7. Save at a terminal to the same file, quit to desktop, restart, load it: the doors still say "explored". The log says `Saved to file N` and `File N loaded: K explored doors`.
+8. Optional: load a different file: its own doors (none at first), not the first file's.
 
 ## What 0.0.10's test showed (22:05 session, analysis only, no code)
 
@@ -72,7 +86,7 @@ Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:0
 
 ## Open problems and next steps (in order)
 
-**1 Oct 2026, evening: navigation continues from `docs/HANDOFF-PATHFINDING.md` (rewritten): Francesco is playing through the game. **0.0.31 (the refactor plan) verified; 0.0.34 partly tested. **Next: `docs/EXPLORED-DOORS-PLAN.md` items 1 and 2 (an "explored" mark for generic doors; item 3, custom waypoints, later only).** Open: the Annex 1F ramp item box (`docs/HANDOFF.md`, end); still to test from 0.0.34: annex gate after the pass, talking to a demon via Home, Magatama**. He reports bugs and missing features: read each session's log, fix, record (`docs/HANDOFF-PATHFINDING.md`), then the open problems listed there.**
+**1 Oct 2026, evening: navigation continues from `docs/HANDOFF-PATHFINDING.md` (rewritten): Francesco is playing through the game. **0.0.31 (the refactor plan) verified; 0.0.34 partly tested. **0.0.35 built: `docs/EXPLORED-DOORS-PLAN.md` items 1 to 3 (explored doors per save file, empty item boxes), test steps in "0.0.35 test" below; item 4, custom waypoints, later only.** Open: the Annex 1F ramp item box (`docs/HANDOFF.md`, end); still to test from 0.0.34: annex gate after the pass, talking to a demon via Home, Magatama**. He reports bugs and missing features: read each session's log, fix, record (`docs/HANDOFF-PATHFINDING.md`), then the open problems listed there.**
 
 **1 Oct 2026, end of the first navigation chat: continue navigation from `docs/HANDOFF-PATHFINDING.md` (rewritten): blobber mode must keep the game's own controls, snap only movement, and never block on cues; fixed-camera rooms get points of interest with auto-walk later.**
 

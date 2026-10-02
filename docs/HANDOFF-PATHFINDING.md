@@ -73,8 +73,8 @@ Read `CLAUDE.md` first (binding rules), then this file, then:
 
 ## Open problems, in order
 
-1. Francesco plays through the game and reports bugs and missing features: read each session's log, fix, record here. Installed: 0.0.34 (`docs/HANDOFF.md`).
-1a. **Next (Francesco, 2 Oct 2026): `docs/EXPLORED-DOORS-PLAN.md`**: an "explored" mark for generic doors, kept across sessions, for a mental map of identical doors and corridors; custom waypoints later (recorded, not to build yet).
+1. Francesco plays through the game and reports bugs and missing features: read each session's log, fix, record here. Installed: 0.0.35 (`docs/HANDOFF.md`).
+1a. **Built in 0.0.35, to test (Francesco, 2 Oct 2026): `docs/EXPLORED-DOORS-PLAN.md`**: generic doors gone through say "explored" (Page Up / Page Down, Home, End), kept per save file; opened item boxes say "empty"; custom waypoints later (item 4, recorded, not to build yet). Test steps: `docs/NEXT-SESSION.md`, "0.0.35 test".
 1b. **Annex 1F ramp:** an item box (gEvnRng 17) was "not reachable" from the floor below ramp #90 until the player walked up it; suspected `WalkGrid` `Layers` = 3 overflow (`docs/HANDOFF.md`, 0.0.34 notes).
 2. **Story triggers on routes.** A walk through an `NNeve` volume stops at the event. Should routes avoid them (risk: blocking progress), or walk on after the event? Ask Francesco.
 3. **Locked doors and doors behind walls:** the reach test (95 units) is a measured rule. A dump with `gEvnRngBox` sizes for doors that never fire would make it exact.

@@ -42,6 +42,8 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
             string text = Directions(gb, target);
+            if (target.State.Length > 0)
+                text = $"{TextUtil.Capitalize(target.InSentence)}. {text}";   // "Explored door. Ahead, 12 metres."
             Log.Info($"[Nav:Guide] To {target.Label} {target.ResName} (gEvnRng {target.Index}) from {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)}: {text}");
             SpeechManager.Say(text, interrupt: true);
         }

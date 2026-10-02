@@ -28,12 +28,22 @@ namespace NocturneAccess.Systems.Navigation
         public float NX, NZ;            // a door's facing (gEvnRngBox.boxnml, pointing out to the side the player stands on), or 0 0
         public bool HasFront => NX * NX + NZ * NZ > 0.25f;
 
+        public bool Explored;           // a generic door (no place name) the player has gone through (ExploredDoors)
+        public bool Empty;              // an item box the game has opened (fld_Npc.gfldTakaraWork MotPhase, PointsOfInterest.Opened)
+
         public string Label => Kind == PoiKind.Door ? (Name.Length > 0 ? Name + " door" : "Door")
             : Kind == PoiKind.Place ? Name
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
 
-        /// <summary>The label inside a sentence: game names and "Soul" keep their capitals, the mod's own words do not.</summary>
-        public string InSentence => Name.Length > 0 || Soul || Demon ? Label : Label.ToLowerInvariant();
+        /// <summary>"explored" or "empty", or "".</summary>
+        public string State => Explored ? "explored" : Empty ? "empty" : "";
+
+        /// <summary>Page Up / Page Down: "Door, explored", "Item box, empty".</summary>
+        public string Spoken => State.Length > 0 ? $"{Label}, {State}" : Label;
+
+        /// <summary>The label inside a sentence: game names and "Soul" keep their capitals, the mod's own words do not;
+        /// "explored door", "empty item box".</summary>
+        public string InSentence => (State.Length > 0 ? State + " " : "") + (Name.Length > 0 || Soul || Demon ? Label : Label.ToLowerInvariant());
 
         /// <summary>Doors only: the in-reach check uses fldEveHit.OldHitDoor, which resets on leaving the volume (gFldEveRngIdx does not).</summary>
         public bool IsDoorLike => Kind == PoiKind.Door || Kind == PoiKind.Place;
@@ -96,6 +106,7 @@ namespace NocturneAccess.Systems.Navigation
                 string placeName = h.resourceType == 10 ? PlaceName(gb.fieldID, pads, p.x, p.y, p.z) : "";
                 bool soul = false;
                 bool demon = false;
+                int takara = box != null && box.TakaraIdx >= 0 ? box.TakaraIdx : -1;
                 if (h.resourceType == 10 && DoorName.IsMatch(name))
                     kind = PoiKind.Door;
                 else if (h.resourceType == 10 && EventName.IsMatch(name) && placeName.Length > 0)
@@ -111,9 +122,12 @@ namespace NocturneAccess.Systems.Navigation
                     kind = npc.Type == 999 ? PoiKind.ItemBox : PoiKind.Person;
                     soul = obj != null && (obj.name ?? "").StartsWith("shinentai", StringComparison.Ordinal);
                     demon = obj == null;
+                    if (npc.Type == 999)
+                        takara = npc.ItemBoxIdx;
                 }
                 if (kind == null)
                     continue;
+                bool generic = kind == PoiKind.Door && placeName.Length == 0;
 
                 VolumeSpan(box, gb.playerY, out float floorY, out float nx, out float nz);
                 bool doorLike = kind == PoiKind.Door || kind == PoiKind.Place;
@@ -132,6 +146,8 @@ namespace NocturneAccess.Systems.Navigation
                     NX = doorLike ? nx : 0f,
                     NZ = doorLike ? nz : 0f,
                     Distance = (float)Math.Sqrt((p.x - px) * (p.x - px) + (p.z - pz) * (p.z - pz)),
+                    Explored = generic && ExploredDoors.IsExplored(gb.fieldID, gb.areaID, name),
+                    Empty = kind == PoiKind.ItemBox && Opened(takara),
                 });
             }
 
@@ -142,8 +158,13 @@ namespace NocturneAccess.Systems.Navigation
             {
                 if (q.Kind == PoiKind.Place && list.Any(d => d.Kind == PoiKind.Door && d.Name == q.Name && Near(d, q, 800f)))
                     continue;
-                if (kept.Any(d => d.Kind == q.Kind && Near(d, q, 20f) && Math.Abs(d.Y - q.Y) < 50f))
+                Poi same = kept.FirstOrDefault(d => d.Kind == q.Kind && Near(d, q, 20f) && Math.Abs(d.Y - q.Y) < 50f);
+                if (same != null)
+                {
+                    same.Explored |= q.Explored;   // either volume of a door listed twice may be the one gone through
+                    same.Empty |= q.Empty;
                     continue;
+                }
                 if (grid)
                     q.Reachable = WalkGrid.ReachableNear(px, py, pz, q.X, q.FloorY, q.Z, q.ReachRadius);
                 kept.Add(q);
@@ -201,6 +222,28 @@ namespace NocturneAccess.Systems.Navigation
             // Y points down: hi is the bottom of the box. Inside the span the game's hit can fire where the player stands; outside
             // it the floor is under the box (the stairwell's 1F door seen from 2F must stay downstairs).
             floorY = playerY >= lo - 50f && playerY <= hi + 50f ? playerY : hi;
+        }
+
+        /// <summary>
+        /// Whether the game has opened item box takaraIdx (gEvnRngBox.TakaraIdx, fldNpc_tag.ItemBoxIdx: the same number in every
+        /// dump): its fld_Npc.gfldTakaraWork entry has left phase 0. Read offline (2 Oct 2026): fld_Npc.fldItemBoxAdd sets
+        /// MotPhase 3 when the game's fldGbChkTakaraOpen says the box was opened, else 0; fldItemBoxCalcTask moves an opening box
+        /// through phases 1, 2 and 3. Seen in game: Annex 1F boxes 8 and 9 went from MotPhase 0 (15:05 dump) to 3 (15:06 dump)
+        /// after being opened. fldGbChkTakaraOpen itself runs in protected code and is not called.
+        /// </summary>
+        private static bool Opened(int takaraIdx)
+        {
+            if (takaraIdx < 0)
+                return false;
+            Il2CppReferenceArray<fldTakaraWork_tag> work = fld_Npc.gfldTakaraWork;
+            int n = work == null ? 0 : Math.Min(fld_Npc.gfldTakaraNum, work.Length);
+            for (int i = 0; i < n; i++)
+            {
+                fldTakaraWork_tag w = work[i];
+                if (w != null && w.TakaraIdx == takaraIdx)
+                    return w.MotPhase != 0 || w.MotPhaseNext != 0;
+            }
+            return false;
         }
 
         private static bool Near(Poi a, Poi b, float d) => (a.X - b.X) * (a.X - b.X) + (a.Z - b.Z) * (a.Z - b.Z) <= d * d;
@@ -283,7 +326,7 @@ namespace NocturneAccess.Systems.Navigation
 
             List<Poi> all = Build(gb);
             Log.Info($"[Nav:Poi] {all.Count} in field {gb.fieldID} area {gb.areaID}: " +
-                     string.Join("; ", all.Select(q => $"{q.Index} {q.Label} {q.ResName} at {FieldData.F(q.X)} {FieldData.F(q.Z)} d {FieldData.F(q.Distance)}{(q.Reachable ? "" : " (not reachable, left out)")}")));
+                     string.Join("; ", all.Select(q => $"{q.Index} {q.Spoken} {q.ResName} at {FieldData.F(q.X)} {FieldData.F(q.Z)} d {FieldData.F(q.Distance)}{(q.Reachable ? "" : " (not reachable, left out)")}")));
             List<Poi> list = all.Where(q => q.Reachable).ToList();
             if (list.Count == 0)
             {
@@ -297,7 +340,7 @@ namespace NocturneAccess.Systems.Navigation
             Poi poi = list[at];
             _selected = poi.Index;
             Selected = poi;
-            SpeechManager.Say($"{poi.Label}, {Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}. {at + 1} of {list.Count}.", interrupt: true);
+            SpeechManager.Say($"{poi.Spoken}, {Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}. {at + 1} of {list.Count}.", interrupt: true);
         }
 
         /// <summary>The selected point of interest, re-read from the game's list (null if none or the area changed).</summary>
