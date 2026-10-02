@@ -416,4 +416,6 @@ Francesco plans a debug and efficiency pass over everything so far. Where the wo
 - `TmpRouter`: the per-component classification cache is cleared at 20 000 entries (new UI copies every battle and save screen made it grow all session).
 - `WalkGrid.Plan`: the search arrays and queue are reused between calls (reset each time), instead of about 1.4 MB allocated per search.
 
-Proposed, waiting for Francesco: see the reply of 2 Oct 2026 (split `BattleReader`, share the two dump writers, prune `AnnouncementReader` entries, trim per-tick work in `WalkGrid.Ensure`).
+Proposed and **approved** (Francesco, 2 Oct 2026): `docs/REFACTOR-PLAN.md`, items 1 to 5, plus item 0, a bug fix.
+
+**0.0.29 and 0.0.30 verified in game (2 Oct 2026, 10:07 session, `session_2026-10-02_10-07-39.log`).** Francesco: everything "looks and feels exactly as before" after the cleanup; no `[ERROR]` or `[Update]` lines. Confirmed in the log: Analyze spoken ("Haunt Preta. Level 4. HP 30 of 30. MP 24 of 24. Null: Dark. Weak: Light/Magic. Skills: Feral Claw."; a Will o' Wisp's line adds "Str: Phys"); weakness hits (`Half turn: actor 1, nowcommand 1, nowindex 13, element 3` = Zio is Elec, the Preta's and Will o' Wisp's `aisyo[3]` 0x80000096); F5 log; results items (`item [2 0 0 0] itemcnt [1 0 0 0]`: "19 EXP. 67 macca. Medicine."); "Enemy turn.", "Preta: Feral Claw", damage amounts. One bug: an HP line ("Art, HP 48 of 48") before "Battle. Preta." in the first battle of the session, from the target poll running before the battle start (`docs/REFACTOR-PLAN.md` item 0).
