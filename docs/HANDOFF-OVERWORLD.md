@@ -53,7 +53,7 @@ Read-only disassembly of `GameAssembly.dll` (never `smt3hd.exe`); new helpers in
 
 Consequences for the plan: auto-walk on the world map is the simplest of the three modes (hold the pads of the compass direction, chosen again every tick, no camera to follow), and directions can name compass directions, which are also the arrow keys. Both need a walking map built for the world map's terrain and radius (step 3).
 
-## Step 2 built: 0.0.39 (2 Oct 2026, not yet tested)
+## Step 2 built: 0.0.39 (2 Oct 2026; verified 21:03 session)
 
 - **Page Up / Page Down work on the world map** (fields 1 and 2): entrances, people and Souls, item boxes, nearest first, with straight-line distance and compass direction, as in dungeons.
 - **Entrances** are named by the game's place pads, with the mod's word "entrance": "Yoyogi Park entrance, 52 metres, south-west. 5 of 10." Without a place pad: "Entrance". The big event volumes (`01eve_07` to `_09`) have no place pad and are not listed.
@@ -61,6 +61,14 @@ Consequences for the plan: auto-walk on the world map is the simplest of the thr
 - **Everything is listed** there: the dungeon walking map would mark every point unreachable.
 - End says "Directions are not available on the world map yet."; Home says "Auto-walk is not available on the world map yet."
 - Also fixed: an area with no floor (field 15 area 19, outside the Medical Center) rebuilt the walking map and logged "Grid: no floor" on every frame in blobber mode (5426 of 7616 lines of the 20:10 log).
+
+### Result (21:03 session, `session_2026-10-02_21-03-43.log`): verified
+
+- Page Up / Page Down at the Yoyogi Park entrance (field 2), 10 points: "Yoyogi Park entrance, here. 1 of 10.", "Soul, 6 metres, north-west.", "Yoyogi Park entrance, 14 metres, east.", "Soul, 21 metres, south.", "Shibuya entrance, 28 metres, south-east.", "Soul, 33 metres, south-east.", "Gaienmae Station entrance, 51 metres, east.", "Soul, 51 metres, north-east.", "Item box, 58 metres, east.", "Shinjuku Medical Center entrance, 62 metres, north-east."; Page Down wraps to 10 of 10.
+- End and Home spoke their "not available on the world map yet" lines.
+- Dungeon tools unchanged in the Medical Center annex (Page Up, Home walks arrived, explored doors, empty boxes).
+- Two world-map dumps for step 3: `navdump_2026-10-02_21-08-02.txt` (outside the Medical Center) and `navdump_2026-10-02_21-11-41.txt` (near Yoyogi Park). The 20:26 trace and the 21:11 walk (Medical Center to Yoyogi Park, `[Nav:Trace]` 21:11:18 to 21:11:44) are the ground truth for the walking map.
+- Not reached: the prologue map (field 1).
 
 ### Test (0.0.39)
 

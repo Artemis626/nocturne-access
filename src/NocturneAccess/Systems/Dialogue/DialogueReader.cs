@@ -20,6 +20,7 @@ namespace NocturneAccess.Systems.Dialogue
     /// - itfMesManager.SwitchSpeaker(bool sw, bool disp): the last call before a page says whether
     ///   the speaker box is shown for it.
     /// - itfMesManager.WindowDispOff(bool): the message window closed.
+    /// - itfMesManager.ClearMessage(): the game starts a new message page (not every page of one message calls it).
     /// - itfMesManager.itfMesMngRequestMessage(id, message, page, callmode): a message was requested;
     ///   its lines arrive a few hundred ms later. Until its page is spoken, PageDue is true, so a menu
     ///   opening at the same moment (the terminal) waits behind it (Systems/SpeechOrder.cs).
@@ -27,6 +28,10 @@ namespace NocturneAccess.Systems.Dialogue
     /// A page is spoken once no line or speaker change has arrived for SettleMs, as one
     /// interrupting utterance. The speaker is named when it changes, after the window reopens,
     /// or on every page if SpeakerEveryPage is set.
+    /// A page identical to the last one spoken is spoken again only when the game started a new message in between
+    /// (ClearMessage, a message request or the window closing). In battle talks the game blanks a page and writes it
+    /// again about 0.4 s later with no message call: three Shikigami lines were spoken twice (20:10 session, 2 Oct 2026).
+    /// In every archived log the 20 real repeats (the cylinder question on each visit, "Soul: *mumble*") had one.
     /// </summary>
     internal static class DialogueReader
     {
@@ -73,6 +78,8 @@ namespace NocturneAccess.Systems.Dialogue
                 AccessTools.Method(typeof(DialogueReader), nameof(AfterSwitchSpeaker)));
             Patcher.Postfix("Dialogue", mes, "WindowDispOff", new[] { typeof(bool) },
                 AccessTools.Method(typeof(DialogueReader), nameof(AfterWindowOff)));
+            Patcher.Postfix("Dialogue", mes, "ClearMessage", Type.EmptyTypes,
+                AccessTools.Method(typeof(DialogueReader), nameof(AfterClearMessage)));
             Type i = typeof(int);
             Patcher.Postfix("Dialogue", mes, "itfMesMngRequestMessage", new[] { i, i, i, i },
                 AccessTools.Method(typeof(DialogueReader), nameof(AfterRequestMessage)));
@@ -102,8 +109,6 @@ namespace NocturneAccess.Systems.Dialogue
                 return;
 
             Lines[index] = text;
-            if (Lines.All(l => l.Length == 0))
-                _clearedSinceSpoken = true;
             _dirty = true;
             _changedAt = Clock.ElapsedMilliseconds;
         }
@@ -130,9 +135,15 @@ namespace NocturneAccess.Systems.Dialogue
             _clearedSinceSpoken = true;
         }
 
+        private static void AfterClearMessage()
+        {
+            _clearedSinceSpoken = true;
+        }
+
         private static void AfterRequestMessage()
         {
             _requestedAt = Clock.ElapsedMilliseconds;
+            _clearedSinceSpoken = true;
         }
 
         /// <summary>Called every frame: speaks a page once it has settled.</summary>

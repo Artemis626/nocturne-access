@@ -14,6 +14,11 @@ namespace NocturneAccess.Systems.Menus
     /// <summary>
     /// Speaks the highlighted slot of the save/load file list: "File 1. AAAA, Level 1, Shinjuku Medical
     /// Center, NORMAL" or "File 2. No File".
+    /// The title screen's Continue screen (continueUI(Clone), one slot, the suspend data, no file number) is the
+    /// same saveUI: slMain.SetupUI loads one of two prefabs by slMain.gslMode (5 = Continue) and stores either's
+    /// saveUI in slMain._saveUI (read offline in slMain.SetupUI, RVA 0x2312BA0, 2 Oct 2026). Before 0.0.40 its slot
+    /// was silent (21:03 session); now it reads like a load slot without the file number: "Art, Level 8, Yoyogi
+    /// Park-West Plaza, NORMAL" (the level when the screen shows it).
     ///
     /// Sources (docs/class-index.md, "Save and load" and the highlight list):
     /// - Trigger: the highlighted slot's texts are rewritten with material TMC01 (16:18 session). Every
@@ -39,7 +44,7 @@ namespace NocturneAccess.Systems.Menus
         private const int MaxOwnerDepth = 4;
 
         private static readonly Regex SlotText = new Regex(
-            @"^Canvas_UI/saveUI\(Clone\)/savelist/savelist_data/savefile_mask/savefile/savefile(?:\(Clone\))?/(?:savefile_data/)?Text_(?:name|location|difficulty|new)TM$",
+            @"^Canvas_UI/(?:saveUI|continueUI)\(Clone\)/savelist/savelist_data/savefile_mask/savefile/savefile(?:\(Clone\))?/(?:savefile_data/)?Text_(?:name|location|difficulty|new)TM$",
             RegexOptions.Compiled);
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
