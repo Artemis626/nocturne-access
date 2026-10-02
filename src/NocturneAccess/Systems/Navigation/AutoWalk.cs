@@ -105,7 +105,7 @@ namespace NocturneAccess.Systems.Navigation
                 return;
 
             PadInput.ReleaseAll();
-            if (gb.areaID != _area || gb.fieldID < 10)
+            if (gb.areaID != _area || FieldState.WorldMap(gb))
             {
                 Stop("area change", null);
                 return;
@@ -240,7 +240,12 @@ namespace NocturneAccess.Systems.Navigation
         {
             if (_active)
                 Stop("new request", null);
-            if (!FieldState.IsExploring || gb.fieldID < 10)
+            if (FieldState.WorldMap(gb))
+            {
+                Say("Auto-walk is not available on the world map yet.");   // docs/HANDOFF-OVERWORLD.md plan step 4
+                return;
+            }
+            if (!FieldState.IsExploring)
             {
                 Say("Auto-walk is not available here.");
                 return;

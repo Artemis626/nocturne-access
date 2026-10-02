@@ -30,7 +30,12 @@ namespace NocturneAccess.Systems.Navigation
         internal static void Speak()
         {
             fldGlobalWork_t gb = fldGlobal.fldGb;
-            if (gb == null || !FieldState.IsExploring || gb.fieldID < 10)
+            if (FieldState.WorldMap(gb))
+            {
+                SpeechManager.Say("Directions are not available on the world map yet.", interrupt: true);   // docs/HANDOFF-OVERWORLD.md plan step 3
+                return;
+            }
+            if (gb == null || !FieldState.IsExploring)
             {
                 SpeechManager.Say("Directions are not available here.", interrupt: true);
                 return;

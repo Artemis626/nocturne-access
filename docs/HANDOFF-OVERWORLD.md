@@ -1,6 +1,6 @@
 # Overworld handoff (the Vortex World map)
 
-Written 2 Oct 2026 at the end of the dungeon chats, for a new chat dedicated to the overworld. Analysis only so far: nothing in this file is built. Read `CLAUDE.md` first (binding rules), then this file, then `docs/HANDOFF-PATHFINDING.md` and `docs/PATHFINDING.md` for the dungeon tools this work reuses.
+Written 2 Oct 2026 at the end of the dungeon chats, for a new chat dedicated to the overworld. Step 1 (the offline reading) is done and step 2 is built as 0.0.39: see the sections after the plan. Read `CLAUDE.md` first (binding rules), then this file, then `docs/HANDOFF-PATHFINDING.md` and `docs/PATHFINDING.md` for the dungeon tools this work reuses.
 
 ## Where we are
 
@@ -39,6 +39,45 @@ Written 2 Oct 2026 at the end of the dungeon chats, for a new chat dedicated to 
 4. **Auto-walk (Home)** once step 1 shows how movement is read, with a walking map that follows the terrain.
 5. **The moon phase** (a key or the banner), from game data, not the image.
 6. Later: explored entrances, Souls and boxes the same way as in dungeons; the big event volumes once understood.
+
+## Step 1 done: `fldPlayerCalc_Wm2` read offline (2 Oct 2026, overworld chat)
+
+Read-only disassembly of `GameAssembly.dll` (never `smt3hd.exe`); new helpers in `tools/native/README.md` step 4 name the static classes and fields. Rows in `docs/class-index.md` "Field navigation".
+
+- **The game's own world-map test is `fldGb.fieldID` below 10.** `fldPlayerCalc` runs `fldPlayerCalc_Wm2` then, instead of the dungeon routines. Two world maps so far: field 1, the prologue's Tokyo map (Francesco's 1 Oct 19:57 session: "Yoyogi-koen Station", Jinnan, Harajuku, people with "Talk", "Enter" at Yoyogi Park and the Medical Center; 290 collision polygons, nearly flat), and field 2, Shinjuku in the Vortex World.
+- **Input: the first person's pad buttons.** `DDS3_PADCHECK_PRESS(L, R, U, D, cip 0)`, no analog stick. `PadInput` already reads and presses exactly these. Input is ignored while `fldGb.NoInpPlCnt` is above 0 or `fldPlayer.fldWmWarpMode` is not 0 (entering a place).
+- **Directions are fixed to the world, not to the camera:** Up = north, Down = south, Right = east, Left = west, two keys = the diagonal in between (45 degrees). The camera never turns, so screen directions and compass directions are the same thing.
+- **Movement is immediate:** 16 units per tick (about 4.8 of the mod's metres a second), straight in the key's direction, no turning or easing as in fixed-camera rooms.
+- **Collision:** `fldHit.fldHitChkUnitVWM` with a radius of **30** on the world map (the dungeon walking map assumes 60 to 65), pushing the marker out of walls; slopes are followed through the floor normals.
+- **Why the dungeon walking map failed there:** besides the radius, the world map's ground includes `Attr` 0x800 floors (the polygon under the player at the Medical Center is one; in dungeons 0x800 overlays reach past walls), many walls are tilted (|n.y| 0.2 to 0.5, ignored as walls by `WalkGrid`), and the terrain spans 2000 units of height.
+
+Consequences for the plan: auto-walk on the world map is the simplest of the three modes (hold the pads of the compass direction, chosen again every tick, no camera to follow), and directions can name compass directions, which are also the arrow keys. Both need a walking map built for the world map's terrain and radius (step 3).
+
+## Step 2 built: 0.0.39 (2 Oct 2026, not yet tested)
+
+- **Page Up / Page Down work on the world map** (fields 1 and 2): entrances, people and Souls, item boxes, nearest first, with straight-line distance and compass direction, as in dungeons.
+- **Entrances** are named by the game's place pads, with the mod's word "entrance": "Yoyogi Park entrance, 52 metres, south-west. 5 of 10." Without a place pad: "Entrance". The big event volumes (`01eve_07` to `_09`) have no place pad and are not listed.
+- **No "upstairs" / "downstairs"** on the world map: heights there are the terrain's slopes.
+- **Everything is listed** there: the dungeon walking map would mark every point unreachable.
+- End says "Directions are not available on the world map yet."; Home says "Auto-walk is not available on the world map yet."
+- Also fixed: an area with no floor (field 15 area 19, outside the Medical Center) rebuilt the walking map and logged "Grid: no floor" on every frame in blobber mode (5426 of 7616 lines of the 20:10 log).
+
+### Test (0.0.39)
+
+1. Load a save on the Shinjuku world map (or leave the Medical Center). Press Page Up: "Shinjuku Medical Center entrance, 2 metres, north-west. 1 of 10." (the numbers depend on where you stand).
+2. Page Up again through the list: a Soul, an item box, "Gaienmae Station entrance", two "Yoyogi Park entrance" (two different entrances of the park), "Shibuya entrance", more Souls. Page Down goes back.
+3. Pick "Yoyogi Park entrance" and walk with the arrow keys or W A S D in the direction it names (Up = north, Right = east, two keys for diagonals). Page Down then Page Up (back to it) to hear the new distance and direction.
+4. End: "Directions are not available on the world map yet." Home: "Auto-walk is not available on the world map yet."
+5. Enter a place and come out: the list works again on the world map, and inside dungeons Page Up, End and Home work as before.
+6. If you reach the prologue map again (a new game), Page Up there too: entrances and "Person".
+7. Shift+F6 once on the world map, so the dump shows the list as spoken.
+
+## Plan from here (one step per test run)
+
+3. **A walking map for the world map**, checked offline first: floors of any `Attr` that are ground, walls by the world map's own radius (30) including tilted walls, heights joined along slopes. Ground truth: the trace of Francesco's walk from the Medical Center to Yoyogi Park (`[Nav:Trace]`, 20:26 to 20:27) must lie on walkable cells and connect. Then Page Up leaves out what cannot be reached, and **End** speaks the route in compass directions: "South-west, 12 metres, then south."
+4. **Auto-walk (Home)**: hold the pads of each run's compass direction (`PadInput`, the first person's buttons), stop on any key, on an event, or when the game's "Enter" / "Talk" fires.
+5. **The moon phase** from game data (the HUD draws it as images; no text in the log): candidates `evtMoon.evtGetAgeOfMoon()`, `evtGetAgeOfMoon16()`; to read offline first, never call protected code.
+6. Later: explored entrances, the big event volumes.
 
 ## Open items from the last dungeon session (not overworld)
 

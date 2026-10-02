@@ -6,6 +6,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 Francesco reached the overworld (Shinjuku, field 2) and starts a new chat for it: read `docs/HANDOFF-OVERWORLD.md` (facts from the 20:10 session, its two dumps and the video; the plan, one step per test run). The dungeon tools stay as they are. Small open items: a demon conversation line spoken twice, the Annex 1F ramp item box, custom waypoints later.
 
+**Overworld chat, 2 Oct 2026: step 1 done, 0.0.39 built (step 2, Page Up / Page Down on the world map), not yet tested.** Test steps and the plan from here: `docs/HANDOFF-OVERWORLD.md` ("Step 2 built", "Plan from here"). After the test: read the log (`[Nav:Poi]` lines on field 2, no "Grid: no floor" flood), then step 3 (a walking map for the world map, checked offline against the 20:26 trace, and End). Never push to GitHub unless Francesco gives the order.
+
 ## The project in one paragraph
 
 Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III Nocturne HD Remaster (Steam, Unity 2019.4.10f1 IL2CPP, game folder `E:\SteamLibrary\steamapps\common\smt3hd`, repo `E:\Claude projects\Nocturne Access`). It is one MelonLoader 0.6.1 mod (net6.0, HarmonyX, Il2CppInterop) that speaks through NVDA by calling `nvdaControllerClient.dll` directly. Francesco is a low-vision NVDA user: he tests in game and decides design; Claude writes the code and owns the architecture.
@@ -60,6 +62,7 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.36** | Blobber cues silent while the game moves the player itself (the cutscene before Forneus sounded like a walk) | Built 2 Oct 2026, not yet tested |
 | **0.0.37** | Door warp table (where each door leads) decoded and written to the Shift+F6 dump, nothing spoken yet | Verified 2 Oct 17:11 (matches every door gone through); analysis in `docs/EXPLORED-DOORS-PLAN.md`; next: Francesco picks the wording |
 | **0.0.38** | Door kinds: a plain door says "room", "passage" or "exit" (Page Up / Page Down, Home, End); off with `DoorKinds = false` in the config, revert point f0621c8 | Verified 2 Oct 20:10 ("Door, explored, passage") |
+| **0.0.39** | World map step 2: Page Up / Page Down list entrances ("Yoyogi Park entrance"), people, Souls and item boxes on the world map (fieldID below 10, the game's own test); End and Home say "not available on the world map yet"; no "Grid: no floor" flood | Built 2 Oct 2026 (overworld chat), not yet tested |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 

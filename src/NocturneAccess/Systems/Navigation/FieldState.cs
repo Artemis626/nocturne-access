@@ -41,6 +41,13 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>fldPlayerCalc_Nml (third-person movement) calls since start; with SyukanCount, a change means the game took movement.</summary>
         internal static int NmlCount { get; private set; }
 
+        /// <summary>
+        /// The world map: the game's own test. fldPlayer.fldPlayerCalc runs fldPlayerCalc_Wm2 (the world map's movement)
+        /// instead of the dungeon routines when fldGb.fieldID is below 10 (read offline, RVA 0x206D2A3, 2 Oct 2026): the
+        /// Vortex World (field 2) and the prologue's Tokyo map (field 1, session of 1 Oct 2026 19:57).
+        /// </summary>
+        internal static bool WorldMap(Il2Cppfield_H.fldGlobalWork_t gb) => gb != null && gb.fieldID < 10;
+
         internal static void Install()
         {
             Patcher.Prefix("Navigation", typeof(fldPlayer), nameof(fldPlayer.fldPlayerCalc), Type.EmptyTypes,

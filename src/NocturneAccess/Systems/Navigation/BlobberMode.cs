@@ -114,8 +114,8 @@ namespace NocturneAccess.Systems.Navigation
             if (gb == null)
                 return;
 
-            // The world map (fieldID below 10) has its own movement routine (fldPlayerCalc_Wm2): blobber mode stays out.
-            if (gb.fieldID < 10)
+            // The world map has its own movement routine (fldPlayerCalc_Wm2): blobber mode stays out.
+            if (FieldState.WorldMap(gb))
             {
                 Leave("world map");
                 RefuseCentre();

@@ -29,3 +29,15 @@ Needs: `llvm-objdump` (WinLibs, on PATH), `ilspycmd`, perl. Outputs go to `resea
    The three hex numbers are the `.text` virtual address, file offset and size (`llvm-readobj --sections GameAssembly.dll`).
 
 IL2CPP notes: static methods take their arguments in rcx, rdx, r8, r9 and a trailing `MethodInfo*` (usually 0); a class's static fields are at `[TypeInfo + 0xB8]`, in declaration order (8 bytes per reference); array data starts at +0x20, length at +0x18.
+
+4. Static fields and class pointers (2 Oct 2026, the world map's `fldPlayerCalc_Wm2`). IL2CPP code reaches a class's static fields through a global holding its class pointer (`movq X(%rip), %rax` ... `movq 0xb8(%rax), %rax` ... `OFFSET(%rax)`). To name those globals and offsets:
+
+   ```
+   llvm-objdump -d --no-show-raw-insn --start-address=$((0x180000000+0x01C00000)) --stop-address=$((0x180000000+0x028A0000)) GameAssembly.dll | perl tools/native/typeinfo.pl research/native/symmap.txt > research/native/typeinfo.txt
+   bash tools/native/dis.sh 'fldPlayer.fldPlayerCalc_Wm2(' | perl tools/native/annot-ti.pl research/native/typeinfo.txt
+   perl tools/native/statics.pl research/native/acs fldPlayer        # static field offsets from TypeInfo+0xB8
+   perl tools/native/fields.pl research/native/acs/field_H/fldGlobalWork_t.cs   # instance field offsets
+   perl tools/native/consts.pl GameAssembly.dll 1828c9e30            # a float constant the code loads (movss X(%rip))
+   ```
+
+   `typeinfo.pl` (about 7 s) lists, for every global followed by the class-init test `testb $0x2, 0x12f(reg)`, the classes whose methods use it, most often first. The first name is usually the class itself, not always: a static class used everywhere is named by its heaviest user. Check with the static field offsets. Verified: `0x182e4e678` is `fldGlobal` (its `fldGb` at static offset 0x48, although `fldCommand` is listed first), `0x182e44900` is `dds3Basic`, `0x182e4eeb8` `fldPlayer`, `0x182e4deb0` `fldMain`. `consts.pl` reads the `.xdata` section (virtual address 0x1828BE000, file offset 0x28BC800), where the code's float constants live.

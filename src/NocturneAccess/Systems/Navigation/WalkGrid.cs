@@ -90,7 +90,9 @@ namespace NocturneAccess.Systems.Navigation
         private static bool Ensure(int field, int area, float px, float py, float pz, bool everyFrame)
         {
             CollisionCache.Refresh(field, area);
-            bool same = _version == CollisionCache.Version && _field == field && _area == area && Contains(px, pz);
+            // An area with no floor has no window to leave: it was rebuilt and logged on every frame in blobber mode
+            // (field 15 area 19, 5 426 of the 7 616 lines of the 20:10 session, 2 Oct 2026).
+            bool same = _version == CollisionCache.Version && _field == field && _area == area && (_w == 0 || Contains(px, pz));
             long now = Clock.ElapsedMilliseconds;
             if (same && everyFrame && now - _hiddenReadMs < HiddenNpcPollMs)
                 return _w > 0;

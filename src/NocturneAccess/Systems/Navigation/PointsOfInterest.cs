@@ -30,8 +30,9 @@ namespace NocturneAccess.Systems.Navigation
 
         public bool Explored;           // a generic door (no place name) the player has gone through (ExploredDoors)
         public bool Empty;              // an item box the game has opened (fld_Npc.gfldTakaraWork MotPhase, PointsOfInterest.Opened)
+        public bool World;              // on the world map (FieldState.WorldMap): doors are entrances to places, heights are terrain
 
-        public string Label => Kind == PoiKind.Door ? (Name.Length > 0 ? Name + " door" : "Door")
+        public string Label => Kind == PoiKind.Door ? (World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : "Door")
             : Kind == PoiKind.Place ? Name
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
 
@@ -71,6 +72,8 @@ namespace NocturneAccess.Systems.Navigation
     /// - item boxes: box TakaraIdx 0 or more, or an NPC of Type 999 ("itembox1").
     /// Other story triggers ("NNeve_MM") are invisible and left out. Unnamed things get the mod's own category words. Page Up / Page Down move the selection (nearest first) and speak kind, distance in
     /// metres (game units / 100) and compass direction (north = +Z, the game's compass).
+    /// On the world map (0.0.39) the same list is read: doors are entrances named by their place pads ("Yoyogi Park
+    /// entrance"), every point is listed (no walking map there yet) and heights are not spoken.
     /// </summary>
     internal static class PointsOfInterest
     {
@@ -92,7 +95,11 @@ namespace NocturneAccess.Systems.Navigation
         internal static List<Poi> Build(fldGlobalWork_t gb)
         {
             float px = gb.playerX, py = gb.playerY, pz = gb.playerZ;
-            bool grid = WalkGrid.Ensure(gb.fieldID, gb.areaID, px, gb.playerY, pz);
+            // The world map is a sloped terrain (y -2120 to -117 in Shinjuku) with a 30-unit collision radius
+            // (fldHit.fldHitChkUnitVWM): the dungeon walking map marked every point there "not reachable" (20:26 dump,
+            // 2 Oct 2026), so everything is listed until the world map has its own (docs/HANDOFF-OVERWORLD.md).
+            bool world = FieldState.WorldMap(gb);
+            bool grid = !world && WalkGrid.Ensure(gb.fieldID, gb.areaID, px, gb.playerY, pz);
             var list = new List<Poi>();
             Il2CppReferenceArray<fldResHead_t> ranges = fldEveHit.gEvnRng;
             Il2CppReferenceArray<putevebox_s> boxes = fldEveHit.gEvnRngBox;
@@ -133,7 +140,7 @@ namespace NocturneAccess.Systems.Navigation
                 }
                 if (kind == null)
                     continue;
-                bool generic = kind == PoiKind.Door && placeName.Length == 0;
+                bool generic = kind == PoiKind.Door && placeName.Length == 0 && !world;   // world map entrances lead to places, not rooms
 
                 VolumeSpan(box, gb.playerY, out float floorY, out float nx, out float nz);
                 bool doorLike = kind == PoiKind.Door || kind == PoiKind.Place;
@@ -154,6 +161,7 @@ namespace NocturneAccess.Systems.Navigation
                     Distance = (float)Math.Sqrt((p.x - px) * (p.x - px) + (p.z - pz) * (p.z - pz)),
                     Explored = generic && ExploredDoors.IsExplored(gb.fieldID, gb.areaID, name),
                     Empty = kind == PoiKind.ItemBox && Opened(takara),
+                    World = world,
                     DoorKind = generic ? DoorTable.KindOf(gb.fieldID, gb.areaID, name) : "",
                 });
             }
@@ -321,7 +329,7 @@ namespace NocturneAccess.Systems.Navigation
         internal static void Cycle(int step)
         {
             fldGlobalWork_t gb = fldGlobal.fldGb;
-            if (gb == null || !FieldState.IsExploring || gb.fieldID < 10)
+            if (gb == null || !FieldState.IsExploring)
             {
                 SpeechManager.Say("No points of interest here.", interrupt: true);
                 return;
@@ -360,7 +368,8 @@ namespace NocturneAccess.Systems.Navigation
             return Build(gb).FirstOrDefault(q => q.Index == _selected && q.Reachable);
         }
 
-        /// <summary>"5 metres, south-east", plus ", upstairs" or ", downstairs" when the point is on another floor.</summary>
+        /// <summary>"5 metres, south-east", plus ", upstairs" or ", downstairs" when the point is on another floor (not on
+        /// the world map, where heights are the terrain's slopes).</summary>
         internal static string Describe(float px, float py, float pz, Poi p)
         {
             float dx = p.X - px, dz = p.Z - pz;
@@ -371,6 +380,8 @@ namespace NocturneAccess.Systems.Navigation
                 double bearing = (Math.Atan2(dx, dz) * 180.0 / Math.PI + 360) % 360;   // 0 = +Z = north, 90 = +X = east
                 text += $", {Compass[(int)Math.Round(bearing / 45.0) % 8]}";
             }
+            if (p.World)
+                return text;
             // Y points down; a door's volume centre is about 100 above its floor, a person's or box's position on it.
             float above = py - p.FloorY;
             if (above > 150f)
