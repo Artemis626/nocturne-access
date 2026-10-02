@@ -12,8 +12,8 @@ Status: **approved, not yet implemented.** Revert point: the commit that added t
 ## 0. Bug: an HP line before the battle starts
 
 - **Seen:** `session_2026-10-02_10-07-39.log`, first battle of the session: `[Battle] Battle UI up.` at 10:10:14.356, then 5 ms later `Target formindex 0 (Art).` and "Art, HP 48 of 48", one second before "Battle. Preta.". The second battle did not do it.
-- **Cause:** `BattleReader.Tick` calls `PollTarget` from the moment the party panel appears, before `_started` (the start announcement, `StartDelayMs` = 1000). A target-help call (`nbDispText` with a name) during the battle setup set `_targetCallAt`, so `PollTarget` read `nbTarSelProcess` (`nowform` 0) and spoke it.
-- **Fix:** in `Tick`, poll targets and speak target banners only once `_started` is true (the banner path `SpeakPendingBanner` for target banners too); drop a target seen before that. Everything after the start is unchanged.
+- **Cause:** `BattleReader.Tick` calls `PollTarget` from the moment the party panel appears, before `_started` (the start announcement, `StartDelayMs` = 1000). ~~A target-help call during the battle setup set `_targetCallAt`~~ Corrected while implementing: no target call came before it (no banner in the log). `_targetCallAt` started at `long.MinValue`, and `now - long.MinValue` overflows to a negative number, so the 300 ms target window counted as open until the first real target call of the session. `PollTarget` read `nbTarSelProcess` (`nowform` 0, Art) and spoke it. That is why only the session's first battle did it.
+- **Fix:** `_targetCallAt` starts at `long.MinValue / 2`, as the other timers in the mod do, so it cannot overflow. As approved, `Tick` also polls targets and speaks target banners only once `_started` is true; a target seen before that is dropped. Everything after the start is unchanged.
 
 ## 1. Split `BattleReader` (about 780 lines)
 

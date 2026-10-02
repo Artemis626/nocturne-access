@@ -97,7 +97,9 @@ namespace NocturneAccess.Systems.Battle
         private static long _pendingSince;
 
         // Targeting
-        private static long _targetCallAt = long.MinValue;
+        // Halved, as elsewhere: now - long.MinValue overflows to a negative number, which read as a target call "just now"
+        // in the first battle of a session (10:10 on 2 Oct: "Art, HP 48 of 48" before "Battle. Preta.").
+        private static long _targetCallAt = long.MinValue / 2;
         private static string _targetRace = "";
         private static string _targetName = "";
         private static int _lastTargetForm = int.MinValue;
@@ -204,6 +206,11 @@ namespace NocturneAccess.Systems.Battle
         {
             if (_pendingBanner == null)
                 return;
+            if (_pendingIsTarget && !_started)
+            {
+                _pendingBanner = null;   // a target before the start is announced, as in Tick
+                return;
+            }
             if (!UiUtil.IsVisible(_bannerComponent))
             {
                 if (now - _pendingSince > BannerWaitMs)
@@ -350,7 +357,11 @@ namespace NocturneAccess.Systems.Battle
             long now = Clock.ElapsedMilliseconds;
             try
             {
-                PollTarget(now);
+                // Nothing can be targeted before the start is announced: a target seen while the battle is set up is dropped.
+                if (_started)
+                    PollTarget(now);
+                else
+                    _targetCallAt = long.MinValue / 2;
                 SpeakPendingBanner(now);
 
                 if (!_started && now - _activeSince >= StartDelayMs)
