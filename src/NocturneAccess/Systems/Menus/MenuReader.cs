@@ -164,6 +164,10 @@ namespace NocturneAccess.Systems.Menus
         internal static bool IsActive(string name)
             => States.Any(s => s.Spec.Name == name && (s.Current >= 0 || s.PendingSlot >= 0));
 
+        /// <summary>The screen title last written for the named menu ("What will you use?" for the pause menu's lists), or "".</summary>
+        internal static string TitleOf(string name)
+            => States.FirstOrDefault(s => s.Spec.Name == name)?.Title ?? "";
+
         internal static void Install()
         {
             if (!Config.MenusEnabled.Value)

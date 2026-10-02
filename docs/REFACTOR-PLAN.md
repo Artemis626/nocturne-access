@@ -1,6 +1,6 @@
 # Refactor plan (approved by Francesco, 2 Oct 2026)
 
-Status: **done in 0.0.31 (2 Oct 2026), built, not yet tested in game.** Revert point: `aa9c7c2`, the commit that added this file (0.0.30 verified in game). One commit per item, each revertable alone:
+Status: **done in 0.0.31 (2 Oct 2026), verified in game (12:03 session: no regression, no HP line before the battle start, trace once a second).** Revert point: `aa9c7c2`, the commit that added this file (0.0.30 verified in game). One commit per item, each revertable alone:
 
 | Item | Commit |
 | --- | --- |

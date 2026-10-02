@@ -136,6 +136,23 @@ Also seen: `DisconnectCaution/saveannounce_tex/Text_announce01TM`, `Text_announc
 | Magatama | `magUI(Clone)/magtitle_window/TextTM`, `magname_base/TextTM` (`TMC19`), `magnote/Text01TM..03TM`, `magstatus/magstatus_item01..05/TextTM` | "Which will you ingest?", "Marogareh", "Imparts Physical skills", "Normal resistance", stat labels. |
 | Magatama → Stats | `campUIBase/statusUI(Clone)/title_window/TextTM` = "Which will you ingest?", `sskill/sskill_obtained01..08/TextTM` | Stats screen opened from the Magatama screen; skills to obtain are empty for now. |
 
+### Camp menu lists: item and skill cursor (2 Oct 2026, 12:03 session dumps; proxy decompile; disassembly, read-only)
+
+Used from 0.0.32 by `Systems/Menus/CampListReader.cs` and `StatusReader.cs`.
+
+| Name | Source | Notes |
+| --- | --- | --- |
+| Unusable entries | Log, 12:03 session | In the item and skill lists an entry that cannot be used now (Maragi Rock in the field, Art's Lunge and Analyze, Pixie's Zio and Seduce) is drawn `TMC02` and stays `TMC02` under the cursor: no row turns `TMC01`, so the material cannot give the cursor. Moving the cursor rewrites only `menu_note/Text01TM..03TM` (the help, about 200 ms after `datSkillHelp_msg.Get` / `datItemHelp_msg.Get`). |
+| `Il2Cpp.cmpDrawItem.cmpDrawItemList(fclPanelPos_t pPanelPos, cmpCursorInfo_t pCursorInfo, Il2CppSystem.Object pData, sbyte DrawMode, int Rate, uint OtNo)` | Proxy; disassembly RVA 0x2522980 | Draws the item list; postfix gives its cursor. `fclPanelPos_t` is in `Il2Cppfacility_H`. |
+| `Il2Cpp.cmpDrawSkill.cmpDrawSkillList(...)` (same parameters) | Proxy; disassembly RVA 0x2525040 | Draws the skill list; `pData` is type-checked and used as the unit (`pStock` for `cmpSkillNameCostDraw`); the help is drawn for the skill at `cmpGetCursorIndex(pCursorInfo)`. |
+| `Il2Cpp.cmpMisc.cmpGetCursorIndex(cmpCursorInfo_t)` | Disassembly RVA 0x22ED1C0 | Returns `CursorPos.Index + CursorPos.Shift` (byte at +0x14 plus short at +0x12): the entry under the cursor; `Index` is the visible row. |
+| `Il2Cpp.cmpCalc.cmpGetSelectSkillID()` | Disassembly RVA 0x2516370 | Reads the chosen unit's `skill[cmpGetCursorIndex(CMP_GBWK.WorkCI[0])]`. `cmpGetSelectItemID` and `cmpCreateLocalItem` start with a jump into protected code: not readable offline. |
+| `Il2Cpp.cmpInit.CMP_GBWK` → `Il2Cppcamp_H.cmpGlobalWork_t` | Proxy | Fields: `RootCI`, `WorkCI` (`cmpCursorInfo_t[]`), `StockInfo`, `ItemCnt` (byte), `ItemListFlag`, `ItemIdx` (`ushort[]`, item ids of the list shown), `ItemType` (sbyte), `StatusFlag`. |
+| `Il2Cppcamp_H.cmpCursorInfo_t` | Proxy | `StepY`, `StopFlag`, `CursorSize`, `CursorPos` (`cmpCursorPos_t`). |
+| `Il2Cppcamp_H.cmpCursorPos_t` | Proxy | `ListNums` (byte), `InvisibleListNums`, `Index` (short), `Shift`, `DrawShift`, `ShiftMax` (byte), `pStr`, `pFlag`. Meanings of `ListNums` / `ShiftMax` to check in the log (`[CampList] ... list opened`). |
+| `dds3GlobalWork.DDS3_GBWK.item` (`byte[]`) | Proxy; Ref MatthiewNocturne BetterNewGamePlus (`item[12]` Chakra Elixir) | Count of each item held, indexed by item id. |
+| `statusUI.obtainedText`, `awaitText`, `aisyoText` | Proxy; Log 12:03 session; Ref MatthiewNocturne DisplayFutureSkills (writes `awaitText[i]`) | Stats screen: learned skills (`sskill_obtained01..08`: "Dia", "Zio", "Seduce"), skills learned at later levels (`sskill_await2_01..`, `TMC14`: "Rakunda", "？" for hidden ones), affinities (`sfeature/help_mask`: "Str: Elec"; that `aisyoText` is this component is to verify in the log). |
+
 ### Name entry (Log, 30 Sep 2026 20:44 session, probe and F6 dumps)
 
 Used for the player (family name, given name, nickname), Yuko (opens on the confirmation with "Takao / Yuko") and the classmate. All paths under `Canvas_UI/nameUI_oubei(Clone)/`.

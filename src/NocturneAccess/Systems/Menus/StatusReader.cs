@@ -219,7 +219,7 @@ namespace NocturneAccess.Systems.Menus
             return best;
         }
 
-        /// <summary>"Artemis Soul, Fiend. Level 2. HP 34 of 34. MP 14 of 14. Str 3, Mag 2, Vit 3, Agi 3, Luc 3. 1 point left"</summary>
+        /// <summary>"Artemis Soul, Fiend. Level 2. HP 34 of 34. MP 14 of 14. Str 3, Mag 2, Vit 3, Agi 3, Luc 3. Skills: ... 1 point left"</summary>
         private static string Summary()
         {
             var parts = new List<string>();
@@ -240,9 +240,47 @@ namespace NocturneAccess.Systems.Menus
             }
             if (stats.Count > 0)
                 parts.Add(string.Join(", ", stats));
+            AddSkills(parts);
             if (_levelUp && _points != int.MinValue)
                 parts.Add(_points == 1 ? "1 point left" : $"{_points} points left");
             return string.Join(". ", parts) + ".";
+        }
+
+        /// <summary>
+        /// "Skills: Dia, Zio, Seduce. Skills to learn: Rakunda, and 2 hidden. Str: Elec." (12:03 session, 2 Oct: the
+        /// screen shows the learned skills in obtainedText (sskill_obtained01..08), the ones learned at later levels in
+        /// awaitText (sskill_await2_01..), "？" where the game keeps one hidden, and the affinities in aisyoText
+        /// (sfeature/help_mask, "Str: Elec").
+        /// </summary>
+        private static void AddSkills(List<string> parts)
+        {
+            List<string> learned = Visible(_ui.obtainedText, out _);
+            if (learned.Count > 0)
+                parts.Add("Skills: " + string.Join(", ", learned));
+            List<string> coming = Visible(_ui.awaitText, out int hidden);
+            if (hidden > 0)
+                coming.Add(coming.Count == 0 ? $"{hidden} hidden" : $"and {hidden} hidden");
+            if (coming.Count > 0)
+                parts.Add("Skills to learn: " + string.Join(", ", coming));
+            string affinity = Text(_ui.aisyoText);
+            if (affinity.Length > 0)
+                parts.Add(affinity.TrimEnd('.'));
+        }
+
+        /// <summary>The visible, non-empty texts in order; "？" (a skill the game keeps hidden) only counted.</summary>
+        private static List<string> Visible(Il2CppReferenceArray<TextMeshProUGUI> texts, out int hidden)
+        {
+            var list = new List<string>();
+            hidden = 0;
+            for (int i = 0; texts != null && i < texts.Length; i++)
+            {
+                string text = Text(texts[i]);
+                if (text == "？" || text == "?")
+                    hidden++;
+                else if (text.Length > 0)
+                    list.Add(text);
+            }
+            return list;
         }
 
         /// <summary>
