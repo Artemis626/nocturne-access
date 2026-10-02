@@ -52,7 +52,8 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.32** | Item and skill lists read (cursor from the game, counts, costs, "unavailable", descriptions); Stats adds skills, skills to learn and affinities | Tested 13:20: every entry read as the first row (cursor fields swapped); elevator left out of B1 (walking map window) |
 | **0.0.33** | Fixes: list row from `Shift`; "Empty." for an empty list; the walking map keeps whole areas that fit (elevator back in B1) | Verified 2 Oct 13:45 (lists, Stats skills, elevator) |
 | **0.0.34** | Talking demons listed ("Demon"); the walking map and wall cues follow the game's own collision switches (annex gate open after the pass); Magatama screen read | Partly tested 2 Oct 14:48: demons listed, collision switches read; gate, demon talk and Magatama not reached |
-| **0.0.35** | `docs/EXPLORED-DOORS-PLAN.md` items 1 to 3: generic doors gone through say "explored" (Page Up / Page Down, Home, End), kept per save file in `UserData/NocturneAccess/Explored/fileNN.txt`; item boxes the game has opened say "empty" | Built 2 Oct 2026, **not yet tested in game**; test steps below |
+| **0.0.35** | `docs/EXPLORED-DOORS-PLAN.md` items 1 to 3: generic doors gone through say "explored" (Page Up / Page Down, Home, End), kept per save file in `UserData/NocturneAccess/Explored/fileNN.txt`; item boxes the game has opened say "empty" | Verified 2 Oct 16:11 (marks both sides, End and Home wording, saved per file; suspend data keeps its own list) |
+| **0.0.36** | Blobber cues silent while the game moves the player itself (the cutscene before Forneus sounded like a walk) | Built 2 Oct 2026, not yet tested |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 
@@ -86,7 +87,7 @@ What to check in the log: `[Nav:Explored]` lines (`File N loaded`, `... marked (
 
 ## Open problems and next steps (in order)
 
-**1 Oct 2026, evening: navigation continues from `docs/HANDOFF-PATHFINDING.md` (rewritten): Francesco is playing through the game. **0.0.31 (the refactor plan) verified; 0.0.34 partly tested. **0.0.35 built: `docs/EXPLORED-DOORS-PLAN.md` items 1 to 3 (explored doors per save file, empty item boxes), test steps in "0.0.35 test" below; item 4, custom waypoints, later only.** Open: the Annex 1F ramp item box (`docs/HANDOFF.md`, end); still to test from 0.0.34: annex gate after the pass, talking to a demon via Home, Magatama**. He reports bugs and missing features: read each session's log, fix, record (`docs/HANDOFF-PATHFINDING.md`), then the open problems listed there.**
+**1 Oct 2026, evening: navigation continues from `docs/HANDOFF-PATHFINDING.md` (rewritten): Francesco is playing through the game. **0.0.31 (the refactor plan) verified; 0.0.34 partly tested. **0.0.35 verified (explored doors per save file); "empty" item boxes not yet heard in a log. 0.0.36: blobber cues silent during scripted movement (test: a cutscene that moves the player should be silent, walking afterwards cues as before). Item 4, custom waypoints, later only.** Open: the Annex 1F ramp item box (`docs/HANDOFF.md`, end); still to test from 0.0.34: annex gate after the pass, talking to a demon via Home, Magatama**. He reports bugs and missing features: read each session's log, fix, record (`docs/HANDOFF-PATHFINDING.md`), then the open problems listed there.**
 
 **1 Oct 2026, end of the first navigation chat: continue navigation from `docs/HANDOFF-PATHFINDING.md` (rewritten): blobber mode must keep the game's own controls, snap only movement, and never block on cues; fixed-camera rooms get points of interest with auto-walk later.**
 

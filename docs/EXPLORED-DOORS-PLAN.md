@@ -1,6 +1,6 @@
 # Plan: explored doors (and, later, custom waypoints)
 
-Status: **items 1 to 3 implemented in 0.0.35 (2 Oct 2026), not yet tested in game.** Item 4 (custom waypoints) is recorded for later and must not be built yet. Revert point: commit 4f1f035 (0.0.34).
+Status: **items 1 to 3 implemented in 0.0.35 (2 Oct 2026); item 1 verified in game (16:11 session), item 3 not yet heard.** Item 4 (custom waypoints) is recorded for later and must not be built yet. Revert point: commit 4f1f035 (0.0.34).
 
 ## Why (Francesco, 2 Oct 2026)
 
@@ -19,6 +19,7 @@ Nocturne is a notoriously hard and dispersive game: even sighted players get los
 - **Kept across sessions, one list per save file (Francesco, 2 Oct 2026; built in 0.0.35):** `UserData/NocturneAccess/Explored/file01.txt` for the game's File 1 (one `door field/area/name` per line). Loading a file reads its list (`slMain.slLoadProc_closeFile`, file = `slMain.gslSelect` + 1); the title screen (`dds3TitleMain.dds3TitleInit`) empties it, so a new game starts with none; a door gone through is written at once to the file in play (a quit without saving keeps it: the player has been there); a new game's marks are held until its first save; saving to a file (`slSaveProc_closeFile` or `slSaveWriteEnd_saveData`, whichever fires: logged) writes the whole list there. Not handled: a quick save or suspend data, if the game has one (to watch in the log).
 - **Never blocks or changes input**, as every navigation cue (CLAUDE.md). Logging: `[Nav:Explored] 15/4/01d_15 marked (left through it)` so the test can be checked in the log.
 - **Possible extension to propose, not to build unasked:** remember where the door led ("Door to Annex 1F", from the location banner or the area name after the change). It may help the mental map more than "explored" alone; ask Francesco first.
+- **Francesco, after the 0.0.35 test:** connecting doors (B1 to the Underground Facility) sound the same as doors of small rooms; "a godsend" if the data told them apart; kept as is for now. Findings: the door volume's `areaname` is the door's own floor block ("01", "02" within an area), not its destination; the destination is in the door's event script (`union` looks like an offset into it; not decoded). Usable without decoding: going through a door gives both ends (`[Nav:Explored]` logs "came in through it from 15/21/01d_04"), so a later step can store the pair and describe what is behind an explored door: a room with one door (dead end), an area with N doors (a corridor or hub), or the area's location banner name. Ask Francesco before building.
 
 ## 2. The purpose to keep in mind while building item 1
 

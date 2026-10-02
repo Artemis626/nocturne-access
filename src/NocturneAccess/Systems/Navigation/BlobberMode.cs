@@ -200,8 +200,21 @@ namespace NocturneAccess.Systems.Navigation
                 else if (_prevRealU && !_realU && _otherKey.Length == 0)
                     TryStartSnap(gb, moveX, moveZ);
 
-                AnnounceTurn(gb);
-                CueAtCentre(gb, moveX, moveZ);
+                if (gameMoved)
+                {
+                    AnnounceTurn(gb);
+                    CueAtCentre(gb, moveX, moveZ);
+                }
+                else
+                {
+                    // The game moves or turns the player itself (a cutscene, a speaker turning to face): no cues, a fresh
+                    // baseline. Before Forneus (16:11 session, 2 Oct 2026) the scripted walk across the Annex Lobby (syukan 0
+                    // a second, no keys, no pads) spoke "East, open ahead", "South, open ahead", "Opening left" and sounded
+                    // like the mod walking. The facing spoken is kept: once the player has control again, AnnounceTurn
+                    // speaks the facing only if the game turned them (and on a new area, where it is -1).
+                    _cueCell = CellKey(x, z);
+                    _haveView = false;
+                }
             }
 
             _prevRealU = _realU;
