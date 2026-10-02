@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Text;
 using Il2Cpp;
 using Il2Cppfield_H;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
-using MelonLoader.Utils;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
 using NocturneAccess.Systems.Navigation;
@@ -29,18 +27,13 @@ namespace NocturneAccess.Capture
         private const int NearestCollision = 12;
         private const int NearestEvents = 15;
 
-        internal static string Folder => Path.Combine(MelonEnvironment.UserDataDirectory, "NocturneAccess", "NavDumps");
+        private static DumpWriter _dump;
 
-        private static StringBuilder _file;
-        private static List<string> _summary;
+        private static void Both(string line) => _dump.Both(line);
 
-        private static void Both(string line)
-        {
-            _file.AppendLine(line);
-            _summary.Add(line);
-        }
+        private static void FileOnly(string line) => _dump.FileOnly(line);
 
-        private static void FileOnly(string line) => _file.AppendLine(line);
+        private static void Section(string name, Action body) => _dump.Section(name, body);
 
         internal static void Dump()
         {
@@ -52,8 +45,7 @@ namespace NocturneAccess.Capture
                 return;
             }
 
-            _file = new StringBuilder();
-            _summary = new List<string>();
+            _dump = new DumpWriter("[Nav:Dump]", "NavDumps", "navdump", "Navigation");
             PlayerSnapshot s = default;
 
             FileOnly($"Nocturne Access {ModMain.ModVersion} navigation dump, {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
@@ -68,39 +60,8 @@ namespace NocturneAccess.Capture
             Section("Points of interest and walk grid", () => DumpWalkGrid(s));
             Section("Input and flags", DumpInputAndFlags);
 
-            string path = "";
-            try
-            {
-                Directory.CreateDirectory(Folder);
-                path = Path.Combine(Folder, $"navdump_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt");
-                File.WriteAllText(path, _file.ToString(), new UTF8Encoding(false));
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"[Nav:Dump] Could not write the dump file: {ex.Message}");
-                path = "";
-            }
-
-            foreach (string line in _summary)
-                Log.Info("[Nav:Dump] " + line);
-            Log.Info($"[Nav:Dump] Full dump: {(path.Length == 0 ? "not written" : path)}");
-            SpeechManager.Say(path.Length == 0 ? "Navigation dump failed." : "Navigation data saved.", interrupt: true, force: true);
-
-            _file = null;
-            _summary = null;
-        }
-
-        private static void Section(string name, Action body)
-        {
-            Both($"== {name}");
-            try
-            {
-                body();
-            }
-            catch (Exception ex)
-            {
-                Both($"{name} failed: {ex.GetType().Name}: {ex.Message}");
-            }
+            _dump.Save();
+            _dump = null;
         }
 
         // ---- player ----

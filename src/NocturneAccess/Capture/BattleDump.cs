@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using Il2Cpp;
 using Il2Cppnewbattle_H;
 using Il2Cppnewdata_H;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
-using MelonLoader.Utils;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
 using NocturneAccess.Systems.Battle;
@@ -24,9 +21,7 @@ namespace NocturneAccess.Capture
     {
         private const int Slots = 12;   // formindex 0 to 3 the party, 4 and up the enemies
 
-        internal static string Folder => Path.Combine(MelonEnvironment.UserDataDirectory, "NocturneAccess", "BattleDumps");
-
-        private static StringBuilder _file;
+        private static DumpWriter _dump;
 
         internal static void Dump()
         {
@@ -35,48 +30,19 @@ namespace NocturneAccess.Capture
                 SpeechManager.Say("Not in battle.", interrupt: true, force: true);
                 return;
             }
-            _file = new StringBuilder();
+            // The whole file goes to the log too.
+            _dump = new DumpWriter("[Battle:Dump]", "BattleDumps", "battledump", "Battle", logEveryLine: true);
             Line($"Nocturne Access {ModMain.ModVersion} battle dump, {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-            Section("Main process", DumpMain);
-            Section("Units by formindex", DumpUnits);
-            Section("Party records", DumpParty);
-            Section("Formation", DumpFormation);
-            Section("Target selection", DumpTarget);
-
-            string path = "";
-            try
-            {
-                Directory.CreateDirectory(Folder);
-                path = Path.Combine(Folder, $"battledump_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt");
-                File.WriteAllText(path, _file.ToString(), new UTF8Encoding(false));
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"[Battle:Dump] Could not write the dump file: {ex.Message}");
-                path = "";
-            }
-            foreach (string line in _file.ToString().Split('\n'))
-                if (line.Trim().Length > 0)
-                    Log.Info("[Battle:Dump] " + line.TrimEnd('\r'));
-            Log.Info($"[Battle:Dump] Full dump: {(path.Length == 0 ? "not written" : path)}");
-            SpeechManager.Say(path.Length == 0 ? "Battle dump failed." : "Battle data saved.", interrupt: true, force: true);
-            _file = null;
+            _dump.Section("Main process", DumpMain);
+            _dump.Section("Units by formindex", DumpUnits);
+            _dump.Section("Party records", DumpParty);
+            _dump.Section("Formation", DumpFormation);
+            _dump.Section("Target selection", DumpTarget);
+            _dump.Save();
+            _dump = null;
         }
 
-        private static void Line(string text) => _file.AppendLine(text);
-
-        private static void Section(string name, Action body)
-        {
-            Line($"== {name}");
-            try
-            {
-                body();
-            }
-            catch (Exception ex)
-            {
-                Line($"{name} failed: {ex.GetType().Name}: {ex.Message}");
-            }
-        }
+        private static void Line(string text) => _dump.FileOnly(text);
 
         private static string Join<T>(IEnumerable<T> values) => values == null ? "null" : string.Join(" ", values);
 
