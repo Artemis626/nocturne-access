@@ -1,0 +1,128 @@
+using System;
+using Il2Cpp;
+using Il2Cppnewbattle_H;
+using Il2Cppnewdata_H;
+using NocturneAccess.Core;
+using NocturneAccess.Speech;
+
+namespace NocturneAccess.Systems.Battle
+{
+    // BattleReader: whose turn, the side acting, press turns and half-turn hits.
+    internal static partial class BattleReader
+    {
+        // ---- Whose turn ----
+
+        /// <summary>
+        /// "Pixie's turn", for the battle command menu's opening line (MenuReader OpeningPrefix), read from
+        /// nbMainProcessData_t.activeunit at that moment: the formindex of the unit choosing its action (0 to 3 the
+        /// party; it changed 50 ms before Pixie's menu opened, 22:14 session). Said once per unit and press-turn state,
+        /// so backing out of a submenu does not repeat it, while a unit acting again after an extra press turn does.
+        /// </summary>
+        internal static string TurnAnnouncement()
+        {
+            if (!_active)
+                return "";
+            nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
+            if (d == null || d.activeunit < 0 || d.activeunit >= PartySlots)
+                return "";
+            ObserveSide(d);   // the menu opens 50 ms after activeunit changes, before the 200 ms poll sees it
+            int form = d.activeunit;
+            string key = $"{_battleNo}/{d.turn}/{form}/{d.press4_p}/{d.press4_ten}";
+            if (key == _lastTurnKey)
+                return "";
+            _lastTurnKey = key;
+            string name = !string.IsNullOrEmpty(PanelNames[form]) ? PanelNames[form]
+                : Units.TryGetValue(form, out Unit u) ? u.Name : "";
+            if (name.Length == 0)
+                return "";
+            Log.Info($"{Tag} Turn: formindex {form} ({name}), press4_p {d.press4_p}, press4_ten {d.press4_ten}.");
+            string side = _playerTurnUnsaid ? "Player turn. " : "";
+            _playerTurnUnsaid = false;
+            return $"{side}{name}'s turn";
+        }
+
+        /// <summary>
+        /// The side acting changed (activeunit 0 to 3 the party, 4 and up the enemies): the game shows "PLAYER TURN" or
+        /// "ENEMY TURN" as images (09:22 recording). "Enemy turn." is spoken at once; "Player turn." opens the next party
+        /// command menu ("Player turn. Art's turn. Attack, 1 of 4."). Each side's turn starts a new part of the battle log.
+        /// </summary>
+        private static void ObserveSide(nbMainProcessData_t d)
+        {
+            if (d.activeunit < 0)
+                return;
+            bool enemy = d.activeunit >= FirstEnemy;
+            if (_sideKnown && enemy == _sideEnemy)
+                return;
+            _sideKnown = true;
+            _sideEnemy = enemy;
+            BattleLog.NewSide(enemy ? "Enemy turn" : "Player turn");
+            Log.Info($"{Tag} Side: {(enemy ? "enemies" : "party")} (turn {d.turn}, activeunit {d.activeunit}).");
+            if (enemy)
+            {
+                _playerTurnUnsaid = false;
+                SpeechManager.Say("Enemy turn.", interrupt: false, force: true);
+            }
+            else
+            {
+                _playerTurnUnsaid = true;
+            }
+        }
+
+        /// <summary>
+        /// A hit that costs only half a press turn: while the same unit acts, a full icon becomes a half one (press4_p one
+        /// less, press4_ten the same). Seen for Pixie's Zio on the Preta's Elec weakness (1/1 to 0 full of 1, 09:17) and
+        /// for Art's critical hit on a Kodama (2/2 to 1 full of 2, 22:20 on 1 Oct). The cause is told from the actor's
+        /// action and the target's affinity: weak to the action's element = "Weakness"; a physical or skill hit
+        /// otherwise = "Critical"; anything else (Pass costs half a turn too) = no claim. Both sides play by these rules,
+        /// so enemies' hits on the party are announced as well.
+        /// </summary>
+        private static void ObservePress(nbMainProcessData_t d)
+        {
+            int actor = d.activeunit;
+            if (actor >= 0 && actor == _pressActor && d.turn == _pressTurn && _pressP > 0
+                && d.press4_ten == _pressTen && d.press4_p == _pressP - 1)
+                HalfTurn(actor);
+            _pressActor = actor;
+            _pressTurn = d.turn;
+            _pressP = d.press4_p;
+            _pressTen = d.press4_ten;
+        }
+
+        private static void HalfTurn(int actor)
+        {
+            datUnitWork_t w = nbMainProcess.nbGetUnitWorkFromFormindex(actor);
+            if (w == null)
+                return;
+            int element = w.nowcommand == 0 ? BattleSkills.Physical : w.nowcommand == 1 ? BattleSkills.Element(w.nowindex) : -1;
+            int target = w.nowtform;
+            string text;
+            if (element < 0)
+            {
+                text = "Half a turn used.";
+                Log.Info($"{Tag} Half turn: actor {actor}, nowcommand {w.nowcommand}, nowindex {w.nowindex}: no element.");
+            }
+            else
+            {
+                bool weak = BattleSkills.IsWeak(target, element, out uint raw);
+                string who = ActorName(target);
+                text = weak ? (who.Length > 0 ? $"Weakness hit on {who}, only half a turn used." : "Weakness hit, only half a turn used.")
+                            : "Critical hit, only half a turn used.";
+                Log.Info($"{Tag} Half turn: actor {actor}, nowcommand {w.nowcommand}, nowindex {w.nowindex}, element {element}, target {target}, aisyo 0x{raw:X}: {(weak ? "weak" : "not weak")}.");
+            }
+            SpeechManager.Say(text, interrupt: false, force: true);
+            BattleLog.Add(text);
+        }
+
+        /// <summary>"2 press turns left, 1 full and 1 half." (press4_ten all icons, press4_p the full ones; a blinking icon is half a turn).</summary>
+        private static string PressTurns(nbMainProcessData_t d)
+        {
+            int total = Math.Max((int)d.press4_ten, 0);
+            int full = Math.Min(Math.Max((int)d.press4_p, 0), total);
+            int half = total - full;
+            string left = total == 1 ? "1 press turn left" : $"{total} press turns left";
+            if (half == 0)
+                return left + ".";
+            return $"{left}: {full} full and {half} half.";
+        }
+    }
+}

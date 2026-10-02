@@ -1,0 +1,171 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Il2Cpp;
+using Il2Cppnewbattle_H;
+using Il2Cppnewdata_H;
+using NocturneAccess.Core;
+using NocturneAccess.Speech;
+
+namespace NocturneAccess.Systems.Battle
+{
+    // BattleReader: the units (HP and MP from the game's unit data), their names and numbers, the data log.
+    internal static partial class BattleReader
+    {
+        private sealed class Unit
+        {
+            public int Form;
+            public ushort Id;
+            public int Hp, MaxHp, Mp, MaxMp;
+            public string Name = "";
+            public int Number;   // among units of the same name and side, fixed for the battle
+        }
+
+        // ---- Data ----
+
+        private static void ReadUnits(bool speakChanges)
+        {
+            nbMainProcessData_t data = nbMainProcess.nbGetMainProcessData();
+            if (data == null)
+                return;
+
+            var seen = new HashSet<int>();
+            // Party: only slots that show a name on the battle party panel (formindex = panel slot, to verify in the log).
+            for (int form = 0; form < PartySlots; form++)
+            {
+                if (!string.IsNullOrEmpty(PanelNames[form]))
+                    ReadUnit(form, speakChanges, seen);
+            }
+            // Enemies keep their formindex when others fall while enemypcnt counts the living (22:14 session: with Pretas 1
+            // and 2 dead, enemypcnt 1 and Preta 3 at formindex 6 was no longer read, so its target and damage had no HP).
+            // Read every slot up to the highest one used this battle; a fallen enemy's slot returns null.
+            int living = Math.Min(Math.Max((int)data.enemypcnt, 0), MaxEnemies);
+            int found = 0;
+            for (int k = 0; k < MaxEnemies; k++)
+            {
+                if (k >= _enemySlots && found >= living)
+                    break;   // further slots only while fewer living enemies were found than enemypcnt says (a newcomer)
+                if (ReadUnit(FirstEnemy + k, speakChanges, seen))
+                {
+                    found++;
+                    _enemySlots = Math.Max(_enemySlots, k + 1);
+                }
+            }
+
+            foreach (int gone in Units.Keys.Where(k => !seen.Contains(k)).ToList())
+                Units.Remove(gone);
+        }
+
+        /// <summary>Reads one formindex; false when the slot is empty or fallen (null).</summary>
+        private static bool ReadUnit(int form, bool speakChanges, HashSet<int> seen)
+        {
+            datUnitWork_t w = nbMainProcess.nbGetUnitWorkFromFormindex(form);
+            if (w == null || w.maxhp == 0)
+                return false;
+            seen.Add(form);
+
+            if (!Units.TryGetValue(form, out Unit u) || u.Id != w.id)
+            {
+                u = new Unit { Form = form, Id = w.id, Hp = w.hp, MaxHp = w.maxhp, Mp = w.mp, MaxMp = w.maxmp, Name = form < PartySlots ? PanelNames[form] : NameOf(w.id) };
+                Number(u);
+                Units[form] = u;
+                return true;
+            }
+
+            int oldHp = u.Hp;
+            u.Hp = w.hp;
+            u.MaxHp = w.maxhp;
+            u.Mp = w.mp;
+            u.MaxMp = w.maxmp;
+            if (speakChanges && u.Hp != oldHp)
+            {
+                // The amount, as the game's damage numbers show it ("7" over Pixie, 09:22 recording); an HP drop equal to
+                // the acting unit's own skill cost is the cost (Lunge: 4 HP), said once.
+                string who = DisplayName(u);
+                string what;
+                if (u.Hp < oldHp && form == _actionActor && _actionHpCost > 0 && oldHp - u.Hp == _actionHpCost)
+                {
+                    what = $"{_actionHpCost} HP cost";
+                    _actionHpCost = 0;
+                }
+                else
+                {
+                    what = u.Hp < oldHp ? $"{oldHp - u.Hp} damage" : $"{u.Hp - oldHp} healed";
+                }
+                string text = u.Hp == 0 ? $"{who}: {what}, 0 HP." : $"{who}: {what}, HP {u.Hp} of {u.MaxHp}.";
+                SpeechManager.Say(text, interrupt: false, force: true);
+                BattleLog.Add(text);
+            }
+            return true;
+        }
+
+        private static string NameOf(ushort id)
+        {
+            try
+            {
+                return TextUtil.Clean(datDevilName.Get(id));
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        /// <summary>The unit's name, numbered when several units of this battle share it ("Will o' Wisp 2").</summary>
+        private static string DisplayName(Unit u)
+        {
+            string name = u.Name.Length > 0 ? u.Name : (u.Form >= FirstEnemy ? "Enemy" : "Ally");
+            // Numbered when the battle had several of this name; the number stays when one falls.
+            return NameCounts.TryGetValue(NameKey(u), out int count) && count > 1 ? $"{name} {u.Number}" : name;
+        }
+
+        private static string NameKey(Unit u) => (u.Form >= FirstEnemy ? "e:" : "p:") + u.Name;
+
+        private static void Number(Unit u)
+        {
+            string key = NameKey(u);
+            NameCounts.TryGetValue(key, out int count);
+            NameCounts[key] = ++count;
+            u.Number = count;
+        }
+
+        /// <summary>Logs the raw battle state when it changes, to check the field meanings against the screen.</summary>
+        private static void LogData(bool force)
+        {
+            nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
+            if (d == null)
+                return;
+            string units = string.Join("; ", Units.Values.OrderBy(u => u.Form)
+                .Select(u => $"{u.Form} {u.Name} id {u.Id} HP {u.Hp}/{u.MaxHp} MP {u.Mp}/{u.MaxMp}"));
+            string line = $"turn {d.turn}, phase {d.phase}, activeunit {d.activeunit}, press4_p {d.press4_p}, press4_ten {d.press4_ten}, "
+                          + $"hansya {d.press4_hansya}, miss {d.press4_miss}, playerpcnt {d.playerpcnt}, enemypcnt {d.enemypcnt}, "
+                          + $"TarSelType {d.TarSelType}, exp {d.exp}, maka {d.maka} | {units}";
+            if (!force && line == _lastData)
+                return;
+            _lastData = line;
+            Log.Info($"{DataTag} {line}");
+        }
+
+        /// <summary>For the Analyze screen, whose level, HP and MP are images: "Level 4. HP 30 of 30. MP 24 of 24." for the
+        /// enemy of that name (the one targeted when several share it), or "".</summary>
+        internal static string UnitFigures(string name)
+        {
+            if (!_active)
+                return "";
+            List<Unit> matches = Units.Values.Where(u => u.Form >= FirstEnemy && u.Name == name).ToList();
+            Unit unit = matches.Count == 1 ? matches[0] : null;
+            if (unit == null && matches.Count > 1)
+            {
+                nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
+                datUnitWork_t actor = d == null || d.activeunit < 0 ? null : nbMainProcess.nbGetUnitWorkFromFormindex(d.activeunit);
+                if (actor != null)
+                    unit = matches.FirstOrDefault(u => u.Form == actor.nowtform);
+            }
+            if (unit == null)
+                return "";
+            datUnitWork_t w = nbMainProcess.nbGetUnitWorkFromFormindex(unit.Form);
+            string level = w != null ? $"Level {w.level}. " : "";
+            return $"{level}HP {unit.Hp} of {unit.MaxHp}. MP {unit.Mp} of {unit.MaxMp}.";
+        }
+    }
+}
