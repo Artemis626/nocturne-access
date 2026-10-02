@@ -23,8 +23,9 @@ namespace NocturneAccess.Systems.Menus
     /// Analyze, Pixie's Zio). The cursor comes from the game instead (docs/class-index.md "Camp menu"):
     /// - cmpDrawItem.cmpDrawItemList and cmpDrawSkill.cmpDrawSkillList are called every frame while their list is shown,
     ///   with the list's cursor (cmpCursorInfo_t) and, for skills, the unit (pData, a datUnitWork_t);
-    /// - the entry under the cursor is CursorPos.Index + Shift (cmpMisc.cmpGetCursorIndex, read offline), Index being
-    ///   the visible row (menuitem_top, menuitem_base02..08);
+    /// - the entry under the cursor is CursorPos.Index + Shift (cmpMisc.cmpGetCursorIndex, read offline): Shift is the
+    ///   visible row (menuitem_top, menuitem_base02..08), Index the first entry shown (13:21 session: Index stayed 0
+    ///   while Shift followed the cursor through 3 items);
     /// - items: cmpInit.CMP_GBWK.ItemIdx[entry] is the item id (ItemCnt entries), its count
     ///   dds3GlobalWork.DDS3_GBWK.item[id]; skills: unit.skill[entry], as cmpCalc.cmpGetSelectSkillID reads it.
     /// The name is the row's own text; the id's name from the game's tables must match it, or the count, cost and
@@ -137,7 +138,7 @@ namespace NocturneAccess.Systems.Menus
                 if (now - _openedAt < OpenDelayMs || now - _pendingSince < SettleMs || (_announced && index == _index))
                     return;
 
-                TMP_Text row = pos.Index >= 0 && pos.Index < Rows ? RowText[pos.Index] : null;
+                TMP_Text row = pos.Shift < Rows ? RowText[pos.Shift] : null;
                 if (!UiUtil.IsVisible(row))
                     return;
                 bool opening = !_announced;
@@ -155,9 +156,14 @@ namespace NocturneAccess.Systems.Menus
         private static void Speak(bool opening, int index, string raw)
         {
             string name = TextUtil.Clean(raw);
-            if (name.Length == 0)
-                return;
             string title = MenuReader.TitleOf("Pause menu");
+            if (name.Length == 0)
+            {
+                // An empty list (GEMS with none, 13:22 session: ItemCnt 0) has only blank rows: say so once.
+                if (opening && _open == Kind.Item && cmpInit.CMP_GBWK?.ItemCnt == 0)
+                    Say((title.Length > 0 ? Sentence(title) + " " : "") + "Empty.", interrupt: false);
+                return;
+            }
             string detail = "", description = "";
             int total = _open == Kind.Item ? ItemFacts(index, name, title, ref detail, ref description)
                                            : SkillFacts(index, name, ref detail, ref description);
@@ -176,9 +182,14 @@ namespace NocturneAccess.Systems.Menus
             if (description.Length > 0)
                 text += " " + description;
 
+            Say(text, interrupt: !opening);
+        }
+
+        private static void Say(string text, bool interrupt)
+        {
             LastUtterance = text;
             LastUtteranceAt = Environment.TickCount64;
-            SpeechManager.Say(text, interrupt: !opening, force: true);
+            SpeechManager.Say(text, interrupt: interrupt, force: true);
         }
 
         /// <summary>The entry count; detail "have 3" (not for key items) and the description, when the id matches the row.</summary>

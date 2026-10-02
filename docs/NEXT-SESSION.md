@@ -49,7 +49,8 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.29** | Battle: skill costs in the menu ("Lunge, 4 HP"), weakness and critical hits for both sides, the Analyze screen, "Enemy turn." / "Player turn.", damage and healing amounts, enemy names on their actions, results with EXP, macca and items; F2 our side, F3 the enemies, F5 the battle log | Verified 2 Oct 10:07 (weakness, Analyze, F5, results items) |
 | **0.0.30** | Cleanup and debug pass, no behaviour change | Verified 2 Oct 10:07 ("exactly as before") |
 | **0.0.31** | `docs/REFACTOR-PLAN.md` items 0 to 5: no HP line before a battle starts (an overflow on the session's first battle); `BattleReader` in partial files; one dump writer; one announcement entry per path; hidden-NPC read every 500 ms in blobber mode; trace once a second | Verified 2 Oct 12:03 (no regression; no HP line before the start) |
-| **0.0.32** | Item and skill lists read (cursor from the game, counts, costs, "unavailable", descriptions); Stats adds skills, skills to learn and affinities | Built 2 Oct 2026, **not yet tested in game** |
+| **0.0.32** | Item and skill lists read (cursor from the game, counts, costs, "unavailable", descriptions); Stats adds skills, skills to learn and affinities | Tested 13:20: every entry read as the first row (cursor fields swapped); elevator left out of B1 (walking map window) |
+| **0.0.33** | Fixes: list row from `Shift`; "Empty." for an empty list; the walking map keeps whole areas that fit (elevator back in B1) | Built 2 Oct 2026, **not yet tested in game** |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 
@@ -70,7 +71,7 @@ Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:0
 
 ## Open problems and next steps (in order)
 
-**1 Oct 2026, evening: navigation continues from `docs/HANDOFF-PATHFINDING.md` (rewritten): Francesco is playing through the game. **0.0.31 (the refactor plan) verified; 0.0.32 reads the item and skill lists and the Stats skills: next, read the log of its test (`[CampList]` opening lines: check `ListNums`, `ShiftMax`, item ids against the screen)**. He reports bugs and missing features: read each session's log, fix, record (`docs/HANDOFF-PATHFINDING.md`), then the open problems listed there.**
+**1 Oct 2026, evening: navigation continues from `docs/HANDOFF-PATHFINDING.md` (rewritten): Francesco is playing through the game. **0.0.31 (the refactor plan) verified; 0.0.33 fixes the item and skill lists (0.0.32) and the elevator missing from B1: next, read the log of its test (`[CampList]` entries; B1 `[Nav:Poi]` with the Elevator reachable after coming from the Healing Room)**. He reports bugs and missing features: read each session's log, fix, record (`docs/HANDOFF-PATHFINDING.md`), then the open problems listed there.**
 
 **1 Oct 2026, end of the first navigation chat: continue navigation from `docs/HANDOFF-PATHFINDING.md` (rewritten): blobber mode must keep the game's own controls, snap only movement, and never block on cues; fixed-camera rooms get points of interest with auto-walk later.**
 

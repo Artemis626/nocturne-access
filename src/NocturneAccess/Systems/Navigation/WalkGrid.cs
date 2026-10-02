@@ -143,6 +143,16 @@ namespace NocturneAccess.Systems.Navigation
             return false;
         }
 
+        /// <summary>Narrows [lo, hi] to 'span' around p, kept inside [lo, hi], only when it is wider than that.</summary>
+        private static void Window(ref float lo, ref float hi, float p, float span)
+        {
+            if (hi - lo <= span)
+                return;
+            float start = Math.Min(Math.Max(p - span / 2, lo), hi - span);
+            lo = start;
+            hi = start + span;
+        }
+
         private static void Build(int field, int area, float px, float py, float pz)
         {
             var clock = Stopwatch.StartNew();
@@ -191,9 +201,12 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
 
-            float span = MaxCells * CellSize;
-            minX = Math.Max(minX, px - span / 2); maxX = Math.Min(maxX, px + span / 2);
-            minZ = Math.Max(minZ, pz - span / 2); maxZ = Math.Min(maxZ, pz + span / 2);
+            // Only an area larger than the window is cut, and then the window slides to hold the player while staying inside
+            // the area. Centring it on the player cut areas that fit: back in B1 from the Healing Room (z -5650), a window
+            // ending at z 350 left out the elevator at z 850 (13:23 session, 2 Oct 2026: "not reachable, left out").
+            float span = (MaxCells - 1) * CellSize;
+            Window(ref minX, ref maxX, px, span);
+            Window(ref minZ, ref maxZ, pz, span);
             _x0 = (float)Math.Floor(minX / CellSize) * CellSize + CellSize / 2;
             _z0 = (float)Math.Floor(minZ / CellSize) * CellSize + CellSize / 2;
             _w = Math.Min(MaxCells, (int)Math.Ceiling((maxX - _x0) / CellSize) + 1);
