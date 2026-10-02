@@ -34,6 +34,7 @@ namespace NocturneAccess.Systems.Navigation
     ///   up to 1 + NearCost times more within NearRange of a wall (routes keep to the middle), plus TurnPenalty per turn.
     /// - The goal is the reachable node nearest the target in X and Z, at least minDist away and within TargetBand of
     ///   the target's height.
+    /// - The world map (fieldID below 10, 0.0.41) has its own walls: see WorldClearance and BlockWorldWalls.
     /// Rebuilt when the collision copy changes (CollisionCache.Version), the area changes or the player leaves the window.
     /// </summary>
     internal static class WalkGrid
@@ -164,8 +165,10 @@ namespace NocturneAccess.Systems.Navigation
             _area = area;
             LastPath.Clear();
 
+            bool world = FieldState.WorldMapField(field);
             var floors = new List<CollisionPoly>();
             var walls = new List<(float ax, float az, float bx, float bz, float lo, float hi)>();
+            var worldWalls = new List<CollisionPoly>();
             float minX = float.MaxValue, minZ = float.MaxValue, maxX = float.MinValue, maxZ = float.MinValue;
             foreach (CollisionPoly p in CollisionCache.Polys)
             {
@@ -181,6 +184,14 @@ namespace NocturneAccess.Systems.Navigation
                         minX = Math.Min(minX, v.x); maxX = Math.Max(maxX, v.x);
                         minZ = Math.Min(minZ, v.z); maxZ = Math.Max(maxZ, v.z);
                     }
+                }
+                else if (world)
+                {
+                    // The world map: every non-floor polygon of Attr 0 (and NPC boxes, 0x80) is a wall, tilted ones included;
+                    // the tall vertical Attr 0x800 planes are region boundaries the marker walks through (3 units from
+                    // them in the 20:26 trace) and cut Shinjuku into pieces when they counted as walls.
+                    if (p.Points.Length >= 3 && (p.Attr == 0 || p.Attr == 0x80) && !HiddenNpcBox(p) && !CollisionCache.SwitchedOff(p))
+                        worldWalls.Add(p);
                 }
                 else if (Math.Abs(p.Normal.y) < 0.2f && !HiddenNpcBox(p) && !CollisionCache.SwitchedOff(p))
                 {
@@ -271,6 +282,9 @@ namespace NocturneAccess.Systems.Navigation
                     });
             }
 
+            if (world)
+                BlockWorldWalls(worldWalls);
+
             int walkable = 0, multi = 0;
             for (int c = 0; c < cells; c++)
             {
@@ -281,7 +295,113 @@ namespace NocturneAccess.Systems.Navigation
                         walkable++;
             }
             Log.Info($"[Nav:Walk] Grid for field {field} area {area}: {_w} x {_h} cells of {CellSize} from {FieldData.F(_x0)} {FieldData.F(_z0)}, " +
-                     $"{floors.Count} floors, {walls.Count} walls, {walkable} walkable places, {multi} cells with more than one level, {clock.ElapsedMilliseconds} ms.");
+                     $"{floors.Count} floors, {(world ? worldWalls.Count + " world-map" : walls.Count.ToString())} walls, {walkable} walkable places, {multi} cells with more than one level, {clock.ElapsedMilliseconds} ms.");
+        }
+
+        // The world map's walls (docs/HANDOFF-OVERWORLD.md step 3). The game's collision (fldHit.fldHitChkUnitVWM, radius 30
+        // there) pushes the marker out of a wall when it is closer than the radius to the wall's plane and lies inside its
+        // outline; 13 of the 18 traced positions near walls sat at 29 to 30 (20:26 and 21:11 walks, 2 Oct 2026). The lanes
+        // are narrow: the one west of the Medical Center leaves a free band a few units wide, which no cell centre hits, and
+        // the marker squeezed through at 26 to 27 (once 17.7, at a block corner). So a cell is walkable when some point in it
+        // (centre, then offsets of 6 and 12) clears every wall by WorldClearance, measured WorldLift above the floor:
+        // checked offline against the Shinjuku dump, 22 puts all 92 traced positions on reachable cells and makes every
+        // point of interest reachable; 24 already breaks the lane the player walked.
+        private const float WorldClearance = 22f, WorldLift = 15f, WorldBucketReach = 40f;
+        private static readonly float[] WorldOffsets = { 0f, -6f, 6f, -12f, 12f };
+
+        /// <summary>World map: blocks the nodes with no point clear of the walls (see WorldClearance) and sets wall distances.</summary>
+        private static void BlockWorldWalls(List<CollisionPoly> walls)
+        {
+            var near = new Dictionary<int, List<CollisionPoly>>();
+            foreach (CollisionPoly w in walls)
+            {
+                float x0 = float.MaxValue, z0 = float.MaxValue, x1 = float.MinValue, z1 = float.MinValue;
+                foreach (Vector4 v in w.Points)
+                {
+                    x0 = Math.Min(x0, v.x); x1 = Math.Max(x1, v.x);
+                    z0 = Math.Min(z0, v.z); z1 = Math.Max(z1, v.z);
+                }
+                ForCells(x0 - NearRange, z0 - NearRange, x1 + NearRange, z1 + NearRange, (c, x, z) =>
+                {
+                    int n = _count[c];
+                    if (n == 0)
+                        return;
+                    for (int l = 0; l < n; l++)
+                    {
+                        int k = c * Layers + l;
+                        float d = ProjectedDistance(w, x, _height[k] - WorldLift, z);
+                        if (d < _near[k])
+                            _near[k] = d;
+                    }
+                    if (x >= x0 - WorldBucketReach && x <= x1 + WorldBucketReach && z >= z0 - WorldBucketReach && z <= z1 + WorldBucketReach)
+                    {
+                        if (!near.TryGetValue(c, out List<CollisionPoly> list))
+                            near[c] = list = new List<CollisionPoly>();
+                        list.Add(w);
+                    }
+                });
+            }
+
+            foreach (KeyValuePair<int, List<CollisionPoly>> e in near)
+            {
+                int c = e.Key;
+                CellCentre(c, out float x, out float z);
+                for (int l = 0; l < _count[c]; l++)
+                {
+                    int k = c * Layers + l;
+                    if (_near[k] >= WorldClearance || Clear(e.Value, x, _height[k] - WorldLift, z))
+                        continue;
+                    _state[k] = 2;
+                }
+            }
+        }
+
+        /// <summary>Some point of the cell around (x, z) lies at least WorldClearance from every wall in the list.</summary>
+        private static bool Clear(List<CollisionPoly> walls, float x, float y, float z)
+        {
+            foreach (float ox in WorldOffsets)
+                foreach (float oz in WorldOffsets)
+                {
+                    bool free = true;
+                    foreach (CollisionPoly w in walls)
+                        if (ProjectedDistance(w, x + ox, y, z + oz) < WorldClearance)
+                        {
+                            free = false;
+                            break;
+                        }
+                    if (free)
+                        return true;
+                }
+            return false;
+        }
+
+        /// <summary>
+        /// Distance from a point to a polygon's plane (normal . p = Num) when the point projects inside the polygon (its
+        /// triangles 0-1-2 and 0-2-3), else MaxValue: the game's kind of wall test.
+        /// </summary>
+        private static float ProjectedDistance(CollisionPoly w, float x, float y, float z)
+        {
+            Vector4 n = w.Normal;
+            float d = n.x * x + n.y * y + n.z * z - w.Num;
+            float qx = x - d * n.x, qy = y - d * n.y, qz = z - d * n.z;
+            Vector4[] p = w.Points;
+            if (InTriangle(qx, qy, qz, p[0], p[1], p[2]) || (p.Length > 3 && InTriangle(qx, qy, qz, p[0], p[2], p[3])))
+                return Math.Abs(d);
+            return float.MaxValue;
+        }
+
+        private static bool InTriangle(float px, float py, float pz, Vector4 a, Vector4 b, Vector4 c)
+        {
+            double v0x = c.x - a.x, v0y = c.y - a.y, v0z = c.z - a.z;
+            double v1x = b.x - a.x, v1y = b.y - a.y, v1z = b.z - a.z;
+            double v2x = px - a.x, v2y = py - a.y, v2z = pz - a.z;
+            double d00 = v0x * v0x + v0y * v0y + v0z * v0z, d01 = v0x * v1x + v0y * v1y + v0z * v1z, d02 = v0x * v2x + v0y * v2y + v0z * v2z;
+            double d11 = v1x * v1x + v1y * v1y + v1z * v1z, d12 = v1x * v2x + v1y * v2y + v1z * v2z;
+            double den = d00 * d11 - d01 * d01;
+            if (Math.Abs(den) < 1e-6)
+                return false;
+            double u = (d11 * d02 - d01 * d12) / den, v = (d00 * d12 - d01 * d02) / den;
+            return u >= -1e-4 && v >= -1e-4 && u + v <= 1 + 1e-4;
         }
 
         /// <summary>

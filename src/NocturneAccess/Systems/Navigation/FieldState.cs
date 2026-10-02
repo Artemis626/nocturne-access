@@ -46,7 +46,9 @@ namespace NocturneAccess.Systems.Navigation
         /// instead of the dungeon routines when fldGb.fieldID is below 10 (read offline, RVA 0x206D2A3, 2 Oct 2026): the
         /// Vortex World (field 2) and the prologue's Tokyo map (field 1, session of 1 Oct 2026 19:57).
         /// </summary>
-        internal static bool WorldMap(Il2Cppfield_H.fldGlobalWork_t gb) => gb != null && gb.fieldID < 10;
+        internal static bool WorldMap(Il2Cppfield_H.fldGlobalWork_t gb) => gb != null && WorldMapField(gb.fieldID);
+
+        internal static bool WorldMapField(int fieldId) => fieldId < 10;
 
         internal static void Install()
         {

@@ -73,7 +73,7 @@ namespace NocturneAccess.Systems.Navigation
     /// Other story triggers ("NNeve_MM") are invisible and left out. Unnamed things get the mod's own category words. Page Up / Page Down move the selection (nearest first) and speak kind, distance in
     /// metres (game units / 100) and compass direction (north = +Z, the game's compass).
     /// On the world map (0.0.39) the same list is read: doors are entrances named by their place pads ("Yoyogi Park
-    /// entrance"), every point is listed (no walking map there yet) and heights are not spoken.
+    /// entrance"), heights are not spoken, and from 0.0.41 only reachable points are listed, as in dungeons.
     /// </summary>
     internal static class PointsOfInterest
     {
@@ -95,11 +95,9 @@ namespace NocturneAccess.Systems.Navigation
         internal static List<Poi> Build(fldGlobalWork_t gb)
         {
             float px = gb.playerX, py = gb.playerY, pz = gb.playerZ;
-            // The world map is a sloped terrain (y -2120 to -117 in Shinjuku) with a 30-unit collision radius
-            // (fldHit.fldHitChkUnitVWM): the dungeon walking map marked every point there "not reachable" (20:26 dump,
-            // 2 Oct 2026), so everything is listed until the world map has its own (docs/HANDOFF-OVERWORLD.md).
+            // The world map has its own walking map from 0.0.41 (WalkGrid, world-map walls); 0.0.39 listed everything there.
             bool world = FieldState.WorldMap(gb);
-            bool grid = !world && WalkGrid.Ensure(gb.fieldID, gb.areaID, px, gb.playerY, pz);
+            bool grid = WalkGrid.Ensure(gb.fieldID, gb.areaID, px, gb.playerY, pz);
             var list = new List<Poi>();
             Il2CppReferenceArray<fldResHead_t> ranges = fldEveHit.gEvnRng;
             Il2CppReferenceArray<putevebox_s> boxes = fldEveHit.gEvnRngBox;

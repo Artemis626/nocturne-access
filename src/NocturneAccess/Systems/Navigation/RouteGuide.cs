@@ -17,6 +17,8 @@ namespace NocturneAccess.Systems.Navigation
     /// - Third person (fixed camera): the key direction on screen, from the camera yaw as AutoWalk.Press chooses its pads:
     ///   "Up, 5 metres, then left."
     /// - In reach: "In reach." when facing the target, else the turn to face it.
+    /// - World map (0.0.41): compass words, which are also the arrow keys there (Up = north): "South-west, 12 metres, then
+    ///   south."; short sidesteps between runs of one direction are folded in; "In reach." needs no facing.
     /// 0.0.25 spoke every change while walking; Francesco (20:37 session): too much audio clutter, the wall and corridor
     /// cues must come first, so directions are spoken only when End is pressed.
     /// </summary>
@@ -25,16 +27,13 @@ namespace NocturneAccess.Systems.Navigation
         private const float MinRun = 60f;            // shorter first runs (a half-cell jog onto the grid) are not spoken
         private const float FacingTolerance = 50f;
         private static readonly string[] Keys = { "up", "up-right", "right", "down-right", "down", "down-left", "left", "up-left" };
+        private static readonly string[] Compass = { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" };
+        private const float JogLength = 90f;         // world map: a shorter run between two runs of one direction is folded into them
 
         /// <summary>End (OnUpdate).</summary>
         internal static void Speak()
         {
             fldGlobalWork_t gb = fldGlobal.fldGb;
-            if (FieldState.WorldMap(gb))
-            {
-                SpeechManager.Say("Directions are not available on the world map yet.", interrupt: true);   // docs/HANDOFF-OVERWORLD.md plan step 3
-                return;
-            }
             if (gb == null || !FieldState.IsExploring)
             {
                 SpeechManager.Say("Directions are not available here.", interrupt: true);
@@ -55,11 +54,16 @@ namespace NocturneAccess.Systems.Navigation
 
         private static string Directions(fldGlobalWork_t gb, Poi target)
         {
-            bool firstPerson = gb.cammode == 0 && FirstPersonView.On;
+            // The world map: directions fixed to the world (Up = north, fldPlayerCalc_Wm2), no facing for its prompts, and the
+            // first-person state the mod keeps from dungeons does not apply.
+            bool world = FieldState.WorldMap(gb);
+            bool firstPerson = !world && gb.cammode == 0 && FirstPersonView.On;
             float x = gb.playerX, z = gb.playerZ, yaw = CameraYaw();
             float flat = (float)Math.Sqrt((target.X - x) * (target.X - x) + (target.Z - z) * (target.Z - z));
             float toTarget = Bearing(x, z, target.X, target.Z);
 
+            if (world && AutoWalk.InReach(target, flat))
+                return "In reach.";
             if (AutoWalk.InReach(target, flat) && AutoWalk.Lateral(target, x, z) <= 45f)
             {
                 float face = AutoWalk.FaceBearing(target, x, z);
@@ -91,17 +95,40 @@ namespace NocturneAccess.Systems.Navigation
                     continue;
                 legs.Add((r.Bearing, length));
             }
+            if (world)
+                FoldJogs(legs);
             if (legs.Count == 0)
                 legs.Add((firstPerson ? Square(toTarget) : Mod360((float)Math.Round(toTarget / 45.0) * 45f), flat));   // at the goal cell: straight at it
 
             (float bearing, float length) first = legs[0];
-            string word = firstPerson ? Relative(gb, first.bearing) : Key(first.bearing, yaw);
+            string word = world ? CompassWord(first.bearing) : firstPerson ? Relative(gb, first.bearing) : Key(first.bearing, yaw);
             string then = "";
             if (legs.Count > 1)
-                then = firstPerson ? TurnWord(Mod360(legs[1].bearing - first.bearing)) : Key(legs[1].bearing, yaw);
+                then = world ? CompassWord(legs[1].bearing) : firstPerson ? TurnWord(Mod360(legs[1].bearing - first.bearing)) : Key(legs[1].bearing, yaw);
             int metres = Math.Max(1, (int)Math.Round(first.length / 100f));
             return $"{TextUtil.Capitalize(word)}, {metres} {(metres == 1 ? "metre" : "metres")}{(then.Length > 0 ? ", then " + then : "")}.";
         }
+
+        /// <summary>
+        /// World map: a run shorter than JogLength between two runs of the same direction is a sidestep of a cell or two (a
+        /// slanted lane drawn on the grid); holding the main direction slides along the wall there, so it is folded into them.
+        /// </summary>
+        private static void FoldJogs(List<(float bearing, float length)> legs)
+        {
+            for (int i = 1; i + 1 < legs.Count;)
+            {
+                if (legs[i].length < JogLength && legs[i - 1].bearing == legs[i + 1].bearing)
+                {
+                    legs[i - 1] = (legs[i - 1].bearing, legs[i - 1].length + legs[i].length + legs[i + 1].length);
+                    legs.RemoveRange(i, 2);
+                }
+                else
+                    i++;
+            }
+        }
+
+        /// <summary>World map: the compass word of a bearing (a multiple of 45), which is also the arrow key: north = up.</summary>
+        private static string CompassWord(float bearing) => Compass[(int)Mod360((float)Math.Round(bearing / 45.0) * 45f) / 45 % 8];
 
         /// <summary>First person: a compass bearing (multiple of 90) relative to the facing: "ahead", "turn right", "turn round", "turn left".</summary>
         private static string Relative(fldGlobalWork_t gb, float bearing)

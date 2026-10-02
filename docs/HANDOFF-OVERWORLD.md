@@ -80,9 +80,30 @@ Consequences for the plan: auto-walk on the world map is the simplest of the thr
 6. If you reach the prologue map again (a new game), Page Up there too: entrances and "Person".
 7. Shift+F6 once on the world map, so the dump shows the list as spoken.
 
+## Step 3 built: 0.0.41 (2 Oct 2026, not yet tested): a walking map for the world map, End
+
+Checked offline first (`tools/worldgrid.pl`, the Shinjuku dumps of 20:26 and 21:11 and the 92 positions of the 20:26 and 21:11 walks):
+
+- **Why the dungeon map failed:** it counted the tall vertical `Attr 0x800` planes as walls. They are invisible region boundaries (the marker passed 3 units from them) and cut Shinjuku into pieces. Its clearance (65) is also twice the marker's.
+- **The game's rule, measured:** the marker stays about 30 from a wall's plane (13 of 18 close positions at 29 to 30), but rounds block corners closer and squeezes through lanes: west of the Medical Center your route runs down a lane whose free band is a few units wide, passed at 26 to 27.
+- **The world-map walls in `WalkGrid` (fieldID below 10):** every non-floor polygon of `Attr` 0 (and NPC boxes), tilted ones included; a 30-unit cell is walkable when its centre or a point 6 or 12 off it clears every wall by 22, measured 15 above the floor. Floors, levels and steps as in dungeons.
+- **Calibration:** 22 puts all 92 traced positions on reachable cells and every Page Up point within 6 to 35 units of a reachable cell (Gaienmae Station and the second Yoyogi Park entrance included). 24 already breaks your lane; with the plain centre test even 15 left the south cut off.
+- **Page Up / Page Down** use this map again on the world map: only reachable points are listed, as in dungeons (0.0.39 listed everything).
+- **End** on the world map: the route spoken in compass words, which are the arrow keys there: "South-west, 12 metres, then south." A sidestep shorter than 90 units between two runs of one direction (a slanted lane drawn on the grid) is folded into them; holding the main key slides along the wall. "In reach." needs no facing on the world map. The first-person setting kept from dungeons is ignored there.
+- Home still says "Auto-walk is not available on the world map yet." (step 4).
+
+### Test (0.0.41)
+
+1. On the Shinjuku world map, Page Up: the same 10 points as before should still be listed (if one is missing, the log says "not reachable, left out": that is a calibration miss).
+2. Select "Yoyogi Park entrance" (the nearer one when you stand at the Medical Center) and press End: "West, N metres, then ..." or similar. Walk with the arrow key it names; press End again whenever you like: the route is planned again from where you stand.
+3. Follow End to the entrance until it says "In reach." and the game says "Enter".
+4. Try End towards a Soul and towards Shibuya.
+5. Shift+F6 once on the way: the dump shows the world map as text, with the planned route.
+6. In a dungeon, End and Home work as before.
+
 ## Plan from here (one step per test run)
 
-3. **A walking map for the world map**, checked offline first: floors of any `Attr` that are ground, walls by the world map's own radius (30) including tilted walls, heights joined along slopes. Ground truth: the trace of Francesco's walk from the Medical Center to Yoyogi Park (`[Nav:Trace]`, 20:26 to 20:27) must lie on walkable cells and connect. Then Page Up leaves out what cannot be reached, and **End** speaks the route in compass directions: "South-west, 12 metres, then south."
+3. Done in 0.0.41 (above).
 4. **Auto-walk (Home)**: hold the pads of each run's compass direction (`PadInput`, the first person's buttons), stop on any key, on an event, or when the game's "Enter" / "Talk" fires.
 5. **The moon phase** from game data (the HUD draws it as images; no text in the log): candidates `evtMoon.evtGetAgeOfMoon()`, `evtGetAgeOfMoon16()`; to read offline first, never call protected code.
 6. Later: explored entrances, the big event volumes.
