@@ -51,7 +51,7 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.31** | `docs/REFACTOR-PLAN.md` items 0 to 5: no HP line before a battle starts (an overflow on the session's first battle); `BattleReader` in partial files; one dump writer; one announcement entry per path; hidden-NPC read every 500 ms in blobber mode; trace once a second | Verified 2 Oct 12:03 (no regression; no HP line before the start) |
 | **0.0.32** | Item and skill lists read (cursor from the game, counts, costs, "unavailable", descriptions); Stats adds skills, skills to learn and affinities | Tested 13:20: every entry read as the first row (cursor fields swapped); elevator left out of B1 (walking map window) |
 | **0.0.33** | Fixes: list row from `Shift`; "Empty." for an empty list; the walking map keeps whole areas that fit (elevator back in B1) | Verified 2 Oct 13:45 (lists, Stats skills, elevator) |
-| **0.0.34** | Talking demons listed ("Demon"); the walking map and wall cues follow the game's own collision switches (annex gate open after the pass); Magatama screen read | Built 2 Oct 2026, **not yet tested in game** |
+| **0.0.34** | Talking demons listed ("Demon"); the walking map and wall cues follow the game's own collision switches (annex gate open after the pass); Magatama screen read | Partly tested 2 Oct 14:48: demons listed, collision switches read; gate, demon talk and Magatama not reached |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 
@@ -72,7 +72,7 @@ Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:0
 
 ## Open problems and next steps (in order)
 
-**1 Oct 2026, evening: navigation continues from `docs/HANDOFF-PATHFINDING.md` (rewritten): Francesco is playing through the game. **0.0.31 (the refactor plan) verified; 0.0.34 lists talking demons, opens the annex gate on the walking map (the game's collision switches) and reads the Magatama screen: next, read the log of its test (`[Nav] Collision switches` lines at the annex gate; `[Nav:Poi]` with "Demon" in annex areas 12 and 13)**. He reports bugs and missing features: read each session's log, fix, record (`docs/HANDOFF-PATHFINDING.md`), then the open problems listed there.**
+**1 Oct 2026, evening: navigation continues from `docs/HANDOFF-PATHFINDING.md` (rewritten): Francesco is playing through the game. **0.0.31 (the refactor plan) verified; 0.0.34 partly tested. **Next: `docs/EXPLORED-DOORS-PLAN.md` items 1 and 2 (an "explored" mark for generic doors; item 3, custom waypoints, later only).** Open: the Annex 1F ramp item box (`docs/HANDOFF.md`, end); still to test from 0.0.34: annex gate after the pass, talking to a demon via Home, Magatama**. He reports bugs and missing features: read each session's log, fix, record (`docs/HANDOFF-PATHFINDING.md`), then the open problems listed there.**
 
 **1 Oct 2026, end of the first navigation chat: continue navigation from `docs/HANDOFF-PATHFINDING.md` (rewritten): blobber mode must keep the game's own controls, snap only movement, and never block on cues; fixed-camera rooms get points of interest with auto-walk later.**
 
