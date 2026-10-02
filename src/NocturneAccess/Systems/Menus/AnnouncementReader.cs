@@ -73,6 +73,7 @@ namespace NocturneAccess.Systems.Menus
         private sealed class Entry
         {
             public Options Options;
+            public int Copy;   // which copy of the component owns the entry: the game re-creates some (every save screen)
             public TMP_Text Component;
             public string Text = "";
             public string Spoken = "";
@@ -83,6 +84,7 @@ namespace NocturneAccess.Systems.Menus
         }
 
         private static readonly List<Entry> Entries = new List<Entry>();
+        private static readonly Dictionary<string, Entry> EntryOfPath = new Dictionary<string, Entry>();
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static long _lastPoll;
         private static long _lastReshowPoll;
@@ -117,10 +119,32 @@ namespace NocturneAccess.Systems.Menus
             if (!Paths.TryGetValue(path, out Options options))
                 return null;
 
-            var entry = new Entry { Options = options };
+            // One entry per path. A new copy of the component takes the path's entry over, starting as a new entry would,
+            // and moves it to the end of the list, where a new entry would go; until 0.0.30 every copy added an entry
+            // that stayed in the list all session.
+            if (EntryOfPath.TryGetValue(path, out Entry entry))
+            {
+                entry.Copy++;
+                entry.Component = null;
+                entry.Text = "";
+                entry.Spoken = "";
+                entry.ChangedAt = 0;
+                entry.Pending = false;
+                entry.WasVisible = false;
+                entry.WaitedForDialogue = false;
+                Entries.Remove(entry);
+            }
+            else
+            {
+                entry = new Entry { Options = options };
+                EntryOfPath[path] = entry;
+            }
             Entries.Add(entry);
+            int copy = entry.Copy;
             return (component, raw) =>
             {
+                if (entry.Copy != copy)
+                    return;   // an older copy, replaced by a newer one
                 string text = TextUtil.Clean(raw);
                 entry.Component = component;
                 if (text == entry.Text)
