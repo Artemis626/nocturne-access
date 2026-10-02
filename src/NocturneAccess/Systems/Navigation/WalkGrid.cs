@@ -69,6 +69,9 @@ namespace NocturneAccess.Systems.Navigation
         private static int _reachStart = -1, _reachBuild = -1, _builds;
         private static readonly List<(float x, float z)> HiddenNpcs = new List<(float x, float z)>();
         private static int _hiddenKey;
+        private static readonly Stopwatch Clock = Stopwatch.StartNew();
+        private static long _hiddenReadMs = long.MinValue / 2;
+        private const long HiddenNpcPollMs = 500;   // the per-frame path (Lattice) reads the NPC table at most this often
         private static int _latticeBuild = -1;
         private static float _latticeCell, _latticeX, _latticeZ;
         private const float NpcBoxReach = 80f;   // an NPC box is 100 x 100 around the NPC's position
@@ -77,11 +80,23 @@ namespace NocturneAccess.Systems.Navigation
         internal static int Height => _h;
 
         /// <summary>Builds the grid if the area or the collision copy changed, or the player left it. False if there is no floor.</summary>
-        internal static bool Ensure(int field, int area, float px, float py, float pz)
+        internal static bool Ensure(int field, int area, float px, float py, float pz) => Ensure(field, area, px, py, pz, everyFrame: false);
+
+        /// <param name="everyFrame">
+        /// Called on every field update (blobber mode, 30 a second): the hidden NPCs, read through the game's NPC table, are
+        /// checked at most every HiddenNpcPollMs, so someone the story shows or hides reaches the grid up to that much later
+        /// (Francesco, 2 Oct 2026). A change of area, collision or window rebuilds at once, with a fresh read.
+        /// </param>
+        private static bool Ensure(int field, int area, float px, float py, float pz, bool everyFrame)
         {
             CollisionCache.Refresh(field, area);
+            bool same = _version == CollisionCache.Version && _field == field && _area == area && Contains(px, pz);
+            long now = Clock.ElapsedMilliseconds;
+            if (same && everyFrame && now - _hiddenReadMs < HiddenNpcPollMs)
+                return _w > 0;
+            _hiddenReadMs = now;
             int hidden = ReadHiddenNpcs();
-            if (_version == CollisionCache.Version && _field == field && _area == area && _hiddenKey == hidden && Contains(px, pz))
+            if (same && _hiddenKey == hidden)
                 return _w > 0;
             _hiddenKey = hidden;
             Build(field, area, px, py, pz);
@@ -264,7 +279,7 @@ namespace NocturneAccess.Systems.Navigation
         internal static void Lattice(int field, int area, float px, float py, float pz, float cell, out float ox, out float oz)
         {
             ox = oz = 0f;
-            if (!Ensure(field, area, px, py, pz))
+            if (!Ensure(field, area, px, py, pz, everyFrame: true))
                 return;
             if (_latticeBuild == _builds && _latticeCell == cell)
             {
