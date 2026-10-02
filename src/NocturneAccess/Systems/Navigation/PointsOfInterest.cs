@@ -35,15 +35,21 @@ namespace NocturneAccess.Systems.Navigation
             : Kind == PoiKind.Place ? Name
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
 
+        public string DoorKind = "";    // a generic door: "room", "passage" or "exit", from the game's door table (DoorTable), or ""
+
         /// <summary>"explored" or "empty", or "".</summary>
         public string State => Explored ? "explored" : Empty ? "empty" : "";
 
-        /// <summary>Page Up / Page Down: "Door, explored", "Item box, empty".</summary>
-        public string Spoken => State.Length > 0 ? $"{Label}, {State}" : Label;
+        /// <summary>Page Up / Page Down: "Door, explored, room", "Door, passage", "Item box, empty".</summary>
+        public string Spoken => Label + (State.Length > 0 ? ", " + State : "") + (DoorKind.Length > 0 ? ", " + DoorKind : "");
 
         /// <summary>The label inside a sentence: game names and "Soul" keep their capitals, the mod's own words do not;
-        /// "explored door", "empty item box".</summary>
-        public string InSentence => (State.Length > 0 ? State + " " : "") + (Name.Length > 0 || Soul || Demon ? Label : Label.ToLowerInvariant());
+        /// "explored door", "empty item box"; a door with a kind as on Page Up: "door, explored, room".</summary>
+        public string InSentence => DoorKind.Length > 0 ? Spoken.ToLowerInvariant()
+            : (State.Length > 0 ? State + " " : "") + (Name.Length > 0 || Soul || Demon ? Label : Label.ToLowerInvariant());
+
+        /// <summary>Something beyond the plain label is known (End says it first).</summary>
+        public bool HasDetail => State.Length > 0 || DoorKind.Length > 0;
 
         /// <summary>Doors only: the in-reach check uses fldEveHit.OldHitDoor, which resets on leaving the volume (gFldEveRngIdx does not).</summary>
         public bool IsDoorLike => Kind == PoiKind.Door || Kind == PoiKind.Place;
@@ -148,6 +154,7 @@ namespace NocturneAccess.Systems.Navigation
                     Distance = (float)Math.Sqrt((p.x - px) * (p.x - px) + (p.z - pz) * (p.z - pz)),
                     Explored = generic && ExploredDoors.IsExplored(gb.fieldID, gb.areaID, name),
                     Empty = kind == PoiKind.ItemBox && Opened(takara),
+                    DoorKind = generic ? DoorTable.KindOf(gb.fieldID, gb.areaID, name) : "",
                 });
             }
 
@@ -163,6 +170,8 @@ namespace NocturneAccess.Systems.Navigation
                 {
                     same.Explored |= q.Explored;   // either volume of a door listed twice may be the one gone through
                     same.Empty |= q.Empty;
+                    if (same.DoorKind.Length == 0)
+                        same.DoorKind = q.DoorKind;
                     continue;
                 }
                 if (grid)

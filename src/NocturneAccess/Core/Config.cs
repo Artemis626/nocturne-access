@@ -40,6 +40,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<bool> PadInjection { get; private set; }
         internal static MelonPreferences_Entry<bool> BlobberOnAtStart { get; private set; }
         internal static MelonPreferences_Entry<int> BlobberCellSize { get; private set; }
+        internal static MelonPreferences_Entry<bool> DoorKinds { get; private set; }
 
         // Keys (names are UnityEngine.KeyCode values, e.g. F8, Backslash, Alpha1)
         internal static MelonPreferences_Entry<string> KeyRepeat { get; private set; }
@@ -115,6 +116,8 @@ namespace NocturneAccess.Core
                 "Blobber mode is on when the game starts (F4 switches it).");
             BlobberCellSize = navigation.CreateEntry("BlobberCellSize", 600, "Blobber cell size",
                 "Development: one step in game units (600 = one corridor width in the Underground Facility).");
+            DoorKinds = navigation.CreateEntry("DoorKinds", true, "Door kinds",
+                "Page Up / Page Down, Home and End say whether a plain door leads to a room, a passage or an exit (from the game's door table). Turn off to go back to plain \"Door\".");
 
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);

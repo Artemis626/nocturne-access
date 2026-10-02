@@ -55,6 +55,7 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.35** | `docs/EXPLORED-DOORS-PLAN.md` items 1 to 3: generic doors gone through say "explored" (Page Up / Page Down, Home, End), kept per save file in `UserData/NocturneAccess/Explored/fileNN.txt`; item boxes the game has opened say "empty" | Verified 2 Oct 16:11 (marks both sides, End and Home wording, saved per file; suspend data keeps its own list) |
 | **0.0.36** | Blobber cues silent while the game moves the player itself (the cutscene before Forneus sounded like a walk) | Built 2 Oct 2026, not yet tested |
 | **0.0.37** | Door warp table (where each door leads) decoded and written to the Shift+F6 dump, nothing spoken yet | Verified 2 Oct 17:11 (matches every door gone through); analysis in `docs/EXPLORED-DOORS-PLAN.md`; next: Francesco picks the wording |
+| **0.0.38** | Door kinds: a plain door says "room", "passage" or "exit" (Page Up / Page Down, Home, End); off with `DoorKinds = false` in the config, revert point f0621c8 | Built 2 Oct 2026, not yet tested |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 
