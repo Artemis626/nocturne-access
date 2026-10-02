@@ -404,7 +404,7 @@ Francesco plans a debug and efficiency pass over everything so far. Where the wo
 - **`WalkGrid`:** `Build` 0 to 7 ms on area change (field 11: 35 000 cells); `Plan` (Dijkstra over the whole grid, allocates three arrays the size of the grid, about 1.4 MB in the basement) 1 to 10 ms per call. `AutoWalk.Route` calls it up to 4 times for a person in first person, and `PointsOfInterest.Build` calls `ReachableNear` (a cached flood) per point. `RouteGuide` plans once per End press. Candidates: reuse the arrays, stop the search at the goal (A*), cache the route per target.
 - **`PointsOfInterest.Build`** runs at each Page Up / Page Down and at each `AutoWalk` start and re-plan (`Current` rebuilds the list).
 - **Battle menu cursor:** `BattleSkills.CostOfActing` looks the item up by name among the actor's skills (`datSkillName.Get` per skill) at each cursor move.
-- **Logs:** `[Nav:Trace]` every 250 ms while exploring, `[Battle:Data]` on change, `[Probe:*]` only with `Probe = true`.
+- **Logs:** `[Nav:Trace]` at most once a second while exploring (every 250 ms until 0.0.30; config entry `TraceIntervalMsV2`), `[Battle:Data]` on change, `[Probe:*]` only with `Probe = true`.
 - **Known rough edges:** `BattleReader` is about 780 lines (banner, targets, sides, press turns, units, results, F2 / F3); `AutoWalk` about 550; the `MenuSpec` list in `MenuReader` grows per screen.
 
 **0.0.30, cleanup and debug pass (2 Oct 2026, no change in what the mod says or does).** Applied:

@@ -103,7 +103,9 @@ namespace NocturneAccess.Core
             navigation.SetFilePath(FilePath, true, false);
             NavDiagnostics = navigation.CreateEntry("Diagnostics", true, "Navigation diagnostics",
                 "Development: logs the player's position, facing and input while exploring, place and event changes, and the story flags checked when V (Toggle POV) is pressed. Needs a restart.");
-            NavTraceIntervalMs = navigation.CreateEntry("TraceIntervalMs", 250, "Trace interval (ms)",
+            // "TraceIntervalMsV2" (1000) replaces the entry "TraceIntervalMs" (250) of 0.0.30 and earlier, so saved configs pick
+            // up the new default: the 250 ms trace lines were most of a session log.
+            NavTraceIntervalMs = navigation.CreateEntry("TraceIntervalMsV2", 1000, "Trace interval (ms)",
                 "With Diagnostics on: at most one position line per this many milliseconds, only when something changed.");
             UnlockFirstPerson = navigation.CreateEntry("UnlockFirstPerson", true, "Unlock first person",
                 "Lets V (Toggle POV) switch to first person on a first playthrough. Held in memory only: the game's first-person flag is never written, so saves are unchanged. Needs a restart.");
