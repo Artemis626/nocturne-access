@@ -400,12 +400,12 @@ Francesco plans a debug and efficiency pass over everything so far. Where the wo
 
 - **Per frame (`ModMain.OnUpdate`):** every reader's `Tick`. Cheap ones poll at 80 to 500 ms; `BattleReader` reads every unit every 200 ms in battle; `AnnouncementReader` checks visibility every 100 to 250 ms.
 - **TMP hook (`TmpRouter`):** one postfix on every TMP text write; each component classified once by its hierarchy path (cached by instance id). Readers must ignore identical rewrites.
-- **Field update prefix (`FieldState`, 30 Hz):** `BlobberMode.BeforeCalc` (calls `WalkGrid.Lattice`, which calls `WalkGrid.Ensure` every tick: `CollisionCache.Refresh` is a pointer and count check, `ReadHiddenNpcs` loops the NPC table), `AutoWalk.BeforeCalc`.
+- **Field update prefix (`FieldState`, 30 Hz):** `BlobberMode.BeforeCalc` (calls `WalkGrid.Lattice`, which calls `WalkGrid.Ensure` every tick: `CollisionCache.Refresh` is a pointer and count check; `ReadHiddenNpcs` loops the NPC table, on this path at most every 500 ms since 0.0.31), `AutoWalk.BeforeCalc`.
 - **`WalkGrid`:** `Build` 0 to 7 ms on area change (field 11: 35 000 cells); `Plan` (Dijkstra over the whole grid, allocates three arrays the size of the grid, about 1.4 MB in the basement) 1 to 10 ms per call. `AutoWalk.Route` calls it up to 4 times for a person in first person, and `PointsOfInterest.Build` calls `ReachableNear` (a cached flood) per point. `RouteGuide` plans once per End press. Candidates: reuse the arrays, stop the search at the goal (A*), cache the route per target.
 - **`PointsOfInterest.Build`** runs at each Page Up / Page Down and at each `AutoWalk` start and re-plan (`Current` rebuilds the list).
 - **Battle menu cursor:** `BattleSkills.CostOfActing` looks the item up by name among the actor's skills (`datSkillName.Get` per skill) at each cursor move.
 - **Logs:** `[Nav:Trace]` at most once a second while exploring (every 250 ms until 0.0.30; config entry `TraceIntervalMsV2`), `[Battle:Data]` on change, `[Probe:*]` only with `Probe = true`.
-- **Known rough edges:** `BattleReader` is about 780 lines (banner, targets, sides, press turns, units, results, F2 / F3); `AutoWalk` about 550; the `MenuSpec` list in `MenuReader` grows per screen.
+- **Known rough edges:** `AutoWalk` is about 550 lines; the `MenuSpec` list in `MenuReader` grows per screen. (`BattleReader`, about 780 lines, was split into partial files in 0.0.31.)
 
 **0.0.30, cleanup and debug pass (2 Oct 2026, no change in what the mod says or does).** Applied:
 
@@ -416,6 +416,15 @@ Francesco plans a debug and efficiency pass over everything so far. Where the wo
 - `TmpRouter`: the per-component classification cache is cleared at 20 000 entries (new UI copies every battle and save screen made it grow all session).
 - `WalkGrid.Plan`: the search arrays and queue are reused between calls (reset each time), instead of about 1.4 MB allocated per search.
 
-Proposed and **approved** (Francesco, 2 Oct 2026): `docs/REFACTOR-PLAN.md`, items 1 to 5, plus item 0, a bug fix.
+Proposed and **approved** (Francesco, 2 Oct 2026): `docs/REFACTOR-PLAN.md`, items 1 to 5, plus item 0, a bug fix. Done in 0.0.31 (below).
 
 **0.0.29 and 0.0.30 verified in game (2 Oct 2026, 10:07 session, `session_2026-10-02_10-07-39.log`).** Francesco: everything "looks and feels exactly as before" after the cleanup; no `[ERROR]` or `[Update]` lines. Confirmed in the log: Analyze spoken ("Haunt Preta. Level 4. HP 30 of 30. MP 24 of 24. Null: Dark. Weak: Light/Magic. Skills: Feral Claw."; a Will o' Wisp's line adds "Str: Phys"); weakness hits (`Half turn: actor 1, nowcommand 1, nowindex 13, element 3` = Zio is Elec, the Preta's and Will o' Wisp's `aisyo[3]` 0x80000096); F5 log; results items (`item [2 0 0 0] itemcnt [1 0 0 0]`: "19 EXP. 67 macca. Medicine."); "Enemy turn.", "Preta: Feral Claw", damage amounts. One bug: an HP line ("Art, HP 48 of 48") before "Battle. Preta." in the first battle of the session, from the target poll running before the battle start (`docs/REFACTOR-PLAN.md` item 0).
+
+**0.0.31, the refactor plan (2 Oct 2026, built, not yet tested in game).** `docs/REFACTOR-PLAN.md` items 0 to 5, one commit each after the revert point `aa9c7c2`:
+
+- **0, the bug** (`dfec866`): the real cause was an overflow, not a target call. `_targetCallAt` started at `long.MinValue`, and `now - long.MinValue` wraps to a negative number, so the 300 ms target window read as open until the session's first real target call: `PollTarget` spoke `nowform` 0 (Art) 5 ms after the battle UI came up. It now starts at `long.MinValue / 2`, like the mod's other timers (none of them subtracts from an unhalved `MinValue`). As approved, targets are also polled and target banners spoken only once the start is announced.
+- **1** (`c74f100`): `BattleReader` split into partial files: `BattleReader.cs` (install, start and end, `Tick`), `.Banner.cs`, `.Turns.cs`, `.Units.cs`, `.Results.cs`. Pure move, checked line by line.
+- **2** (`1840d84`): `Capture/DumpWriter` holds the file, log summary, guarded sections and save of both dumps; files, log lines and speech as before.
+- **3** (`d10c492`): `AnnouncementReader` keeps one entry per path; a new copy of a component (each save screen) takes it over, reset as a new entry and moved to the end of the list, so prompts are spoken as before. Writes from a replaced copy are ignored.
+- **4** (`5ec125c`): `WalkGrid.Ensure` from `Lattice` (every field update) reads hidden NPCs at most every 500 ms; area, collision and window changes rebuild at once with a fresh read; the key-driven callers read them every time, as before.
+- **5** (`51b790f`): `[Nav:Trace]` at most once a second by default, new config entry `TraceIntervalMsV2` (the old `TraceIntervalMs = 250` line stays in the file, unused).

@@ -1,6 +1,15 @@
 # Refactor plan (approved by Francesco, 2 Oct 2026)
 
-Status: **approved, not yet implemented.** Revert point: the commit that added this file (0.0.30 verified in game).
+Status: **done in 0.0.31 (2 Oct 2026), built, not yet tested in game.** Revert point: `aa9c7c2`, the commit that added this file (0.0.30 verified in game). One commit per item, each revertable alone:
+
+| Item | Commit |
+| --- | --- |
+| 0, HP line before the battle starts | `dfec866` (also the version bump to 0.0.31) |
+| 1, `BattleReader` partial files | `c74f100` |
+| 2, `Capture/DumpWriter` | `1840d84` |
+| 3, `AnnouncementReader` one entry per path | `d10c492` |
+| 4, hidden NPCs every 500 ms on the per-frame path | `5ec125c` |
+| 5, trace once a second (`TraceIntervalMsV2`) | `51b790f` |
 
 ## Rules for this work
 
