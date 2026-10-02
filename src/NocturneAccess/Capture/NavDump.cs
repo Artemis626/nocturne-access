@@ -57,6 +57,7 @@ namespace NocturneAccess.Capture
             Section("NPCs", () => DumpNpcs(s));
             Section("Item boxes", () => DumpBoxes(s));
             Section("Event volumes", () => DumpEvents(s));
+            Section("Door warp table", () => DumpDoorTable(s));
             Section("Points of interest and walk grid", () => DumpWalkGrid(s));
             Section("Input and flags", DumpInputAndFlags);
 
@@ -340,6 +341,53 @@ namespace NocturneAccess.Capture
                 Both($"  box {i} TakaraIdx {e.TakaraIdx} type {e.type} pos {F(e.x)} {F(e.y)} {F(e.z)} d {Dist(s, e.x, e.y, e.z)} r {F(e.r)} " +
                      $"MotPhase {e.MotPhase} fldTakaraTblIdx {e.fldTakaraTblIdx}");
             }
+        }
+
+        /// <summary>
+        /// The field's door warp table, fldWap.gFldWarpBuff.door_buff (doormovetbl_s), read as data (docs/class-index.md, "Door
+        /// warp table"): per entry the source area (union01 = area + 1) and door volume name (union02), the warp kind (warptype; 0
+        /// a plain warp), the destination field (union08, 0 = this field), area (union09 = area + 1, 0 = this area) and arrival
+        /// point (warp_pos). The story flag (flag) is printed, not checked. Entries of the current area go to the log too.
+        /// </summary>
+        private static void DumpDoorTable(PlayerSnapshot s)
+        {
+            fldGlobalWork_t gb = fldGlobal.fldGb;
+            fldwarp_s warp = fldWap.gFldWarpBuff;
+            Il2CppReferenceArray<doormovetbl_s> table = warp?.door_buff;
+            Both($"door_buff {(table == null ? "null" : table.Length.ToString())}, field {gb?.fieldID}, area {gb?.areaID} (union01 {gb?.areaID + 1})");
+            if (table == null || gb == null)
+                return;
+            int used = 0;
+            for (int i = 0; i < table.Length; i++)
+            {
+                doormovetbl_s e = table[i];
+                if (e == null)
+                    continue;
+                string from = Chars(e.union02);
+                if (e.movetype == 0 && from.Length == 0)
+                    continue;
+                used++;
+                string line = $"  door {i} movetype {(int)e.movetype} flagmode {(int)e.flagmode} flag {e.flag} from area+1 {e.union01} {Q(from)} | " +
+                              $"u03 {e.union03} u04 {e.union04} u05 {e.union05} u06 {Q(Chars(e.union06))} u07 {Q(Chars(e.union07))} | " +
+                              $"warptype {(int)e.warptype} attr {(int)e.warp_attr} to field {e.union08} area+1 {e.union09} u10 {e.union10} at {Q(Chars(e.warp_pos))} | " +
+                              $"cam {(int)e.warp_cammode}/{(int)e.warp_camtbl} {Q(Chars(e.warp_camname))} bgm {(int)e.warp_bgm} foot {(int)e.warp_foot} after {(int)e.after_flag} {Q(Chars(e.after_scr))}";
+                if (e.union01 == gb.areaID + 1)
+                    Both(line);
+                else
+                    FileOnly(line);
+            }
+            Both($"{used} entries used");
+        }
+
+        /// <summary>A game char array up to its first NUL.</summary>
+        private static string Chars(Il2CppStructArray<char> a)
+        {
+            if (a == null)
+                return "";
+            var sb = new StringBuilder();
+            for (int i = 0; i < a.Length && a[i] != '\0'; i++)
+                sb.Append(a[i]);
+            return sb.ToString();
         }
 
         private static string Dist(PlayerSnapshot s, float x, float y, float z)
