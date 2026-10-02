@@ -103,6 +103,12 @@ namespace NocturneAccess.Systems.Battle
         private static int _lastTargetForm = int.MinValue;
         private static bool _targetFromData;
 
+        // Actions, sides and press turns
+        private static bool _bannerIsAction, _pendingIsAction;
+        private static int _actionActor = -1, _pendingActor = -1, _actionHpCost;
+        private static bool _sideKnown, _sideEnemy, _playerTurnUnsaid;
+        private static int _pressActor = -99, _pressTurn = -1, _pressP, _pressTen;
+
         internal static bool Active => _active;
 
         internal static void Install()
@@ -139,10 +145,14 @@ namespace NocturneAccess.Systems.Battle
 
         // ---- Banner ----
 
-        private static void AfterDispText(string __0, string __1)
+        private static void AfterDispText(string __0, string __1, int __2)
         {
             _bannerRequested = true;
             _bannerIsTarget = __1 != null;
+            // An action name: ("Feral Claw", null, 0, ...) or ("Attack", null, 0, ...); results are (null, null, 1, ...).
+            _bannerIsAction = __1 == null && __0 != null && __2 == 0;
+            if (_bannerIsAction)
+                NoteAction();
             if (__1 != null)
             {
                 // Target help: text1 is the race, text2 the name. Called continuously while the cursor is shown.
@@ -165,8 +175,30 @@ namespace NocturneAccess.Systems.Battle
             _bannerComponent = component;
             _pendingBanner = text;
             _pendingIsTarget = _bannerIsTarget;
+            _pendingIsAction = _bannerIsAction;
+            _pendingActor = _actionActor;
             _pendingSince = Clock.ElapsedMilliseconds;
         }
+
+        /// <summary>
+        /// An action begins: remember who acts (activeunit) and the HP its skill costs, so the HP drop is called a cost,
+        /// not damage. The skill itself is read from the actor's unit work when it lands (nowcommand 1 = skill, nowindex =
+        /// skill id, nowtform = target: Analyze gave 1, 71, 4 in the 09:16 dump; nowcommand 0 = attack).
+        /// </summary>
+        private static void NoteAction()
+        {
+            nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
+            _actionActor = d?.activeunit ?? -1;
+            _actionHpCost = 0;
+            if (_actionActor < 0)
+                return;
+            datUnitWork_t w = nbMainProcess.nbGetUnitWorkFromFormindex(_actionActor);
+            if (w != null && w.nowcommand == 1)
+                _actionHpCost = BattleSkills.HpCost(w.nowindex, w);
+        }
+
+        private static string ActorName(int form)
+            => Units.TryGetValue(form, out Unit u) ? DisplayName(u) : "";
 
         private static void SpeakPendingBanner(long now)
         {
@@ -188,9 +220,17 @@ namespace NocturneAccess.Systems.Battle
                 string hp = TargetHp(text);
                 SpeechManager.Say(hp.Length > 0 ? $"{text}, {hp}" : text, interrupt: true, force: true);
             }
+            else if (_pendingIsAction)
+            {
+                // Enemies act without a menu: say who ("Preta 2: Feral Claw"). The party's own choice needs no name.
+                string actor = ActorName(_pendingActor);
+                SpeechManager.Say(_pendingActor >= FirstEnemy && actor.Length > 0 ? $"{actor}: {text}" : text, interrupt: false, force: true);
+                BattleLog.Add(actor.Length > 0 ? $"{actor}: {text}" : text);
+            }
             else
             {
                 SpeechManager.Say(text, interrupt: false, force: true);
+                BattleLog.Add(text);
             }
         }
 
@@ -238,6 +278,11 @@ namespace NocturneAccess.Systems.Battle
             _battleNo++;
             _lastTurnKey = "";
             _enemySlots = 0;
+            _sideKnown = false;
+            _playerTurnUnsaid = false;
+            _pressActor = -99;
+            _actionActor = _pendingActor = -1;
+            BattleLog.NewBattle();
             NameCounts.Clear();
             _lastData = "";
             Log.Info($"{Tag} Battle UI up.");
@@ -250,8 +295,51 @@ namespace NocturneAccess.Systems.Battle
                 return;
             _resultsShown = true;
             LogData(force: true);
-            Log.Info($"{Tag} Results screen.");
-            SpeechManager.Say("Battle results.", interrupt: false, force: true);
+            string text = "Battle results." + Spoils();
+            Log.Info($"{Tag} Results screen: {text}");
+            SpeechManager.Say(text, interrupt: false, force: true);
+            BattleLog.Add(text);
+        }
+
+        /// <summary>
+        /// " 9 EXP. 27 macca. Medicine." from the main process data at the results screen: exp and maka matched the screen
+        /// (EXP 9, macca 27, 09:22 recording); items from item[] / itemcnt[] named by datItemName.Get (the results screen
+        /// asked for item 2, "Medicine"), the count added when more than one. The raw arrays are logged to check.
+        /// </summary>
+        private static string Spoils()
+        {
+            nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
+            if (d == null)
+                return "";
+            var parts = new List<string>();
+            if (d.exp > 0)
+                parts.Add($"{d.exp} EXP.");
+            if (d.maka > 0)
+                parts.Add($"{d.maka} macca.");
+            var items = d.item;
+            var counts = d.itemcnt;
+            if (items != null)
+            {
+                Log.Info($"{Tag} Results items: item [{string.Join(" ", items)}] itemcnt [{(counts == null ? "null" : string.Join(" ", counts))}].");
+                for (int k = 0; k < items.Length; k++)
+                {
+                    if (items[k] == 0)
+                        continue;
+                    string name;
+                    try
+                    {
+                        name = TextUtil.Clean(datItemName.Get(items[k]) ?? "");
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                    int count = counts != null && k < counts.Length ? counts[k] : 1;
+                    if (name.Length > 0)
+                        parts.Add(count > 1 ? $"{name}, {count}." : $"{name}.");
+                }
+            }
+            return parts.Count == 0 ? "" : " " + string.Join(" ", parts);
         }
 
         /// <summary>Called every frame.</summary>
@@ -275,9 +363,16 @@ namespace NocturneAccess.Systems.Battle
                 else if (_started && now - _lastDataPoll >= DataPollMs)
                 {
                     _lastDataPoll = now;
+                    nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
+                    if (d != null)
+                    {
+                        ObserveSide(d);
+                        ObservePress(d);
+                    }
                     ReadUnits(speakChanges: Config.SpeakHpChanges.Value);
                     LogData(force: false);
                 }
+                BattleAnalyze.Tick();
 
                 if (now - _lastVisibilityPoll >= VisibilityPollMs)
                 {
@@ -417,8 +512,22 @@ namespace NocturneAccess.Systems.Battle
             u.MaxMp = w.maxmp;
             if (speakChanges && u.Hp != oldHp)
             {
+                // The amount, as the game's damage numbers show it ("7" over Pixie, 09:22 recording); an HP drop equal to
+                // the acting unit's own skill cost is the cost (Lunge: 4 HP), said once.
                 string who = DisplayName(u);
-                SpeechManager.Say(u.Hp == 0 ? $"{who}, 0 HP." : $"{who}, HP {u.Hp} of {u.MaxHp}.", interrupt: false, force: true);
+                string what;
+                if (u.Hp < oldHp && form == _actionActor && _actionHpCost > 0 && oldHp - u.Hp == _actionHpCost)
+                {
+                    what = $"{_actionHpCost} HP cost";
+                    _actionHpCost = 0;
+                }
+                else
+                {
+                    what = u.Hp < oldHp ? $"{oldHp - u.Hp} damage" : $"{u.Hp - oldHp} healed";
+                }
+                string text = u.Hp == 0 ? $"{who}: {what}, 0 HP." : $"{who}: {what}, HP {u.Hp} of {u.MaxHp}.";
+                SpeechManager.Say(text, interrupt: false, force: true);
+                BattleLog.Add(text);
             }
             return true;
         }
@@ -485,6 +594,7 @@ namespace NocturneAccess.Systems.Battle
             nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
             if (d == null || d.activeunit < 0 || d.activeunit >= PartySlots)
                 return "";
+            ObserveSide(d);   // the menu opens 50 ms after activeunit changes, before the 200 ms poll sees it
             int form = d.activeunit;
             string key = $"{_battleNo}/{d.turn}/{form}/{d.press4_p}/{d.press4_ten}";
             if (key == _lastTurnKey)
@@ -495,7 +605,81 @@ namespace NocturneAccess.Systems.Battle
             if (name.Length == 0)
                 return "";
             Log.Info($"{Tag} Turn: formindex {form} ({name}), press4_p {d.press4_p}, press4_ten {d.press4_ten}.");
-            return $"{name}'s turn";
+            string side = _playerTurnUnsaid ? "Player turn. " : "";
+            _playerTurnUnsaid = false;
+            return $"{side}{name}'s turn";
+        }
+
+        /// <summary>
+        /// The side acting changed (activeunit 0 to 3 the party, 4 and up the enemies): the game shows "PLAYER TURN" or
+        /// "ENEMY TURN" as images (09:22 recording). "Enemy turn." is spoken at once; "Player turn." opens the next party
+        /// command menu ("Player turn. Art's turn. Attack, 1 of 4."). Each side's turn starts a new part of the battle log.
+        /// </summary>
+        private static void ObserveSide(nbMainProcessData_t d)
+        {
+            if (d.activeunit < 0)
+                return;
+            bool enemy = d.activeunit >= FirstEnemy;
+            if (_sideKnown && enemy == _sideEnemy)
+                return;
+            _sideKnown = true;
+            _sideEnemy = enemy;
+            BattleLog.NewSide(enemy ? "Enemy turn" : "Player turn");
+            Log.Info($"{Tag} Side: {(enemy ? "enemies" : "party")} (turn {d.turn}, activeunit {d.activeunit}).");
+            if (enemy)
+            {
+                _playerTurnUnsaid = false;
+                SpeechManager.Say("Enemy turn.", interrupt: false, force: true);
+            }
+            else
+            {
+                _playerTurnUnsaid = true;
+            }
+        }
+
+        /// <summary>
+        /// A hit that costs only half a press turn: while the same unit acts, a full icon becomes a half one (press4_p one
+        /// less, press4_ten the same). Seen for Pixie's Zio on the Preta's Elec weakness (1/1 to 0 full of 1, 09:17) and
+        /// for Art's critical hit on a Kodama (2/2 to 1 full of 2, 22:20 on 1 Oct). The cause is told from the actor's
+        /// action and the target's affinity: weak to the action's element = "Weakness"; a physical or skill hit
+        /// otherwise = "Critical"; anything else (Pass costs half a turn too) = no claim. Both sides play by these rules,
+        /// so enemies' hits on the party are announced as well.
+        /// </summary>
+        private static void ObservePress(nbMainProcessData_t d)
+        {
+            int actor = d.activeunit;
+            if (actor >= 0 && actor == _pressActor && d.turn == _pressTurn && _pressP > 0
+                && d.press4_ten == _pressTen && d.press4_p == _pressP - 1)
+                HalfTurn(actor);
+            _pressActor = actor;
+            _pressTurn = d.turn;
+            _pressP = d.press4_p;
+            _pressTen = d.press4_ten;
+        }
+
+        private static void HalfTurn(int actor)
+        {
+            datUnitWork_t w = nbMainProcess.nbGetUnitWorkFromFormindex(actor);
+            if (w == null)
+                return;
+            int element = w.nowcommand == 0 ? BattleSkills.Physical : w.nowcommand == 1 ? BattleSkills.Element(w.nowindex) : -1;
+            int target = w.nowtform;
+            string text;
+            if (element < 0)
+            {
+                text = "Half a turn used.";
+                Log.Info($"{Tag} Half turn: actor {actor}, nowcommand {w.nowcommand}, nowindex {w.nowindex}: no element.");
+            }
+            else
+            {
+                bool weak = BattleSkills.IsWeak(target, element, out uint raw);
+                string who = ActorName(target);
+                text = weak ? (who.Length > 0 ? $"Weakness hit on {who}, only half a turn used." : "Weakness hit, only half a turn used.")
+                            : "Critical hit, only half a turn used.";
+                Log.Info($"{Tag} Half turn: actor {actor}, nowcommand {w.nowcommand}, nowindex {w.nowindex}, element {element}, target {target}, aisyo 0x{raw:X}: {(weak ? "weak" : "not weak")}.");
+            }
+            SpeechManager.Say(text, interrupt: false, force: true);
+            BattleLog.Add(text);
         }
 
         /// <summary>"2 press turns left, 1 full and 1 half." (press4_ten all icons, press4_p the full ones; a blinking icon is half a turn).</summary>
@@ -512,7 +696,11 @@ namespace NocturneAccess.Systems.Battle
 
         // ---- Status key ----
 
-        /// <summary>F2: Press Turns, enemies, then the party, all from game data.</summary>
+        // Short sentences, each ending in a full stop, so the screen reader pauses between them (Francesco, 22:14 session:
+        // "Press turns: 1 full, 1 blinking" ran together). Split in two keys (Francesco, 2 Oct 2026: one key gave too much
+        // at once): F2 our side, F3 the enemies.
+
+        /// <summary>F2: whose turn, the press turns left, then each party member's HP and MP.</summary>
         internal static void SpeakStatus()
         {
             if (!_active)
@@ -520,9 +708,6 @@ namespace NocturneAccess.Systems.Battle
                 SpeechManager.Say("Not in battle.", interrupt: true, force: true);
                 return;
             }
-
-            // Short sentences, each ending in a full stop, so the screen reader pauses between them (Francesco, 22:14 session:
-            // "Press turns: 1 full, 1 blinking" ran together and was unclear).
             ReadUnits(speakChanges: false);
             var parts = new List<string>();
             nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
@@ -533,15 +718,48 @@ namespace NocturneAccess.Systems.Battle
                     side = $"{PanelNames[d.activeunit]}'s turn. ";
                 parts.Add(side + Capital(PressTurns(d)));
             }
-            List<Unit> enemies = Units.Values.Where(u => u.Form >= FirstEnemy && u.Hp > 0).OrderBy(u => u.Form).ToList();
-            parts.Add(enemies.Count == 1 ? "1 enemy." : $"{enemies.Count} enemies.");
-            foreach (Unit u in enemies)
-                parts.Add($"{DisplayName(u)}: HP {u.Hp} of {u.MaxHp}.");
-            parts.Add("Party.");
             foreach (Unit u in Units.Values.Where(u => u.Form < FirstEnemy).OrderBy(u => u.Form))
                 parts.Add($"{DisplayName(u)}: HP {u.Hp} of {u.MaxHp}, MP {u.Mp} of {u.MaxMp}.");
             LogData(force: true);
             SpeechManager.Say(string.Join(" ", parts), interrupt: true, force: true);
+        }
+
+        /// <summary>F3 in battle: each living enemy with HP, and its affinities once Analyze has shown them.</summary>
+        internal static void SpeakEnemies()
+        {
+            if (!_active)
+                return;
+            ReadUnits(speakChanges: false);
+            List<Unit> enemies = Units.Values.Where(u => u.Form >= FirstEnemy && u.Hp > 0).OrderBy(u => u.Form).ToList();
+            var parts = new List<string> { enemies.Count == 1 ? "1 enemy." : $"{enemies.Count} enemies." };
+            foreach (Unit u in enemies)
+            {
+                string affinities = BattleAnalyze.AffinitiesOf(u.Name);
+                parts.Add($"{DisplayName(u)}: HP {u.Hp} of {u.MaxHp}." + (affinities.Length > 0 ? " " + affinities : ""));
+            }
+            SpeechManager.Say(string.Join(" ", parts), interrupt: true, force: true);
+        }
+
+        /// <summary>For the Analyze screen, whose level, HP and MP are images: "Level 4. HP 30 of 30. MP 24 of 24." for the
+        /// enemy of that name (the one targeted when several share it), or "".</summary>
+        internal static string UnitFigures(string name)
+        {
+            if (!_active)
+                return "";
+            List<Unit> matches = Units.Values.Where(u => u.Form >= FirstEnemy && u.Name == name).ToList();
+            Unit unit = matches.Count == 1 ? matches[0] : null;
+            if (unit == null && matches.Count > 1)
+            {
+                nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
+                datUnitWork_t actor = d == null || d.activeunit < 0 ? null : nbMainProcess.nbGetUnitWorkFromFormindex(d.activeunit);
+                if (actor != null)
+                    unit = matches.FirstOrDefault(u => u.Form == actor.nowtform);
+            }
+            if (unit == null)
+                return "";
+            datUnitWork_t w = nbMainProcess.nbGetUnitWorkFromFormindex(unit.Form);
+            string level = w != null ? $"Level {w.level}. " : "";
+            return $"{level}HP {unit.Hp} of {unit.MaxHp}. MP {unit.Mp} of {unit.MaxMp}.";
         }
 
         private static string Capital(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);

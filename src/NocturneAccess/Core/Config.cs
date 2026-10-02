@@ -49,6 +49,8 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyToggleProbe { get; private set; }
         internal static MelonPreferences_Entry<string> KeyNavDump { get; private set; }
         internal static MelonPreferences_Entry<string> KeyBattleDump { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyBattleEnemies { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyBattleLog { get; private set; }
         internal static MelonPreferences_Entry<string> KeyBlobber { get; private set; }
         internal static MelonPreferences_Entry<string> KeyCentre { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiNext { get; private set; }
@@ -119,7 +121,11 @@ namespace NocturneAccess.Core
             KeyStatus = keys.CreateEntry("Status", "F8", "Status key",
                 "Speaks whether the mod is running and which speech backend it uses.");
             KeyBattleStatus = keys.CreateEntry("BattleStatus", "F2", "Battle status key",
-                "In battle: whose turn it is and the press turns left, then every enemy and party member with HP and MP.");
+                "In battle: whose turn it is and the press turns left, then each party member with HP and MP.");
+            KeyBattleEnemies = keys.CreateEntry("BattleEnemies", "F3", "Battle enemies key",
+                "In battle: each enemy with HP, and its affinities once Analyze has shown them. Shares F3 with centring, which works only outside battle.");
+            KeyBattleLog = keys.CreateEntry("BattleLog", "F5", "Battle log key",
+                "Battle: what happened in the previous side's turn and the current one so far (actions, damage, weakness and critical hits). Kept until the next battle.");
             KeyDumpUi = keys.CreateEntry("DumpUi", "F6", "Dump UI key",
                 "Debug: writes every text currently visible on screen to Latest.log.");
             KeyToggleProbe = keys.CreateEntry("ToggleProbe", "F7", "Toggle probe key",

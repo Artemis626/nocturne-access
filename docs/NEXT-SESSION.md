@@ -45,7 +45,8 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.25** | Basement test of 0.0.24: hidden NPCs (inactive object) left out of the list and the walking map, no spin next to a person, start off the route allowed; **End: spoken directions** to the selected point | Played 20:37: hidden NPC gone, walks fine; End too talkative | 
 | **0.0.26** | End speaks directions only when pressed; Home turns to a door even right at it | Played 21:31 (1F, 2F, annex gate): End fine, about 30 walks arrived |
 | **0.0.27** | Elevator floor banner not spoken after the question; volume heights from their boxes (Pixie listed); walks end in front of doors and on a line with people; blobber square centres per area (2F corridors) | Played 22:14: elevator banner gone, walks in front of doors, 2F square offset 300 |
-| **0.0.28** | Battle: "Pixie's turn" before each command menu; F2 in short sentences with "2 press turns left: 1 full and 1 half"; enemies read by slot, so HP is spoken after others fall; Shift+F2 battle dump. Square offset: middle of the near-best range | Built 1 Oct 2026, **not yet tested in game**; `docs/HANDOFF.md` (battle, 0.0.28) |
+| **0.0.28** | Battle: "Pixie's turn" before each command menu; F2 in short sentences with "2 press turns left: 1 full and 1 half"; enemies read by slot, so HP is spoken after others fall; Shift+F2 battle dump. Square offset: middle of the near-best range | Played 2 Oct 09:14: "Pixie's turn" and F2 worked; asked for costs, weakness, Analyze, a split F2, a battle log |
+| **0.0.29** | Battle: skill costs in the menu ("Lunge, 4 HP"), weakness and critical hits for both sides, the Analyze screen, "Enemy turn." / "Player turn.", damage and healing amounts, enemy names on their actions, results with EXP, macca and items; F2 our side, F3 the enemies, F5 the battle log | Built 2 Oct 2026, **not yet tested in game**; `docs/HANDOFF.md` (battle, 0.0.29) |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 
@@ -66,7 +67,7 @@ Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:0
 
 ## Open problems and next steps (in order)
 
-**1 Oct 2026, evening: navigation continues from `docs/HANDOFF-PATHFINDING.md` (rewritten): Francesco is playing through the game with 0.0.28 and reports bugs and missing features: read each session's log, fix, record (`docs/HANDOFF-PATHFINDING.md`), then the open problems listed there.**
+**1 Oct 2026, evening: navigation continues from `docs/HANDOFF-PATHFINDING.md` (rewritten): Francesco is playing through the game with 0.0.29 (Francesco first plans a debug and efficiency pass over the code: `docs/HANDOFF.md`, "Code map for the debug and efficiency pass") and reports bugs and missing features: read each session's log, fix, record (`docs/HANDOFF-PATHFINDING.md`), then the open problems listed there.**
 
 **1 Oct 2026, end of the first navigation chat: continue navigation from `docs/HANDOFF-PATHFINDING.md` (rewritten): blobber mode must keep the game's own controls, snap only movement, and never block on cues; fixed-camera rooms get points of interest with auto-walk later.**
 

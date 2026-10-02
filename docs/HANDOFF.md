@@ -382,3 +382,27 @@ Pages opened for this document: [MatthiewNocturne](https://github.com/NocturneMo
 4. **Shift+F2 battle dump** (Francesco asked whether a dump would help scope the missing pieces): every field of the main process data, each formindex's unit (level, HP, MP, `badstatus`, `param`, skills with names, `nbParty_t.count` buffs), the formation and the target selection, to `UserData/NocturneAccess/BattleDumps`. Next: affinities, buffs, ailments and skill costs from these dumps.
 
 Also verified in this log: 0.0.27's elevator fix (the current floor "Ｂ1", "Ｒ", "2Ｆ" not spoken with "> Select a floor."), walks aimed in front of doors, square-centre offsets (basement 0 0, 2F 300 0). One rebuild of the 2F map chose 240 instead of 300 (the score is flat near the best): 0.0.28 takes the middle of the run of offsets within 3 % of the best.
+
+**0.0.29, battle (2 Oct 2026, 09:14 session, `session_2026-10-02_09-14-01.log`, recording `2026-10-02 09-22-07.mp4`, battle dumps 09:16:35 and 09:16:46).** 0.0.28 verified: "Art's turn" / "Pixie's turn" opened each command menu; F2 worked ("1 press turn left: 0 full and 1 half"). Francesco asked for:
+
+1. **Skill costs** ("Lunge 4 HP, Analyze 2 MP" are images in the menu). The game's rule, read offline from `cmpDrawSkill.cmpSkillNameCostDraw`: `costtype` 1 = HP, `maxhp * cost / 100 + costbase`; otherwise MP, `cost`; 0 = none. `MenuSpec.ItemDetail`: "Lunge, 4 HP, 2 of 4. Low Physical damage to one foe." The skill is found by name among the acting unit's skills (`activeunit`).
+2. **Weakness hits not announced, for both sides.** No text is written; the press turns show it: Pixie's Zio on the Preta turned the last full icon into a half one (1/1 to 0 full of 1). `ObservePress`: while one unit acts, `press4_p` one less and `press4_ten` the same = a half-turn hit; the actor's `nowcommand` / `nowindex` (skill id) give the element (`datSkill.tbl[id].skillattr`, attack = physical), the target `nowtform`, and its `aisyo[element]` bit 31 = weak: "Weakness hit on Preta, only half a turn used."; otherwise "Critical hit, only half a turn used."; other commands (Pass) "Half a turn used.". Enemies too.
+3. **Analyze said nothing.** Its screen writes race, name, skills and the affinity line as text (`banalyze_oubei`); `BattleAnalyze` speaks "Haunt Preta. Level 4. HP 30 of 30. MP 24 of 24. Null: Dark. Weak: Light/Magic. Skills: Feral Claw." (level, HP, MP from data) and remembers the affinities by name for F3.
+4. **F2 split:** F2 = whose turn, press turns, the party; F3 in battle = the enemies (with known affinities). F3 still centres outside battle.
+5. **Cross-check with the recording:** the screen also shows "ENEMY TURN" / "PLAYER TURN" (now spoken: "Enemy turn." at once, "Player turn." before the next party menu), damage numbers (now "Pixie: 7 damage, HP 25 of 36."; healing "20 healed"; Lunge's own HP "4 HP cost"), which enemy acts (now "Preta: Feral Claw"), and the results' EXP, macca and item (now "Battle results. 9 EXP. 27 macca. Medicine."). Not yet: each member's EXP to the next level, the moon phase, the AUTO battle toggle.
+6. **Battle log (F5):** the previous side's turn and the current one so far, kept until the next battle.
+
+Not yet verified: the item arrays at the results (logged), skillattr for Zio (logged at the half-turn), Pass's `nowcommand`.
+
+## Code map for the debug and efficiency pass (2 Oct 2026)
+
+Francesco plans a debug and efficiency pass over everything so far. Where the work happens and what costs most:
+
+- **Per frame (`ModMain.OnUpdate`):** every reader's `Tick`. Cheap ones poll at 80 to 500 ms; `BattleReader` reads every unit every 200 ms in battle; `AnnouncementReader` checks visibility every 100 to 250 ms.
+- **TMP hook (`TmpRouter`):** one postfix on every TMP text write; each component classified once by its hierarchy path (cached by instance id). Readers must ignore identical rewrites.
+- **Field update prefix (`FieldState`, 30 Hz):** `BlobberMode.BeforeCalc` (calls `WalkGrid.Lattice`, which calls `WalkGrid.Ensure` every tick: `CollisionCache.Refresh` is a pointer and count check, `ReadHiddenNpcs` loops the NPC table), `AutoWalk.BeforeCalc`.
+- **`WalkGrid`:** `Build` 0 to 7 ms on area change (field 11: 35 000 cells); `Plan` (Dijkstra over the whole grid, allocates three arrays the size of the grid, about 1.4 MB in the basement) 1 to 10 ms per call. `AutoWalk.Route` calls it up to 4 times for a person in first person, and `PointsOfInterest.Build` calls `ReachableNear` (a cached flood) per point. `RouteGuide` plans once per End press. Candidates: reuse the arrays, stop the search at the goal (A*), cache the route per target.
+- **`PointsOfInterest.Build`** runs at each Page Up / Page Down and at each `AutoWalk` start and re-plan (`Current` rebuilds the list).
+- **Battle menu cursor:** `BattleSkills.CostOfActing` looks the item up by name among the actor's skills (`datSkillName.Get` per skill) at each cursor move.
+- **Logs:** `[Nav:Trace]` every 250 ms while exploring, `[Battle:Data]` on change, `[Probe:*]` only with `Probe = true`.
+- **Known rough edges:** `BattleReader` is about 780 lines (banner, targets, sides, press turns, units, results, F2 / F3); `AutoWalk` about 550; the `MenuSpec` list in `MenuReader` grows per screen.

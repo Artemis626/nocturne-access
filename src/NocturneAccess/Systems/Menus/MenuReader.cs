@@ -47,6 +47,7 @@ namespace NocturneAccess.Systems.Menus
             public string YieldTo;                // stay silent while this menu has a visible highlighted item
             public bool ReannounceOnTitle;        // a new screen title re-announces the current item
             public Func<string> OpeningPrefix;    // said before the item when the menu opens, if not empty
+            public Func<string, string> ItemDetail;   // said after the item's text (a skill's cost), if not empty
         }
 
         private sealed class Slot
@@ -122,6 +123,7 @@ namespace NocturneAccess.Systems.Menus
                 Item = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bmenu/[^/]+/bmenu_command/bmenu_command(?<slot>\d\d)/bmenu_text01TM$", RegexOptions.Compiled),
                 Highlight = "<material=\"TMC01\">",
                 Description = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bhelp_window/text_mask/TextTM$", RegexOptions.Compiled),
+                ItemDetail = BattleSkills.CostOfActing,          // "Lunge, 4 HP": the cost is drawn as images (2 Oct 2026)
                 OpeningPrefix = BattleReader.TurnAnnouncement,   // "Pixie's turn" (22:14 session: the acting unit was never said)
             },
             // Yes/No prompts outside dialogue (16:49 session): highlighted option TMC08, other TMC22.
@@ -353,7 +355,9 @@ namespace NocturneAccess.Systems.Menus
                 .OrderBy(k => k)
                 .ToList();
             int position = visible.IndexOf(state.Current) + 1;
-            string item = position > 0 ? $"{slot.Text}, {position} of {visible.Count}" : slot.Text;
+            string detail = state.Spec.ItemDetail?.Invoke(slot.Text) ?? "";
+            string named = detail.Length > 0 ? $"{slot.Text}, {detail}" : slot.Text;
+            string item = position > 0 ? $"{named}, {position} of {visible.Count}" : named;
             if (opening && state.Spec.IsChoice)
                 item = $"Choice, {visible.Count} options. {item}";
 
