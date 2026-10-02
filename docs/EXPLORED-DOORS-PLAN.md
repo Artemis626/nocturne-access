@@ -1,6 +1,6 @@
 # Plan: explored doors (and, later, custom waypoints)
 
-Status: **items 1 to 3 implemented in 0.0.35 (2 Oct 2026); item 1 verified in game (16:11 session), item 3 not yet heard.** Item 4 (custom waypoints) is recorded for later and must not be built yet. Revert point: commit 4f1f035 (0.0.34).
+Status: **items 1 to 3 implemented in 0.0.35 (2 Oct 2026); item 1 verified in game (16:11 session); item 3 right in the log (the opened Annex 1F boxes listed "Item box, empty", unopened Annex Lobby boxes plain) but not yet heard on a reachable box.** Item 4 (custom waypoints) is recorded for later and must not be built yet. Revert point: commit 4f1f035 (0.0.34).
 
 ## Why (Francesco, 2 Oct 2026)
 
