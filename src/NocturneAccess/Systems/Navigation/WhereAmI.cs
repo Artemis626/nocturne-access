@@ -19,10 +19,40 @@ namespace NocturneAccess.Systems.Navigation
     ///   dump, so the banner is the one name the game shows;
     /// - in first person, the facing ("Facing north");
     /// - the nearest reachable point of interest, as Page Up says it ("Nearest: Yoyogi Park entrance, 6 metres, south-east").
-    /// "Overworld, Yoyogi Kamizonocho. Nearest: Soul, 6 metres, north-west."
+    /// - last, the moon phase (0.0.46), as the HUD shows it in the Vortex World, dungeons included ("Moon 3/8, waxing").
+    /// "Overworld, Yoyogi Kamizonocho. Nearest: Soul, 6 metres, north-west. Moon 3/8, waxing."
     /// </summary>
     internal static class WhereAmI
     {
+        /// <summary>
+        /// The moon (Kagutsuchi) as the HUD shows it, from dds3GlobalWork.DDS3_GBWK.Moon.Age (0 to 15; read offline,
+        /// docs/class-index.md "Moon phase"): evtMoonProcess2 passes min(Age, 16 - Age) to the HUD, which shows it as "n/8",
+        /// 4 "HALF", 8 "FULL"; Age 1 to 7 waxing, 9 to 15 waning. Only where the game draws it (fldMain.fldChkVortex, plain
+        /// code): not before the Conception. "" otherwise.
+        /// </summary>
+        internal static string MoonPhase()
+        {
+            try
+            {
+                if (fldGlobal.fldGb == null || fldMain.fldChkVortex() == 0)   // it reads fldGb.fieldID
+                    return "";
+                Il2Cppevent_H.evtMoon_t moon = dds3GlobalWork.DDS3_GBWK?.Moon;
+                if (moon == null)
+                    return "";
+                int age = ((moon.Age % 16) + 16) % 16;
+                int type = Math.Min(age, 16 - age);
+                string label = type == 0 ? "new" : type == 4 ? "half" : type == 8 ? "full" : $"{type}/8";
+                string trend = age == 0 || age == 8 ? "" : age < 8 ? ", waxing" : ", waning";
+                Log.Info($"[Nav:Where] Moon age {moon.Age}, type {type}.");
+                return $"Moon {label}{trend}";
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[Nav:Where] Moon phase could not be read: {ex.Message}");
+                return "";
+            }
+        }
+
         private static readonly string[] Compass = { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" };
 
         internal static void Speak()
@@ -45,6 +75,10 @@ namespace NocturneAccess.Systems.Navigation
                 if (nearest != null)
                     parts.Add($"Nearest: {nearest.Spoken}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, nearest)}");
             }
+
+            string moon = MoonPhase();   // last, as Francesco asked (0.0.46)
+            if (moon.Length > 0)
+                parts.Add(moon);
 
             string text = parts.Count == 0 ? "Location not known." : string.Join(". ", parts) + ".";
             Log.Info($"[Nav:Where] Field {(gb == null ? "-" : gb.fieldID.ToString())} area {(gb == null ? "-" : gb.areaID.ToString())}" +

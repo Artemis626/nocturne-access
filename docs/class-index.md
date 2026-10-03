@@ -315,6 +315,14 @@ Used in 0.0.12 by `Systems/Navigation/FieldState.cs` (prefix and postfix on `fld
 | First person (Log, 1 Oct 2026 10:23 session) | Francesco | V (`FD_Subjectivity`) does nothing on a first playthrough: locked to New Game+. Unlock plan: `docs/NAVIGATION-DESIGN.md` section 5. |
 | Meanings measured (Log, 1 Oct 2026 12:04 session) | 0.0.12 diagnostic | See `docs/NAVIGATION-DESIGN.md` section 6: units, axes, facing, `gKeyInputDir`, `mode2D`, `Attr`, door event names, auto-map offsets, empty name tables, first-person gate candidates. |
 
+### Moon phase (Kagutsuchi), 3 Oct 2026 (0.0.46)
+
+| Name | Source | Meaning |
+| --- | --- | --- |
+| `dds3GlobalWork.DDS3_GBWK.Moon` (`event_H.evtMoon_t`: `Stat` 0x10, `Age` 0x14, `TakaraCnt` 0x18, `pub` 0x1C, `MoveCnt` 0x20) | Proxy; field offsets `tools/native/fields.pl` (`dds3GlobalWork_t.Moon` at 0x40) | The moon's state. `evtMoon.evtGetAgeOfMoon16()` (RVA 0x21A5860, plain code, read-only disassembly) returns exactly `DDS3_GBWK.Moon.Age`; `evtGetAgeOfMoon()` jumps into protected code (never called). The mod reads `Age` as data |
+| Age to the HUD label | Disassembly of `evtMoon.evtMoonProcess2` (read-only): a 16-entry switch on `Age` (table at RVA 0x21A7DF4) passes `type` = min(Age, 16 - Age) to `dds3DefaultMain.SetMoonUI(true, x, y, type)` | Type n is the HUD's "n/8": 0 new, 4 "HALF", 8 "FULL" (Age 8); Age 1 to 7 waxing, 9 to 15 waning (the HUD read "3/8", "HALF", "6/8", "7/8", "FULL", "7/8", "5/8" while walking, recording 3 Oct 14:37). `WhereAmI` speaks it (0.0.46) |
+| `fldMain.fldChkVortex()` (static, returns int; RVA 0x204F990, plain code) | Proxy; disassembly (read-only) | 0 when `fldGb.fieldID` is one of three listed fields or 601 to 616, else 1. `evtMoonProcess2` draws the moon only when it returns non-zero. `WhereAmI` calls it (0.0.46) before speaking the moon |
+
 ## MelonLoader 0.6.1 API used by the mod
 
 | Name | Source | Used in |

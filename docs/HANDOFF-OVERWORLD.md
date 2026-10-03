@@ -5,7 +5,7 @@ Written 2 Oct 2026 at the end of the dungeon chats, for a new chat dedicated to 
 ## Start here (state on 3 Oct 2026, after the 14:04 session)
 
 - **Overworld navigation is done (Francesco, 3 Oct 2026, 15:34 session).** Installed: 0.0.45 (exits to the overworld never "explored"; battle verbosity on F8). 0.0.44 verified 15:34 (Exit to overworld, Where am I). 0.0.43 (no route through walls) verified 15:13: "navigation worked very well for every target given". 0.0.42 (step 4, auto-walk) was tested at 14:31: Home works, but the walking map let routes through buildings and cliffs ("Result" under "Step 4 built"). Verified: 0.0.39 (Page Up / Page Down on the world map), 0.0.41 (world-map walking map, End in compass words: "solid enough to play the overworld", Francesco), and from 0.0.40 the title Continue screen. Not yet exercised: 0.0.40's battle-talk fix (no demon talk since).
-- **Next on the overworld: step 5, the moon phase**; step 6 explored entrances. Not yet exercised: arrival on the "Talk" prompt for a demon that fires its hit early (0.0.44).
+- **Step 5 (the moon phase) built as 0.0.46, on Delete; not yet tested.** Then step 6, explored entrances, when Francesco asks. Not yet exercised: arrival on the "Talk" prompt for a demon that fires its hit early (0.0.44).
 - Then: step 5 the moon phase; step 6 explored entrances.
 - Evidence: logs `session_2026-10-02_20-10-19`, `_21-03-43`, `session_2026-10-03_14-04-02` (`UserData/NocturneAccess/Logs`); world-map dumps `navdump_2026-10-02_20-26-27`, `_21-08-02`, `_21-11-41` (`NavDumps`); offline checker `tools/worldgrid.pl`; analysis helpers `tools/native/README.md` step 4.
 
@@ -209,6 +209,17 @@ If a walk says "Blocked." or "Walk interrupted by an event." on open ground, say
 
 - Francesco: "another great run"; **overworld navigation is done** (his words: "overworld navigation looks done"). Heard: "Exit to overworld, 33 metres, south. 4 of 4." in the Annex Lobby, Home to it ("Arrived.", "Will you leave the area?"); Delete: "Annex 1F. Facing east. Nearest: Door, explored, passage, here.", "Annex Lobby. Facing east. ...", "Overworld, Shinjuku Medical Center. Nearest: Shinjuku Medical Center entrance, here."; Home across the world map again.
 - Requests, built in **0.0.45**: an exit to the overworld never says "explored" (it is used again and again; Shibuya's unnamed exit would have said it); battle verbosity on F8 (below, `docs/HANDOFF.md`).
+
+## Step 5 built: 0.0.46 (3 Oct 2026; not yet tested): the moon phase on Delete
+
+- Francesco: the moon phase at the end of Where am I (Delete), also the "numbers" shown in dungeons, which are the same moon display (the game draws it everywhere in the Vortex World).
+- Read offline (read-only disassembly, `docs/class-index.md` "Moon phase"): `evtMoon.evtGetAgeOfMoon16()` returns `dds3GlobalWork.DDS3_GBWK.Moon.Age` (0 to 15); `evtMoonProcess2` passes min(Age, 16 - Age) to `dds3DefaultMain.SetMoonUI`, the HUD's "n/8" (4 "HALF", 8 "FULL"), and draws only when `fldMain.fldChkVortex()` (plain code) is non-zero. The mod reads `Age` as data and calls only `fldChkVortex`. `evtGetAgeOfMoon()` jumps into protected code and is never called.
+- Spoken last: "Moon 3/8, waxing." (Age 1 to 7), "Moon 5/8, waning." (9 to 15), "Moon half, ...", "Moon full.", "Moon new.". The log has `[Nav:Where] Moon age N, type T.` to check against the HUD.
+
+### Test (0.0.46)
+
+1. On the world map and in a dungeon, press Delete: the sentence ends with "Moon ...". Walk a while and press again: it changes as the HUD does (it advances with walking).
+2. If someone can read the HUD for you, or with a recording, compare one press with the top-left moon.
 
 ## Plan from here (one step per test run)
 
