@@ -71,6 +71,8 @@ namespace NocturneAccess.Systems.Battle
         private static bool _seenVisible;   // the party panel is written while hidden during the encounter intro
         private static long _hiddenSince = -1;
         private static long _goneAt = -1;
+        private static int _battleField = int.MinValue;   // fldGb.fieldID when the battle began (217 in Shibuya, 202 on the world map)
+        private static bool _leftBattleField;              // the field changed since: the battle is over
         private static bool _resultsShown;
         private static long _activeSince;
         private static long _lastDataPoll;
@@ -157,13 +159,18 @@ namespace NocturneAccess.Systems.Battle
             _seenVisible = false;
             _hiddenSince = -1;
 
-            // The panel hides while an enemy talks (20:44 session): the same battle, not a new one.
-            if (_goneAt >= 0 && !_resultsShown && now - _goneAt < ResumeWindowMs)
+            // The panel hides while an enemy talks (20:44 session): the same battle, not a new one. A long talk (recruiting
+            // Kodama, 3 Oct 21:24, more than ResumeWindowMs) is still the same battle while the game's field has not changed
+            // since it began: "Battle. Kodama." was announced again for the one enemy left.
+            bool sameField = !_leftBattleField && _battleField != int.MinValue && CurrentField() == _battleField;
+            if (!_resultsShown && ((_goneAt >= 0 && now - _goneAt < ResumeWindowMs) || sameField))
             {
                 Log.Info($"{Tag} Battle UI back.");
                 return;
             }
 
+            _battleField = CurrentField();
+            _leftBattleField = false;
             _started = false;
             _resultsShown = false;
             Units.Clear();
@@ -183,6 +190,8 @@ namespace NocturneAccess.Systems.Battle
         /// <summary>Called every frame.</summary>
         internal static void Tick()
         {
+            if (_battleField != int.MinValue && !_leftBattleField && CurrentField() != _battleField)
+                _leftBattleField = true;
             if (!_active)
                 return;
             long now = Clock.ElapsedMilliseconds;
@@ -244,6 +253,18 @@ namespace NocturneAccess.Systems.Battle
             {
                 if (_errors++ < 5)
                     Log.Error($"{Tag} {ex.Message}");
+            }
+        }
+
+        private static int CurrentField()
+        {
+            try
+            {
+                return fldGlobal.fldGb?.fieldID ?? int.MinValue;
+            }
+            catch
+            {
+                return int.MinValue;
             }
         }
 

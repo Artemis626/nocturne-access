@@ -60,6 +60,25 @@ namespace NocturneAccess.Systems.Navigation
         /// 75 units; Medical Center door 01d_06, whose volume lies behind the wall, had none nearer than 115 and never fired
         /// (0.0.23 test). A person or a box stands in furniture (the Soul's goal cell was 135 away, 0.0.21 test).</summary>
         public float ReachRadius => IsDoorLike ? 95f : 250f;
+
+        /// <summary>A door's volume footprint in X and Z (gEvnRngBox.vtx), when it has a box: the game fires the door when the player
+        /// enters it, so a walkable cell inside it (VolumeMargin around) is in reach whatever the distance to the centre.</summary>
+        public bool HasBox;
+        public float BoxX0, BoxX1, BoxZ0, BoxZ1;
+        internal const float VolumeMargin = 30f;
+
+        /// <summary>
+        /// Whether a walk ending at (x, z) reaches the target: within ReachRadius of its centre, or for a door inside its volume
+        /// footprint. The Underground Mall stairs (field 17 area 1, 01d_01, 3 Oct 2026) have a 600-wide volume centred on the
+        /// stairs' central divider: the nearest walkable cells (65 clear of the divider) lay 105 from the centre and the way
+        /// out was "not reachable" (0.0.49).
+        /// </summary>
+        internal bool NearVolume(float x, float z)
+        {
+            if (IsDoorLike && HasBox && x >= BoxX0 - VolumeMargin && x <= BoxX1 + VolumeMargin && z >= BoxZ0 - VolumeMargin && z <= BoxZ1 + VolumeMargin)
+                return true;
+            return (x - X) * (x - X) + (z - Z) * (z - Z) <= ReachRadius * ReachRadius;
+        }
     }
 
     /// <summary>
@@ -145,6 +164,7 @@ namespace NocturneAccess.Systems.Navigation
 
                 VolumeSpan(box, gb.playerY, out float floorY, out float nx, out float nz);
                 bool doorLike = kind == PoiKind.Door || kind == PoiKind.Place;
+                bool hasBox = Footprint(box, out float bx0, out float bx1, out float bz0, out float bz1);
                 // The world map: the ground under the volume, never the player's height. Shibuya's volume 01d_03 is 400 tall, so
                 // from the low south (Soul 01npc_02, y about -1420) the player's height lay in its span and became the floor
                 // to reach, 400 below the entrance: "not reachable" (3 Oct 14:10). Offline (tools/worldgrid.pl FLOOR=under,
@@ -172,6 +192,11 @@ namespace NocturneAccess.Systems.Navigation
                     Empty = kind == PoiKind.ItemBox && Opened(takara),
                     World = world,
                     ToWorld = toWorld,
+                    HasBox = hasBox,
+                    BoxX0 = bx0,
+                    BoxX1 = bx1,
+                    BoxZ0 = bz0,
+                    BoxZ1 = bz1,
                     DoorKind = generic && !toWorld ? DoorTable.KindOf(gb.fieldID, gb.areaID, name) : "",
                 });
             }
@@ -199,7 +224,9 @@ namespace NocturneAccess.Systems.Navigation
                     continue;
                 }
                 if (grid)
-                    q.Reachable = WalkGrid.ReachableNear(px, py, pz, q.X, q.FloorY, q.Z, q.ReachRadius);
+                    q.Reachable = WalkGrid.ReachableNear(px, py, pz, q.X, q.FloorY, q.Z, q.ReachRadius)
+                                  || (q.IsDoorLike && q.HasBox && WalkGrid.ReachableInRect(px, py, pz, q.BoxX0 - Poi.VolumeMargin, q.BoxZ0 - Poi.VolumeMargin,
+                                      q.BoxX1 + Poi.VolumeMargin, q.BoxZ1 + Poi.VolumeMargin, q.FloorY));
                 kept.Add(q);
             }
             return kept.OrderBy(q => q.Distance).ToList();
@@ -255,6 +282,22 @@ namespace NocturneAccess.Systems.Navigation
             // Y points down: hi is the bottom of the box. Inside the span the game's hit can fire where the player stands; outside
             // it the floor is under the box (the stairwell's 1F door seen from 2F must stay downstairs).
             floorY = playerY >= lo - 50f && playerY <= hi + 50f ? playerY : hi;
+        }
+
+        /// <summary>A volume's box footprint in X and Z (gEvnRngBox.vtx); false without a box (all zero for people).</summary>
+        private static bool Footprint(putevebox_s box, out float x0, out float x1, out float z0, out float z1)
+        {
+            x0 = z0 = float.MaxValue;
+            x1 = z1 = float.MinValue;
+            Il2CppStructArray<Vector4> vtx = box?.vtx;
+            if (vtx == null || vtx.Length == 0)
+                return false;
+            for (int k = 0; k < vtx.Length; k++)
+            {
+                x0 = Math.Min(x0, vtx[k].x); x1 = Math.Max(x1, vtx[k].x);
+                z0 = Math.Min(z0, vtx[k].z); z1 = Math.Max(z1, vtx[k].z);
+            }
+            return x1 - x0 + z1 - z0 > 1f;
         }
 
         /// <summary>The bottom of a volume's box (the largest vtx y; Y points down). VolumeSpan has checked the box is real.</summary>

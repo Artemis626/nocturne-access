@@ -2,6 +2,10 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
+## Next: shops, Fountain and fusion (3 Oct 2026)
+
+Read `docs/HANDOFF-SHOPS-FUSION.md` first: 0.0.49 (built, not yet tested) reads the institution menus (Fountain of Life, Junk Shop, Cathedral of Shadows), the shop lists and the fusion demon table, fixes the Underground Mall stairs and the second "Battle." after recruiting. Main open work: the Cathedral's affinities and levels from game data (images on screen), shop prices, Fountain costs. Overworld navigation is done (`docs/HANDOFF-OVERWORLD.md`).
+
 ## Next: the overworld (2 Oct 2026)
 
 Francesco reached the overworld (Shinjuku, field 2) and starts a new chat for it: read `docs/HANDOFF-OVERWORLD.md` (facts from the 20:10 session, its two dumps and the video; the plan, one step per test run). The dungeon tools stay as they are. Small open items: a demon conversation line spoken twice, the Annex 1F ramp item box, custom waypoints later.
@@ -70,8 +74,9 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.44** | People and boxes reached only when the game's prompt shows (Shibuya demon); dungeon doors to the world map say "Exit to overworld"; Where am I on Delete (banner, facing, nearest point); F8 Status removed | Verified 3 Oct 15:34 (Exit to overworld, Where am I); prompt arrival not yet exercised |
 | **0.0.45** | Exits to the overworld never "explored"; F8 battle verbosity: HP left after each hit or heal on or off (off by default; F2, F3, F5 keep HP) | Built 3 Oct 2026, not yet tested |
 | **0.0.46** | The moon phase (Kagutsuchi) at the end of Where am I (Delete), from game data: "Moon 3/8, waxing." | Verified 3 Oct 16:13 |
-| **0.0.47** | Fountain of Life menu and heal list read; same dialogue page within a second not repeated (Shikigami); no bare "Battle." after a talk; moon in eighths | Built 3 Oct 2026, not yet tested |
-| **0.0.48** | Reverts the 0.0.47 battle help-line silence (help lines spoken with each command again; the drawn heading "FIGHT" / "TALK" was never spoken) | Built 3 Oct 2026, not yet tested |
+| **0.0.47** | Fountain of Life menu and heal list read; same dialogue page within a second not repeated (Shikigami); no bare "Battle." after a talk; moon in eighths | Partly verified 3 Oct 20:37 (page de-duplication, silent zero-enemy return, moon); its Fountain menus failed (fixed in 0.0.49) |
+| **0.0.48** | Reverts the 0.0.47 battle help-line silence (help lines spoken with each command again; the drawn heading "FIGHT" / "TALK" was never spoken) | Verified 3 Oct 20:37 |
+| **0.0.49** | Institution menus everywhere (Fountain fixed, Junk Shop, Cathedral), shop lists, fusion demon table; doors reached inside their volume (Underground Mall stairs); a door that moves the player says "Arrived."; no second "Battle." after a long recruiting talk | Built 3 Oct 2026, not yet tested |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 

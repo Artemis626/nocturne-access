@@ -50,6 +50,7 @@ namespace NocturneAccess.Systems.Menus
             public Func<string, string> ItemDetail;   // said after the item's text (a skill's cost), if not empty
             public bool NoPosition;               // one slot shows the current choice: no "1 of 1"
             public bool LinesAreSentences;        // description lines are separate statements, not one wrapped sentence
+            public string SiblingDetail;          // a text object beside the item, under the same row (the fusion table's race), said after it
         }
 
         private sealed class Slot
@@ -107,24 +108,42 @@ namespace NocturneAccess.Systems.Menus
             },
             new MenuSpec
             {
-                Name = "Terminal menu",
-                Item = new Regex(@"^Canvas_UI/terminalUI/institutionUI/institution_menu/insmenu_window/insmenu_(?<slot>top|base\d\d)/TextTM$", RegexOptions.Compiled),
+                // The game's "institution" menus share one layout under their screen, highlighted TMC01 (0.0.49): the Terminal
+                // (terminalUI), the Fountain of Life (recovUI: Heal, Revive, Remove Curse, Talk, Exit), the Junk Shop (shopUI:
+                // Buy, Sell, Talk, Exit), the Cathedral of Shadows (combUI_oubei: Fuse, Talk, Exit; its Talk topics Fusion
+                // Basics, Element and Mitama, ...). F6 dumps of 3 Oct 2026, 16:22 and 21:14 to 21:21.
+                Name = "Institution menu",
+                Item = new Regex(@"^Canvas_UI/[^/]+/institutionUI/institution_menu/insmenu_window/insmenu_(?<slot>top|base\d\d)/TextTM$", RegexOptions.Compiled),
                 Highlight = "<material=\"TMC01\">",
             },
             new MenuSpec
             {
-                // The Fountain of Life (Yoyogi Park, field 801; 16:21 session, 3 Oct 2026): "Heal", "Revive", "Remove Curse",
-                // "Talk", "Exit", highlighted TMC01, the Terminal's layout under recovUI.
-                Name = "Fountain menu",
-                Item = new Regex(@"^Canvas_UI/recovUI/institutionUI/institution_menu/insmenu_window/insmenu_(?<slot>top|basedd)/TextTM$", RegexOptions.Compiled),
+                // Junk Shop lists (21:21 session): "BUY" / "SELL" title, one item name per row (TMC01 highlighted), the item's help
+                // in shophelp/Text01TM..Text03TM (a wrapped sentence). Prices and counts are images: not read yet.
+                Name = "Shop list",
+                Item = new Regex(@"^Canvas_UI/shopUI/shoplist/shop_row/shop_row(?<slot>\d\d)/Text_nameTM$", RegexOptions.Compiled),
                 Highlight = "<material=\"TMC01\">",
+                TitlePath = "Canvas_UI/shopUI/shoptitle/Text_shoptitleTM",
+                Description = new Regex(@"^Canvas_UI/shopUI/shophelp/Text(?<line>\d\d)TM$", RegexOptions.Compiled),
+                CloseWhenUnhighlighted = true,
+            },
+            new MenuSpec
+            {
+                // Cathedral of Shadows, fusion: the demon table (21:20 session): "Select the 1st demon" title, a name and a race
+                // per row (both TMC01 when highlighted). Levels and affinities are images (docs/HANDOFF-SHOPS-FUSION.md).
+                Name = "Fusion list",
+                Item = new Regex(@"^Canvas_UI/combUI_oubei/combmenu/comtable01/comtable_row/comtable01_row(?<slot>\d\d)/Text_nameTM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC01\">",
+                TitlePath = "Canvas_UI/combUI_oubei/comtitle/Text_comtitleTM",
+                SiblingDetail = "Text_raceTM",
+                CloseWhenUnhighlighted = true,
             },
             new MenuSpec
             {
                 // Its party list ("HEAL" title; "Whom shall I heal?" is a dialogue page): one name per row, highlighted TMC01; a
                 // healed member leaves the list (row01 became "Pixie" after Art was healed). Costs and HP are drawn as images.
                 Name = "Fountain list",
-                Item = new Regex(@"^Canvas_UI/recovUI/rcvlist/rcv_row/rcv_row(?<slot>dd)/Text_nameTM$", RegexOptions.Compiled),
+                Item = new Regex(@"^Canvas_UI/recovUI/rcvlist/rcv_row/rcv_row(?<slot>\d\d)/Text_nameTM$", RegexOptions.Compiled),
                 Highlight = "<material=\"TMC01\">",
                 TitlePath = "Canvas_UI/recovUI/rcvtitle/Text_rcvtitleTM",
                 CloseWhenUnhighlighted = true,
@@ -392,6 +411,8 @@ namespace NocturneAccess.Systems.Menus
                 .ToList();
             int position = visible.IndexOf(state.Current) + 1;
             string detail = state.Spec.ItemDetail?.Invoke(slot.Text) ?? "";
+            if (state.Spec.SiblingDetail != null && detail.Length == 0)
+                detail = SiblingText(slot.Component, state.Spec.SiblingDetail);
             string named = detail.Length > 0 ? $"{slot.Text}, {detail}" : slot.Text;
             string item = position > 0 && !state.Spec.NoPosition ? $"{named}, {position} of {visible.Count}" : named;
             if (opening && state.Spec.IsChoice)
@@ -423,6 +444,21 @@ namespace NocturneAccess.Systems.Menus
             if (opening)
                 Log.Info($"{Tag} {state.Spec.Name} opened.");
             SpeechManager.Say(utterance, interrupt: !opening, force: true);
+        }
+
+        /// <summary>The visible text of the object named name beside the component (same parent), or "".</summary>
+        private static string SiblingText(TMP_Text component, string name)
+        {
+            try
+            {
+                var t = component?.transform.parent?.Find(name);
+                TMP_Text text = t == null ? null : t.GetComponent<TMP_Text>();
+                return text != null && UiUtil.IsVisible(text) ? TextUtil.Clean(text.text) : "";
+            }
+            catch
+            {
+                return "";
+            }
         }
 
         private static bool HasVisibleHighlight(MenuState state)

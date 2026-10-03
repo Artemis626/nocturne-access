@@ -143,6 +143,14 @@ namespace NocturneAccess.Systems.Navigation
             _moveCount = moves;
             if (_idle >= IdleTicks)
             {
+                // A door that moves the player itself (the Underground Mall stairs, 3 Oct 20:49:45: its hit was the target, then the
+                // game walked the player through) takes movement as soon as it fires: that is arrival, not an interruption.
+                float d = (float)Math.Sqrt((_target.X - gb.playerX) * (_target.X - gb.playerX) + (_target.Z - gb.playerZ) * (_target.Z - gb.playerZ));
+                if (_target.IsDoorLike && InReach(_target, d))
+                {
+                    Stop("the game took movement with the target door's hit active", "Arrived.");
+                    return;
+                }
                 Stop("the game stopped taking movement (event or dialogue)", "Walk interrupted by an event.");
                 return;
             }
@@ -341,7 +349,7 @@ namespace NocturneAccess.Systems.Navigation
         /// - a person or box in first person: on one of the four compass lines through it, AxisReach away, so the last turn
         ///   faces it squarely (the shortest of the four routes that ends within AimTolerance of its point);
         /// - otherwise the reachable cell nearest the target, at least 120 from a person or box (outside its 100 x 100 box).
-        /// The goal must lie within the target's ReachRadius (people: of the axis point's target). Null if there is no route.
+        /// The goal must lie within the target's ReachRadius, or inside a door's volume (Poi.NearVolume, 0.0.49). Null if there is no route.
         /// </summary>
         internal static List<PathRun> Route(fldGlobalWork_t gb, Poi target, bool firstPerson, out float gx, out float gz, out string aim)
         {
@@ -351,7 +359,7 @@ namespace NocturneAccess.Systems.Navigation
             {
                 aim = "in front";
                 runs = WalkGrid.Plan(px, py, pz, target.X + target.NX * FrontDistance, target.FloorY, target.Z + target.NZ * FrontDistance, 0f, firstPerson, out gx, out gz);
-                if (runs != null && Dist(gx, gz, target.X, target.Z) <= target.ReachRadius)
+                if (runs != null && target.NearVolume(gx, gz))
                     return runs;
             }
             else if (firstPerson && !target.IsDoorLike)
@@ -386,7 +394,7 @@ namespace NocturneAccess.Systems.Navigation
             }
             aim = "nearest";
             runs = WalkGrid.Plan(px, py, pz, target.X, target.FloorY, target.Z, target.IsDoorLike ? 0f : 120f, firstPerson, out gx, out gz);
-            if (runs != null && Dist(gx, gz, target.X, target.Z) > target.ReachRadius)
+            if (runs != null && !target.NearVolume(gx, gz))
                 return null;
             return runs;
         }
@@ -405,7 +413,7 @@ namespace NocturneAccess.Systems.Navigation
         {
             var clock = Stopwatch.StartNew();
             _runs = Route(gb, _target, _firstPerson, out float gx, out float gz, out string aim);
-            if (_runs != null && Math.Sqrt((gx - _target.X) * (gx - _target.X) + (gz - _target.Z) * (gz - _target.Z)) > _target.ReachRadius)
+            if (_runs != null && !_target.NearVolume(gx, gz))
             {
                 Log.Info($"[Nav:Walk] Plan ({why}): the nearest reachable cell {FieldData.F(gx)} {FieldData.F(gz)} is too far from {_target.Label} {_target.ResName}.");
                 _runs = null;

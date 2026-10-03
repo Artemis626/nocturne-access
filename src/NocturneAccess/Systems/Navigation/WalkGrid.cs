@@ -767,6 +767,33 @@ namespace NocturneAccess.Systems.Navigation
             return false;
         }
 
+        /// <summary>
+        /// Whether a walkable node whose cell centre lies in the rectangle x0..x1, z0..z1 (a door volume's footprint) and within
+        /// TargetBand of height y can be reached from the player (0.0.49). Same flood as ReachableNear.
+        /// </summary>
+        internal static bool ReachableInRect(float px, float py, float pz, float x0, float z0, float x1, float z1, float y)
+        {
+            int start = StartNode(px, py, pz);
+            if (start < 0)
+                return false;
+            if (start != _reachStart || _reach.Length != _state.Length || _reachBuild != _builds)
+                Flood(start);
+            int i0 = Math.Max(0, (int)Math.Ceiling((x0 - _x0) / CellSize)), i1 = Math.Min(_w - 1, (int)Math.Floor((x1 - _x0) / CellSize));
+            int j0 = Math.Max(0, (int)Math.Ceiling((z0 - _z0) / CellSize)), j1 = Math.Min(_h - 1, (int)Math.Floor((z1 - _z0) / CellSize));
+            for (int j = j0; j <= j1; j++)
+                for (int i = i0; i <= i1; i++)
+                {
+                    int c = j * _w + i;
+                    for (int l = 0; l < _count[c]; l++)
+                    {
+                        int k = c * Layers + l;
+                        if (_reach[k] && Math.Abs(_height[k] - y) <= TargetBand)
+                            return true;
+                    }
+                }
+            return false;
+        }
+
         private static void Flood(int start)
         {
             _reach = new bool[_state.Length];
