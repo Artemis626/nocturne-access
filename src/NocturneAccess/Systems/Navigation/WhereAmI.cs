@@ -19,8 +19,8 @@ namespace NocturneAccess.Systems.Navigation
     ///   dump, so the banner is the one name the game shows;
     /// - in first person, the facing ("Facing north");
     /// - the nearest reachable point of interest, as Page Up says it ("Nearest: Yoyogi Park entrance, 6 metres, south-east").
-    /// - last, the moon phase (0.0.46), as the HUD shows it in the Vortex World, dungeons included ("Moon 3/8, waxing").
-    /// "Overworld, Yoyogi Kamizonocho. Nearest: Soul, 6 metres, north-west. Moon 3/8, waxing."
+    /// - last, the moon phase (0.0.46), as the HUD shows it in the Vortex World, dungeons included ("Moon 3 eighths, waxing").
+    /// "Overworld, Yoyogi Kamizonocho. Nearest: Soul, 6 metres, north-west. Moon 3 eighths, waxing."
     /// </summary>
     internal static class WhereAmI
     {
@@ -41,7 +41,7 @@ namespace NocturneAccess.Systems.Navigation
                     return "";
                 int age = ((moon.Age % 16) + 16) % 16;
                 int type = Math.Min(age, 16 - age);
-                string label = type == 0 ? "new" : type == 4 ? "half" : type == 8 ? "full" : $"{type}/8";
+                string label = type == 0 ? "new" : type == 4 ? "half" : type == 8 ? "full" : type == 1 ? "1 eighth" : $"{type} eighths";   // Francesco: "3 eighths", not "3 slash 8"
                 string trend = age == 0 || age == 8 ? "" : age < 8 ? ", waxing" : ", waning";
                 Log.Info($"[Nav:Where] Moon age {moon.Age}, type {type}.");
                 return $"Moon {label}{trend}";

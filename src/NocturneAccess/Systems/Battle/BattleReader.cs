@@ -252,7 +252,10 @@ namespace NocturneAccess.Systems.Battle
             List<Unit> enemies = Units.Values.Where(u => u.Form >= FirstEnemy).OrderBy(u => u.Form).ToList();
             string names = string.Join(", ", enemies.Select(u => u.Name).Where(n => n.Length > 0));
             Log.Info($"{Tag} Start: {enemies.Count} enemies: {names}.");
-            SpeechManager.Say(names.Length > 0 ? $"Battle. {names}." : "Battle.", interrupt: false, force: true);
+            // No enemies: the battle screen coming back after a demon joined (or left) in a talk (3 Oct 16:45:13, 2 Oct 20:20:38),
+            // the results follow; a bare "Battle." there was noise.
+            if (names.Length > 0)
+                SpeechManager.Say($"Battle. {names}.", interrupt: false, force: true);
         }
     }
 }

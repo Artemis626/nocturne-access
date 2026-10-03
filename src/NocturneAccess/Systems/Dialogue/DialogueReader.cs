@@ -54,6 +54,8 @@ namespace NocturneAccess.Systems.Dialogue
         private static string _lastPage = "";
         private static string _lastSpeakerSpoken = "";
         private static long _requestedAt = -1;   // Clock ms of a requested message whose page is not spoken yet
+        private static long _lastSpokenAt = long.MinValue / 2;   // Clock ms of the last page spoken
+        private const long RepeatWindowMs = 1000;
 
         /// <summary>A page is on its way: lines changed and not yet settled, or a message was just requested.</summary>
         internal static bool PageDue
@@ -170,6 +172,14 @@ namespace NocturneAccess.Systems.Dialogue
                 return;
             if (page == _lastPage && !_clearedSinceSpoken)
                 return;
+            // The same page again within a second, even after a clear: the game blanked and rewrote it ("> Shikigami joined your
+            // party." twice 567 ms apart, 3 Oct 16:45:09, with no clear, request or window-off logged in between). Nobody can
+            // confirm a page that fast, so it is not a new one.
+            if (page == _lastPage && Clock.ElapsedMilliseconds - _lastSpokenAt < RepeatWindowMs)
+            {
+                Log.Info($"{Tag} Same page again after {Clock.ElapsedMilliseconds - _lastSpokenAt} ms, not spoken: \"{page}\"");
+                return;
+            }
 
             if (!AnyLineVisible())
             {
@@ -185,6 +195,7 @@ namespace NocturneAccess.Systems.Dialogue
             LastUtterance = speaker.Length > 0 ? $"{speaker}: {page}" : page;
             LastUtteranceAt = Environment.TickCount64;
             _lastPage = page;
+            _lastSpokenAt = Clock.ElapsedMilliseconds;
             _lastSpeakerSpoken = speaker;
             _clearedSinceSpoken = false;
             _windowReopened = false;
