@@ -31,8 +31,9 @@ namespace NocturneAccess.Systems.Navigation
         public bool Explored;           // a generic door (no place name) the player has gone through (ExploredDoors)
         public bool Empty;              // an item box the game has opened (fld_Npc.gfldTakaraWork MotPhase, PointsOfInterest.Opened)
         public bool World;              // on the world map (FieldState.WorldMap): doors are entrances to places, heights are terrain
+        public bool ToWorld;            // a dungeon door that leads to the world map (DoorTable.ToField below 10): "Exit to overworld" (0.0.44)
 
-        public string Label => Kind == PoiKind.Door ? (World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : "Door")
+        public string Label => Kind == PoiKind.Door ? (ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : "Door")
             : Kind == PoiKind.Place ? Name
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
 
@@ -46,7 +47,7 @@ namespace NocturneAccess.Systems.Navigation
 
         /// <summary>The label inside a sentence: game names and "Soul" keep their capitals, the mod's own words do not;
         /// "explored door", "empty item box"; a door with a kind as on Page Up: "door, explored, room".</summary>
-        public string InSentence => DoorKind.Length > 0 ? Spoken.ToLowerInvariant()
+        public string InSentence => DoorKind.Length > 0 || ToWorld ? Spoken.ToLowerInvariant()
             : (State.Length > 0 ? State + " " : "") + (Name.Length > 0 || Soul || Demon ? Label : Label.ToLowerInvariant());
 
         /// <summary>Something beyond the plain label is known (End says it first).</summary>
@@ -139,6 +140,8 @@ namespace NocturneAccess.Systems.Navigation
                 if (kind == null)
                     continue;
                 bool generic = kind == PoiKind.Door && placeName.Length == 0 && !world;   // world map entrances lead to places, not rooms
+                int toField = kind == PoiKind.Door && !world ? DoorTable.ToField(gb.fieldID, gb.areaID, name) : -1;
+                bool toWorld = toField > 0 && FieldState.WorldMapField(toField);
 
                 VolumeSpan(box, gb.playerY, out float floorY, out float nx, out float nz);
                 bool doorLike = kind == PoiKind.Door || kind == PoiKind.Place;
@@ -168,7 +171,8 @@ namespace NocturneAccess.Systems.Navigation
                     Explored = generic && ExploredDoors.IsExplored(gb.fieldID, gb.areaID, name),
                     Empty = kind == PoiKind.ItemBox && Opened(takara),
                     World = world,
-                    DoorKind = generic ? DoorTable.KindOf(gb.fieldID, gb.areaID, name) : "",
+                    ToWorld = toWorld,
+                    DoorKind = generic && !toWorld ? DoorTable.KindOf(gb.fieldID, gb.areaID, name) : "",
                 });
             }
 
@@ -184,8 +188,11 @@ namespace NocturneAccess.Systems.Navigation
                 {
                     same.Explored |= q.Explored;   // either volume of a door listed twice may be the one gone through
                     same.Empty |= q.Empty;
+                    same.ToWorld |= q.ToWorld;
                     if (same.DoorKind.Length == 0)
                         same.DoorKind = q.DoorKind;
+                    if (same.ToWorld)
+                        same.DoorKind = "";   // "Exit to overworld" already says it
                     continue;
                 }
                 if (grid)

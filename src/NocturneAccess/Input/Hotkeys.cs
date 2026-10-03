@@ -41,7 +41,6 @@ namespace NocturneAccess.Input
         {
             Bindings.Clear();
             Add("repeat", Config.KeyRepeat, KeyCode.F1, RepeatLast);
-            Add("status", Config.KeyStatus, KeyCode.F8, SpeakStatus);
             Add("battle status", Config.KeyBattleStatus, KeyCode.F2, BattleReader.SpeakStatus);
             Add("dump UI", Config.KeyDumpUi, KeyCode.F6, UiTreeDumper.Dump);
             Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle);
@@ -56,6 +55,7 @@ namespace NocturneAccess.Input
             Add("previous point of interest", Config.KeyPoiPrevious, KeyCode.PageDown, () => PointsOfInterest.Cycle(-1));
             Add("walk to point of interest", Config.KeyPoiWalk, KeyCode.Home, AutoWalk.Request);
             Add("directions to point of interest", Config.KeyPoiGuide, KeyCode.End, RouteGuide.Speak);
+            Add("where am I", Config.KeyWhereAmI, KeyCode.Delete, WhereAmI.Speak);
         }
 
         internal static void Update()
@@ -137,11 +137,6 @@ namespace NocturneAccess.Input
                 latest = text;
                 latestAt = at;
             }
-        }
-
-        private static void SpeakStatus()
-        {
-            SpeechManager.Say($"Nocturne Access running. Speech through {SpeechManager.BackendName}.", interrupt: true, force: true);
         }
 
         private static void Add(string name, MelonPreferences_Entry<string> entry, KeyCode fallback, Action action,

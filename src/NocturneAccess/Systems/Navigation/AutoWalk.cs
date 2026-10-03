@@ -161,6 +161,29 @@ namespace NocturneAccess.Systems.Navigation
             float flat = (float)Math.Sqrt((_target.X - x) * (_target.X - x) + (_target.Z - z) * (_target.Z - z));
             // The world map: the game's prompt ("Enter", "Talk") fires on entering range, the marker has no facing (logs 1 Oct
             // 19:57, 3 Oct 14:07): in reach is arrival, at once. Pressing on towards the target would walk past it.
+            if (_world && _target.IsDoorLike && InReach(_target, flat))
+            {
+                Stop("the game's hit index is the target (world map)", "Arrived.");
+                return;
+            }
+
+            // People and item boxes: the game's hit index fires at the edge of its range, the prompt ("Talk", "Examine") only
+            // closer (Shibuya, 3 Oct 15:17: the demon's hit at 232 units, "Talk" at 172, after Francesco stepped on). Arrival is
+            // the prompt on screen; with the hit but no prompt, carry on straight at the target (Approach ends with "Near the
+            // ..." if it never comes). Before the prompt has ever been written this session, the hit counts, as up to 0.0.43.
+            bool? prompt = _target.IsDoorLike ? null : Menus.AnnouncementReader.InteractionPromptVisible;
+            if (prompt.HasValue && InReach(_target, flat))
+            {
+                if (prompt.Value)
+                {
+                    Stop("the game's prompt is shown and its hit index is the target", "Arrived.");
+                    return;
+                }
+                if (_approach == 0)
+                    Log.Info($"[Nav:Walk] The game's hit index is the target at {FieldData.F(flat)} units, but no prompt yet: stepping closer.");
+                Approach(gb, x, z, toTarget, flat);
+                return;
+            }
             if (_world && InReach(_target, flat))
             {
                 Stop("the game's hit index is the target (world map)", "Arrived.");

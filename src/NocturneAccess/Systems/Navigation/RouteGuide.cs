@@ -62,9 +62,18 @@ namespace NocturneAccess.Systems.Navigation
             float flat = (float)Math.Sqrt((target.X - x) * (target.X - x) + (target.Z - z) * (target.Z - z));
             float toTarget = Bearing(x, z, target.X, target.Z);
 
-            if (world && AutoWalk.InReach(target, flat))
+            // People and boxes: in reach once the game's prompt is up (as AutoWalk, 0.0.44); hit but no prompt: directions.
+            bool? prompt = target.IsDoorLike ? null : Menus.AnnouncementReader.InteractionPromptVisible;
+            bool inReach = AutoWalk.InReach(target, flat);
+            if (prompt.HasValue)
+            {
+                if (inReach && prompt.Value)
+                    return "In reach.";
+                inReach = false;
+            }
+            if (world && inReach)
                 return "In reach.";
-            if (AutoWalk.InReach(target, flat) && AutoWalk.Lateral(target, x, z) <= 45f)
+            if (inReach && AutoWalk.Lateral(target, x, z) <= 45f)
             {
                 float face = AutoWalk.FaceBearing(target, x, z);
                 if (Math.Abs(Diff(180 - gb.PlayerKakudo, face)) <= FacingTolerance)

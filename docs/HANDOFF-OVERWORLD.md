@@ -4,8 +4,8 @@ Written 2 Oct 2026 at the end of the dungeon chats, for a new chat dedicated to 
 
 ## Start here (state on 3 Oct 2026, after the 14:04 session)
 
-- **Installed: 0.0.43 (3 Oct 2026, not yet tested): no route through walls on the world map ("0.0.43" below).** 0.0.42 (step 4, auto-walk) was tested at 14:31: Home works, but the walking map let routes through buildings and cliffs ("Result" under "Step 4 built"). Verified: 0.0.39 (Page Up / Page Down on the world map), 0.0.41 (world-map walking map, End in compass words: "solid enough to play the overworld", Francesco), and from 0.0.40 the title Continue screen. Not yet exercised: 0.0.40's battle-talk fix (no demon talk since).
-- **Next: Francesco tests 0.0.43** (Page Up list of 7, Home to Yoyogi Park and Shibuya): read the log; then step 5.
+- **Installed: 0.0.44 (3 Oct 2026, not yet tested: arrival on the game's prompt, "Exit to overworld", Where am I on Delete; "0.0.44" below).** 0.0.43 (no route through walls) verified 15:13: "navigation worked very well for every target given". 0.0.42 (step 4, auto-walk) was tested at 14:31: Home works, but the walking map let routes through buildings and cliffs ("Result" under "Step 4 built"). Verified: 0.0.39 (Page Up / Page Down on the world map), 0.0.41 (world-map walking map, End in compass words: "solid enough to play the overworld", Francesco), and from 0.0.40 the title Continue screen. Not yet exercised: 0.0.40's battle-talk fix (no demon talk since).
+- **Next: Francesco tests 0.0.44**; then step 5 (the moon phase).
 - Then: step 5 the moon phase; step 6 explored entrances.
 - Evidence: logs `session_2026-10-02_20-10-19`, `_21-03-43`, `session_2026-10-03_14-04-02` (`UserData/NocturneAccess/Logs`); world-map dumps `navdump_2026-10-02_20-26-27`, `_21-08-02`, `_21-11-41` (`NavDumps`); offline checker `tools/worldgrid.pl`; analysis helpers `tools/native/README.md` step 4.
 
@@ -187,6 +187,23 @@ If a walk says "Blocked." or "Walk interrupted by an event." on open ground, say
 3. Home to Shibuya from the Soul south of Yoyogi Park: "Arrived.", "Enter".
 4. If the marker stops against something: after about 1.5 s the walk re-plans by itself; if it cannot get on, "Blocked.". Tell me roughly where.
 5. Shift+F6 once: the dump's map shows the new walking map.
+
+### Result (3 Oct 2026, `session_2026-10-03_15-13-07.log`, 0.0.43): verified
+
+- Francesco: "Navigation worked very well for every target given." Home from Yoyogi Park to the Medical Center (16 s, 0 re-plans, "Arrived.", "Enter"), back to Yoyogi Park (16 s), to Shibuya (10 s, through Jinnan and Komaba), and to the Soul `01npc_04`, all without a key. Page Up listed 7 points; the dumps `navdump_2026-10-03_15-15-42` and `_15-16-42` leave out exactly the three points the offline check predicted (Yoyogi Park's east entrance, Gaienmae Station, the item box). 5034 moves through walls blocked, grid built in 12 to 33 ms.
+- Three requests after entering Shibuya (field 17), built in 0.0.44 below.
+
+## 0.0.44 (3 Oct 2026; not yet tested): arrival on the prompt, "Exit to overworld", Where am I (Delete)
+
+1. **A demon "Arrived." one step too early** (Shibuya, Hachiko Intersection, 15:17:12): the game set its hit index (`gFldEveRngIdx`, `OldHitInf`) at 232 units, but its "Talk" prompt only appeared at 172, after Francesco stepped closer; seven Home presses each said "Walking to Demon, 2 metres, south. Arrived." from the same spot. Now a person or item box counts as reached only when the interaction prompt (`fieldUI/fannounce/guidetext`) is on screen with the hit on the target; with the hit and no prompt the walk keeps going straight at it ("Near the demon." if the prompt never comes). End says "In reach." on the same test. Doors are unchanged (`OldHitDoor`). Before the prompt has been written once in a session, the old rule applies.
+2. **"Exit to overworld"**: a dungeon door whose door-table entry leads to a field below 10 is listed as "Exit to overworld" (was "Door, explored, exit" in Shibuya, "Exit door" in the Medical Center's Annex Lobby): `DoorTable.ToField`, any door, named or not.
+3. **Where am I (Delete; F8 Status removed, Francesco)**: the location banner's last text (the game's own: area in dungeons, district on the world map, preceded by "Overworld"), the facing in first person, and the nearest reachable point of interest: "Overworld, Yoyogi Kamizonocho. Nearest: Soul, 6 metres, north-west." The game's name tables (`area_name`, `basyo_name`) read empty in every dump, so the banner is the name used.
+
+### Test (0.0.44)
+
+1. In Shibuya, Page Up to the demon near Hachiko Intersection, Home: the walk should now go on until the game says "Talk", then "Arrived." (order may vary by a moment). Same with a Soul.
+2. Page Up in Shibuya: the way out to the world map is now "Exit to overworld, explored, N metres, ...". In the Medical Center's Annex Lobby the exit too.
+3. Press Delete: on the world map "Overworld, <district>. Nearest: ..."; in Shibuya "<area>. Nearest: ..."; in first person with "Facing ...". F8 now does nothing.
 
 ## Plan from here (one step per test run)
 

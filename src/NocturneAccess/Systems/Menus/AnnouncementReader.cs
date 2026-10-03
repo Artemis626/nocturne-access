@@ -107,6 +107,52 @@ namespace NocturneAccess.Systems.Menus
             }
         }
 
+        private const string LocationPath = "Canvas_UI/fieldUI/flocation/stretch/TextTM";
+        private const string PromptPath = "Canvas_UI/fieldUI/fannounce/guidetext/TextTM";
+
+        /// <summary>
+        /// The location banner's last text (the game's own: the area in dungeons, "West Plaza"; the district on the world map,
+        /// "Yoyogi Kamizonocho", rewritten as the marker crosses districts), or "" if it was never written. Where am I (0.0.44).
+        /// </summary>
+        internal static string LocationText
+        {
+            get
+            {
+                TMP_Text c = EntryOfPath.TryGetValue(LocationPath, out Entry e) ? e.Component : null;
+                try
+                {
+                    return c == null ? "" : TextUtil.Clean(c.text);
+                }
+                catch
+                {
+                    return "";   // a destroyed copy
+                }
+            }
+        }
+
+        /// <summary>
+        /// Whether the interaction prompt ("Talk", "Examine", "Open Door") is on screen; null while its component has never
+        /// been written this session. AutoWalk's arrival at people and boxes (0.0.44): the game's hit index fires before the
+        /// prompt (Shibuya, 3 Oct 15:17: the demon's hit at 232 units, "Talk" only at 172).
+        /// </summary>
+        internal static bool? InteractionPromptVisible
+        {
+            get
+            {
+                TMP_Text c = EntryOfPath.TryGetValue(PromptPath, out Entry e) ? e.Component : null;
+                if (c == null)
+                    return null;
+                try
+                {
+                    return UiUtil.IsVisible(c) && TextUtil.Clean(c.text).Length > 0;
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+        }
+
         internal static void Install()
         {
             if (!Config.MenusEnabled.Value)

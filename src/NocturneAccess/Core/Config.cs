@@ -44,7 +44,7 @@ namespace NocturneAccess.Core
 
         // Keys (names are UnityEngine.KeyCode values, e.g. F8, Backslash, Alpha1)
         internal static MelonPreferences_Entry<string> KeyRepeat { get; private set; }
-        internal static MelonPreferences_Entry<string> KeyStatus { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyWhereAmI { get; private set; }
         internal static MelonPreferences_Entry<string> KeyBattleStatus { get; private set; }
         internal static MelonPreferences_Entry<string> KeyDumpUi { get; private set; }
         internal static MelonPreferences_Entry<string> KeyToggleProbe { get; private set; }
@@ -123,8 +123,8 @@ namespace NocturneAccess.Core
             keys.SetFilePath(FilePath, true, false);
             KeyRepeat = keys.CreateEntry("Repeat", "F1", "Repeat key",
                 "Repeats whichever came last: the menu item, or the dialogue page (plus the highlighted option while a choice is open).");
-            KeyStatus = keys.CreateEntry("Status", "F8", "Status key",
-                "Speaks whether the mod is running and which speech backend it uses.");
+            KeyWhereAmI = keys.CreateEntry("WhereAmI", "Delete", "Where am I key",
+                "Speaks where you are: the location banner (area, or the district on the world map), the facing in first person, and the nearest point of interest.");
             KeyBattleStatus = keys.CreateEntry("BattleStatus", "F2", "Battle status key",
                 "In battle: whose turn it is and the press turns left, then each party member with HP and MP.");
             KeyBattleEnemies = keys.CreateEntry("BattleEnemies", "F3", "Battle enemies key",

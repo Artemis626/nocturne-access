@@ -73,6 +73,28 @@ namespace NocturneAccess.Systems.Navigation
             }
         }
 
+        /// <summary>
+        /// The field a plain door (warptype 0) leads to, or -1 when the table has no entry the game would take now. Any door,
+        /// named or not: "Exit to overworld" (0.0.44) for a door into a field below 10 (FieldState.WorldMapField), as Shibuya's
+        /// 01d_05 and the Medical Center's Annex Lobby exit 01d_04 lead to field 2.
+        /// </summary>
+        internal static int ToField(int field, int area, string resName)
+        {
+            try
+            {
+                Refresh(field);
+                Entry e = Find(area, resName);
+                if (e == null || e.WarpType != 0)
+                    return -1;
+                return e.ToField == 0 ? field : e.ToField;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[Nav:Doors] Destination of {field}/{area}/{resName} could not be read: {ex.Message}");
+                return -1;
+            }
+        }
+
         /// <summary>The entry the game would take for this door now (fldWap.fldDoor_Find).</summary>
         private static Entry Find(int area, string name)
         {
