@@ -50,7 +50,6 @@ namespace NocturneAccess.Systems.Menus
             public Func<string, string> ItemDetail;   // said after the item's text (a skill's cost), if not empty
             public bool NoPosition;               // one slot shows the current choice: no "1 of 1"
             public bool LinesAreSentences;        // description lines are separate statements, not one wrapped sentence
-            public Func<bool> SpeakDescription;   // null: always; false: the description is kept for F1 (repeat) but not spoken as the cursor moves
         }
 
         private sealed class Slot
@@ -144,9 +143,6 @@ namespace NocturneAccess.Systems.Menus
                 Item = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bmenu/[^/]+/bmenu_command/bmenu_command(?<slot>\d\d)/bmenu_text01TM$", RegexOptions.Compiled),
                 Highlight = "<material=\"TMC01\">",
                 Description = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bhelp_window/text_mask/TextTM$", RegexOptions.Compiled),
-                // The help line sits in the window at the top of the screen; Francesco (3 Oct 2026): not spoken for now
-                // (config SpeakBattleHelp), F1 still says it.
-                SpeakDescription = () => Config.SpeakBattleHelp?.Value ?? false,
                 ItemDetail = BattleSkills.CostOfActing,          // "Lunge, 4 HP": the cost is drawn as images (2 Oct 2026)
                 OpeningPrefix = BattleReader.TurnAnnouncement,   // "Pixie's turn" (22:14 session: the acting unit was never said)
             },
@@ -418,12 +414,11 @@ namespace NocturneAccess.Systems.Menus
             string description = string.Join(state.Spec.LinesAreSentences ? ". " : " ", state.Description.Where(d => !string.IsNullOrEmpty(d)));
             if (state.Spec.LinesAreSentences && description.Length > 0)
                 description += ".";
-            string repeat = string.Join(". ", description.Length > 0 ? parts.Append(description) : parts);
-            if (description.Length > 0 && (state.Spec.SpeakDescription?.Invoke() ?? true))
+            if (description.Length > 0)
                 parts.Add(description);
 
             string utterance = string.Join(". ", parts);
-            LastUtterance = repeat;   // F1 always has the description
+            LastUtterance = utterance;
             LastUtteranceAt = Environment.TickCount64;
             if (opening)
                 Log.Info($"{Tag} {state.Spec.Name} opened.");

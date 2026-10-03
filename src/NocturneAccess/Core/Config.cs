@@ -33,7 +33,6 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<bool> BattleEnabled { get; private set; }
         internal static MelonPreferences_Entry<bool> SpeakHpChanges { get; private set; }
         internal static MelonPreferences_Entry<bool> SpeakHpLeft { get; private set; }
-        internal static MelonPreferences_Entry<bool> SpeakBattleHelp { get; private set; }
 
         // Navigation
         internal static MelonPreferences_Entry<bool> NavDiagnostics { get; private set; }
@@ -102,8 +101,6 @@ namespace NocturneAccess.Core
                 "Speaks the battle start with the enemies, actions, targets and results, and HP changes. Needs a restart.");
             SpeakHpChanges = battle.CreateEntry("SpeakHpChanges", true, "Speak HP changes",
                 "After each hit or heal, say the unit's HP (from game data).");
-            SpeakBattleHelp = battle.CreateEntry("SpeakBattleHelp", false, "Speak battle help lines",
-                "Say the help line shown at the top of the screen (\"Retreat from battle.\") with each battle command. Off: only the command; F1 repeats it with the help line.");
             SpeakHpLeft = battle.CreateEntry("SpeakHpLeft", false, "Speak HP left after actions",
                 "After each hit or heal, also say the HP left (\"Zhen 1: 27 damage, HP 38 of 65.\"); off: \"Zhen 1: 27 damage.\" A unit brought to 0 says \"0 HP\" either way. F8 toggles it in game. F2, F3 and F5 always give HP.");
 
