@@ -73,6 +73,26 @@ namespace NocturneAccess.Systems.Battle
         // "Press turns: 1 full, 1 blinking" ran together). Split in two keys (Francesco, 2 Oct 2026: one key gave too much
         // at once): F2 our side, F3 the enemies.
 
+        /// <summary>
+        /// F8 (0.0.45): battle verbosity. Turns on or off the HP left spoken after each hit or heal (Config.SpeakHpLeft, kept in
+        /// the config file). Only the lines spoken as actions happen; F2, F3 and the battle log (F5) always give HP.
+        /// </summary>
+        internal static void ToggleHpLeft()
+        {
+            bool on = !Config.SpeakHpLeft.Value;
+            Config.SpeakHpLeft.Value = on;
+            try
+            {
+                Config.SpeakHpLeft.Category.SaveToFile(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[Battle] Could not save SpeakHpLeft: {ex.Message}");
+            }
+            Log.Info($"[Battle] HP left after actions: {(on ? "on" : "off")}.");
+            SpeechManager.Say(on ? "HP after actions on." : "HP after actions off.", interrupt: true, force: true);
+        }
+
         /// <summary>F2: whose turn, the press turns left, then each party member's HP and MP.</summary>
         internal static void SpeakStatus()
         {

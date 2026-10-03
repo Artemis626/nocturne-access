@@ -31,7 +31,7 @@ namespace NocturneAccess.Systems.Navigation
         public bool Explored;           // a generic door (no place name) the player has gone through (ExploredDoors)
         public bool Empty;              // an item box the game has opened (fld_Npc.gfldTakaraWork MotPhase, PointsOfInterest.Opened)
         public bool World;              // on the world map (FieldState.WorldMap): doors are entrances to places, heights are terrain
-        public bool ToWorld;            // a dungeon door that leads to the world map (DoorTable.ToField below 10): "Exit to overworld" (0.0.44)
+        public bool ToWorld;            // a dungeon door that leads to the world map (DoorTable.ToField below 10): "Exit to overworld" (0.0.44), never "explored" (0.0.45)
 
         public string Label => Kind == PoiKind.Door ? (ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : "Door")
             : Kind == PoiKind.Place ? Name
@@ -168,7 +168,7 @@ namespace NocturneAccess.Systems.Navigation
                     NX = doorLike ? nx : 0f,
                     NZ = doorLike ? nz : 0f,
                     Distance = (float)Math.Sqrt((p.x - px) * (p.x - px) + (p.z - pz) * (p.z - pz)),
-                    Explored = generic && ExploredDoors.IsExplored(gb.fieldID, gb.areaID, name),
+                    Explored = generic && !toWorld && ExploredDoors.IsExplored(gb.fieldID, gb.areaID, name),   // an exit to the overworld is used again and again: never "explored" (Francesco, 0.0.45)
                     Empty = kind == PoiKind.ItemBox && Opened(takara),
                     World = world,
                     ToWorld = toWorld,
@@ -192,7 +192,10 @@ namespace NocturneAccess.Systems.Navigation
                     if (same.DoorKind.Length == 0)
                         same.DoorKind = q.DoorKind;
                     if (same.ToWorld)
+                    {
                         same.DoorKind = "";   // "Exit to overworld" already says it
+                        same.Explored = false;
+                    }
                     continue;
                 }
                 if (grid)

@@ -93,7 +93,10 @@ namespace NocturneAccess.Systems.Battle
                     what = u.Hp < oldHp ? $"{oldHp - u.Hp} damage" : $"{u.Hp - oldHp} healed";
                 }
                 string text = u.Hp == 0 ? $"{who}: {what}, 0 HP." : $"{who}: {what}, HP {u.Hp} of {u.MaxHp}.";
-                SpeechManager.Say(text, interrupt: false, force: true);
+                // Francesco (3 Oct 2026): the HP left after every hit is too chatty; F8 turns it on and off (Config.SpeakHpLeft,
+                // off by default). A unit brought to 0 still says "0 HP"; the battle log (F5) and F2 / F3 always keep HP.
+                string spoken = u.Hp == 0 || (Config.SpeakHpLeft?.Value ?? true) ? text : $"{who}: {what}.";
+                SpeechManager.Say(spoken, interrupt: false, force: true);
                 BattleLog.Add(text);
             }
             return true;

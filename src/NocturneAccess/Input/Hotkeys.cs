@@ -51,6 +51,7 @@ namespace NocturneAccess.Input
             Add("centre on the square", Config.KeyCentre, KeyCode.F3, () => { if (!BattleReader.Active) BlobberMode.RequestCentre(); });
             Add("battle enemies", Config.KeyBattleEnemies, KeyCode.F3, () => { if (BattleReader.Active) BattleReader.SpeakEnemies(); });
             Add("battle log", Config.KeyBattleLog, KeyCode.F5, BattleLog.Speak);
+            Add("battle verbosity", Config.KeyBattleVerbosity, KeyCode.F8, BattleReader.ToggleHpLeft);
             Add("next point of interest", Config.KeyPoiNext, KeyCode.PageUp, () => PointsOfInterest.Cycle(1));
             Add("previous point of interest", Config.KeyPoiPrevious, KeyCode.PageDown, () => PointsOfInterest.Cycle(-1));
             Add("walk to point of interest", Config.KeyPoiWalk, KeyCode.Home, AutoWalk.Request);

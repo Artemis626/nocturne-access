@@ -32,6 +32,7 @@ namespace NocturneAccess.Core
         // Battle
         internal static MelonPreferences_Entry<bool> BattleEnabled { get; private set; }
         internal static MelonPreferences_Entry<bool> SpeakHpChanges { get; private set; }
+        internal static MelonPreferences_Entry<bool> SpeakHpLeft { get; private set; }
 
         // Navigation
         internal static MelonPreferences_Entry<bool> NavDiagnostics { get; private set; }
@@ -46,6 +47,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyRepeat { get; private set; }
         internal static MelonPreferences_Entry<string> KeyWhereAmI { get; private set; }
         internal static MelonPreferences_Entry<string> KeyBattleStatus { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyBattleVerbosity { get; private set; }
         internal static MelonPreferences_Entry<string> KeyDumpUi { get; private set; }
         internal static MelonPreferences_Entry<string> KeyToggleProbe { get; private set; }
         internal static MelonPreferences_Entry<string> KeyNavDump { get; private set; }
@@ -99,6 +101,8 @@ namespace NocturneAccess.Core
                 "Speaks the battle start with the enemies, actions, targets and results, and HP changes. Needs a restart.");
             SpeakHpChanges = battle.CreateEntry("SpeakHpChanges", true, "Speak HP changes",
                 "After each hit or heal, say the unit's HP (from game data).");
+            SpeakHpLeft = battle.CreateEntry("SpeakHpLeft", false, "Speak HP left after actions",
+                "After each hit or heal, also say the HP left (\"Zhen 1: 27 damage, HP 38 of 65.\"); off: \"Zhen 1: 27 damage.\" A unit brought to 0 says \"0 HP\" either way. F8 toggles it in game. F2, F3 and F5 always give HP.");
 
             MelonPreferences_Category navigation = MelonPreferences.CreateCategory("NocturneAccess_Navigation", "Navigation");
             navigation.SetFilePath(FilePath, true, false);
@@ -125,6 +129,8 @@ namespace NocturneAccess.Core
                 "Repeats whichever came last: the menu item, or the dialogue page (plus the highlighted option while a choice is open).");
             KeyWhereAmI = keys.CreateEntry("WhereAmI", "Delete", "Where am I key",
                 "Speaks where you are: the location banner (area, or the district on the world map), the facing in first person, and the nearest point of interest.");
+            KeyBattleVerbosity = keys.CreateEntry("BattleVerbosity", "F8", "Battle verbosity key",
+                "Turns on or off the HP left spoken after each hit or heal in battle (status keys always give HP).");
             KeyBattleStatus = keys.CreateEntry("BattleStatus", "F2", "Battle status key",
                 "In battle: whose turn it is and the press turns left, then each party member with HP and MP.");
             KeyBattleEnemies = keys.CreateEntry("BattleEnemies", "F3", "Battle enemies key",
