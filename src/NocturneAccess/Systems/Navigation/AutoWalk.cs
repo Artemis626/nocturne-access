@@ -25,6 +25,10 @@ namespace NocturneAccess.Systems.Navigation
     /// Re-plans when more than 90 units off the run or still for 8 ticks (at most 6 times). Arrival is the game's own:
     /// its hit index (fldEveHit.gFldEveRngIdx) is the target AND the player faces it (within 50 degrees): the 0.0.22
     /// test showed the "Open Door" prompt waits for the facing. If in reach but not facing, it turns towards the target.
+    /// - World map (0.0.42, fieldID below 10): fldPlayerCalc_Wm2 reads the same pads fixed to the world (U north, R east,
+    ///   16 units a tick, no facing): Press with yaw 0; in reach is arrival at once (the prompt needs no facing); a field
+    ///   change (a random battle, 2 to 202) ends the walk; ticks where the game ignores the pads (NoInpPlCnt,
+    ///   fldWmWarpMode) are not "still"; 90 s timeout.
     /// Ends after 30 s, or at once when the player presses a movement key. It never presses confirm.
     /// </summary>
     internal static class AutoWalk
@@ -37,6 +41,7 @@ namespace NocturneAccess.Systems.Navigation
         private const int StillTicks = 8;
         private const int MaxReplans = 6;
         private const long TimeoutMs = 30000;
+        private const long WorldTimeoutMs = 90000;   // Shinjuku is about 70 x 80 metres at 4.8 a second; Medical Center to Yoyogi Park took 26 s
         private const long TurnWaitMs = 1500;
         private const int ApproachTicks = 30;
         private const int FaceTicks = 20;
@@ -66,10 +71,10 @@ namespace NocturneAccess.Systems.Navigation
         };
 
         private static long _requestMs = long.MinValue / 2;
-        private static bool _active, _firstPerson;
+        private static bool _active, _firstPerson, _world;
         private static Poi _target;
         private static List<PathRun> _runs;
-        private static int _run, _replans, _still, _approach, _facing, _area, _combo = -1, _turns, _idle, _moveCount;
+        private static int _run, _replans, _still, _approach, _facing, _area, _field, _combo = -1, _turns, _idle, _moveCount;
         private static bool _correcting;
         private static float _startSlack;   // how far the player stood off the first run at planning (start cell away from a blocked spot)
         private static float _lastX, _lastZ;
@@ -105,12 +110,13 @@ namespace NocturneAccess.Systems.Navigation
                 return;
 
             PadInput.ReleaseAll();
-            if (gb.areaID != _area || FieldState.WorldMap(gb))
+            // A random battle on the world map switches field 2 to 202 and back: the walk ends and does not resume by itself.
+            if (gb.fieldID != _field || gb.areaID != _area)
             {
-                Stop("area change", null);
+                Stop(gb.fieldID != _field ? "field change" : "area change", null);
                 return;
             }
-            if (_firstPerson != (gb.cammode == 0 && FirstPersonView.On))
+            if (_firstPerson != FirstPersonNow(gb))
             {
                 Stop("view changed", "Auto-walk stopped.");
                 return;
@@ -121,14 +127,14 @@ namespace NocturneAccess.Systems.Navigation
                 Stop($"pad {key} pressed", "Auto-walk stopped.");
                 return;
             }
-            if (Clock.ElapsedMilliseconds - _startMs > TimeoutMs)
+            if (Clock.ElapsedMilliseconds - _startMs > (_world ? WorldTimeoutMs : TimeoutMs))
             {
                 Stop("timed out", "Auto-walk timed out.");
                 return;
             }
             // A story event or dialogue stops the game's movement routine while the field update goes on (0.0.23 test,
             // field 11: trigger 01eve_15 moved the player and opened a dialogue): end the walk instead of re-planning.
-            int moves = FieldState.SyukanCount + FieldState.NmlCount;
+            int moves = FieldState.MoveCount;
             _idle = moves == _moveCount ? _idle + 1 : 0;
             _moveCount = moves;
             if (_idle >= IdleTicks)
@@ -144,9 +150,19 @@ namespace NocturneAccess.Systems.Navigation
             _still = moved < 2f ? _still + 1 : 0;
             if (Turning(gb))
                 _still = 0;   // a first-person turn stands still on purpose
+            if (_world && (gb.NoInpPlCnt > 0 || fldPlayer.fldWmWarpMode != 0))
+                _still = 0;   // fldPlayerCalc_Wm2 ignores the pads then (read offline): waiting, not blocked
 
             float toTarget = Bearing(x, z, _target.X, _target.Z);
             float flat = (float)Math.Sqrt((_target.X - x) * (_target.X - x) + (_target.Z - z) * (_target.Z - z));
+            // The world map: the game's prompt ("Enter", "Talk") fires on entering range, the marker has no facing (logs 1 Oct
+            // 19:57, 3 Oct 14:07): in reach is arrival, at once. Pressing on towards the target would walk past it.
+            if (_world && InReach(_target, flat))
+            {
+                Stop("the game's hit index is the target (world map)", "Arrived.");
+                return;
+            }
+
             float face = FaceBearing(_target, x, z);
             // A door's hit fires at the edge of its 300-wide volume: walking along the wall, that is beside the door. Only in front
             // of it (or at the end of the route) does it count.
@@ -240,11 +256,6 @@ namespace NocturneAccess.Systems.Navigation
         {
             if (_active)
                 Stop("new request", null);
-            if (FieldState.WorldMap(gb))
-            {
-                Say("Auto-walk is not available on the world map yet.");   // docs/HANDOFF-OVERWORLD.md plan step 4
-                return;
-            }
             if (!FieldState.IsExploring)
             {
                 Say("Auto-walk is not available here.");
@@ -264,10 +275,12 @@ namespace NocturneAccess.Systems.Navigation
             CentreWalk.Cancel("auto-walk");
             _target = poi;
             _area = gb.areaID;
-            _firstPerson = gb.cammode == 0 && FirstPersonView.On;
+            _field = gb.fieldID;
+            _world = FieldState.WorldMap(gb);
+            _firstPerson = FirstPersonNow(gb);
             _replans = 0;
             _idle = 0;
-            _moveCount = FieldState.SyukanCount + FieldState.NmlCount;
+            _moveCount = FieldState.MoveCount;
             _startMs = Clock.ElapsedMilliseconds;
             if (!Plan(gb, "start"))
             {
@@ -374,7 +387,7 @@ namespace NocturneAccess.Systems.Navigation
                 _startSlack = Math.Abs((gb.playerX - _runs[0].Ax) * sz - (gb.playerZ - _runs[0].Az) * sx);
             }
             _lastZ = gb.playerZ;
-            Log.Info($"[Nav:Walk] Plan ({why}, {(_firstPerson ? "first person" : "third person")}) from {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)} " +
+            Log.Info($"[Nav:Walk] Plan ({why}, {(_firstPerson ? "first person" : _world ? "world map" : "third person")}) from {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)} " +
                      $"to {_target.Label} {_target.ResName} (gEvnRng {_target.Index}) at {FieldData.F(_target.X)} {FieldData.F(_target.Z)}: " +
                      $"goal cell {FieldData.F(gx)} {FieldData.F(gz)} ({aim}), {_runs.Count} runs [{string.Join(", ", _runs.Select(r => $"{r.Bearing}:{FieldData.F(r.Length)}"))}], " +
                      $"{clock.ElapsedMilliseconds} ms.");
@@ -460,6 +473,10 @@ namespace NocturneAccess.Systems.Navigation
             return true;
         }
 
+        /// <summary>The mod's first-person walking: off on the world map, where the state kept from dungeons does not apply.</summary>
+        private static bool FirstPersonNow(fldGlobalWork_t gb)
+            => !FieldState.WorldMap(gb) && gb.cammode == 0 && FirstPersonView.On;
+
         private static bool Turning(fldGlobalWork_t gb)
             => _firstPerson && (fldPlayer.gFldPlayerSyukanDly != 0 || Math.Abs(Diff(gb.PlayerKakudo, gb.PlayerKakudoGoal)) > 2);
 
@@ -472,11 +489,15 @@ namespace NocturneAccess.Systems.Navigation
         private static float OffSquare(fldGlobalWork_t gb)
             => Math.Abs(Diff(gb.PlayerKakudoGoal, GridSense.Normalize90(gb.PlayerKakudoGoal)));
 
-        /// <summary>Holds the pad combination whose camera-relative bearing is nearest the wanted compass bearing (third person).</summary>
+        /// <summary>
+        /// Holds the pad combination whose camera-relative bearing is nearest the wanted compass bearing (third person). On the
+        /// world map the pads are fixed to the world (fldPlayerCalc_Wm2, read offline: U north, R east, two pads the diagonal):
+        /// yaw 0, Combos[round(bearing / 45)], whatever the camera does.
+        /// </summary>
         private static void Press(float bearing)
         {
             float camYaw = 0;
-            GameObject cam = fldCamera.fldCameraObj;
+            GameObject cam = _world ? null : fldCamera.fldCameraObj;
             if (cam != null)
                 camYaw = cam.transform.eulerAngles.y;
             int best = 0;

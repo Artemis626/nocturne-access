@@ -4,8 +4,8 @@ Written 2 Oct 2026 at the end of the dungeon chats, for a new chat dedicated to 
 
 ## Start here (state on 3 Oct 2026, after the 14:04 session)
 
-- **Installed: 0.0.41.** Verified: 0.0.39 (Page Up / Page Down on the world map), 0.0.41 (world-map walking map, End in compass words: "solid enough to play the overworld", Francesco), and from 0.0.40 the title Continue screen. Not yet exercised: 0.0.40's battle-talk fix (no demon talk since).
-- **Next: step 4, auto-walk (Home) on the world map**, plus the Shibuya "not reachable" fix: everything needed is in "Step 4 plan" below. Build it, bump to 0.0.42, commit, update the docs, give test steps.
+- **Installed: 0.0.42 (step 4, built 3 Oct 2026 after the compact, not yet tested: "Step 4 built" below).** Before it, 0.0.41. Verified: 0.0.39 (Page Up / Page Down on the world map), 0.0.41 (world-map walking map, End in compass words: "solid enough to play the overworld", Francesco), and from 0.0.40 the title Continue screen. Not yet exercised: 0.0.40's battle-talk fix (no demon talk since).
+- **Next: Francesco tests 0.0.42** (auto-walk on the world map, Shibuya from the south): read the log, then step 5.
 - Then: step 5 the moon phase; step 6 explored entrances.
 - Evidence: logs `session_2026-10-02_20-10-19`, `_21-03-43`, `session_2026-10-03_14-04-02` (`UserData/NocturneAccess/Logs`); world-map dumps `navdump_2026-10-02_20-26-27`, `_21-08-02`, `_21-11-41` (`NavDumps`); offline checker `tools/worldgrid.pl`; analysis helpers `tools/native/README.md` step 4.
 
@@ -116,7 +116,7 @@ Checked offline first (`tools/worldgrid.pl`, the Shinjuku dumps of 20:26 and 21:
 - Seen, not a bug: a first leg of 1 metre is spoken ("North, 1 metre, then north-west.") when the player stands just off the route; fine for now.
 - Also verified in this session (0.0.40): the title Continue screen reads its slot ("Art, Level 8, Yoyogi Park-West Plaza, NORMAL"). The doubled battle-talk fix was not exercised (no demon talk).
 
-## Step 4 plan: auto-walk (Home) on the world map (next chat; nothing built yet)
+## Step 4 plan: auto-walk (Home) on the world map (built as 0.0.42, see "Step 4 built")
 
 Francesco (3 Oct 2026): with no footsteps or other audio feedback on the world map, auto-walk is even more essential there than in dungeons; build it from the information available. Everything below is already known; no new game names are needed except the ones listed (all in the Proxy and `docs/class-index.md`).
 
@@ -142,10 +142,34 @@ Francesco (3 Oct 2026): with no footsteps or other audio feedback on the world m
 
 **Test for step 4:** Page Up to "Yoyogi Park entrance" from the Medical Center, Home: "Walking to ...", the marker walks the lanes without a key, "Arrived.", "Enter". Then Home to a Soul, Home to Shibuya from the south, Home and press an arrow key midway ("Auto-walk stopped."), Home through a random battle (the walk ends; Home again afterwards). Dungeons: Home as before.
 
+## Step 4 built: 0.0.42 (3 Oct 2026; not yet tested)
+
+As planned above, with these details:
+
+- `FieldState`: a prefix on `fldPlayer.fldPlayerCalc_Wm2` counts its runs (`WmCount`); `MoveCount` (all three movement routines) is `AutoWalk`'s idle test. Without it every world-map walk would have ended after 3 ticks as "interrupted by an event".
+- `AutoWalk.TryStart`: no world-map refusal; `FirstPersonNow` is false on the world map (also for the "view changed" check, so a first-person state kept from a dungeon cannot stop the walk).
+- `AutoWalk.Press`: on the world map the camera is not read (yaw 0), so the pads are `Combos[round(bearing / 45)]`, U = north. Runs, the off-run correction (the neighbouring 45) and the final approach all go through it.
+- Arrival on the world map: `InReach` (the game's hit index is the target: `OldHitDoor` for entrances, `OldHitInf` / `gFldEveRngIdx` for Souls) ends the walk at once with "Arrived."; the facing step never runs there.
+- Stop: a field or area change ("field change" in the log; a random battle 2 to 202). Ticks with `fldGb.NoInpPlCnt` above 0 or `fldPlayer.fldWmWarpMode` not 0 are not counted as still. Timeout 90 s on the world map (30 s in dungeons).
+- Log: `[Nav:Walk] Plan (start, world map) ...`, the pad lines say "camera yaw 0".
+- **Shibuya fix** (`PointsOfInterest`): on the world map an entrance's target floor is the ground under its volume centre (`CollisionCache.FloorUnder(..., groundOnly: true)`, the `Attr` 0 floors the walking map uses, the one nearest the centre's height), else the box bottom; never the player's height. Offline (`tools/worldgrid.pl` with `FLOOR=under`, dump `navdump_2026-10-02_21-11-41`, 133 traced positions of the 20:10, 21:03 and 14:04 sessions, all on reachable cells): ground under the centre vs the nearest reachable cell: `01d_01` +8, `01d_02` +1, `01d_03` (Shibuya) +2, `01d_04` +2, `01d_05` -8. The box bottom alone was 85 off at `01d_04`, so the ground is the better target.
+
+### Test (0.0.42)
+
+1. Load a save on the Shinjuku world map. Page Up to "Yoyogi Park entrance" (or any entrance), then Home: "Walking to Yoyogi Park entrance, N metres, west." (your numbers). Do not touch the keys: the marker walks by itself; when it gets there: "Arrived.", then the game's "Enter". Confirm with Enter as usual if you want to go in.
+2. Page Up to a Soul, Home: "Walking to Soul, N metres, ..." then "Arrived." and "Talk".
+3. Go south to the Soul there (or anywhere south), Page Up: "Shibuya entrance" must now be in the list. Home to it: "Arrived.", "Enter".
+4. Start a long walk with Home and press an arrow key midway: "Auto-walk stopped." and you control the marker again at once.
+5. If a random battle starts during a walk, it ends the walk silently; after the battle press Home again to carry on.
+6. Shift+F6 once on the world map during the session.
+7. In a dungeon: Home as before (third person and first person).
+
+If a walk says "Blocked." or "Walk interrupted by an event." on open ground, say where: the log has every pad and re-plan.
+
 ## Plan from here (one step per test run)
 
 3. Done in 0.0.41 (above).
-4. **Auto-walk (Home)**: next; full plan in "Step 4 plan" above.
+4. **Auto-walk (Home)**: built as 0.0.42, to test ("Step 4 built").
 5. **The moon phase** from game data (the HUD draws it as images; no text in the log): candidates `evtMoon.evtGetAgeOfMoon()`, `evtGetAgeOfMoon16()`; to read offline first, never call protected code.
 6. Later: explored entrances, the big event volumes.
 

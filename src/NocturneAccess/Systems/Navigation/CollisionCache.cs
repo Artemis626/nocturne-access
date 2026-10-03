@@ -221,15 +221,15 @@ namespace NocturneAccess.Systems.Navigation
         /// The floor-like polygon whose outline contains (x, z) and whose plane is nearest to y, or null.
         /// Assumes the polygon points are in the same space as fldGb.playerX/Y/Z: the diagnostic run checks that.
         /// </summary>
-        internal static CollisionPoly FloorUnder(float x, float y, float z, out float planeY)
+        internal static CollisionPoly FloorUnder(float x, float y, float z, out float planeY, bool groundOnly = false)
         {
             CollisionPoly best = null;
             float bestDist = float.MaxValue;
             planeY = 0;
             foreach (CollisionPoly p in Items)
             {
-                if (!p.IsFloorLike || p.Points.Length < 3 || !ContainsXZ(p.Points, x, z))
-                    continue;
+                if (!p.IsFloorLike || p.Points.Length < 3 || !ContainsXZ(p.Points, x, z) || (groundOnly && p.Attr != 0))
+                    continue;   // groundOnly: the walking map's floors (Attr 0), not the 0x800 / 0x1000 / 0x8000 overlays
 
                 Vector4 a = p.Points[0];
                 float py = a.y - (p.Normal.x * (x - a.x) + p.Normal.z * (z - a.z)) / p.Normal.y;

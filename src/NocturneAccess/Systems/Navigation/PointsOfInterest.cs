@@ -24,7 +24,7 @@ namespace NocturneAccess.Systems.Navigation
         public string Name = "";        // the game's place name for a door (FldNameData.GetBasyoName), or ""
         public bool Soul;               // a person whose model is "shinentai" (the game's speaker name for them is "Soul")
         public bool Demon;              // a person with no field object: a demon, whose model is not a field object (the game's speaker name is "Demon")
-        public float FloorY;            // the floor height to walk to: the player's height inside the volume's height span (gEvnRngBox.vtx), else its bottom; without a box Y + 100 for doors, Y for others
+        public float FloorY;            // the floor height to walk to: the player's height inside the volume's height span (gEvnRngBox.vtx), else its bottom; without a box Y + 100 for doors, Y for others; world-map entrances: the ground under the volume (0.0.42)
         public float NX, NZ;            // a door's facing (gEvnRngBox.boxnml, pointing out to the side the player stands on), or 0 0
         public bool HasFront => NX * NX + NZ * NZ > 0.25f;
 
@@ -142,6 +142,14 @@ namespace NocturneAccess.Systems.Navigation
 
                 VolumeSpan(box, gb.playerY, out float floorY, out float nx, out float nz);
                 bool doorLike = kind == PoiKind.Door || kind == PoiKind.Place;
+                // The world map: the ground under the volume, never the player's height. Shibuya's volume 01d_03 is 400 tall, so
+                // from the low south (Soul 01npc_02, y about -1420) the player's height lay in its span and became the floor
+                // to reach, 400 below the entrance: "not reachable" (3 Oct 14:10). Offline (tools/worldgrid.pl FLOOR=under,
+                // Shinjuku dumps): the ground under each entrance's centre is within 8 of the walking map's nearest cell.
+                if (world && doorLike && CollisionCache.FloorUnder(p.x, p.y, p.z, out float ground, groundOnly: true) != null)
+                    floorY = ground;
+                else if (world && doorLike && !float.IsNaN(floorY))
+                    floorY = BoxBottom(box);
                 list.Add(new Poi
                 {
                     Index = i,
@@ -237,6 +245,16 @@ namespace NocturneAccess.Systems.Navigation
             // Y points down: hi is the bottom of the box. Inside the span the game's hit can fire where the player stands; outside
             // it the floor is under the box (the stairwell's 1F door seen from 2F must stay downstairs).
             floorY = playerY >= lo - 50f && playerY <= hi + 50f ? playerY : hi;
+        }
+
+        /// <summary>The bottom of a volume's box (the largest vtx y; Y points down). VolumeSpan has checked the box is real.</summary>
+        private static float BoxBottom(putevebox_s box)
+        {
+            float hi = float.MinValue;
+            Il2CppStructArray<Vector4> vtx = box.vtx;
+            for (int k = 0; k < vtx.Length; k++)
+                hi = Math.Max(hi, vtx[k].y);
+            return hi;
         }
 
         /// <summary>

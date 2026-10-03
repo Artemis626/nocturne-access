@@ -6,7 +6,7 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 Francesco reached the overworld (Shinjuku, field 2) and starts a new chat for it: read `docs/HANDOFF-OVERWORLD.md` (facts from the 20:10 session, its two dumps and the video; the plan, one step per test run). The dungeon tools stay as they are. Small open items: a demon conversation line spoken twice, the Annex 1F ramp item box, custom waypoints later.
 
-**Overworld chat, 2 to 3 Oct 2026: steps 1 to 3 done and verified (0.0.39 Page Up / Page Down, 0.0.41 world-map walking map and End; 0.0.40 Continue screen verified, its battle-talk fix not yet exercised). Next: step 4, auto-walk (Home) on the world map plus the Shibuya "not reachable" fix, fully planned in `docs/HANDOFF-OVERWORLD.md` ("Start here", "Step 4 plan"). No code was written in the 3 Oct session (analysis and documentation only).** Never push to GitHub unless Francesco gives the order.
+**Overworld chat, 2 to 3 Oct 2026: steps 1 to 3 done and verified (0.0.39 Page Up / Page Down, 0.0.41 world-map walking map and End; 0.0.40 Continue screen verified, its battle-talk fix not yet exercised). Step 4 built as 0.0.42 (3 Oct 2026, after the compact): auto-walk (Home) on the world map and the Shibuya "not reachable" fix, not yet tested; test steps in `docs/HANDOFF-OVERWORLD.md` "Step 4 built". Then step 5, the moon phase.** Never push to GitHub unless Francesco gives the order.
 
 ## The project in one paragraph
 
@@ -65,6 +65,7 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.39** | World map step 2: Page Up / Page Down list entrances ("Yoyogi Park entrance"), people, Souls and item boxes on the world map (fieldID below 10, the game's own test); End and Home say "not available on the world map yet"; no "Grid: no floor" flood | Verified 2 Oct 21:03 (10 points read at Yoyogi Park) |
 | **0.0.40** | Battle talk pages no longer spoken twice (identical page only after `ClearMessage` / a request / window off); the title Continue screen reads its slot | Continue screen verified 3 Oct 14:04; battle-talk fix not yet exercised |
 | **0.0.41** | World map step 3: a walking map for the world map (world-map walls, calibrated on the traces), Page Up filters by it, End speaks compass routes there | Verified 3 Oct 14:04 (End to two Souls and an entrance); miss: Shibuya "not reachable" from the south |
+| **0.0.42** | World map step 4: auto-walk (Home) on the world map (pads fixed to the compass, arrival on the game's "Enter" / "Talk", 90 s timeout, a battle ends it); Shibuya fix: world-map entrances aim at the ground under the volume | Built 3 Oct 2026, not yet tested |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 

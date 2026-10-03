@@ -72,7 +72,13 @@ for my $t(@tr){ my $n0=node(@{$t}[1..3],0); my $n1=node(@{$t}[1..3],1);
 printf "grid %dx%d, %d floors, %d walls, reachable nodes %d; trace: %d on a reachable cell, %d next to one, %d not (%s)\n",$W,$H,scalar@F,scalar@W,scalar(keys %reach),$ok,$near,$bad,join('; ',@badl[0..min(5,$#badl)]);
 # points of interest from the dump
 open D,'<',$dump; while(<D>){ next unless /^\s+gEvnRng (\d+) \S+ \S+ type (\d+) name "([^"]+)" flag \S+ pos (\S+) (\S+) (\S+) .*box type \S+ size (\S+) (\S+) (\S+)/; next if $seen{$1}++;
-  my($ix,$ty,$nm,$x,$y,$z)=($1,$2,$3,$4,$5,$6); next if $nm=~/eve/; my $fy=$nm=~/d_/?$y+100:$y; my $r=$nm=~/d_/?150:250; my $rr=int($r/$C)+1; my $hit=''; my $bestd;
+  my($ix,$ty,$nm,$x,$y,$z)=($1,$2,$3,$4,$5,$6); next if $nm=~/eve/; my $fy=$nm=~/d_/?$y+100:$y;
+  # FLOOR=bottom: doors aim at the box bottom (vtx, the 0.0.42 world-map rule); FLOOR=under: the floor polygon under the centre.
+  if($ENV{FLOOR} && $nm=~/d_/ && /vtx (.*)$/){ my $bot=-1e9; for(split /\s*\|\s*/,$1){ my @v=split; $bot=$v[1] if $v[1]>$bot }
+    my($fl)=sort { abs(poly::planey($a,$x,$z)-$y)<=>abs(poly::planey($b,$x,$z)-$y) } grep { poly::inxz($_,$x,$z) } @F;
+    my $under=$fl?poly::planey($fl,$x,$z):undef; $fy=$bot if $ENV{FLOOR} eq 'bottom'; $fy=$under if $ENV{FLOOR} eq 'under' && defined $under;
+    printf "  %-12s centre %.0f, box bottom %.0f, floor under centre %s, target %.0f\n",$nm,$y,$bot,defined $under?sprintf("%.0f",$under):'none',$fy; }
+my $r=$nm=~/d_/?150:250; my $rr=int($r/$C)+1; my $hit=''; my $bestd;
   my $ci=int(($x-$gx)/$C+0.5); my $cj=int(($z-$gz)/$C+0.5);
   OUT: for my $j($cj-$rr..$cj+$rr){for my $i($ci-$rr..$ci+$rr){ next if $i<0||$j<0||$i>=$W||$j>=$H; next if ($gx+$i*$C-$x)**2+($gz+$j*$C-$z)**2>$r*$r; my $k=$j*$W+$i;
     for my $l(0..($cnt[$k]//0)-1){ if($reach{"$k,$l"} && abs($hy[$k][$l]-$fy)<=200){ my $dd=sqrt(($gx+$i*$C-$x)**2+($gz+$j*$C-$z)**2); if(!defined $bestd || $dd<$bestd){$bestd=$dd; $hit=sprintf "reachable, nearest cell %.0f from it, height %+.0f", $dd, $hy[$k][$l]-$fy;} } } } }

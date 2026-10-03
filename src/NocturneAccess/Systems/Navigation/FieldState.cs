@@ -42,6 +42,16 @@ namespace NocturneAccess.Systems.Navigation
         internal static int NmlCount { get; private set; }
 
         /// <summary>
+        /// fldPlayerCalc_Wm2 (world-map movement) calls since start (0.0.42). fldPlayerCalc runs it only while movement is
+        /// allowed (fldProcess.fldProcCheckFlag(0x40), read offline): with SyukanCount and NmlCount, a change means the game
+        /// took movement on the world map too.
+        /// </summary>
+        internal static int WmCount { get; private set; }
+
+        /// <summary>Movement routine runs of every kind: AutoWalk's test that the game is still taking movement.</summary>
+        internal static int MoveCount => SyukanCount + NmlCount + WmCount;
+
+        /// <summary>
         /// The world map: the game's own test. fldPlayer.fldPlayerCalc runs fldPlayerCalc_Wm2 (the world map's movement)
         /// instead of the dungeon routines when fldGb.fieldID is below 10 (read offline, RVA 0x206D2A3, 2 Oct 2026): the
         /// Vortex World (field 2) and the prologue's Tokyo map (field 1, session of 1 Oct 2026 19:57).
@@ -60,6 +70,8 @@ namespace NocturneAccess.Systems.Navigation
                 AccessTools.Method(typeof(FieldState), nameof(BeforeSyukan)));
             Patcher.Prefix("Navigation", typeof(fldPlayer), nameof(fldPlayer.fldPlayerCalc_Nml), Type.EmptyTypes,
                 AccessTools.Method(typeof(FieldState), nameof(BeforeNml)));
+            Patcher.Prefix("Navigation", typeof(fldPlayer), nameof(fldPlayer.fldPlayerCalc_Wm2), Type.EmptyTypes,
+                AccessTools.Method(typeof(FieldState), nameof(BeforeWm)));
         }
 
         internal static void Tick()
@@ -108,6 +120,8 @@ namespace NocturneAccess.Systems.Navigation
         private static void BeforeSyukan() => SyukanCount++;
 
         private static void BeforeNml() => NmlCount++;
+
+        private static void BeforeWm() => WmCount++;
 
         private static void AfterCalc()
         {
