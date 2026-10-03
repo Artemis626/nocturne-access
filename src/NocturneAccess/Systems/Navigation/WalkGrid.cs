@@ -34,7 +34,7 @@ namespace NocturneAccess.Systems.Navigation
     ///   up to 1 + NearCost times more within NearRange of a wall (routes keep to the middle), plus TurnPenalty per turn.
     /// - The goal is the reachable node nearest the target in X and Z, at least minDist away and within TargetBand of
     ///   the target's height.
-    /// - The world map (fieldID below 10, 0.0.41) has its own walls: see WorldClearance and BlockWorldWalls.
+    /// - The world map (fieldID below 10, 0.0.41) has its own walls: see WorldClearance and BlockWorldWalls; from 0.0.43 no move may cross one (BlockWorldMoves).
     /// Rebuilt when the collision copy changes (CollisionCache.Version), the area changes or the player leaves the window.
     /// </summary>
     internal static class WalkGrid
@@ -67,6 +67,8 @@ namespace NocturneAccess.Systems.Navigation
         private static sbyte[] _dir = Array.Empty<sbyte>();
         private static readonly PriorityQueue<int, float> Open = new PriorityQueue<int, float>();
         private static bool[] _reach = Array.Empty<bool>();
+        private static byte[] _blockedMoves = Array.Empty<byte>();   // world map: per node, bit s set when the move in direction s crosses a wall
+        private static Dictionary<int, List<CollisionPoly>> _worldNear = new Dictionary<int, List<CollisionPoly>>();   // world map: walls near each cell
         private static int _reachStart = -1, _reachBuild = -1, _builds;
         private static readonly List<(float x, float z)> HiddenNpcs = new List<(float x, float z)>();
         private static int _hiddenKey;
@@ -226,6 +228,8 @@ namespace NocturneAccess.Systems.Navigation
             _h = Math.Min(MaxCells, (int)Math.Ceiling((maxZ - _z0) / CellSize) + 1);
             int cells = _w * _h;
             _count = new byte[cells];
+            _blockedMoves = Array.Empty<byte>();
+            _worldNear = new Dictionary<int, List<CollisionPoly>>();
             _height = new float[cells * Layers];
             _state = new byte[cells * Layers];
             _near = new float[cells * Layers];
@@ -282,8 +286,12 @@ namespace NocturneAccess.Systems.Navigation
                     });
             }
 
+            int crossings = 0;
             if (world)
+            {
                 BlockWorldWalls(worldWalls);
+                crossings = BlockWorldMoves();
+            }
 
             int walkable = 0, multi = 0;
             for (int c = 0; c < cells; c++)
@@ -295,7 +303,7 @@ namespace NocturneAccess.Systems.Navigation
                         walkable++;
             }
             Log.Info($"[Nav:Walk] Grid for field {field} area {area}: {_w} x {_h} cells of {CellSize} from {FieldData.F(_x0)} {FieldData.F(_z0)}, " +
-                     $"{floors.Count} floors, {(world ? worldWalls.Count + " world-map" : walls.Count.ToString())} walls, {walkable} walkable places, {multi} cells with more than one level, {clock.ElapsedMilliseconds} ms.");
+                     $"{floors.Count} floors, {(world ? worldWalls.Count + " world-map" : walls.Count.ToString())} walls, {(world ? crossings + " moves through walls blocked, " : "")}{walkable} walkable places, {multi} cells with more than one level, {clock.ElapsedMilliseconds} ms.");
         }
 
         // The world map's walls (docs/HANDOFF-OVERWORLD.md step 3). The game's collision (fldHit.fldHitChkUnitVWM, radius 30
@@ -306,7 +314,7 @@ namespace NocturneAccess.Systems.Navigation
         // (centre, then offsets of 6 and 12) clears every wall by WorldClearance, measured WorldLift above the floor:
         // checked offline against the Shinjuku dump, 22 puts all 92 traced positions on reachable cells and makes every
         // point of interest reachable; 24 already breaks the lane the player walked.
-        private const float WorldClearance = 22f, WorldLift = 15f, WorldBucketReach = 40f;
+        private const float WorldClearance = 22f, WorldLift = 15f, WorldBucketReach = 45f;   // 45: a diagonal move (42.4) crosses only walls this close
         private static readonly float[] WorldOffsets = { 0f, -6f, 6f, -12f, 12f };
 
         /// <summary>World map: blocks the nodes with no point clear of the walls (see WorldClearance) and sets wall distances.</summary>
@@ -342,6 +350,7 @@ namespace NocturneAccess.Systems.Navigation
                 });
             }
 
+            _worldNear = near;
             foreach (KeyValuePair<int, List<CollisionPoly>> e in near)
             {
                 int c = e.Key;
@@ -354,6 +363,84 @@ namespace NocturneAccess.Systems.Navigation
                     _state[k] = 2;
                 }
             }
+        }
+
+        /// <summary>
+        /// World map (0.0.43): blocks every move between two walkable nodes whose segment (centre to centre, WorldLift above
+        /// each floor) crosses a wall polygon. The cell test alone made walls thin: a cell 15 from a wall finds a point 12
+        /// further off that clears it by 22, so the cells on both sides of a wall were walkable and routes went straight
+        /// through buildings and cliffs (3 Oct 14:31 session: stuck against wall #20 west of the Medical Center, against
+        /// #155 and #156 in Yoyogi). Checked offline (tools/worldgrid.pl EDGE=1): all 190 traced positions stay reachable.
+        /// Returns the number of moves blocked.
+        /// </summary>
+        private static int BlockWorldMoves()
+        {
+            _blockedMoves = new byte[_state.Length];
+            int blocked = 0;
+            foreach (KeyValuePair<int, List<CollisionPoly>> e in _worldNear)
+            {
+                int c = e.Key;
+                int ci = c % _w, cj = c / _w;
+                CellCentre(c, out float x, out float z);
+                for (int l = 0; l < _count[c]; l++)
+                {
+                    int k = c * Layers + l;
+                    if (_state[k] != 1)
+                        continue;
+                    float y = _height[k];
+                    for (int s = 0; s < 8; s++)
+                    {
+                        int nk = Step(ci + Dx[s], cj + Dz[s], y);
+                        if (nk < 0)
+                            continue;
+                        CellCentre(nk / Layers, out float nx, out float nz);
+                        if (Crosses(e.Value, x, y - WorldLift, z, nx, _height[nk] - WorldLift, nz))
+                        {
+                            _blockedMoves[k] |= (byte)(1 << s);
+                            blocked++;
+                        }
+                    }
+                }
+            }
+            return blocked;
+        }
+
+        /// <summary>Whether the segment a-b passes through one of the wall polygons (its triangles 0-1-2 and 0-2-3).</summary>
+        private static bool Crosses(List<CollisionPoly> walls, float ax, float ay, float az, float bx, float by, float bz)
+        {
+            foreach (CollisionPoly w in walls)
+            {
+                Vector4 n = w.Normal;
+                float da = n.x * ax + n.y * ay + n.z * az - w.Num;
+                float db = n.x * bx + n.y * by + n.z * bz - w.Num;
+                if (da * db > 0f || da == db)
+                    continue;
+                float t = da / (da - db);
+                float px = ax + t * (bx - ax), py = ay + t * (by - ay), pz = az + t * (bz - az);
+                Vector4[] p = w.Points;
+                if (InTriangle(px, py, pz, p[0], p[1], p[2]) || (p.Length > 3 && InTriangle(px, py, pz, p[0], p[2], p[3])))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>The move from node k in direction s goes through a wall (world map only; dungeons have no such list).</summary>
+        private static bool MoveBlocked(int k, int s) => _blockedMoves.Length == _state.Length && (_blockedMoves[k] & (1 << s)) != 0;
+
+        /// <summary>
+        /// World map: the straight line from the player to a candidate start cell goes through a wall, checked against the walls
+        /// near both cells (a start up to 6 cells away must not lie behind a building).
+        /// </summary>
+        private static bool StartBehindWall(float x, float y, float z, int c, float cy)
+        {
+            if (_blockedMoves.Length != _state.Length)
+                return false;
+            CellCentre(c, out float cx, out float cz);
+            int pi = (int)Math.Round((x - _x0) / CellSize), pj = (int)Math.Round((z - _z0) / CellSize);
+            if (pi >= 0 && pj >= 0 && pi < _w && pj < _h && _worldNear.TryGetValue(pj * _w + pi, out List<CollisionPoly> a) &&
+                Crosses(a, x, y - WorldLift, z, cx, cy - WorldLift, cz))
+                return true;
+            return _worldNear.TryGetValue(c, out List<CollisionPoly> b) && Crosses(b, x, y - WorldLift, z, cx, cy - WorldLift, cz);
         }
 
         /// <summary>Some point of the cell around (x, z) lies at least WorldClearance from every wall in the list.</summary>
@@ -532,7 +619,7 @@ namespace NocturneAccess.Systems.Navigation
                 for (int s = 0; s < 8; s += fourWay ? 2 : 1)
                 {
                     int nk = Step(ci + Dx[s], cj + Dz[s], y);
-                    if (nk < 0)
+                    if (nk < 0 || MoveBlocked(cur, s))
                         continue;
                     bool diagonal = Dx[s] != 0 && Dz[s] != 0;
                     if (diagonal && (Step(ci + Dx[s], cj, y) < 0 || Step(ci, cj + Dz[s], y) < 0))
@@ -633,7 +720,7 @@ namespace NocturneAccess.Systems.Navigation
                         for (int l = 0; l < _count[c]; l++)
                         {
                             int k = c * Layers + l;
-                            if (_state[k] != 1 || Math.Abs(_height[k] - y) > StartBand)
+                            if (_state[k] != 1 || Math.Abs(_height[k] - y) > StartBand || StartBehindWall(x, y, z, c, _height[k]))
                                 continue;
                             CellCentre(c, out float cx, out float cz);
                             float d = (cx - x) * (cx - x) + (cz - z) * (cz - z);
@@ -697,7 +784,7 @@ namespace NocturneAccess.Systems.Navigation
                 for (int s = 0; s < 8; s++)
                 {
                     int nk = Step(ci + Dx[s], cj + Dz[s], y);
-                    if (nk < 0 || _reach[nk])
+                    if (nk < 0 || _reach[nk] || MoveBlocked(cur, s))
                         continue;
                     if (Dx[s] != 0 && Dz[s] != 0 && (Step(ci + Dx[s], cj, y) < 0 || Step(ci, cj + Dz[s], y) < 0))
                         continue;

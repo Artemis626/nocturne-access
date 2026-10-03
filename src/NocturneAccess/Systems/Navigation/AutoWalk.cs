@@ -42,6 +42,8 @@ namespace NocturneAccess.Systems.Navigation
         private const int MaxReplans = 6;
         private const long TimeoutMs = 30000;
         private const long WorldTimeoutMs = 90000;   // Shinjuku is about 70 x 80 metres at 4.8 a second; Medical Center to Yoyogi Park took 26 s
+        private const int ProgressTicks = 45;         // world map: no progress along the run for this long (about 1.5 s) re-plans
+        private const float ProgressStep = 30f;
         private const long TurnWaitMs = 1500;
         private const int ApproachTicks = 30;
         private const int FaceTicks = 20;
@@ -78,6 +80,8 @@ namespace NocturneAccess.Systems.Navigation
         private static bool _correcting;
         private static float _startSlack;   // how far the player stood off the first run at planning (start cell away from a blocked spot)
         private static float _lastX, _lastZ;
+        private static int _progressRun = -1, _progressTicks;
+        private static float _progressAlong;
         private static long _startMs, _turnMs = long.MinValue / 2;
 
         internal static bool Active => _active;
@@ -189,6 +193,22 @@ namespace NocturneAccess.Systems.Navigation
             Dir(r.Dir, out float ux, out float uz);
             float along = (x - r.Ax) * ux + (z - r.Az) * uz;
             float cross = (x - r.Ax) * uz - (z - r.Az) * ux;   // > 0: the player is to the right of the run (east of a run going north)
+            // World map: sliding along a wall the marker keeps moving (the pads alternate between the run and its correction)
+            // without getting on, so the still test never fires: 14:36 session, 10 s against wall #20 west of the Medical Center.
+            if (_world)
+            {
+                if (_run != _progressRun || along > _progressAlong + ProgressStep)
+                {
+                    _progressRun = _run;
+                    _progressAlong = along;
+                    _progressTicks = 0;
+                }
+                else if (++_progressTicks > ProgressTicks)
+                {
+                    Replan(gb, $"no progress along run {_run + 1} for {ProgressTicks} ticks");
+                    return;
+                }
+            }
             float lead = _firstPerson ? HalfTick : NextRunLead;
             if (along >= r.Length - lead)
             {
@@ -379,6 +399,7 @@ namespace NocturneAccess.Systems.Navigation
             _turns = 0;
             _correcting = false;
             _combo = -1;
+            _progressRun = -1;
             _lastX = gb.playerX;
             _startSlack = 0f;
             if (_runs.Count > 0)

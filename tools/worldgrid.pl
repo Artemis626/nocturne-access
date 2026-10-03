@@ -8,6 +8,10 @@
 # from every wall's plane (where it projects inside the wall), <lift> above the floor. Prints how many traced positions
 # lie on reachable cells and whether each point of interest has a reachable cell near it. WIN="x,z,radius" also draws
 # the map around a point (R reachable, . walkable not reached, # blocked).
+# More options (environment): EDGE=1 blocks moves whose centre-to-centre segment crosses a wall (the 0.0.43 rule);
+#   FLOOR=bottom|under entrance target floors (0.0.42 uses under); FULL=n the whole map, n x n cells per character, with
+#   points of interest as digits and traced positions as +; CUT=x,z the region reached from (x, z) and the walls between it
+#   and the traced region; FRONTIER=1 the walls bounding the traced region; PROBE=x,z,dir one move and the walls it crosses.
 package poly; use List::Util qw(min max);
 our @P;
 sub load { my $f=shift; my %seen; open my $h,'<',$f or die; @P=();
@@ -63,16 +67,28 @@ sub node { my($x,$y,$z,$r)=@_; my $ci=int(($x-$gx)/$C+0.5); my $cj=int(($z-$gz)/
 my %reach; my $s=node(@{$tr[0]}[1..3],2); my @q=($s); $reach{$s}=1;
 my @DX=(0,1,1,1,0,-1,-1,-1); my @DZ=(1,1,0,-1,-1,-1,0,1);
 sub step { my($i,$j,$y)=@_; return undef if $i<0||$j<0||$i>=$W||$j>=$H; my $k=$j*$W+$i; my($b,$bd)=(undef,$MS); for my $l(0..($cnt[$k]//0)-1){ my $d=abs($hy[$k][$l]-$y); ($b,$bd)=("$k,$l",$d) if $st[$k][$l]==1 && $d<=$bd } $b }
+# EDGE=1 (0.0.43): a move between two cells is blocked when the segment between their centres, <lift> above the floors,
+# crosses a wall polygon (the 0.0.42 walls were thin: cells on both sides of a wall found a clear point and the map
+# stepped through buildings).
+my $EDGE=$ENV{EDGE}//0; my $crossings=0;
+our $lastwall; sub crosses { my($k,$A,$B)=@_; for my $wi(@{$bucket{$k}//[]}){ my $w=$W[$wi]; $lastwall=$wi; my $n=$w->{n}; my $da=poly::dot($n,$A)-$w->{num}; my $db=poly::dot($n,$B)-$w->{num};
+  next if $da*$db>0 || $da==$db; my $t=$da/($da-$db); my $P=[map{$A->[$_]+$t*($B->[$_]-$A->[$_])}0..2]; my @t=@{$w->{p}};
+  return 1 if poly::intri($P,@t[0,1,2]) || (@t>3 && poly::intri($P,@t[0,2,3])); } 0 }
+sub blockedmove { my($k,$l,$nk)=@_; return 0 unless $EDGE; my($k2,$l2)=split /,/,$nk; my($i,$j)=($k%$W,int($k/$W)); my($i2,$j2)=($k2%$W,int($k2/$W));
+  my $r=crosses($k,[$gx+$i*$C,$hy[$k][$l]-$LIFT,$gz+$j*$C],[$gx+$i2*$C,$hy[$k2][$l2]-$LIFT,$gz+$j2*$C]); $crossings++ if $r; $r }
 while(@q){ my($k,$l)=split /,/,shift @q; my($i,$j)=($k%$W,int($k/$W)); my $y=$hy[$k][$l];
   for my $s(0..7){ my $nk=step($i+$DX[$s],$j+$DZ[$s],$y); next unless defined $nk; next if $reach{$nk};
+    next if blockedmove($k,$l,$nk);
     next if $DX[$s]&&$DZ[$s]&&(!defined step($i+$DX[$s],$j,$y)||!defined step($i,$j+$DZ[$s],$y)); $par{$nk}="$k,$l"; $reach{$nk}=1; push @q,$nk; } }
 my ($ok,$near,$bad)=(0,0,0); my @badl;
 for my $t(@tr){ my $n0=node(@{$t}[1..3],0); my $n1=node(@{$t}[1..3],1);
   if(defined $n0 && $n0 ne '-1' && $reach{$n0}){$ok++} elsif($n1 ne '-1' && $reach{$n1}){$near++} else {$bad++; push @badl, "@$t"} }
+print "moves blocked by a wall crossing: $crossings
+" if $EDGE;
 printf "grid %dx%d, %d floors, %d walls, reachable nodes %d; trace: %d on a reachable cell, %d next to one, %d not (%s)\n",$W,$H,scalar@F,scalar@W,scalar(keys %reach),$ok,$near,$bad,join('; ',@badl[0..min(5,$#badl)]);
 # points of interest from the dump
 open D,'<',$dump; while(<D>){ next unless /^\s+gEvnRng (\d+) \S+ \S+ type (\d+) name "([^"]+)" flag \S+ pos (\S+) (\S+) (\S+) .*box type \S+ size (\S+) (\S+) (\S+)/; next if $seen{$1}++;
-  my($ix,$ty,$nm,$x,$y,$z)=($1,$2,$3,$4,$5,$6); next if $nm=~/eve/; my $fy=$nm=~/d_/?$y+100:$y;
+  my($ix,$ty,$nm,$x,$y,$z)=($1,$2,$3,$4,$5,$6); next if $nm=~/eve/ && $nm!~/^program_eve$/; my $fy=$nm=~/d_/?$y+100:$y;
   # FLOOR=bottom: doors aim at the box bottom (vtx, the 0.0.42 world-map rule); FLOOR=under: the floor polygon under the centre.
   if($ENV{FLOOR} && $nm=~/d_/ && /vtx (.*)$/){ my $bot=-1e9; for(split /\s*\|\s*/,$1){ my @v=split; $bot=$v[1] if $v[1]>$bot }
     my($fl)=sort { abs(poly::planey($a,$x,$z)-$y)<=>abs(poly::planey($b,$x,$z)-$y) } grep { poly::inxz($_,$x,$z) } @F;
@@ -83,8 +99,50 @@ my $r=$nm=~/d_/?150:250; my $rr=int($r/$C)+1; my $hit=''; my $bestd;
   OUT: for my $j($cj-$rr..$cj+$rr){for my $i($ci-$rr..$ci+$rr){ next if $i<0||$j<0||$i>=$W||$j>=$H; next if ($gx+$i*$C-$x)**2+($gz+$j*$C-$z)**2>$r*$r; my $k=$j*$W+$i;
     for my $l(0..($cnt[$k]//0)-1){ if($reach{"$k,$l"} && abs($hy[$k][$l]-$fy)<=200){ my $dd=sqrt(($gx+$i*$C-$x)**2+($gz+$j*$C-$z)**2); if(!defined $bestd || $dd<$bestd){$bestd=$dd; $hit=sprintf "reachable, nearest cell %.0f from it, height %+.0f", $dd, $hy[$k][$l]-$fy;} } } } }
   printf "  %-12s %s\n", $nm, $hit||'NOT reachable'; }
-if($ENV{WIN}){ my($wx,$wz,$wr)=split /,/,$ENV{WIN}; my $ci=int(($wx-$gx)/$C+0.5); my $cj=int(($wz-$gz)/$C+0.5); my $r=int($wr/$C);
+sub winmap { return unless $ENV{WIN}; my($wx,$wz,$wr)=split /,/,$ENV{WIN}; my $ci=int(($wx-$gx)/$C+0.5); my $cj=int(($wz-$gz)/$C+0.5); my $r=int($wr/$C);
   print "map around $wx $wz (north up; R reachable, . walkable not reached, # blocked, : floor only other level within 80, ' ' none, X target)\n";
   for(my $j=$cj+$r;$j>=$cj-$r;$j--){ my $row=''; for my $i($ci-$r..$ci+$r){ if($i==$ci&&$j==$cj){$row.='X';next} my $k=$j*$W+$i; my $c=' ';
-    for my $l(0..($cnt[$k]//0)-1){ my $ch=$reach{"$k,$l"}?'R':$st[$k][$l]==1?'.':'#'; $c=$ch if $c eq ' ' || $ch eq 'R' || ($ch eq '.' && $c eq '#'); }
+    for my $l(0..($cnt[$k]//0)-1){ my $ch=$reach{"$k,$l"}?'R':$main::B{"$k,$l"}?'b':$st[$k][$l]==1?'.':'#'; $c=$ch if $c eq ' ' || $ch eq 'R' || ($ch eq '.' && $c eq '#'); }
     $row.=$c; } print "$row\n"; } }
+# FRONTIER=1: the walls that block moves from reached cells to walkable cells not reached (what cuts the map), by wall.
+if($ENV{FRONTIER} && $EDGE){ my %by; my %ex;
+  for my $kl(keys %reach){ my($k,$l)=split /,/,$kl; my($i,$j)=($k%$W,int($k/$W)); my $y=$hy[$k][$l];
+    for my $s(0..7){ my $nk=step($i+$DX[$s],$j+$DZ[$s],$y); next unless defined $nk; next if $reach{$nk}; next unless blockedmove($k,$l,$nk);
+      my $w=$W[$poly::lastwall // $main::lastwall]; $by{$w->{id}}++; $ex{$w->{id}}//=sprintf "at %.0f %.0f floor %.0f",$gx+$i*$C,$gz+$j*$C,$y; } }
+  for my $id(sort { $by{$b}<=>$by{$a} } keys %by){ my($w)=grep{$_->{id}==$id}@W; my @p=@{$w->{p}};
+    printf "  wall #%s: %d moves, n %.2f %.2f %.2f attr 0x%x y %.0f..%.0f, %s\n",$id,$by{$id},@{$w->{n}},$w->{attr},min(map{$_->[1]}@p),max(map{$_->[1]}@p),$ex{$id}; } }
+# CUT=x,z: flood from (x, z) and list the walls that block moves from that region into the region reached from the trace.
+if($ENV{CUT} && $EDGE){ my($cx,$cz)=split /,/,$ENV{CUT}; my $s2=node($cx,-1000,$cz,3); $s2=undef if $s2 eq '-1';
+  unless(defined $s2){ my $ci=int(($cx-$gx)/$C+0.5); my $cj=int(($cz-$gz)/$C+0.5); my $k=$cj*$W+$ci; $s2="$k,0" if ($cnt[$k]//0) && $st[$k][0]==1; }
+  our %B=($s2=>1); my $bref=%B; local *b=%B; my @q=($s2); my %by; my %ex;
+  while(@q){ my($k,$l)=split /,/,shift @q; my($i,$j)=($k%$W,int($k/$W)); my $y=$hy[$k][$l];
+    for my $s(0..7){ my $nk=step($i+$DX[$s],$j+$DZ[$s],$y); next unless defined $nk; next if $b{$nk};
+      next if $DX[$s]&&$DZ[$s]&&(!defined step($i+$DX[$s],$j,$y)||!defined step($i,$j+$DZ[$s],$y));
+      if(blockedmove($k,$l,$nk)){ if($reach{$nk}){ my $w=$W[$main::lastwall]; $by{$w->{id}}++; $ex{$w->{id}}//=sprintf "at %.0f %.0f floor %.0f",$gx+$i*$C,$gz+$j*$C,$y; } next; }
+      $b{$nk}=1; push @q,$nk; } }
+  printf "region from %s: %d nodes; walls between it and the traced region:\n",$ENV{CUT},scalar keys %b;
+  for my $id(sort { $by{$b}<=>$by{$a} } keys %by){ my($w)=grep{$_->{id}==$id}@W; my @p=@{$w->{p}};
+    printf "  wall #%s: %d moves, n %.2f %.2f %.2f attr 0x%x y %.0f..%.0f, %s | %s\n",$id,$by{$id},@{$w->{n}},$w->{attr},min(map{$_->[1]}@p),max(map{$_->[1]}@p),$ex{$id},join(' | ',map{sprintf "%.0f %.0f %.0f",@$_}@p); } }
+winmap();
+# PROBE=x,z,dir: the nodes of cell (x, z) and its neighbour in direction dir (0 north, clockwise), and every wall the
+# move crosses, as blockedmove tests it.
+if($ENV{PROBE}){ my($px,$pz,$s)=split /,/,$ENV{PROBE}; my $i=int(($px-$gx)/$C+0.5); my $j=int(($pz-$gz)/$C+0.5); my $k=$j*$W+$i;
+  for my $l(0..($cnt[$k]//0)-1){ my $nk=step($i+$DX[$s],$j+$DZ[$s],$hy[$k][$l]); my $kl="$k,$l";
+    printf "cell %.0f %.0f layer %d y %.0f state %d reach %s -> %s\n",$gx+$i*$C,$gz+$j*$C,$l,$hy[$k][$l],$st[$k][$l],$reach{$kl}?1:0,defined $nk?do{my($k2,$l2)=split /,/,$nk; sprintf "y %.0f reach %s",$hy[$k2][$l2],$reach{$nk}?1:0}:'none';
+    next unless defined $nk; my($k2,$l2)=split /,/,$nk; my($i2,$j2)=($k2%$W,int($k2/$W));
+    my $A=[$gx+$i*$C,$hy[$k][$l]-$LIFT,$gz+$j*$C]; my $Bp=[$gx+$i2*$C,$hy[$k2][$l2]-$LIFT,$gz+$j2*$C];
+    for my $w(@W){ my $n=$w->{n}; my $da=poly::dot($n,$A)-$w->{num}; my $db=poly::dot($n,$Bp)-$w->{num}; next if $da*$db>0 || $da==$db;
+      my $t=$da/($da-$db); my $P=[map{$A->[$_]+$t*($Bp->[$_]-$A->[$_])}0..2]; my @t=@{$w->{p}};
+      next unless poly::intri($P,@t[0,1,2]) || (@t>3 && poly::intri($P,@t[0,2,3]));
+      printf "  crosses wall #%s n %.2f %.2f %.2f attr 0x%x y %.0f..%.0f at %.0f %.0f %.0f | %s\n",$w->{id},@{$n},$w->{attr},min(map{$_->[1]}@t),max(map{$_->[1]}@t),@$P,join(' | ',map{sprintf "%.0f %.0f %.0f",@$_}@t); } } }
+# FULL=n: the whole map, n x n cells per character, north up: R reached from the trace, b the CUT region, . other
+# walkable, # blocked only, ' ' no floor; digits mark points of interest (1 = first listed). Traced positions: '+'.
+if($ENV{FULL}){ my $f=$ENV{FULL}; my %mark; my $m=0;
+  open my $dh,'<',$dump; my %s2; while(<$dh>){ next unless /^\s+gEvnRng (\d+) \S+ \S+ type (\d+) name "([^"]+)" flag \S+ pos (\S+) (\S+) (\S+)/; next if $s2{$1}++; next if $3=~/eve/; $m++;
+    $mark{int(int(($6-$gz)/$C+0.5)/$f)*100000+int(int(($4-$gx)/$C+0.5)/$f)}=($m%10); print "  $m%10 = $3\n"; }
+  my %tr; for my $t(@tr){ $tr{int(int(($t->[3]-$gz)/$C+0.5)/$f)*100000+int(int(($t->[1]-$gx)/$C+0.5)/$f)}=1 }
+  for(my $J=int(($H-1)/$f);$J>=0;$J--){ my $row=''; for my $I(0..int(($W-1)/$f)){ my $key=$J*100000+$I;
+    if(exists $mark{$key}){ $row.=$mark{$key}; next } my $c=' '; my %rank=(' '=>0,'#'=>1,'.'=>2,'b'=>3,'R'=>4);
+    for my $j($J*$f..$J*$f+$f-1){ for my $i($I*$f..$I*$f+$f-1){ next if $i>=$W||$j>=$H; my $k=$j*$W+$i;
+      for my $l(0..($cnt[$k]//0)-1){ my $ch=$reach{"$k,$l"}?'R':$main::B{"$k,$l"}?'b':$st[$k][$l]==1?'.':'#'; $c=$ch if $rank{$ch}>$rank{$c}; } } }
+    $c='+' if $tr{$key} && $c eq 'R'; $row.=$c; } print "$row\n"; } }

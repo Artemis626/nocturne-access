@@ -4,8 +4,8 @@ Written 2 Oct 2026 at the end of the dungeon chats, for a new chat dedicated to 
 
 ## Start here (state on 3 Oct 2026, after the 14:04 session)
 
-- **Installed: 0.0.42 (step 4, built 3 Oct 2026 after the compact, not yet tested: "Step 4 built" below).** Before it, 0.0.41. Verified: 0.0.39 (Page Up / Page Down on the world map), 0.0.41 (world-map walking map, End in compass words: "solid enough to play the overworld", Francesco), and from 0.0.40 the title Continue screen. Not yet exercised: 0.0.40's battle-talk fix (no demon talk since).
-- **Next: Francesco tests 0.0.42** (auto-walk on the world map, Shibuya from the south): read the log, then step 5.
+- **Installed: 0.0.43 (3 Oct 2026, not yet tested): no route through walls on the world map ("0.0.43" below).** 0.0.42 (step 4, auto-walk) was tested at 14:31: Home works, but the walking map let routes through buildings and cliffs ("Result" under "Step 4 built"). Verified: 0.0.39 (Page Up / Page Down on the world map), 0.0.41 (world-map walking map, End in compass words: "solid enough to play the overworld", Francesco), and from 0.0.40 the title Continue screen. Not yet exercised: 0.0.40's battle-talk fix (no demon talk since).
+- **Next: Francesco tests 0.0.43** (Page Up list of 7, Home to Yoyogi Park and Shibuya): read the log; then step 5.
 - Then: step 5 the moon phase; step 6 explored entrances.
 - Evidence: logs `session_2026-10-02_20-10-19`, `_21-03-43`, `session_2026-10-03_14-04-02` (`UserData/NocturneAccess/Logs`); world-map dumps `navdump_2026-10-02_20-26-27`, `_21-08-02`, `_21-11-41` (`NavDumps`); offline checker `tools/worldgrid.pl`; analysis helpers `tools/native/README.md` step 4.
 
@@ -165,6 +165,28 @@ As planned above, with these details:
 7. In a dungeon: Home as before (third person and first person).
 
 If a walk says "Blocked." or "Walk interrupted by an event." on open ground, say where: the log has every pad and re-plan.
+
+### Result (3 Oct 2026, `session_2026-10-03_14-31-09.log`, 0.0.42): the walking map went through walls
+
+- Worked: Home to Soul `01npc_01` from the Medical Center entrance (pads L then U+L, "Arrived.", then the game's "Talk"); Home at the entrance itself said "Arrived." at once; an arrow key stopped walks ("Auto-walk stopped."); random battles ended walks ("no longer exploring", field 2 to 202) and Home carried on afterwards; the dungeon walks of the session (Annex 1F, Annex Lobby) arrived as before.
+- **Failed (Francesco: "navigation impossible"; End too):** routes went straight through buildings and cliffs. Home to "Yoyogi Park entrance" picked `01d_04` (the east side of the park) and ran west into wall #20 (a building west of the Medical Center, x -63 to -110): the marker slid along it for 10 s with the pads alternating L and D+L (recording `2026-10-03 14-37-33.mp4`); later it stuck against cliff walls #155 (-1494 -462) and #156 (-2193 -494) in Yoyogi.
+- **Cause:** the world-map rule of 0.0.41 tests cells, not moves. A cell 15 from a wall finds a sample point 12 further off that clears it by 22, so the cells on both sides of a thin wall were walkable, and the floor triangles continue under buildings: the search stepped through. The calibration only checked that the traced positions were reachable, never that walls block. Dungeons are safe: their clearance (65) is wider than a cell.
+
+## 0.0.43 (3 Oct 2026; not yet tested): no move through a wall
+
+- `WalkGrid.BlockWorldMoves`: on the world map a move between two walkable cells is blocked when the segment between their centres, 15 above each floor, crosses a wall polygon (the walls near each cell, 45 around it). `Plan`, `Flood` (Page Up's reachability) and so End and Home all use it; the start cell must not lie behind a wall from the player either. The grid log line counts the blocked moves.
+- Offline (`tools/worldgrid.pl` with `EDGE=1`, dump `navdump_2026-10-03_14-39-18`, 190 traced positions of four sessions): every traced position stays reachable; building interiors and the regions behind the cliffs drop out. Reachable from where you have walked: the Medical Center entrance, Yoyogi Park's west entrance `01d_02`, Shibuya `01d_03` (from the lane south of it, 87 from the volume centre, inside the volume), all four Souls. **Not reachable from there:** Yoyogi Park's east entrance `01d_04`, Gaienmae Station `01d_05` and the item box `program_eve` (3274 -1432): they lie in the central desert behind the cliffs (whole-map drawing with `FULL=3`); Page Up now leaves them out as "not reachable", as in dungeons. If the game lets you there later (through Yoyogi Park, or after a story event), the map follows the game's collision as it is then.
+- `AutoWalk` on the world map: no progress along the current run (30 units) for 45 ticks (about 1.5 s) re-plans; after 6 re-plans "Blocked.". The 14:36 walk slid along wall #20 for 10 s without one, as the still test never fired.
+- New checker options: `EDGE`, `FULL`, `CUT`, `FRONTIER`, `PROBE` (header of `tools/worldgrid.pl`).
+- Open question: walls are taken as two-sided. If the game's `fldHitChkUnitVWM` only pushes from a wall's front (its normal side), some cliffs could be dropped down one way; the walls the marker hit on 3 Oct were all met from the front, so the logs cannot tell yet.
+
+### Test (0.0.43)
+
+1. On the Shinjuku world map, Page Up through the list: 7 points, without the second "Yoyogi Park entrance" (the one east of the park), "Gaienmae Station entrance" and the item box. The log says "not reachable, left out" for those three.
+2. From the Medical Center, Page Up to "Yoyogi Park entrance" (now only the west one), End: the first leg should no longer be "West" straight into the buildings. Then Home and do not touch the keys: the marker should follow the streets to the park ("Arrived.", "Enter"). Battles on the way end the walk; press Home again.
+3. Home to Shibuya from the Soul south of Yoyogi Park: "Arrived.", "Enter".
+4. If the marker stops against something: after about 1.5 s the walk re-plans by itself; if it cannot get on, "Blocked.". Tell me roughly where.
+5. Shift+F6 once: the dump's map shows the new walking map.
 
 ## Plan from here (one step per test run)
 
