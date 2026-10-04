@@ -24,8 +24,53 @@ namespace NocturneAccess.Systems.Navigation
     {
         private sealed class Entry
         {
-            public int AreaPlus1, Flag, WarpType, ToField, ToAreaPlus1;
-            public string Name = "";
+            public int AreaPlus1, Flag, WarpType, ToField, ToAreaPlus1, MoveType;
+            public string Name = "", WarpPos = "";
+        }
+
+        /// <summary>
+        /// A door that moves the player to a point of its own area (0.0.52): warptype 0, union08 0 or this field, union09 0 or
+        /// this area + 1, arriving at the resource named warp_pos ("01pos_02"). The Amala Network's hidden warps are movetype 2
+        /// (no door model, fired by walking in: 4 Oct 2026, 15:56 to 15:58, area 3's 01d_03 sent the player to 01pos_02 four
+        /// times); movetype 1 are doors with a model ("md_01d_02") and the "Open Door" prompt.
+        /// </summary>
+        internal static bool SameAreaWarp(int field, int area, string resName, out int moveType, out string warpPos)
+        {
+            moveType = 0;
+            warpPos = "";
+            try
+            {
+                Refresh(field);
+                Entry e = Find(area, resName);
+                if (e == null || e.WarpType != 0 || e.WarpPos.Length == 0)
+                    return false;
+                int toField = e.ToField == 0 ? field : e.ToField;
+                int toArea = e.ToAreaPlus1 == 0 ? area : e.ToAreaPlus1 - 1;
+                if (toField != field || toArea != area)
+                    return false;
+                moveType = e.MoveType;
+                warpPos = e.WarpPos;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[Nav:Doors] Warp of {field}/{area}/{resName} could not be read: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>The movetype of the entry the game would take for this door now, or -1 (2: fired by walking in).</summary>
+        internal static int MoveTypeOf(int field, int area, string resName)
+        {
+            try
+            {
+                Refresh(field);
+                return Find(area, resName)?.MoveType ?? -1;
+            }
+            catch
+            {
+                return -1;
+            }
         }
 
         private static readonly List<Entry> Entries = new List<Entry>();
@@ -142,6 +187,8 @@ namespace NocturneAccess.Systems.Navigation
                     WarpType = d.warptype,
                     ToField = d.union08,
                     ToAreaPlus1 = d.union09,
+                    MoveType = d.movetype,
+                    WarpPos = Chars(d.warp_pos),
                 });
             }
             _loggedEmpty = false;

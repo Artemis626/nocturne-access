@@ -28,6 +28,7 @@ Log `session_2026-10-03_21-44-05.log`. Worked: Fountain menu and heal list (each
 
 - Field 18 ("B3" banner, no area name). Its doors (`01d_02` to `01d_10`, door table movetype 1 or 2, target field 0 = this field) teleport the player to a marker in the same field (`01posNN`), changing `AmSBlock`; three are turned 45 degrees (`01d_04`, `01d_05`, `01d_06`), so corridors run diagonally. `01d_10` is a "Stairs door", `01eve_01` an event volume at the far end.
 - What worked: Page Up listed 9 points (doors, a Soul, a Mystical Chest as "Item box"), Home walked to three doors and arrived ("the game's hit index is the target"); a battle interrupted one walk, Home resumed it. Diagonal corridors are walked as short right-angle runs (the walking grid treats the huge floor planes as floor and only the 41 wall polygons as walls: 126133 of 131200 cells walkable, which is fine as long as the walls close the corridors).
+- 15:36 session (4 Oct): the hidden warps (movetype 2 door volumes) broke auto-walk and the list; 0.0.52 adds `WarpMap` (`docs/HANDOFF.md`). Re-test with the save Francesco kept inside the Network.
 - 14:35 session (4 Oct): Francesco's reports fixed in 0.0.51 (walks stopped by the 100 ms route search, doors inside the area never "explored", list order). Still open: zig-zag in diagonal corridors (right-angle runs; 8-direction runs later), blobber cues there, whether a door says where it leads, "B3" after every teleport.
 
 ## The 20:37 session: Francesco's four reports and what was found

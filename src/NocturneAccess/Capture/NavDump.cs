@@ -58,6 +58,18 @@ namespace NocturneAccess.Capture
             Section("Item boxes", () => DumpBoxes(s));
             Section("Event volumes", () => DumpEvents(s));
             Section("Door warp table", () => DumpDoorTable(s));
+            Section("Warps of this area (0.0.52)", () =>
+            {
+                List<Warp> warps = WarpMap.All(s.FieldId, s.AreaId);
+                Both($"{warps.Count} warps ({warps.Count(w => w.Touch)} fire when walked into)");
+                foreach (Warp w in warps)
+                    Both($"  {w.Name} gEvnRng {w.Index} movetype {w.MoveType} at {F(w.Zone.X)} {F(w.Zone.Z)} facing {F(w.Zone.NX)} {F(w.Zone.NZ)} " +
+                         $"{F(w.Zone.HalfWidth * 2)} wide {F(w.Zone.HalfDepth * 2)} deep -> {w.DestName} " +
+                         (w.HasDest ? $"at {F(w.DestX)} {F(w.DestY)} {F(w.DestZ)}" : "not found"));
+                FileOnly("Resource tables of the loaded area file:");
+                foreach (string line in WarpMap.DescribeTables())
+                    FileOnly(line);
+            });
             Section("Points of interest and walk grid", () => DumpWalkGrid(s));
             Section("Input and flags", DumpInputAndFlags);
 

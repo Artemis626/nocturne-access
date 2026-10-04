@@ -356,6 +356,16 @@ Sources: proxy decompile; read-only disassembly of `GameAssembly.dll` (`tools/na
 | `fclRecoverInit.GBWK` (`fclDataRecover_t`): `StockWindow` (`lstListWindow_t`), `Price` (`int[]`), `LocalStock` | Proxy | The Fountain's state; `StockWindow.CursorInfo.CursorPos` is the list cursor |
 | `fclRecoverCalc.rcvCalcPrice(datUnitWork_t pStock, RCV_ATTR Flag)` and the `rcvCalcPrice*` family | Proxy | The fee calculation (not called by the mod) |
 
+### Warps inside an area (0.0.52, 4 Oct 2026)
+
+Sources: proxy decompile; the 15:36 session of 4 Oct 2026 (Amala Network, field 18; log lines 8522 to 8872) and its door table dump (`navdump_2026-10-04_15-42-57.txt`).
+
+| Name | Source | Meaning |
+| --- | --- | --- |
+| `doormovetbl_s.movetype` 2 | Door table dump; log 15:56 to 15:58 | A door volume with no model (`union06` empty) that moves the player as soon as it is walked into: area 3's `01d_03` (to `01pos_02`) sent the player to 2600 -1260 four times, `01d_02` (to `01pos_03`) back to 3960 -2610. movetype 1: a door with a model (`md_01d_02`) and the "Open Door" prompt. `DoorTable.SameAreaWarp`, `MoveTypeOf` |
+| `fldFileResolver.pF2Head`, `pF1Head` (`Il2CppSystem.Object`) | Proxy | The loaded field files' headers: `fldFileInfoHeaderFL2_t` / `fldFileInfoHeaderFL1_t`, each with `pResourceTypeTable` (`fldResourceTypeTable_t[]`: `type`, `nResourceDataTable`, `pResourceDataTable` = `fldResHead_t[]`, the same records as `fldEveHit.gEvnRng`). `WarpMap` looks up a warp's arrival point (`warp_pos`, "01pos_02") there by `resourceName` and takes `sisei.pos`; the Shift+F6 dump lists the tables ("Warps of this area"). Not yet checked in game |
+| `fldFileResolver.SetfldResourceDataTable`, `dds3PointBasic.dds3AddPointBasic(uint, fldResourcePoint_t, string)`, `fldMain.fldSetSceneParam3(ref fldSceneParam_t, int, int, string pointResName)` | Proxy | How the game builds those tables and registers named points; read only, never called |
+
 ## MelonLoader 0.6.1 API used by the mod
 
 | Name | Source | Used in |

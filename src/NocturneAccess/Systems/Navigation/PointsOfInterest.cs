@@ -14,7 +14,7 @@ namespace NocturneAccess.Systems.Navigation
     internal enum PoiKind { Door, Person, ItemBox, Place }
 
     /// <summary>The Page Up list's filters (Shift+Page Up / Page Down, Francesco 4 Oct 2026), in their order; All first.</summary>
-    internal enum PoiCategory { All, Doors, Rooms, Exits, Souls, Demons, ItemBoxes }
+    internal enum PoiCategory { All, Doors, Rooms, Exits, Warps, Souls, Demons, ItemBoxes }
 
     internal sealed class Poi
     {
@@ -36,7 +36,7 @@ namespace NocturneAccess.Systems.Navigation
         public bool World;              // on the world map (FieldState.WorldMap): doors are entrances to places, heights are terrain
         public bool ToWorld;            // a dungeon door that leads to the world map (DoorTable.ToField below 10): "Exit to overworld" (0.0.44), never "explored" (0.0.45)
 
-        public string Label => Kind == PoiKind.Door ? (ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : "Door")
+        public string Label => Kind == PoiKind.Door ? (Warp ? "Warp" : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : "Door")
             : Kind == PoiKind.Place ? Name
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
 
@@ -49,6 +49,15 @@ namespace NocturneAccess.Systems.Navigation
         /// other people.
         /// </summary>
         public PoiCategory Category;
+
+        /// <summary>A door volume that moves the player to another spot of this area as soon as it is walked into (WarpMap, 0.0.52): "Warp".</summary>
+        public bool Warp;
+
+        /// <summary>Reached only through this many warps (WarpMap.RouteTo), 0 when it can be walked to.</summary>
+        public int ViaWarps;
+
+        /// <summary>", through 2 warps", or "".</summary>
+        public string Via => ViaWarps == 0 ? "" : ViaWarps == 1 ? ", through 1 warp" : $", through {ViaWarps} warps";
 
         /// <summary>"explored" or "empty", or "".</summary>
         public string State => Explored ? "explored" : Empty ? "empty" : "";
@@ -200,6 +209,7 @@ namespace NocturneAccess.Systems.Navigation
                     NZ = doorLike ? nz : 0f,
                     Distance = (float)Math.Sqrt((p.x - px) * (p.x - px) + (p.z - pz) * (p.z - pz)),
                     Explored = generic && !toWorld && ExploredDoors.IsExplored(gb.fieldID, gb.areaID, name),   // an exit to the overworld is used again and again: never "explored" (Francesco, 0.0.45)
+                    Warp = kind == PoiKind.Door && !world && WarpMap.TouchWarp(gb, i) != null,
                     Empty = kind == PoiKind.ItemBox && Opened(takara),
                     World = world,
                     ToWorld = toWorld,
@@ -234,12 +244,25 @@ namespace NocturneAccess.Systems.Navigation
                     }
                     continue;
                 }
+                // A warp's own volume and margin are kept out of the grid: WarpMap.RouteTo below decides for it.
                 if (grid)
-                    q.Reachable = WalkGrid.ReachableNear(px, py, pz, q.X, q.FloorY, q.Z, q.ReachRadius)
+                    q.Reachable = !q.Warp && WalkGrid.ReachableNear(px, py, pz, q.X, q.FloorY, q.Z, q.ReachRadius)
                                   || (q.IsDoorLike && q.HasBox && WalkGrid.ReachableInRect(px, py, pz, q.BoxX0 - Poi.VolumeMargin, q.BoxZ0 - Poi.VolumeMargin,
                                       q.BoxX1 + Poi.VolumeMargin, q.BoxZ1 + Poi.VolumeMargin, q.FloorY));
                 kept.Add(q);
             }
+            // Beyond warps (0.0.52): a point no walk reaches may be reached by taking warps (Francesco, 4 Oct 2026: parts of the Amala
+            // Network were missing from the list until he stood in them).
+            if (grid && !world && WarpMap.Zones(gb.fieldID, gb.areaID).Count > 0)
+                foreach (Poi q in kept.Where(q => !q.Reachable))
+                {
+                    List<Warp> legs = WarpMap.RouteTo(gb, q);
+                    if (legs != null)
+                    {
+                        q.Reachable = true;
+                        q.ViaWarps = legs.Count;   // 0: walked to (a warp next to the player's part of the area)
+                    }
+                }
             foreach (Poi q in kept)
                 q.Category = CategoryOf(q, gb);
             return kept.OrderBy(q => q.Distance).ToList();
@@ -256,6 +279,8 @@ namespace NocturneAccess.Systems.Navigation
                 case PoiKind.Place:
                     return PoiCategory.Rooms;
             }
+            if (q.Warp)
+                return PoiCategory.Warps;
             if (q.ToWorld)
                 return PoiCategory.Exits;
             if (q.World)
@@ -268,7 +293,7 @@ namespace NocturneAccess.Systems.Navigation
             return PoiCategory.Doors;
         }
 
-        private static readonly string[] CategoryNames = { "All", "Doors", "Rooms", "Exits", "Souls", "Demons", "Item boxes" };
+        private static readonly string[] CategoryNames = { "All", "Doors", "Rooms", "Exits", "Warps", "Souls", "Demons", "Item boxes" };
 
         /// <summary>
         /// Whether an NPC is in the world: its object (fldNpc_tag.fldObj) is active. The basement keeps npc_hoji_01 (hojiID
@@ -444,7 +469,7 @@ namespace NocturneAccess.Systems.Navigation
             List<Poi> all = Build(gb);
             if (log)
                 Log.Info($"[Nav:Poi] {all.Count} in field {gb.fieldID} area {gb.areaID}: " +
-                         string.Join("; ", all.Select(q => $"{q.Index} {q.Spoken} [{q.Category}] {q.ResName} at {FieldData.F(q.X)} {FieldData.F(q.Z)} d {FieldData.F(q.Distance)}{(q.Reachable ? "" : " (not reachable, left out)")}")));
+                         string.Join("; ", all.Select(q => $"{q.Index} {q.Spoken} [{q.Category}] {q.ResName} at {FieldData.F(q.X)} {FieldData.F(q.Z)} d {FieldData.F(q.Distance)}{(q.Reachable ? q.Via : " (not reachable, left out)")}")));
             IEnumerable<Poi> list = all.Where(q => q.Reachable && (_filter == PoiCategory.All || q.Category == _filter));
             if (Config.PoiMapOrder?.Value ?? true)
                 list = list.OrderByDescending(q => (int)Math.Floor(q.Z / MapBand)).ThenBy(q => q.X).ThenBy(q => q.Index);
@@ -489,7 +514,7 @@ namespace NocturneAccess.Systems.Navigation
             Poi poi = list[at];
             _selected = poi.Index;
             Selected = poi;
-            SpeechManager.Say($"{poi.Spoken}, {Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}. {at + 1} of {list.Count}.", interrupt: true);
+            SpeechManager.Say($"{poi.Spoken}, {Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}{poi.Via}. {at + 1} of {list.Count}.", interrupt: true);
         }
 
         /// <summary>
@@ -548,7 +573,7 @@ namespace NocturneAccess.Systems.Navigation
             }
             Poi poi = list[at];
             Selected = poi;
-            SpeechManager.Say($"{poi.Spoken}, {Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}. {at + 1} of {list.Count}.{filter}", interrupt: true);
+            SpeechManager.Say($"{poi.Spoken}, {Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}{poi.Via}. {at + 1} of {list.Count}.{filter}", interrupt: true);
         }
 
         /// <summary>The selected point of interest, re-read from the game's list (null if none or the area changed).</summary>

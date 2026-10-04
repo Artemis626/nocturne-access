@@ -84,6 +84,19 @@ namespace NocturneAccess.Systems.Navigation
         private static float _progressAlong;
         private static long _startMs, _turnMs = long.MinValue / 2;
 
+        // Warps (0.0.52, WarpMap): the walk's real target while it heads for a warp on the way, and the wait for the game to
+        // move the player after a warp fired (or after it stopped taking movement for another reason: an event).
+        private const float WarpJump = 300f;          // farther than this from where the movement stopped: the player was warped
+        private const long EventWaitMs = 1200;        // no jump by then: an event or dialogue, the walk ends as before
+        private const long WarpWaitMs = 4000;         // a warp aimed for that has not moved the player by then
+        private const long ResumeWaitMs = 8000;       // after the jump, until the game gives movement back
+        private const int MaxWarps = 12;
+        private static Poi _final;
+        private static bool _awaitWarp, _awaitPlanned, _jumped;
+        private static long _awaitMs;
+        private static float _awaitX, _awaitZ;
+        private static int _resumeTicks, _warpsTaken;
+
         internal static bool Active => _active;
 
         /// <summary>Home (OnUpdate).</summary>
@@ -92,7 +105,7 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>OnUpdate: queued speech; a walk stops when the field update stops (battle, event, menu).</summary>
         internal static void Tick()
         {
-            if (_active && !FieldState.IsExploring)
+            if (_active && !FieldState.IsExploring && !(_awaitWarp && Clock.ElapsedMilliseconds - _awaitMs < ResumeWaitMs))
                 Stop("no longer exploring", null);
             while (Pending.Count > 0)
                 SpeechManager.Say(Pending.Dequeue(), interrupt: true);
@@ -136,6 +149,11 @@ namespace NocturneAccess.Systems.Navigation
                 Stop("timed out", "Auto-walk timed out.");
                 return;
             }
+            if (_awaitWarp)
+            {
+                AwaitWarp(gb);
+                return;
+            }
             // A story event or dialogue stops the game's movement routine while the field update goes on (0.0.23 test,
             // field 11: trigger 01eve_15 moved the player and opened a dialogue): end the walk instead of re-planning.
             int moves = FieldState.MoveCount;
@@ -146,12 +164,13 @@ namespace NocturneAccess.Systems.Navigation
                 // A door that moves the player itself (the Underground Mall stairs, 3 Oct 20:49:45: its hit was the target, then the
                 // game walked the player through) takes movement as soon as it fires: that is arrival, not an interruption.
                 float d = (float)Math.Sqrt((_target.X - gb.playerX) * (_target.X - gb.playerX) + (_target.Z - gb.playerZ) * (_target.Z - gb.playerZ));
-                if (_target.IsDoorLike && InReach(_target, d))
+                if (_target.IsDoorLike && InReach(_target, d) && !(_final != null && IsTouchWarp(gb, _target)))
                 {
                     Stop("the game took movement with the target door's hit active", "Arrived.");
                     return;
                 }
-                Stop("the game stopped taking movement (event or dialogue)", "Walk interrupted by an event.");
+                // A warp on the way, or not: wait a moment to see whether the game moves the player (0.0.52).
+                BeginAwait(gb, planned: _final != null && IsTouchWarp(gb, _target) && InReach(_target, d));
                 return;
             }
 
@@ -202,6 +221,15 @@ namespace NocturneAccess.Systems.Navigation
             // A door's hit fires at the edge of its 300-wide volume: walking along the wall, that is beside the door. Only in front
             // of it (or at the end of the route) does it count.
             bool inFront = Lateral(_target, x, z) <= FrontLateral || _run >= _runs.Count;
+            if (InReach(_target, flat) && _final != null && IsTouchWarp(gb, _target))
+            {
+                // A warp on the way: it fires as the player stands in it; keep walking in until the game takes over.
+                if (_firstPerson)
+                    PadInput.Hold(SDF_PADMAP.SDF_PADMAP_U, true);
+                else
+                    Press(toTarget);
+                return;
+            }
             if (InReach(_target, flat) && inFront)
             {
                 bool noFacing = !_target.HasFront && flat < (_target.IsDoorLike ? DoorFacingMinDistance : FacingMinDistance);
@@ -333,13 +361,110 @@ namespace NocturneAccess.Systems.Navigation
             _idle = 0;
             _moveCount = FieldState.MoveCount;
             _startMs = Clock.ElapsedMilliseconds;
-            if (!Plan(gb, "start"))
+            _final = null;
+            _awaitWarp = false;
+            _warpsTaken = 0;
+            if (!Plan(gb, "start") && !StartWarpLeg(gb, poi, "start"))
             {
                 Say("No path.");
                 return;
             }
             _active = true;
-            Say($"Walking to {poi.InSentence}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}.");
+            Say($"Walking to {poi.InSentence}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}{poi.Via}.");
+        }
+
+        private static bool IsTouchWarp(fldGlobalWork_t gb, Poi p) => p != null && p.IsDoorLike && WarpMap.TouchWarp(gb, p.Index) != null;
+
+        /// <summary>
+        /// The target cannot be walked to, but warps reach it (WarpMap.RouteTo): head for the first warp, keeping the target in
+        /// _final. False (target unchanged) when no warps lead there or the first warp cannot be walked to.
+        /// </summary>
+        private static bool StartWarpLeg(fldGlobalWork_t gb, Poi goal, string why)
+        {
+            List<Warp> legs = WarpMap.RouteTo(gb, goal);
+            if (legs == null || legs.Count == 0)
+                return false;
+            Poi warp = PointsOfInterest.Build(gb).FirstOrDefault(q => q.Index == legs[0].Index);
+            if (warp == null)
+                return false;
+            _target = warp;
+            _final = goal;
+            if (Plan(gb, $"{why}, warp {legs[0].Name} first, {legs.Count} warps to {goal.ResName}"))
+                return true;
+            _target = goal;
+            _final = null;
+            return false;
+        }
+
+        /// <summary>The game stopped taking movement: a warp aimed for (planned), or an event or an unplanned warp.</summary>
+        private static void BeginAwait(fldGlobalWork_t gb, bool planned)
+        {
+            PadInput.ReleaseAll();
+            _awaitWarp = true;
+            _awaitPlanned = planned;
+            _jumped = false;
+            _resumeTicks = 0;
+            _awaitMs = Clock.ElapsedMilliseconds;
+            _awaitX = gb.playerX;
+            _awaitZ = gb.playerZ;
+            _moveCount = FieldState.MoveCount;
+            Log.Info($"[Nav:Walk] The game took movement at {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)}{(planned ? $" in warp {_target.ResName}" : "")}: waiting for a warp.");
+        }
+
+        /// <summary>
+        /// While waiting: a jump of more than WarpJump is a warp; once the game gives movement back the walk goes on from the
+        /// arrival point (0.0.52; before, any loss of movement ended the walk: "Walk interrupted by an event", 19 times in the
+        /// 15:36 session, most of them warps). No jump within EventWaitMs: an event, the walk ends as before.
+        /// </summary>
+        private static void AwaitWarp(fldGlobalWork_t gb)
+        {
+            long waited = Clock.ElapsedMilliseconds - _awaitMs;
+            float moved = Dist(gb.playerX, gb.playerZ, _awaitX, _awaitZ);
+            int moves = FieldState.MoveCount;
+            bool moving = moves != _moveCount;
+            _moveCount = moves;
+            if (!_jumped && moved > WarpJump)
+            {
+                _jumped = true;
+                Log.Info($"[Nav:Walk] Warped {FieldData.F(moved)} to {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)} after {waited} ms.");
+            }
+            if (_jumped)
+            {
+                _resumeTicks = moving ? _resumeTicks + 1 : 0;
+                if (_resumeTicks >= 2)
+                {
+                    _awaitWarp = false;
+                    ContinueAfterWarp(gb);
+                }
+                else if (waited > ResumeWaitMs)
+                {
+                    Stop("no movement after the warp", "Walk interrupted by an event.");
+                }
+                return;
+            }
+            if (!_awaitPlanned && waited > EventWaitMs)
+                Stop("the game stopped taking movement (event or dialogue)", "Walk interrupted by an event.");
+            else if (_awaitPlanned && waited > WarpWaitMs)
+                Stop("the warp did not move the player", "Walk interrupted by an event.");
+        }
+
+        private static void ContinueAfterWarp(fldGlobalWork_t gb)
+        {
+            if (++_warpsTaken > MaxWarps)
+            {
+                Stop($"more than {MaxWarps} warps", "Blocked.");
+                return;
+            }
+            Poi goal = _final ?? _target;
+            _final = null;
+            _target = goal;
+            _replans = 0;
+            _idle = 0;
+            _startMs = Clock.ElapsedMilliseconds;
+            WalkGrid.Ensure(gb.fieldID, gb.areaID, gb.playerX, gb.playerY, gb.playerZ);
+            if (Plan(gb, $"after warp {_warpsTaken}") || StartWarpLeg(gb, goal, $"after warp {_warpsTaken}"))
+                return;
+            Stop("no path after the warp", "No path from here.");
         }
 
         /// <summary>
@@ -354,11 +479,12 @@ namespace NocturneAccess.Systems.Navigation
         internal static List<PathRun> Route(fldGlobalWork_t gb, Poi target, bool firstPerson, out float gx, out float gz, out string aim)
         {
             float px = gb.playerX, py = gb.playerY, pz = gb.playerZ;
+            int allow = target.IsDoorLike ? WarpMap.TouchWarp(gb, target.Index)?.Zone.Id ?? -1 : -1;   // a warp aimed for may be entered (0.0.52)
             List<PathRun> runs;
             if (target.HasFront)
             {
                 aim = "in front";
-                runs = WalkGrid.Plan(px, py, pz, target.X + target.NX * FrontDistance, target.FloorY, target.Z + target.NZ * FrontDistance, 0f, firstPerson, out gx, out gz);
+                runs = WalkGrid.Plan(px, py, pz, target.X + target.NX * FrontDistance, target.FloorY, target.Z + target.NZ * FrontDistance, 0f, firstPerson, out gx, out gz, allow);
                 if (runs != null && target.NearVolume(gx, gz))
                     return runs;
             }
@@ -393,7 +519,7 @@ namespace NocturneAccess.Systems.Navigation
                 }
             }
             aim = "nearest";
-            runs = WalkGrid.Plan(px, py, pz, target.X, target.FloorY, target.Z, target.IsDoorLike ? 0f : 120f, firstPerson, out gx, out gz);
+            runs = WalkGrid.Plan(px, py, pz, target.X, target.FloorY, target.Z, target.IsDoorLike ? 0f : 120f, firstPerson, out gx, out gz, allow);
             if (runs != null && !target.NearVolume(gx, gz))
                 return null;
             return runs;
@@ -604,6 +730,8 @@ namespace NocturneAccess.Systems.Navigation
             if (!_active)
                 return;
             _active = false;
+            _final = null;
+            _awaitWarp = false;
             PadInput.ReleaseAll();
             fldGlobalWork_t gb = fldGlobal.fldGb;
             string at = gb == null ? "" : $" at {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)}";

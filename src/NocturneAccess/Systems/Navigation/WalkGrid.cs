@@ -304,6 +304,146 @@ namespace NocturneAccess.Systems.Navigation
             }
             Log.Info($"[Nav:Walk] Grid for field {field} area {area}: {_w} x {_h} cells of {CellSize} from {FieldData.F(_x0)} {FieldData.F(_z0)}, " +
                      $"{floors.Count} floors, {(world ? worldWalls.Count + " world-map" : walls.Count.ToString())} walls, {(world ? crossings + " moves through walls blocked, " : "")}{walkable} walkable places, {multi} cells with more than one level, {clock.ElapsedMilliseconds} ms.");
+            ApplyAvoid(world ? new List<Zone>() : WarpMap.Zones(field, area));
+        }
+
+        // ---- Warps (0.0.52) ----
+        // The Amala Network's hidden warps (movetype 2 door volumes, WarpMap) move the player as soon as they are walked into
+        // (4 Oct 2026, 15:56 to 15:58: a route's first run crossed area 3's 01d_03 four times and the game sent the player back
+        // each time). Their nodes are kept out of every search and flood, except the warp a route is aiming for (Plan's allow).
+
+        // Kept clear of a warp: the player drifts off a run in turns (15:56:59: the hit of 01d_03 fired 13 inside its box while the
+        // route ran 10 outside it) and its collision radius is 30.
+        private const float AvoidMargin = 45f;
+        private static short[] _avoid = Array.Empty<short>();   // per node: 0, or the warp zone's id + 1
+        private static short _allow;                            // during Plan: the zone id + 1 that may be entered
+        private static int[] _component = Array.Empty<int>();   // per node: connected region (avoid applied), -1 not walkable
+        private static int _componentBuild = -1;
+
+        /// <summary>A warp's volume in X and Z: centre, depth axis (its facing) and half extents.</summary>
+        internal struct Zone
+        {
+            public int Id;
+            public float X, Z, NX, NZ, HalfDepth, HalfWidth;
+
+            public bool Contains(float x, float z, float margin)
+            {
+                float dx = x - X, dz = z - Z;
+                return Math.Abs(dx * NX + dz * NZ) <= HalfDepth + margin && Math.Abs(dz * NX - dx * NZ) <= HalfWidth + margin;
+            }
+        }
+
+        private static void ApplyAvoid(List<Zone> zones)
+        {
+            _avoid = new short[_state.Length];
+            int marked = 0;
+            foreach (Zone zone in zones)
+            {
+                float reach = Math.Max(zone.HalfDepth, zone.HalfWidth) + AvoidMargin + CellSize;
+                ForCells(zone.X - reach, zone.Z - reach, zone.X + reach, zone.Z + reach, (c, x, z) =>
+                {
+                    if (!zone.Contains(x, z, AvoidMargin))
+                        return;
+                    for (int l = 0; l < _count[c]; l++)
+                    {
+                        _avoid[c * Layers + l] = (short)(zone.Id + 1);
+                        marked++;
+                    }
+                });
+            }
+            if (zones.Count > 0)
+                Log.Info($"[Nav:Walk] {zones.Count} warp volumes kept out of routes ({marked} places).");
+        }
+
+        private static bool Avoided(int k) => _avoid.Length == _state.Length && _avoid[k] != 0 && _avoid[k] != _allow;
+
+        /// <summary>The connected region of the node nearest (x, y, z) (as a route would start there), or -1.</summary>
+        internal static int RegionAt(float x, float y, float z)
+        {
+            int k = StartNode(x, y, z);
+            if (k < 0)
+                return -1;
+            Regions();
+            return _component[k];
+        }
+
+        /// <summary>The regions of the walkable nodes within margin of a warp's volume but outside it: the sides it is entered from.</summary>
+        internal static HashSet<int> RegionsAround(Zone zone, float y, float margin)
+        {
+            Regions();
+            var set = new HashSet<int>();
+            float reach = Math.Max(zone.HalfDepth, zone.HalfWidth) + AvoidMargin + margin + CellSize;
+            ForCells(zone.X - reach, zone.Z - reach, zone.X + reach, zone.Z + reach, (c, x, z) =>
+            {
+                if (zone.Contains(x, z, AvoidMargin) || !zone.Contains(x, z, AvoidMargin + margin))
+                    return;
+                for (int l = 0; l < _count[c]; l++)
+                {
+                    int k = c * Layers + l;
+                    if (_component[k] >= 0 && Math.Abs(_height[k] - y) <= TargetBand)
+                        set.Add(_component[k]);
+                }
+            });
+            return set;
+        }
+
+        /// <summary>The regions of the walkable nodes within radius of (x, z) at height y (a target's surroundings).</summary>
+        internal static HashSet<int> RegionsNear(float x, float y, float z, float radius)
+        {
+            Regions();
+            var set = new HashSet<int>();
+            ForCells(x - radius, z - radius, x + radius, z + radius, (c, cx, cz) =>
+            {
+                if ((cx - x) * (cx - x) + (cz - z) * (cz - z) > radius * radius)
+                    return;
+                for (int l = 0; l < _count[c]; l++)
+                {
+                    int k = c * Layers + l;
+                    if (_component[k] >= 0 && Math.Abs(_height[k] - y) <= TargetBand)
+                        set.Add(_component[k]);
+                }
+            });
+            return set;
+        }
+
+        /// <summary>Labels the connected regions of the walkable nodes (8-way moves as Plan, warps kept out), once per grid.</summary>
+        private static void Regions()
+        {
+            if (_componentBuild == _builds && _component.Length == _state.Length)
+                return;
+            _componentBuild = _builds;
+            _component = new int[_state.Length];
+            Array.Fill(_component, -1);
+            short saved = _allow;
+            _allow = 0;
+            int label = 0;
+            var queue = new Queue<int>();
+            for (int k0 = 0; k0 < _state.Length; k0++)
+            {
+                if (_state[k0] != 1 || _component[k0] >= 0 || Avoided(k0))
+                    continue;
+                _component[k0] = label;
+                queue.Enqueue(k0);
+                while (queue.Count > 0)
+                {
+                    int cur = queue.Dequeue();
+                    int cell = cur / Layers;
+                    int ci = cell % _w, cj = cell / _w;
+                    float y = _height[cur];
+                    for (int s = 0; s < 8; s++)
+                    {
+                        int nk = Step(ci + Dx[s], cj + Dz[s], y);
+                        if (nk < 0 || _component[nk] >= 0 || MoveBlocked(cur, s))
+                            continue;
+                        if (Dx[s] != 0 && Dz[s] != 0 && (Step(ci + Dx[s], cj, y) < 0 || Step(ci, cj + Dz[s], y) < 0))
+                            continue;
+                        _component[nk] = label;
+                        queue.Enqueue(nk);
+                    }
+                }
+                label++;
+            }
+            _allow = saved;
         }
 
         // The world map's walls (docs/HANDOFF-OVERWORLD.md step 3). The game's collision (fldHit.fldHitChkUnitVWM, radius 30
@@ -581,7 +721,22 @@ namespace NocturneAccess.Systems.Navigation
         /// A path from the player to the reachable node nearest (tx, tz) in X and Z, at least minDist from it and within
         /// TargetBand of the target's height ty. Null if none. The runs start at the player's cell.
         /// </summary>
+        /// <param name="allowZone">The id of the warp zone the route aims for (WarpMap), which may be entered; -1 for none.</param>
         internal static List<PathRun> Plan(float px, float py, float pz, float tx, float ty, float tz, float minDist, bool fourWay,
+            out float goalX, out float goalZ, int allowZone = -1)
+        {
+            _allow = (short)(allowZone + 1);
+            try
+            {
+                return PlanAllowing(px, py, pz, tx, ty, tz, minDist, fourWay, out goalX, out goalZ);
+            }
+            finally
+            {
+                _allow = 0;
+            }
+        }
+
+        private static List<PathRun> PlanAllowing(float px, float py, float pz, float tx, float ty, float tz, float minDist, bool fourWay,
             out float goalX, out float goalZ)
         {
             goalX = goalZ = 0;
@@ -674,7 +829,7 @@ namespace NocturneAccess.Systems.Navigation
             {
                 int k = c * Layers + l;
                 float d = Math.Abs(_height[k] - y);
-                if (_state[k] == 1 && d <= bestD)
+                if (_state[k] == 1 && d <= bestD && !Avoided(k))
                 {
                     bestD = d;
                     best = k;
@@ -720,7 +875,7 @@ namespace NocturneAccess.Systems.Navigation
                         for (int l = 0; l < _count[c]; l++)
                         {
                             int k = c * Layers + l;
-                            if (_state[k] != 1 || Math.Abs(_height[k] - y) > StartBand || StartBehindWall(x, y, z, c, _height[k]))
+                            if (_state[k] != 1 || Avoided(k) || Math.Abs(_height[k] - y) > StartBand || StartBehindWall(x, y, z, c, _height[k]))
                                 continue;
                             CellCentre(c, out float cx, out float cz);
                             float d = (cx - x) * (cx - x) + (cz - z) * (cz - z);

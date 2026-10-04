@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Il2Cpp;
 using Il2Cppfield_H;
 using NocturneAccess.Core;
@@ -86,7 +87,15 @@ namespace NocturneAccess.Systems.Navigation
                 return "No path.";
             List<PathRun> runs = AutoWalk.Route(gb, target, firstPerson, out float gx, out float gz, out string aim);
             if (runs == null)
-                return "No path from here.";
+            {
+                // Only through warps (0.0.52): the way to the first one. "Through 2 warps. First a warp: ahead, 12 metres."
+                List<Warp> warps = WarpMap.RouteTo(gb, target);
+                Poi warp = warps == null || warps.Count == 0 ? null : PointsOfInterest.Build(gb).FirstOrDefault(q => q.Index == warps[0].Index && q.Reachable);
+                if (warp == null || warp.Index == target.Index)
+                    return "No path from here.";
+                string toWarp = Directions(gb, warp);
+                return $"Through {warps.Count} {(warps.Count == 1 ? "warp" : "warps")}. First a warp: {toWarp}";
+            }
 
             // Remaining length of each run from the player; drop tiny leading runs.
             var legs = new List<(float bearing, float length)>();

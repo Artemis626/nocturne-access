@@ -11,6 +11,7 @@ using Il2Cppkernel_H;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using MelonLoader.Utils;
 using NocturneAccess.Core;
+using NocturneAccess.Speech;
 
 namespace NocturneAccess.Systems.Navigation
 {
@@ -63,6 +64,7 @@ namespace NocturneAccess.Systems.Navigation
         private static float _doorX, _doorZ, _entryX, _entryZ, _normalX, _normalZ;
         private static float _lastX, _lastZ;
         private static bool _hasLast;
+        private static long _jumpMs = long.MinValue / 2;
 
         private static string Folder => Path.Combine(MelonEnvironment.UserDataDirectory, "NocturneAccess", "Explored");
 
@@ -261,10 +263,19 @@ namespace NocturneAccess.Systems.Navigation
         private static void CheckCrossing(fldGlobalWork_t gb, long now)
         {
             float px = gb.playerX, pz = gb.playerZ;
-            bool jumped = _hasLast && (px - _lastX) * (px - _lastX) + (pz - _lastZ) * (pz - _lastZ) > JumpReach * JumpReach;
+            bool jumpedNow = _hasLast && (px - _lastX) * (px - _lastX) + (pz - _lastZ) * (pz - _lastZ) > JumpReach * JumpReach;
             _lastX = px;
             _lastZ = pz;
             _hasLast = true;
+            if (jumpedNow)
+            {
+                // Said for every move by the game inside the area (Francesco, 4 Oct 2026: the Amala Network's warps are not
+                // shown, and the player must know the place changed). The floor banner the game shows again follows it.
+                _jumpMs = now;
+                SpeechManager.Say("Warped.", interrupt: false);
+                Log.Info($"{Tag} Moved by the game to {FieldData.F(px)} {FieldData.F(pz)} in the same area.");
+            }
+            bool jumped = now - _jumpMs <= 500;
             if (_crossing == null)
                 return;
             if (now - _leftMs > LeaveWindowMs)
@@ -289,6 +300,16 @@ namespace NocturneAccess.Systems.Navigation
             string key = _crossing;
             _crossing = null;
             Mark(key, jumped ? "moved by the game after leaving it, same area" : $"came out {FieldData.F(Math.Abs(side))} beyond it, same area");
+            if (jumped)
+            {
+                // A warp's arrival point lies beside its way back (area 3: 01d_03 leads to 01pos_02, beside 01d_02, which leads
+                // back): that door counts as come in through, as after an area change (0.0.52; Francesco: standard areas mark
+                // both sides at once, the Amala Network only the side walked into).
+                string near = NearestDoor(gb, out float d);
+                if (near != null && near != key)
+                    Mark(near, $"arrived beside it from {key} ({FieldData.F(d)} away)");
+                return;
+            }
             if (!through)
                 return;
             // Its other side: a door volume within PairReach, beyond the plane.
