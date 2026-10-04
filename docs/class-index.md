@@ -366,6 +366,19 @@ Sources: proxy decompile; the 15:36 session of 4 Oct 2026 (Amala Network, field 
 | `fldFileResolver.pF2Head`, `pF1Head` (`Il2CppSystem.Object`) | Proxy | The loaded field files' headers: `fldFileInfoHeaderFL2_t` / `fldFileInfoHeaderFL1_t`, each with `pResourceTypeTable` (`fldResourceTypeTable_t[]`: `type`, `nResourceDataTable`, `pResourceDataTable` = `fldResHead_t[]`, the same records as `fldEveHit.gEvnRng`). `WarpMap` looks up a warp's arrival point (`warp_pos`, "01pos_02") there by `resourceName` and takes `sisei.pos`; the Shift+F6 dump lists the tables ("Warps of this area"). Not yet checked in game |
 | `fldFileResolver.SetfldResourceDataTable`, `dds3PointBasic.dds3AddPointBasic(uint, fldResourcePoint_t, string)`, `fldMain.fldSetSceneParam3(ref fldSceneParam_t, int, int, string pointResName)` | Proxy | How the game builds those tables and registers named points; read only, never called |
 
+### Ginza: place pads, story volumes, Rag's Jewelry, warp points (0.0.53, 4 Oct 2026)
+
+Sources: the 21:31 session of 4 Oct 2026 (log; F6 dumps 21:52 to 21:53 in Rag's Jewelry; Shift+F6 dumps `navdump_2026-10-04_21-49-47.txt`, field 19 area 2, and `_21-58-04`, area 6 Nyx's Lounge); proxy decompile.
+
+| Name | Source | Meaning |
+| --- | --- | --- |
+| Place pads in Ginza | Dump 21:49 | Attr 0x1000 polygons 800 x 400 (basyo 3, 5, 6 on doors 01d_10, 01d_05, 01d_07: Rag's Jewelry, Nyx's Lounge, Cathedral of Shadows, as the game's banner says when they are stepped on). `PointsOfInterest.PadMaxSize` was 700 (Shibuya's pads were smaller): raised to 1000 |
+| Story volumes `NNeve_MM` with a prompt | Log 21:57:37 to 21:57:44, dump 21:58 | Nyx's Lounge: `01eve_01` (no box) is Loki, prompt "Talk"; `01eve_03` (300 x 200) his room's door, prompt "Open Door", then "Loki: That's my room". The fldNpc entry `npc_hoji_03` (Loki's model) is inactive. 0.0.53 lists story volumes (not room-sized, not on a door) as "Event" and learns the prompt shown while `gFldEveRngIdx` points at one (`ExploredDoors.LearnPrompt`, saved per file) |
+| `ragUI` | F6 dumps 21:52 to 21:53 | `ragtitle/Text_ragtitleTM` ("ITEM TRADE", "ELEMENT TRADE", "MITAMA TRADE"); `ragitemlist/ragitem_row/ragitem_rowNN/Text_nameTM` (TMC01 under the cursor, TMC02 not affordable, also under the cursor); `ragjewel/ragjewel_rowNN/Text_nameTM` (jewels the entry costs, TMC18); `raghelp/Text01TM..03TM`; counters `num_jewel`, `num_possess` (string literals); menu `ragUI/institutionUI/...` (Trade for Items, Elements, Mitamas, Talk, Exit; already read) |
+| `fclRagDraw.ragDrawItemWindow`, `ragDrawDevilWindow(lstListWindow_t pListWindow, byte Type, sbyte[] pIdxList, int top, sbyte Mode)`, `ragDrawExchangeRate(byte type, byte index)` | Proxy | The trade lists drawn with their list window (cursor: `CursorInfo.CursorPos`); `RagReader` postfixes the first two |
+| `fldFileResolver.pF2Head` / `pF1Head` | Dump 21:49 | Did not give any resource table in game (the dump's table list was empty): 0.0.52's warp destinations were "not found" |
+| `dds3WorldBasic.dds3TheWorld`, `dds3GetActiveScene()`, `dds3GetControlScene()`; `Il2Cppbasic_H.dds3Basic_t` (`name`, `next`, `prev`, `worknext`, `workprev`, `workpointer`, `poseset` = `dds3PoseSet_t` with `pos`) | Proxy | The game's object list; points are added by `dds3PointBasic.dds3AddPointBasic(serialID, fldResourcePoint_t, name)`. `WarpMap.ReadBasics` (0.0.53) walks the links (reading only, at most 20 000) for names containing "pos"; not yet checked in game. Fallback: arrival points learned when the player is warped (`ExploredDoors.LearnArrival`, saved per file) |
+
 ## MelonLoader 0.6.1 API used by the mod
 
 | Name | Source | Used in |

@@ -52,6 +52,112 @@ namespace NocturneAccess.Systems.Navigation
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
 
         private static readonly HashSet<string> Doors = new HashSet<string>();
+
+        // Event volumes' prompts as the game showed them (0.0.53): "field/area/01eve_03" -> "Open Door". Kept with the doors.
+        private static readonly Dictionary<string, string> Prompts = new Dictionary<string, string>();
+        private const long PromptStableMs = 300;
+        private static int _promptIdx = -1;
+        private static long _promptIdxMs;
+        private static readonly Regex EventName = new Regex(@"^\d+eve_\d+$");
+
+        // Warp arrival points as the player landed on them (0.0.53): "field/area/01pos_02" -> position. WarpMap uses them when the
+        // game's own data could not be read; every warp leading to that point then has its destination. Kept with the doors.
+        private static readonly Dictionary<string, UnityEngine.Vector4> Arrivals = new Dictionary<string, UnityEngine.Vector4>();
+
+        /// <summary>Where the player landed on the warp arrival point named pointName in (field, area), when known.</summary>
+        internal static bool LearnedArrival(int field, int area, string pointName, out UnityEngine.Vector4 pos)
+            => Arrivals.TryGetValue(Key(field, area, pointName), out pos);
+
+        private static void LearnArrival(fldGlobalWork_t gb, string leftKey)
+        {
+            string resName = leftKey.Substring(leftKey.LastIndexOf('/') + 1);
+            if (!DoorTable.SameAreaWarp(gb.fieldID, gb.areaID, resName, out _, out string point))
+                return;
+            string key = Key(gb.fieldID, gb.areaID, point);
+            var pos = new UnityEngine.Vector4(gb.playerX, gb.playerY, gb.playerZ, 1f);
+            bool known = Arrivals.ContainsKey(key);
+            Arrivals[key] = pos;
+            if (known)
+                return;
+            Log.Info($"{Tag} Warp {leftKey} lands on {point} at {FieldData.F(pos.x)} {FieldData.F(pos.y)} {FieldData.F(pos.z)}: learned.");
+            WarpMap.Invalidate();
+            if (_file < 0)
+                return;
+            try
+            {
+                Directory.CreateDirectory(Folder);
+                File.AppendAllLines(PathOf(_file), new[] { ArrivalLine(key, pos) });
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"{Tag} The arrival {key} could not be written: {ex.Message}");
+            }
+        }
+
+        private static string ArrivalLine(string key, UnityEngine.Vector4 p)
+            => string.Format(System.Globalization.CultureInfo.InvariantCulture, "arrival {0} {1} {2} {3}", key, p.x, p.y, p.z);
+
+        private static void ReadArrival(string line)
+        {
+            string[] parts = line.Split(' ');
+            if (parts.Length != 5)
+                return;
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            if (float.TryParse(parts[2], System.Globalization.NumberStyles.Float, inv, out float x)
+                && float.TryParse(parts[3], System.Globalization.NumberStyles.Float, inv, out float y)
+                && float.TryParse(parts[4], System.Globalization.NumberStyles.Float, inv, out float z))
+                Arrivals[parts[1]] = new UnityEngine.Vector4(x, y, z, 1f);
+        }
+
+        /// <summary>The prompt the game showed for event volume resName, or "".</summary>
+        internal static string PromptOf(int field, int area, string resName)
+            => Prompts.TryGetValue(Key(field, area, resName), out string p) ? p : "";
+
+        /// <summary>
+        /// Every frame: when the game's hit index (gFldEveRngIdx) has been an event volume ("NNeve_MM") for PromptStableMs and
+        /// its interaction prompt is on screen, that prompt is the volume's (Nyx's Lounge, 21:57: 01eve_01 "Talk" is Loki,
+        /// 01eve_03 "Open Door" his room). The wait keeps the previous volume's prompt (a Soul's "Talk") from being taken.
+        /// </summary>
+        private static void LearnPrompt(fldGlobalWork_t gb, long now)
+        {
+            int i = fldEveHit.gFldEveRngIdx;
+            if (i != _promptIdx)
+            {
+                _promptIdx = i;
+                _promptIdxMs = now;
+                return;
+            }
+            if (i < 0 || now - _promptIdxMs < PromptStableMs)
+                return;
+            Il2CppReferenceArray<fldResHead_t> ranges = fldEveHit.gEvnRng;
+            if (ranges == null || i >= Math.Min(fldEveHit.gEvnRngNum, ranges.Length))
+                return;
+            fldResHead_t h = ranges[i];
+            if (h?.sisei == null || h.resourceType != 10 || !EventName.IsMatch(h.resourceName ?? ""))
+                return;
+            float dx = h.sisei.pos.x - gb.playerX, dz = h.sisei.pos.z - gb.playerZ;
+            if (dx * dx + dz * dz > 400f * 400f)
+                return;
+            string text = Menus.AnnouncementReader.InteractionPromptText;
+            if (text.Length == 0)
+                return;
+            string key = Key(gb.fieldID, gb.areaID, h.resourceName);
+            if (Prompts.TryGetValue(key, out string old) && old == text)
+                return;
+            Prompts[key] = text;
+            Log.Info($"{Tag} Event {key}: prompt \"{text}\".");
+            if (_file < 0)
+                return;
+            try
+            {
+                Directory.CreateDirectory(Folder);
+                File.AppendAllLines(PathOf(_file), new[] { $"prompt {key}\t{text}" });
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"{Tag} The prompt of {key} could not be written: {ex.Message}");
+            }
+        }
         private static int _file = -1;            // slMain.gslSelect of the file in play, -1 for a new game not saved yet
 
         private static int _field = int.MinValue, _area = int.MinValue;
@@ -93,6 +199,8 @@ namespace NocturneAccess.Systems.Navigation
             {
                 int file = slMain.gslSelect;
                 Doors.Clear();
+                Prompts.Clear();
+                Arrivals.Clear();
                 _file = file;
                 ResetTracking();
                 string path = PathOf(file);
@@ -100,7 +208,12 @@ namespace NocturneAccess.Systems.Navigation
                     foreach (string line in File.ReadAllLines(path))
                         if (line.StartsWith("door ", StringComparison.Ordinal))
                             Doors.Add(line.Substring(5).Trim());
-                Log.Info($"{Tag} File {file + 1} loaded (gslSelect {slMain.gslSelect}, gslSelTop {slMain.gslSelTop}, slChooseSaveIndex {slMain.slChooseSaveIndex}): {Doors.Count} explored doors.");
+                        else if (line.StartsWith("prompt ", StringComparison.Ordinal) && line.IndexOf('\t') > 7)
+                            Prompts[line.Substring(7, line.IndexOf('\t') - 7)] = line.Substring(line.IndexOf('\t') + 1).Trim();
+                        else if (line.StartsWith("arrival ", StringComparison.Ordinal))
+                            ReadArrival(line);
+                WarpMap.Invalidate();
+                Log.Info($"{Tag} File {file + 1} loaded (gslSelect {slMain.gslSelect}, gslSelTop {slMain.gslSelTop}, slChooseSaveIndex {slMain.slChooseSaveIndex}): {Doors.Count} explored doors, {Prompts.Count} event prompts.");
             }
             catch (Exception ex)
             {
@@ -132,6 +245,8 @@ namespace NocturneAccess.Systems.Navigation
             if (Doors.Count > 0 || _file >= 0)
                 Log.Info($"{Tag} Title screen: the explored list of file {_file + 1} is put away ({Doors.Count} doors); a new game starts with none.");
             Doors.Clear();
+            Prompts.Clear();
+            Arrivals.Clear();
             _file = -1;
             ResetTracking();
         }
@@ -141,7 +256,9 @@ namespace NocturneAccess.Systems.Navigation
         private static void WriteAll(int file)
         {
             Directory.CreateDirectory(Folder);
-            File.WriteAllLines(PathOf(file), Doors.OrderBy(d => d, StringComparer.Ordinal).Select(d => "door " + d));
+            File.WriteAllLines(PathOf(file), Doors.OrderBy(d => d, StringComparer.Ordinal).Select(d => "door " + d)
+                .Concat(Prompts.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => $"prompt {p.Key}\t{p.Value}"))
+                .Concat(Arrivals.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => ArrivalLine(p.Key, p.Value))));
         }
 
         // ---- Going through doors ----
@@ -195,6 +312,7 @@ namespace NocturneAccess.Systems.Navigation
             }
 
             CheckCrossing(gb, now);
+            LearnPrompt(gb, now);
 
             // The door volume the player stands in: its key is taken while exploring, when the area's own volumes are surely
             // loaded; the time keeps running while the door's transition (no longer exploring) starts.
@@ -305,6 +423,7 @@ namespace NocturneAccess.Systems.Navigation
                 // A warp's arrival point lies beside its way back (area 3: 01d_03 leads to 01pos_02, beside 01d_02, which leads
                 // back): that door counts as come in through, as after an area change (0.0.52; Francesco: standard areas mark
                 // both sides at once, the Amala Network only the side walked into).
+                LearnArrival(gb, key);
                 string near = NearestDoor(gb, out float d);
                 if (near != null && near != key)
                     Mark(near, $"arrived beside it from {key} ({FieldData.F(d)} away)");

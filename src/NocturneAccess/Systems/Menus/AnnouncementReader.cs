@@ -153,6 +153,23 @@ namespace NocturneAccess.Systems.Menus
             }
         }
 
+        /// <summary>The interaction prompt on screen ("Talk", "Open Door"), or "" when none is shown (0.0.53: event volumes learn it).</summary>
+        internal static string InteractionPromptText
+        {
+            get
+            {
+                TMP_Text c = EntryOfPath.TryGetValue(PromptPath, out Entry e) ? e.Component : null;
+                try
+                {
+                    return c != null && UiUtil.IsVisible(c) ? TextUtil.Clean(c.text) : "";
+                }
+                catch
+                {
+                    return "";
+                }
+            }
+        }
+
         internal static void Install()
         {
             if (!Config.MenusEnabled.Value)

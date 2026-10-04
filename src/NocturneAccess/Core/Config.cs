@@ -161,7 +161,7 @@ namespace NocturneAccess.Core
             KeyPoiPrevious = keys.CreateEntry("PoiPrevious", "PageDown", "Previous point of interest key",
                 "Selects the previous point of interest.");
             KeyPoiFilterNext = keys.CreateEntry("PoiFilterNext", "Shift+PageUp", "Next point of interest filter key",
-                "Shows only one kind of point in the Page Up / Page Down list: All, Doors, Rooms, Exits, Warps, Souls, Demons, Item boxes (kinds with none in the area are skipped).");
+                "Shows only one kind of point in the Page Up / Page Down list: All, Doors, Rooms, Exits, Warps, Souls, Demons, Item boxes, Events (kinds with none in the area are skipped).");
             KeyPoiFilterPrevious = keys.CreateEntry("PoiFilterPrevious", "Shift+PageDown", "Previous point of interest filter key",
                 "The previous kind of point.");
             KeyPoiCurrent = keys.CreateEntry("PoiCurrent", "Insert", "Selected point of interest key",

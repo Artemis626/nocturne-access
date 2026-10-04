@@ -11,10 +11,10 @@ using UnityEngine;
 
 namespace NocturneAccess.Systems.Navigation
 {
-    internal enum PoiKind { Door, Person, ItemBox, Place }
+    internal enum PoiKind { Door, Person, ItemBox, Place, Event }
 
     /// <summary>The Page Up list's filters (Shift+Page Up / Page Down, Francesco 4 Oct 2026), in their order; All first.</summary>
-    internal enum PoiCategory { All, Doors, Rooms, Exits, Warps, Souls, Demons, ItemBoxes }
+    internal enum PoiCategory { All, Doors, Rooms, Exits, Warps, Souls, Demons, ItemBoxes, Events }
 
     internal sealed class Poi
     {
@@ -38,6 +38,7 @@ namespace NocturneAccess.Systems.Navigation
 
         public string Label => Kind == PoiKind.Door ? (Warp ? "Warp" : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : "Door")
             : Kind == PoiKind.Place ? Name
+            : Kind == PoiKind.Event ? (Name.Length > 0 ? "Event, " + Name : "Event")
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
 
         public string DoorKind = "";    // a generic door: "room", "passage" or "exit", from the game's door table (DoorTable), or ""
@@ -67,7 +68,8 @@ namespace NocturneAccess.Systems.Navigation
 
         /// <summary>The label inside a sentence: game names and "Soul" keep their capitals, the mod's own words do not;
         /// "explored door", "empty item box"; a door with a kind as on Page Up: "door, explored, room".</summary>
-        public string InSentence => DoorKind.Length > 0 || ToWorld ? Spoken.ToLowerInvariant()
+        public string InSentence => Kind == PoiKind.Event ? (Name.Length > 0 ? "event, " + Name : "event")
+            : DoorKind.Length > 0 || ToWorld ? Spoken.ToLowerInvariant()
             : (State.Length > 0 ? State + " " : "") + (Name.Length > 0 || Soul || Demon ? Label : Label.ToLowerInvariant());
 
         /// <summary>Something beyond the plain label is known (End says it first).</summary>
@@ -120,7 +122,9 @@ namespace NocturneAccess.Systems.Navigation
         private static readonly Regex DoorName = new Regex(@"^\d+d_\d+$");
         private static readonly Regex EventName = new Regex(@"^\d+eve_\d+$");
         private const float PadReach = 300f;      // a place pad this close to a door names it
-        private const float PadMaxSize = 700f;    // larger place polygons are whole rooms, not door pads
+        // Larger place polygons are whole rooms, not door pads. Ginza's door pads are 800 x 400 (field 19, 4 Oct 2026: the Terminal,
+        // Rag's Jewelry and the Cathedral lost their names and were taken for plain doors, "explored"); Shibuya's were under 700.
+        private const float PadMaxSize = 1000f;
         private static readonly string[] Compass = { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" };
 
         private static int _selected = -1;     // gEvnRng index
@@ -162,6 +166,8 @@ namespace NocturneAccess.Systems.Navigation
                     kind = PoiKind.Door;
                 else if (h.resourceType == 10 && EventName.IsMatch(name) && placeName.Length > 0)
                     kind = PoiKind.Place;   // the basement elevator; dropped below when a real door already has the name
+                else if (h.resourceType == 10 && EventName.IsMatch(name) && !RoomSized(box))
+                    kind = PoiKind.Event;   // a story volume: Loki and his room's door in Nyx's Lounge (01eve_01 "Talk", 01eve_03 "Open Door"), 0.0.53
                 else if (box != null && box.TakaraIdx >= 0)
                     kind = PoiKind.ItemBox;
                 else if (box != null && box.npcIdx >= 0 && box.npcIdx < npcCount && npcs[box.npcIdx] != null)
@@ -198,7 +204,7 @@ namespace NocturneAccess.Systems.Navigation
                     Index = i,
                     Kind = kind.Value,
                     ResName = name,
-                    Name = kind == PoiKind.Door || kind == PoiKind.Place ? placeName : "",
+                    Name = kind == PoiKind.Door || kind == PoiKind.Place ? placeName : kind == PoiKind.Event ? ExploredDoors.PromptOf(gb.fieldID, gb.areaID, name) : "",
                     Soul = soul,
                     Demon = demon,
                     X = p.x,
@@ -229,6 +235,8 @@ namespace NocturneAccess.Systems.Navigation
             {
                 if (q.Kind == PoiKind.Place && list.Any(d => d.Kind == PoiKind.Door && d.Name == q.Name && Near(d, q, 800f)))
                     continue;
+                if (q.Kind == PoiKind.Event && list.Any(d => d.Kind == PoiKind.Door && Near(d, q, 100f)))
+                    continue;   // a story volume on a door: the door is listed
                 Poi same = kept.FirstOrDefault(d => d.Kind == q.Kind && Near(d, q, 20f) && Math.Abs(d.Y - q.Y) < 50f);
                 if (same != null)
                 {
@@ -278,6 +286,8 @@ namespace NocturneAccess.Systems.Navigation
                     return q.Demon ? PoiCategory.Demons : PoiCategory.Souls;
                 case PoiKind.Place:
                     return PoiCategory.Rooms;
+                case PoiKind.Event:
+                    return PoiCategory.Events;
             }
             if (q.Warp)
                 return PoiCategory.Warps;
@@ -293,7 +303,7 @@ namespace NocturneAccess.Systems.Navigation
             return PoiCategory.Doors;
         }
 
-        private static readonly string[] CategoryNames = { "All", "Doors", "Rooms", "Exits", "Warps", "Souls", "Demons", "Item boxes" };
+        private static readonly string[] CategoryNames = { "All", "Doors", "Rooms", "Exits", "Warps", "Souls", "Demons", "Item boxes", "Events" };
 
         /// <summary>
         /// Whether an NPC is in the world: its object (fldNpc_tag.fldObj) is active. The basement keeps npc_hoji_01 (hojiID
@@ -346,6 +356,10 @@ namespace NocturneAccess.Systems.Navigation
             // it the floor is under the box (the stairwell's 1F door seen from 2F must stay downstairs).
             floorY = playerY >= lo - 50f && playerY <= hi + 50f ? playerY : hi;
         }
+
+        /// <summary>A story volume as big as a room (more than 1500 across): a trigger for walking into an area, not a thing to go to.</summary>
+        private static bool RoomSized(putevebox_s box)
+            => Footprint(box, out float x0, out float x1, out float z0, out float z1) && (x1 - x0 > 1500f || z1 - z0 > 1500f);
 
         /// <summary>A volume's box footprint in X and Z (gEvnRngBox.vtx); false without a box (all zero for people).</summary>
         private static bool Footprint(putevebox_s box, out float x0, out float x1, out float z0, out float z1)

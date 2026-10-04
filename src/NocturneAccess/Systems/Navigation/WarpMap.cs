@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Il2Cpp;
+using Il2Cppbasic_H;
 using Il2Cppfield_H;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using NocturneAccess.Core;
@@ -98,6 +99,13 @@ namespace NocturneAccess.Systems.Navigation
                 Log.Warn($"{Tag} Warps of {field}/{area} could not be read: {ex.Message}");
             }
             return _warps;
+        }
+
+        /// <summary>Forgets the cached warps and points (a destination was learned, or a save file loaded).</summary>
+        internal static void Invalidate()
+        {
+            _count = -1;
+            _basicPoints = null;
         }
 
         /// <summary>The volumes routes keep out of: the warps that fire when walked into.</summary>
@@ -232,12 +240,85 @@ namespace NocturneAccess.Systems.Navigation
                     }
                 }
             }
+            if (found.Count == 0 && FindBasic(name, out pos))
+                return true;
             if (found.Count == 0)
-                return false;
+                return ExploredDoors.LearnedArrival(_field, _area, name, out pos);
             if (found.Count > 1 && Logged.Add("dup:" + name))
                 Log.Info($"{Tag} {found.Count} resources named {name}: " + string.Join("; ", found.Select(f => $"type {f.type} at {FieldData.F(f.p.x)} {FieldData.F(f.p.z)}")) + "; the first is used.");
             pos = found[0].p;
             return true;
+        }
+
+        /// <summary>
+        /// The game registers each named point of a field as a "basic" (dds3PointBasic.dds3AddPointBasic(serialID, point, name)),
+        /// linked to the others (dds3Basic_t next, prev, worknext, workprev, workpointer) under the world
+        /// (dds3WorldBasic.dds3TheWorld, the active scene dds3GetActiveScene). 0.0.53: the area file's resource tables were not
+        /// reachable in game (Ginza, 21:49 dump: no table at all), so the basics are searched, reading their links and names
+        /// only, up to MaxBasics; the position is the basic's poseset.pos. Logged once per area for checking.
+        /// </summary>
+        private static Dictionary<string, Vector4> _basicPoints;
+        private static string _basicKey = "";
+
+        private static bool FindBasic(string name, out Vector4 pos)
+        {
+            pos = default;
+            string areaKey = $"{_field}/{_area}";
+            if (_basicPoints == null || _basicKey != areaKey)
+            {
+                _basicKey = areaKey;
+                _basicPoints = ReadBasics(out int searched, out int named, out List<string> sample);
+                Log.Info($"{Tag} Field {_field} area {_area}: {searched} of the game's objects searched, {named} named, {_basicPoints.Count} points; names with \"pos\": {string.Join(", ", sample)}.");
+            }
+            return _basicPoints.TryGetValue(name, out pos);
+        }
+
+        private static Dictionary<string, Vector4> ReadBasics(out int searched, out int named, out List<string> sample)
+        {
+            const int MaxBasics = 20000;
+            var points = new Dictionary<string, Vector4>();
+            var seen = new HashSet<IntPtr>();
+            var queue = new Queue<dds3Basic_t>();
+            named = 0;
+            sample = new List<string>();
+            try
+            {
+                Enqueue(queue, seen, dds3WorldBasic.dds3TheWorld);
+                Enqueue(queue, seen, dds3WorldBasic.dds3GetActiveScene());
+                Enqueue(queue, seen, dds3WorldBasic.dds3GetControlScene());
+                while (queue.Count > 0 && seen.Count < MaxBasics)
+                {
+                    dds3Basic_t b = queue.Dequeue();
+                    string n = b.name ?? "";
+                    if (n.Length > 0)
+                    {
+                        named++;
+                        if (n.Contains("pos") && b.poseset != null && !points.ContainsKey(n))
+                        {
+                            points[n] = b.poseset.pos;
+                            if (sample.Count < 30)
+                                sample.Add($"{n} {FieldData.F(b.poseset.pos.x)} {FieldData.F(b.poseset.pos.z)}");
+                        }
+                    }
+                    Enqueue(queue, seen, b.next);
+                    Enqueue(queue, seen, b.prev);
+                    Enqueue(queue, seen, b.worknext);
+                    Enqueue(queue, seen, b.workprev);
+                    Enqueue(queue, seen, b.workpointer);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"{Tag} The game's objects could not be searched: {ex.Message}");
+            }
+            searched = seen.Count;
+            return points;
+        }
+
+        private static void Enqueue(Queue<dds3Basic_t> queue, HashSet<IntPtr> seen, dds3Basic_t b)
+        {
+            if (b != null && b.Pointer != IntPtr.Zero && seen.Add(b.Pointer))
+                queue.Enqueue(b);
         }
 
         private static IEnumerable<(string label, Il2CppReferenceArray<fldResourceTypeTable_t> tables)> TypeTables()
