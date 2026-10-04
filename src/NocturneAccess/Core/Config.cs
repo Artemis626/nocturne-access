@@ -60,6 +60,10 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyPoiPrevious { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiWalk { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiGuide { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyPoiFilterNext { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyPoiFilterPrevious { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyPoiCurrent { get; private set; }
+        internal static MelonPreferences_Entry<bool> PoiMapOrder { get; private set; }
 
         // Debug
         internal static MelonPreferences_Entry<bool> VerboseLogging { get; private set; }
@@ -122,6 +126,8 @@ namespace NocturneAccess.Core
                 "Development: one step in game units (600 = one corridor width in the Underground Facility).");
             DoorKinds = navigation.CreateEntry("DoorKinds", true, "Door kinds",
                 "Page Up / Page Down, Home and End say whether a plain door leads to a room, a passage or an exit (from the game's door table). Turn off to go back to plain \"Door\".");
+            PoiMapOrder = navigation.CreateEntry("PoiMapOrder", true, "Points of interest in map order",
+                "Page Up / Page Down go through an area's points in a fixed order, north to south and west to east, so each keeps its number while you walk. Turn off for the old order, nearest first (it changes as you move).");
 
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);
@@ -151,9 +157,15 @@ namespace NocturneAccess.Core
             KeyCentre = keys.CreateEntry("Centre", "F3", "Centre key",
                 "Blobber mode, first person: walks to the centre of the current square through the game's own movement, then says the facing and the walls around.");
             KeyPoiNext = keys.CreateEntry("PoiNext", "PageUp", "Next point of interest key",
-                "Selects the next door, person or item box of the area, nearest first, and says its distance and compass direction.");
+                "Selects the next door, person or item box of the area (in map order, or nearest first: PoiMapOrder) and says its distance and compass direction.");
             KeyPoiPrevious = keys.CreateEntry("PoiPrevious", "PageDown", "Previous point of interest key",
                 "Selects the previous point of interest.");
+            KeyPoiFilterNext = keys.CreateEntry("PoiFilterNext", "Shift+PageUp", "Next point of interest filter key",
+                "Shows only one kind of point in the Page Up / Page Down list: All, Doors, Rooms, Exits, Souls, Demons, Item boxes (kinds with none in the area are skipped).");
+            KeyPoiFilterPrevious = keys.CreateEntry("PoiFilterPrevious", "Shift+PageDown", "Previous point of interest filter key",
+                "The previous kind of point.");
+            KeyPoiCurrent = keys.CreateEntry("PoiCurrent", "Insert", "Selected point of interest key",
+                "Says the selected point of interest again, with its distance and direction from where you stand now, before Home or End.");
             KeyPoiWalk = keys.CreateEntry("PoiWalk", "Home", "Walk to point of interest key",
                 "Walks to the selected point of interest through the game's own movement (fixed-camera rooms and first person). Any movement key stops it. Enter (the game's confirm) then interacts as usual.");
             KeyPoiGuide = keys.CreateEntry("PoiGuide", "End", "Directions to point of interest key",

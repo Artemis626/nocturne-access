@@ -54,6 +54,9 @@ namespace NocturneAccess.Input
             Add("battle verbosity", Config.KeyBattleVerbosity, KeyCode.F8, BattleReader.ToggleHpLeft);
             Add("next point of interest", Config.KeyPoiNext, KeyCode.PageUp, () => PointsOfInterest.Cycle(1));
             Add("previous point of interest", Config.KeyPoiPrevious, KeyCode.PageDown, () => PointsOfInterest.Cycle(-1));
+            Add("next point of interest filter", Config.KeyPoiFilterNext, KeyCode.PageUp, () => PointsOfInterest.CycleFilter(1), shift: true);
+            Add("previous point of interest filter", Config.KeyPoiFilterPrevious, KeyCode.PageDown, () => PointsOfInterest.CycleFilter(-1), shift: true);
+            Add("selected point of interest", Config.KeyPoiCurrent, KeyCode.Insert, PointsOfInterest.SpeakCurrent);
             Add("walk to point of interest", Config.KeyPoiWalk, KeyCode.Home, AutoWalk.Request);
             Add("directions to point of interest", Config.KeyPoiGuide, KeyCode.End, RouteGuide.Speak);
             Add("where am I", Config.KeyWhereAmI, KeyCode.Delete, WhereAmI.Speak);

@@ -13,6 +13,9 @@ namespace NocturneAccess.Systems.Navigation
 {
     internal enum PoiKind { Door, Person, ItemBox, Place }
 
+    /// <summary>The Page Up list's filters (Shift+Page Up / Page Down, Francesco 4 Oct 2026), in their order; All first.</summary>
+    internal enum PoiCategory { All, Doors, Rooms, Exits, Souls, Demons, ItemBoxes }
+
     internal sealed class Poi
     {
         public int Index;          // fldEveHit.gEvnRng index: the game's own hit index (gFldEveRngIdx) when in reach
@@ -38,6 +41,14 @@ namespace NocturneAccess.Systems.Navigation
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
 
         public string DoorKind = "";    // a generic door: "room", "passage" or "exit", from the game's door table (DoorTable), or ""
+
+        /// <summary>
+        /// The filter it belongs to: Exits lead off the field (door table "exit", "Exit to overworld"); Rooms are doors to a room
+        /// (door table "room") and doors with the game's place name whose kind is not passage or exit (Terminal, Healing Room),
+        /// and named event volumes; Doors are the other doors (passages, Amala's doors, world-map entrances); Souls include
+        /// other people.
+        /// </summary>
+        public PoiCategory Category;
 
         /// <summary>"explored" or "empty", or "".</summary>
         public string State => Explored ? "explored" : Empty ? "empty" : "";
@@ -229,8 +240,35 @@ namespace NocturneAccess.Systems.Navigation
                                       q.BoxX1 + Poi.VolumeMargin, q.BoxZ1 + Poi.VolumeMargin, q.FloorY));
                 kept.Add(q);
             }
+            foreach (Poi q in kept)
+                q.Category = CategoryOf(q, gb);
             return kept.OrderBy(q => q.Distance).ToList();
         }
+
+        private static PoiCategory CategoryOf(Poi q, fldGlobalWork_t gb)
+        {
+            switch (q.Kind)
+            {
+                case PoiKind.ItemBox:
+                    return PoiCategory.ItemBoxes;
+                case PoiKind.Person:
+                    return q.Demon ? PoiCategory.Demons : PoiCategory.Souls;
+                case PoiKind.Place:
+                    return PoiCategory.Rooms;
+            }
+            if (q.ToWorld)
+                return PoiCategory.Exits;
+            if (q.World)
+                return PoiCategory.Doors;
+            string kind = q.Name.Length == 0 ? q.DoorKind : DoorTable.KindOf(gb.fieldID, gb.areaID, q.ResName);
+            if (kind == "exit")
+                return PoiCategory.Exits;
+            if (kind == "room" || (q.Name.Length > 0 && kind != "passage"))
+                return PoiCategory.Rooms;
+            return PoiCategory.Doors;
+        }
+
+        private static readonly string[] CategoryNames = { "All", "Doors", "Rooms", "Exits", "Souls", "Demons", "Item boxes" };
 
         /// <summary>
         /// Whether an NPC is in the world: its object (fldNpc_tag.fldObj) is active. The basement keeps npc_hoji_01 (hojiID
@@ -394,6 +432,38 @@ namespace NocturneAccess.Systems.Navigation
             }
         }
 
+        /// <summary>
+        /// The list Page Up / Page Down go through: the reachable points of the current filter. In map order (0.0.51, config
+        /// PoiMapOrder) it is fixed for the area: north to south in bands of MapBand units, west to east in a band, so a point
+        /// keeps its number while the player walks (Francesco, 4 Oct 2026: nearest first renumbered everything after each
+        /// corridor, "2 of 7" became "5 of 7", which prevents a mental map). Points reachable from one place and not from
+        /// another still come and go (another room, another block).
+        /// </summary>
+        private static List<Poi> Listed(fldGlobalWork_t gb, bool log)
+        {
+            List<Poi> all = Build(gb);
+            if (log)
+                Log.Info($"[Nav:Poi] {all.Count} in field {gb.fieldID} area {gb.areaID}: " +
+                         string.Join("; ", all.Select(q => $"{q.Index} {q.Spoken} [{q.Category}] {q.ResName} at {FieldData.F(q.X)} {FieldData.F(q.Z)} d {FieldData.F(q.Distance)}{(q.Reachable ? "" : " (not reachable, left out)")}")));
+            IEnumerable<Poi> list = all.Where(q => q.Reachable && (_filter == PoiCategory.All || q.Category == _filter));
+            if (Config.PoiMapOrder?.Value ?? true)
+                list = list.OrderByDescending(q => (int)Math.Floor(q.Z / MapBand)).ThenBy(q => q.X).ThenBy(q => q.Index);
+            return list.ToList();
+        }
+
+        private const float MapBand = 300f;
+        private static PoiCategory _filter = PoiCategory.All;
+
+        private static void NewArea(fldGlobalWork_t gb)
+        {
+            if (gb.fieldID == _field && gb.areaID == _area)
+                return;
+            _field = gb.fieldID;
+            _area = gb.areaID;
+            _selected = -1;
+            Selected = null;
+        }
+
         /// <summary>Page Up (+1) / Page Down (-1).</summary>
         internal static void Cycle(int step)
         {
@@ -403,21 +473,14 @@ namespace NocturneAccess.Systems.Navigation
                 SpeechManager.Say("No points of interest here.", interrupt: true);
                 return;
             }
-            if (gb.fieldID != _field || gb.areaID != _area)
-            {
-                _field = gb.fieldID;
-                _area = gb.areaID;
-                _selected = -1;
-            }
+            NewArea(gb);
 
-            List<Poi> all = Build(gb);
-            Log.Info($"[Nav:Poi] {all.Count} in field {gb.fieldID} area {gb.areaID}: " +
-                     string.Join("; ", all.Select(q => $"{q.Index} {q.Spoken} {q.ResName} at {FieldData.F(q.X)} {FieldData.F(q.Z)} d {FieldData.F(q.Distance)}{(q.Reachable ? "" : " (not reachable, left out)")}")));
-            List<Poi> list = all.Where(q => q.Reachable).ToList();
+            List<Poi> list = Listed(gb, log: true);
             if (list.Count == 0)
             {
                 Selected = null;
-                SpeechManager.Say("No points of interest here.", interrupt: true);
+                _selected = -1;
+                SpeechManager.Say(_filter == PoiCategory.All ? "No points of interest here." : $"No {CategoryNames[(int)_filter].ToLowerInvariant()} here.", interrupt: true);
                 return;
             }
 
@@ -427,6 +490,65 @@ namespace NocturneAccess.Systems.Navigation
             _selected = poi.Index;
             Selected = poi;
             SpeechManager.Say($"{poi.Spoken}, {Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}. {at + 1} of {list.Count}.", interrupt: true);
+        }
+
+        /// <summary>
+        /// Shift+Page Up (+1) / Shift+Page Down (-1): the next filter that has points here ("Rooms, 3."); All is always offered.
+        /// The selection stays when it belongs to the new filter, else Page Up starts from the first.
+        /// </summary>
+        internal static void CycleFilter(int step)
+        {
+            fldGlobalWork_t gb = fldGlobal.fldGb;
+            if (gb == null || !FieldState.IsExploring)
+            {
+                SpeechManager.Say("No points of interest here.", interrupt: true);
+                return;
+            }
+            NewArea(gb);
+            List<Poi> reachable = Build(gb).Where(q => q.Reachable).ToList();
+            int count = CategoryNames.Length;
+            PoiCategory next = _filter;
+            for (int k = 1; k <= count; k++)
+            {
+                var c = (PoiCategory)((((int)_filter + step * k) % count + count) % count);
+                if (c == PoiCategory.All || reachable.Any(q => q.Category == c))
+                {
+                    next = c;
+                    break;
+                }
+            }
+            _filter = next;
+            int n = next == PoiCategory.All ? reachable.Count : reachable.Count(q => q.Category == next);
+            if (Selected != null && next != PoiCategory.All && Selected.Category != next)
+            {
+                Selected = null;
+                _selected = -1;
+            }
+            Log.Info($"[Nav:Poi] Filter {next}: {n} of {reachable.Count}.");
+            SpeechManager.Say($"{CategoryNames[(int)next]}, {n}.", interrupt: true);
+        }
+
+        /// <summary>Insert: the selected point again, from where the player stands now, with its number in the list.</summary>
+        internal static void SpeakCurrent()
+        {
+            fldGlobalWork_t gb = fldGlobal.fldGb;
+            if (gb == null || !FieldState.IsExploring)
+            {
+                SpeechManager.Say("No points of interest here.", interrupt: true);
+                return;
+            }
+            NewArea(gb);
+            List<Poi> list = Listed(gb, log: false);
+            int at = list.FindIndex(q => q.Index == _selected);
+            string filter = _filter == PoiCategory.All ? "" : $" {CategoryNames[(int)_filter]}.";
+            if (at < 0)
+            {
+                SpeechManager.Say($"Nothing selected.{filter}", interrupt: true);
+                return;
+            }
+            Poi poi = list[at];
+            Selected = poi;
+            SpeechManager.Say($"{poi.Spoken}, {Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}. {at + 1} of {list.Count}.{filter}", interrupt: true);
         }
 
         /// <summary>The selected point of interest, re-read from the game's list (null if none or the area changed).</summary>

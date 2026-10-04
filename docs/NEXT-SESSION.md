@@ -4,7 +4,7 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
-**4 Oct 2026: 0.0.49 verified (21:44 session); 0.0.50 built, not yet tested: the Cathedral's second table, levels, result and tabs, shop prices and counts, Fountain HP and fees. Test list and the first look at the Amala Network in `docs/HANDOFF-SHOPS-FUSION.md`.**
+**4 Oct 2026, later: 0.0.51 (built, not yet tested) fixes Amala auto-walk, explored doors inside an area, a fixed Page Up order, and adds filters (Shift+Page Up / Down) and Insert; see `docs/HANDOFF.md`, 14:35 session.** **4 Oct 2026: 0.0.49 verified (21:44 session); 0.0.50 built, not yet tested: the Cathedral's second table, levels, result and tabs, shop prices and counts, Fountain HP and fees. Test list and the first look at the Amala Network in `docs/HANDOFF-SHOPS-FUSION.md`.**
 
 Read `docs/HANDOFF-SHOPS-FUSION.md` first: 0.0.49 (built, not yet tested) reads the institution menus (Fountain of Life, Junk Shop, Cathedral of Shadows), the shop lists and the fusion demon table, fixes the Underground Mall stairs and the second "Battle." after recruiting. Main open work: the Cathedral's affinities and levels from game data (images on screen), shop prices, Fountain costs. Overworld navigation is done (`docs/HANDOFF-OVERWORLD.md`).
 
@@ -80,6 +80,7 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.48** | Reverts the 0.0.47 battle help-line silence (help lines spoken with each command again; the drawn heading "FIGHT" / "TALK" was never spoken) | Verified 3 Oct 20:37 |
 | **0.0.49** | Institution menus everywhere (Fountain fixed, Junk Shop, Cathedral), shop lists, fusion demon table; doors reached inside their volume (Underground Mall stairs); a door that moves the player says "Arrived."; no second "Battle." after a long recruiting talk | Verified 3 Oct 21:44 (Fountain, Junk Shop, Cathedral menu and first table, Mall stairs, one battle start); second fusion table silent |
 | **0.0.50** | Fusion tables from the game's cursor (both tables, levels, result, icon in the legend's words); fusion screen tab (RESULT, DEMON 1, DEMON 2); help lines read live (no stale line); shop price, owned count, quantity and sum; Fountain HP and fee; real positions in long shop lists | Built 4 Oct 2026, not yet tested |
+| **0.0.51** | Auto-walk no longer stops itself after a slow route search (Amala); Page Up list in a fixed map order; doors gone through inside an area marked explored (Amala); Shift+Page Up / Down filters (All, Doors, Rooms, Exits, Souls, Demons, Item boxes); Insert says the selected point | Built 4 Oct 2026, not yet tested |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 

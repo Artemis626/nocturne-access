@@ -23,11 +23,18 @@ namespace NocturneAccess.Systems.Navigation
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static long _lastCalcMs = long.MinValue / 2;
+        private static int _lastCalcFrame = int.MinValue / 2;
         private static int _errors;
 
         internal static bool InPlayerCalc { get; private set; }
 
-        internal static bool IsExploring => Clock.ElapsedMilliseconds - _lastCalcMs <= ExploringWindowMs;
+        /// <summary>
+        /// Also counted in Unity frames (0.0.51): a route search of about 100 ms inside the field update (the Amala Network,
+        /// 4 Oct 2026: 131 200 cells) made the next frame see 101 ms without a call, and every walk planned there ended at once
+        /// as "no longer exploring". Exploring holds while the last call was in this frame or the one before.
+        /// </summary>
+        internal static bool IsExploring => Clock.ElapsedMilliseconds - _lastCalcMs <= ExploringWindowMs
+                                            || UnityEngine.Time.frameCount - _lastCalcFrame <= 1;
 
         /// <summary>fldPlayerCalc calls since start; the probe reads differences.</summary>
         internal static int CalcCount { get; private set; }
@@ -83,6 +90,7 @@ namespace NocturneAccess.Systems.Navigation
         private static void BeforeCalc()
         {
             _lastCalcMs = Clock.ElapsedMilliseconds;
+            _lastCalcFrame = UnityEngine.Time.frameCount;
             CalcCount++;
             InPlayerCalc = true;
             // Each system guarded on its own: one failing must not stop the other's update. Pad buttons held by a system
@@ -126,6 +134,7 @@ namespace NocturneAccess.Systems.Navigation
         private static void AfterCalc()
         {
             InPlayerCalc = false;
+            _lastCalcMs = Clock.ElapsedMilliseconds;   // the end of a long update counts too
         }
     }
 }

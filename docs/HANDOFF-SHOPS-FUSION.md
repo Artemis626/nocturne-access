@@ -4,7 +4,7 @@ Written 3 Oct 2026 at the end of the overworld chat, for a new chat. Read `CLAUD
 
 ## Start here
 
-- **Installed: 0.0.50 (built 4 Oct 2026, not yet tested).** Last verified: 0.0.49 (21:44 session, 3 Oct; below).
+- **Installed: 0.0.51 (built 4 Oct 2026, not yet tested).** Last verified: 0.0.49 (21:44 session, 3 Oct; below). 0.0.50's shop and fusion fixes are still untested (the 14:35 session stayed in Amala); 0.0.51 fixes Amala auto-walk, explored doors inside an area, a fixed Page Up order, and adds filters and Insert (`docs/HANDOFF.md`, 14:35 session).
 - **First:** read the next test log against "0.0.50 test" below. Look for the `[Fusion]` lines (`Table N row NN: ...` lists every row object, counter and sprite; `Legend NN: ...`; `Text <COMBINE_L00NN> = ...`; `Icon ...: legend "..."`) and the `[Facility]` lines (`Shop row "...": item N, price N`, `Quantity N`, `Fountain fee N`, `Fountain row ...`). They say whether the guesses below hold.
 - **Then:** whatever 0.0.50 got wrong; the fusion skill choice ("Select Skills", F "Random Skills") and the compendium when Francesco reaches them; the Amala Network (below: what was hard there is Francesco's to say).
 
@@ -28,7 +28,7 @@ Log `session_2026-10-03_21-44-05.log`. Worked: Fountain menu and heal list (each
 
 - Field 18 ("B3" banner, no area name). Its doors (`01d_02` to `01d_10`, door table movetype 1 or 2, target field 0 = this field) teleport the player to a marker in the same field (`01posNN`), changing `AmSBlock`; three are turned 45 degrees (`01d_04`, `01d_05`, `01d_06`), so corridors run diagonally. `01d_10` is a "Stairs door", `01eve_01` an event volume at the far end.
 - What worked: Page Up listed 9 points (doors, a Soul, a Mystical Chest as "Item box"), Home walked to three doors and arrived ("the game's hit index is the target"); a battle interrupted one walk, Home resumed it. Diagonal corridors are walked as short right-angle runs (the walking grid treats the huge floor planes as floor and only the 41 wall polygons as walls: 126133 of 131200 cells walkable, which is fine as long as the walls close the corridors).
-- Open: blobber cues in diagonal corridors (90-degree turns cannot face along them), whether a door says where it leads, and "B3" said after every teleport. **Ask Francesco what was hard there before changing anything.**
+- 14:35 session (4 Oct): Francesco's reports fixed in 0.0.51 (walks stopped by the 100 ms route search, doors inside the area never "explored", list order). Still open: zig-zag in diagonal corridors (right-angle runs; 8-direction runs later), blobber cues there, whether a door says where it leads, "B3" after every teleport.
 
 ## The 20:37 session: Francesco's four reports and what was found
 

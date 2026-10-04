@@ -44,6 +44,9 @@ namespace NocturneAccess.Systems.Navigation
         private const long ArriveWindowMs = 15000; // loading and the fade-in, until the player can move
         private const long ArriveHitMs = 1500;     // seen: OldHitDoor set 0.25 s after the change
         private const float ArriveReach = 300f;
+        private const float CrossReach = 120f;     // beyond a door's plane: gone through it (0.0.51)
+        private const float JumpReach = 300f;      // one frame's move beyond this: the game moved the player (walking is 16 a tick)
+        private const float PairReach = 500f;      // a door's other volume (Amala 01d_02 and 01d_03: 360 apart)
         private static readonly Regex DoorName = new Regex(@"^\d+d_\d+$");
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
 
@@ -56,6 +59,10 @@ namespace NocturneAccess.Systems.Navigation
         private static long _leftMs = long.MinValue / 2;   // when the player was last inside it
         private static string _cameFrom;          // set at an area change through a door, until the arrival door is marked
         private static long _changeMs, _exploringSinceMs = -1;
+        private static string _crossing;          // the door volume just left in this area, until it is known whether the player went through
+        private static float _doorX, _doorZ, _entryX, _entryZ, _normalX, _normalZ;
+        private static float _lastX, _lastZ;
+        private static bool _hasLast;
 
         private static string Folder => Path.Combine(MelonEnvironment.UserDataDirectory, "NocturneAccess", "Explored");
 
@@ -143,6 +150,8 @@ namespace NocturneAccess.Systems.Navigation
             _hit = -1;
             _leaving = null;
             _cameFrom = null;
+            _crossing = null;
+            _hasLast = false;
             _exploringSinceMs = -1;
         }
 
@@ -178,14 +187,20 @@ namespace NocturneAccess.Systems.Navigation
                     _cameFrom = null;
                 }
                 _leaving = null;
+                _crossing = null;
+                _hasLast = false;
                 return;
             }
+
+            CheckCrossing(gb, now);
 
             // The door volume the player stands in: its key is taken while exploring, when the area's own volumes are surely
             // loaded; the time keeps running while the door's transition (no longer exploring) starts.
             int hit = fldEveHit.OldHitDoor;
             if (hit < 0)
             {
+                if (_hit >= 0 && _leaving != null)
+                    _crossing = _leaving;   // left the volume: did the player come out on its other side?
                 _hit = -1;
             }
             else
@@ -195,6 +210,12 @@ namespace NocturneAccess.Systems.Navigation
                     _hit = hit;
                     string key = DoorKey(field, area, hit);
                     _leaving = key;
+                    _crossing = null;
+                    if (key != null && DoorCentre(hit, out _doorX, out _doorZ, out _normalX, out _normalZ))
+                    {
+                        _entryX = gb.playerX - _doorX;
+                        _entryZ = gb.playerZ - _doorZ;
+                    }
                     if (key != null && _cameFrom != null)
                     {
                         Mark(key, $"came in through it from {_cameFrom}");
@@ -225,6 +246,88 @@ namespace NocturneAccess.Systems.Navigation
             else
                 Log.Info($"{Tag} No door within {ArriveReach} of the arrival point from {_cameFrom}.");
             _cameFrom = null;
+        }
+
+        /// <summary>
+        /// Doors gone through without an area change (0.0.51). The Amala Network's doors (field 18, 4 Oct 2026) open and the
+        /// game walks the player through, or move them to a marker elsewhere in the same area: only fldGb's block numbers
+        /// change, so the two Soul rooms entered at 14:44 and 14:47 were never marked. After leaving a door volume (within
+        /// LeaveWindowMs) the door counts as gone through when the player stands CrossReach beyond its plane on the other side
+        /// from where they entered (the side along the volume's facing, gEvnRngBox.boxnml, or along the entry direction when it
+        /// has none), or when the player jumped more than JumpReach in one frame (moved by the game). A door volume close behind
+        /// it on the far side (doors are often two volumes, one per side: 01d_02 and 01d_03, 360 apart) is marked with it, as
+        /// "came in through it" does after an area change. Never used across an area change, which the code above handles.
+        /// </summary>
+        private static void CheckCrossing(fldGlobalWork_t gb, long now)
+        {
+            float px = gb.playerX, pz = gb.playerZ;
+            bool jumped = _hasLast && (px - _lastX) * (px - _lastX) + (pz - _lastZ) * (pz - _lastZ) > JumpReach * JumpReach;
+            _lastX = px;
+            _lastZ = pz;
+            _hasLast = true;
+            if (_crossing == null)
+                return;
+            if (now - _leftMs > LeaveWindowMs)
+            {
+                _crossing = null;
+                return;
+            }
+            float ax = _entryX, az = _entryZ;
+            if (_normalX * _normalX + _normalZ * _normalZ > 0.25f)
+            {
+                ax = _normalX;
+                az = _normalZ;
+            }
+            float alen = (float)Math.Sqrt(ax * ax + az * az);
+            if (alen < 1f && !jumped)
+                return;
+            float entrySide = alen < 1f ? 0f : (_entryX * ax + _entryZ * az) / alen;
+            float side = alen < 1f ? 0f : ((px - _doorX) * ax + (pz - _doorZ) * az) / alen;
+            bool through = entrySide != 0f && Math.Sign(side) != Math.Sign(entrySide) && Math.Abs(side) >= CrossReach;
+            if (!through && !jumped)
+                return;
+            string key = _crossing;
+            _crossing = null;
+            Mark(key, jumped ? "moved by the game after leaving it, same area" : $"came out {FieldData.F(Math.Abs(side))} beyond it, same area");
+            if (!through)
+                return;
+            // Its other side: a door volume within PairReach, beyond the plane.
+            Il2CppReferenceArray<fldResHead_t> ranges = fldEveHit.gEvnRng;
+            int n = ranges == null ? 0 : Math.Min(fldEveHit.gEvnRngNum, ranges.Length);
+            for (int i = 0; i < n; i++)
+            {
+                string other = DoorKey(gb.fieldID, gb.areaID, i);
+                if (other == null || other == key || !DoorCentre(i, out float ox, out float oz, out _, out _))
+                    continue;
+                float dx = ox - _doorX, dz = oz - _doorZ;
+                float otherSide = (dx * ax + dz * az) / alen;
+                if (dx * dx + dz * dz <= PairReach * PairReach && Math.Sign(otherSide) == Math.Sign(side) && Math.Abs(otherSide) >= 50f)
+                    Mark(other, $"the other side of {key}");
+            }
+        }
+
+        /// <summary>gEvnRng[index]'s centre in X and Z and its volume's facing (gEvnRngBox.boxnml, 0 0 without one).</summary>
+        private static bool DoorCentre(int index, out float x, out float z, out float nx, out float nz)
+        {
+            x = z = nx = nz = 0f;
+            Il2CppReferenceArray<fldResHead_t> ranges = fldEveHit.gEvnRng;
+            if (ranges == null || index < 0 || index >= Math.Min(fldEveHit.gEvnRngNum, ranges.Length) || ranges[index]?.sisei == null)
+                return false;
+            x = ranges[index].sisei.pos.x;
+            z = ranges[index].sisei.pos.z;
+            Il2CppReferenceArray<putevebox_s> boxes = fldEveHit.gEvnRngBox;
+            putevebox_s box = boxes != null && index < boxes.Length ? boxes[index] : null;
+            if (box != null)
+            {
+                UnityEngine.Vector4 v = box.boxnml;
+                float len = (float)Math.Sqrt(v.x * v.x + v.z * v.z);
+                if (len > 0.5f && Math.Abs(v.y) < 0.5f)
+                {
+                    nx = v.x / len;
+                    nz = v.z / len;
+                }
+            }
+            return true;
         }
 
         /// <summary>The key of gEvnRng[index] when it is a door volume ("NNd_MM", type 10), else null.</summary>

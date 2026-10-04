@@ -385,6 +385,8 @@ Sources: proxy decompile; read-only disassembly of `GameAssembly.dll` (`tools/na
 | `GameObject.GetComponentInChildren<T>()`, `GetComponentsInChildren<T>(bool)` | Proxy, UnityEngine.CoreModule | `StatusReader`: the `CounterCtr` under each stat object |
 | `Transform.position`, `eulerAngles`, `forward`, `lossyScale` (Vector3 `x`, `y`, `z`) | Proxy, UnityEngine.CoreModule | `FieldData`, `NavDump`: player and camera objects, to compare with `fldGb` coordinates and `PlayerKakudo` |
 | `Input.GetKeyDown(KeyCode.V)` | Proxy, UnityEngine.InputLegacyModule | `NavProbe`: V (Toggle POV) starts the story-flag capture; read only, the game still gets the key |
+| `Time.frameCount` | Proxy, UnityEngine.CoreModule | `FieldState.IsExploring` (0.0.51): the field update counts as running while its last call was this frame or the one before |
+| `Transform.Find(string)`, `Transform.childCount`, `GetChild(int)`, `UnityEngine.UI.Image.sprite` (`Sprite.name`) | Proxy, UnityEngine.CoreModule, UnityEngine.UI | `FusionReader` (rows, icons, legend), `StatusReader` (fusion tabs), 0.0.50 |
 
 ## Screen reader DLLs
 
