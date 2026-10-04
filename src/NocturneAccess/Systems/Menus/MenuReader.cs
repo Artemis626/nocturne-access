@@ -50,7 +50,8 @@ namespace NocturneAccess.Systems.Menus
             public Func<string, string> ItemDetail;   // said after the item's text (a skill's cost), if not empty
             public bool NoPosition;               // one slot shows the current choice: no "1 of 1"
             public bool LinesAreSentences;        // description lines are separate statements, not one wrapped sentence
-            public string SiblingDetail;          // a text object beside the item, under the same row (the fusion table's race), said after it
+            public Func<TMP_Text, string, string> RowDetail;   // game data for the highlighted row (a price), said after the item
+            public Func<int, (int, int)?> GamePosition;        // the entry and count from the game's cursor for this slot, or null to count rows
         }
 
         private sealed class Slot
@@ -65,6 +66,7 @@ namespace NocturneAccess.Systems.Menus
             public MenuSpec Spec;
             public readonly Dictionary<int, Slot> Slots = new Dictionary<int, Slot>();
             public readonly string[] Description = new string[8];
+            public readonly TMP_Text[] DescriptionComponents = new TMP_Text[8];
             public int Current = -1;
             public string CurrentText;
             public TMP_Text CurrentComponent;
@@ -119,34 +121,30 @@ namespace NocturneAccess.Systems.Menus
             new MenuSpec
             {
                 // Junk Shop lists (21:21 session): "BUY" / "SELL" title, one item name per row (TMC01 highlighted), the item's help
-                // in shophelp/Text01TM..Text03TM (a wrapped sentence). Prices and counts are images: not read yet.
+                // in shophelp/Text01TM..Text03TM (a wrapped sentence). Prices, counts and the position in a list longer than
+                // its 9 rows come from the game (FacilityReader, 0.0.50).
                 Name = "Shop list",
                 Item = new Regex(@"^Canvas_UI/shopUI/shoplist/shop_row/shop_row(?<slot>\d\d)/Text_nameTM$", RegexOptions.Compiled),
                 Highlight = "<material=\"TMC01\">",
                 TitlePath = "Canvas_UI/shopUI/shoptitle/Text_shoptitleTM",
                 Description = new Regex(@"^Canvas_UI/shopUI/shophelp/Text(?<line>\d\d)TM$", RegexOptions.Compiled),
                 CloseWhenUnhighlighted = true,
+                RowDetail = FacilityReader.ShopDetail,
+                GamePosition = FacilityReader.ShopPosition,
             },
-            new MenuSpec
-            {
-                // Cathedral of Shadows, fusion: the demon table (21:20 session): "Select the 1st demon" title, a name and a race
-                // per row (both TMC01 when highlighted). Levels and affinities are images (docs/HANDOFF-SHOPS-FUSION.md).
-                Name = "Fusion list",
-                Item = new Regex(@"^Canvas_UI/combUI_oubei/combmenu/comtable01/comtable_row/comtable01_row(?<slot>\d\d)/Text_nameTM$", RegexOptions.Compiled),
-                Highlight = "<material=\"TMC01\">",
-                TitlePath = "Canvas_UI/combUI_oubei/comtitle/Text_comtitleTM",
-                SiblingDetail = "Text_raceTM",
-                CloseWhenUnhighlighted = true,
-            },
+            // The Cathedral of Shadows' demon tables are read by FusionReader (0.0.50), from the game's cursor.
             new MenuSpec
             {
                 // Its party list ("HEAL" title; "Whom shall I heal?" is a dialogue page): one name per row, highlighted TMC01; a
-                // healed member leaves the list (row01 became "Pixie" after Art was healed). Costs and HP are drawn as images.
+                // healed member leaves the list (row01 became "Pixie" after Art was healed). HP and the fee come from the game
+                // (FacilityReader, 0.0.50).
                 Name = "Fountain list",
                 Item = new Regex(@"^Canvas_UI/recovUI/rcvlist/rcv_row/rcv_row(?<slot>\d\d)/Text_nameTM$", RegexOptions.Compiled),
                 Highlight = "<material=\"TMC01\">",
                 TitlePath = "Canvas_UI/recovUI/rcvtitle/Text_rcvtitleTM",
                 CloseWhenUnhighlighted = true,
+                RowDetail = FacilityReader.FountainDetail,
+                GamePosition = FacilityReader.FountainPosition,
             },
             new MenuSpec
             {
@@ -256,7 +254,7 @@ namespace NocturneAccess.Systems.Menus
                     {
                         int line = desc.Groups["line"].Success ? int.Parse(desc.Groups["line"].Value) - 1 : 0;
                         if (line >= 0 && line < state.Description.Length)
-                            return (component, raw) => OnDescription(state, line, raw);
+                            return (component, raw) => OnDescription(state, line, component, raw);
                     }
                 }
             }
@@ -318,8 +316,9 @@ namespace NocturneAccess.Systems.Menus
             }
         }
 
-        private static void OnDescription(MenuState state, int line, string raw)
+        private static void OnDescription(MenuState state, int line, TMP_Text component, string raw)
         {
+            state.DescriptionComponents[line] = component;
             string text = TextUtil.Clean(raw);
             if (text == state.Description[line])
                 return;
@@ -410,13 +409,19 @@ namespace NocturneAccess.Systems.Menus
                 .OrderBy(k => k)
                 .ToList();
             int position = visible.IndexOf(state.Current) + 1;
+            int count = visible.Count;
+            // A list longer than its rows (the shop's SELL list) counts from the game's cursor, when it is on this row.
+            (int, int)? game = state.Spec.GamePosition?.Invoke(state.Current);
+            if (game.HasValue)
+                (position, count) = game.Value;
             string detail = state.Spec.ItemDetail?.Invoke(slot.Text) ?? "";
-            if (state.Spec.SiblingDetail != null && detail.Length == 0)
-                detail = SiblingText(slot.Component, state.Spec.SiblingDetail);
+            string rowDetail = state.Spec.RowDetail?.Invoke(slot.Component, slot.Text) ?? "";
+            if (rowDetail.Length > 0)
+                detail = detail.Length > 0 ? $"{detail}, {rowDetail}" : rowDetail;
             string named = detail.Length > 0 ? $"{slot.Text}, {detail}" : slot.Text;
-            string item = position > 0 && !state.Spec.NoPosition ? $"{named}, {position} of {visible.Count}" : named;
+            string item = position > 0 && !state.Spec.NoPosition ? $"{named}, {position} of {count}" : named;
             if (opening && state.Spec.IsChoice)
-                item = $"Choice, {visible.Count} options. {item}";
+                item = $"Choice, {count} options. {item}";
 
             var parts = new List<string>();
             if (opening && state.Spec.OpeningPrefix != null)
@@ -432,6 +437,14 @@ namespace NocturneAccess.Systems.Menus
             }
             parts.Add(item);
 
+            // Each line as it is now: a line emptied by the game is a blank write, which never reaches the readers, so the
+            // stored text would keep the previous item's words (21:46 session: "Support-type Magatama. for one ally.").
+            for (int i = 0; i < state.Description.Length; i++)
+            {
+                TMP_Text line = state.DescriptionComponents[i];
+                if (line != null)
+                    state.Description[i] = UiUtil.IsVisible(line) ? TextUtil.Clean(line.text) : "";
+            }
             string description = string.Join(state.Spec.LinesAreSentences ? ". " : " ", state.Description.Where(d => !string.IsNullOrEmpty(d)));
             if (state.Spec.LinesAreSentences && description.Length > 0)
                 description += ".";
@@ -444,21 +457,6 @@ namespace NocturneAccess.Systems.Menus
             if (opening)
                 Log.Info($"{Tag} {state.Spec.Name} opened.");
             SpeechManager.Say(utterance, interrupt: !opening, force: true);
-        }
-
-        /// <summary>The visible text of the object named name beside the component (same parent), or "".</summary>
-        private static string SiblingText(TMP_Text component, string name)
-        {
-            try
-            {
-                var t = component?.transform.parent?.Find(name);
-                TMP_Text text = t == null ? null : t.GetComponent<TMP_Text>();
-                return text != null && UiUtil.IsVisible(text) ? TextUtil.Clean(text.text) : "";
-            }
-            catch
-            {
-                return "";
-            }
         }
 
         private static bool HasVisibleHighlight(MenuState state)

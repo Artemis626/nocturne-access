@@ -54,6 +54,9 @@ namespace NocturneAccess.Systems.Menus
         internal static string LastUtterance { get; private set; } = "";
         internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
 
+        /// <summary>True while the screen is shown and its summary has been spoken.</summary>
+        internal static bool IsOpen => _open;
+
         internal static void Install()
         {
             if (!Config.MenusEnabled.Value)
@@ -223,6 +226,9 @@ namespace NocturneAccess.Systems.Menus
         private static string Summary()
         {
             var parts = new List<string>();
+            string tab = FusionTab();
+            if (tab.Length > 0)
+                parts.Add(tab);
             string name = Text(_ui.nameText), race = Race();
             parts.Add(race.Length > 0 ? $"{name}, {race}" : name);
             int? level = Number(_ui.ObjLV);
@@ -262,9 +268,40 @@ namespace NocturneAccess.Systems.Menus
                 coming.Add(coming.Count == 0 ? $"{hidden} hidden" : $"and {hidden} hidden");
             if (coming.Count > 0)
                 parts.Add("Skills to learn: " + string.Join(", ", coming));
+            // "Drn: Fire • Null: Dark • Str: Phys": the bullet is read aloud by NVDA, so each group is its own sentence.
             string affinity = Text(_ui.aisyoText);
-            if (affinity.Length > 0)
-                parts.Add(affinity.TrimEnd('.'));
+            foreach (string group in affinity.Split('•'))
+            {
+                string g = group.Trim().TrimEnd('.');
+                if (g.Length > 0)
+                    parts.Add(g);
+            }
+        }
+
+        /// <summary>
+        /// In the Cathedral of Shadows the screen has tabs (21:49 and 21:54 sessions, 3 Oct 2026): comstatus_parts/commode/
+        /// commode_menu/commode01..03, "DEMON 1", "DEMON 2", "RESULT", switched with Q / E; the tab shown has its
+        /// stretch_off/TextTM visible and drawn TMC01. "" elsewhere.
+        /// </summary>
+        private static string FusionTab()
+        {
+            const string MenuPath = "comstatus_parts/commode/commode_menu";
+            Transform menu = _ui.transform.Find(MenuPath);
+            for (Transform t = _anchor != null ? _anchor.transform : null; menu == null && t != null; t = t.parent)
+            {
+                if (t.name == "statusUI(Clone)")
+                    menu = t.Find(MenuPath);
+            }
+            if (menu == null || !menu.gameObject.activeInHierarchy)
+                return "";
+            for (int i = 0; i < menu.childCount; i++)
+            {
+                Transform label = menu.GetChild(i).Find("stretch_off/TextTM");
+                TMP_Text text = label == null ? null : label.GetComponent<TMP_Text>();
+                if (UiUtil.IsVisible(text) && (text.text ?? "").Contains("<material=\"TMC01\">"))
+                    return TextUtil.Clean(text.text);
+            }
+            return "";
         }
 
         /// <summary>The visible, non-empty texts in order; "？" (a skill the game keeps hidden) only counted.</summary>
