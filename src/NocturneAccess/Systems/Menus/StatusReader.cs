@@ -120,7 +120,11 @@ namespace NocturneAccess.Systems.Menus
 
                 // The race is written after the name (22:05 session: "Fiend" missing from the summary), and
                 // switching character (L/R) rewrites both: wait until they have been stable a moment.
-                string seen = Text(_ui.nameText) + "|" + Race();
+                // The Cathedral's tab highlight is written a frame after the name (21:48:12, 5 Oct 2026: RESULT drawn TMC01 2 ms
+                // after the summary, which had no tab): it is waited for too, as part of what must be stable (0.0.55).
+                string race = Race();
+                string tab = HighlightedTab(out bool tabsShown);
+                string seen = Text(_ui.nameText) + "|" + race + "|" + tab;
                 if (seen != _seen)
                 {
                     _seen = seen;
@@ -131,8 +135,8 @@ namespace NocturneAccess.Systems.Menus
                 {
                     if (_waitSince < 0)
                         _waitSince = now;
-                    bool raceShown = !seen.EndsWith("|", StringComparison.Ordinal);
-                    bool stable = now - _seenSince >= StableMs && raceShown;
+                    bool raceShown = race.Length > 0;
+                    bool stable = now - _seenSince >= StableMs && raceShown && !(tabsShown && tab.Length == 0);
                     if (!stable && now - _waitSince < MaxWaitMs)
                         return;
                     // At a level-up the screen opens just before "> You leveled up!": that page goes first.
@@ -293,7 +297,26 @@ namespace NocturneAccess.Systems.Menus
         /// </summary>
         private static string FusionTab()
         {
-            var seen = new List<string>();
+            string tab = HighlightedTab(out bool _, out List<string> seen);
+            if (tab.Length > 0)
+                return tab;
+            if (seen.Count > 0 && !_tabLogged)
+            {
+                _tabLogged = true;
+                Log.Info($"{Tag} Fusion tabs shown, none highlighted: {string.Join(" | ", seen.Select(UiUtil.Escape))}");
+            }
+            return "";
+        }
+
+        private static bool _tabLogged;
+
+        private static string HighlightedTab(out bool shown) => HighlightedTab(out shown, out _);
+
+        /// <summary>The visible tab drawn TMC01, or ""; shown: some tab is visible (the Cathedral's stats screen).</summary>
+        private static string HighlightedTab(out bool shown, out List<string> seen)
+        {
+            seen = new List<string>();
+            shown = false;
             foreach (TMP_Text text in Tabs.Values)
             {
                 string raw;
@@ -307,19 +330,13 @@ namespace NocturneAccess.Systems.Menus
                 {
                     continue;   // a destroyed copy
                 }
+                shown = true;
                 seen.Add(raw);
                 if (raw.Contains("<material=\"TMC01\">"))
                     return TextUtil.Clean(raw);
             }
-            if (seen.Count > 0 && !_tabLogged)
-            {
-                _tabLogged = true;
-                Log.Info($"{Tag} Fusion tabs shown, none highlighted: {string.Join(" | ", seen.Select(UiUtil.Escape))}");
-            }
             return "";
         }
-
-        private static bool _tabLogged;
 
         /// <summary>The visible, non-empty texts in order; "？" (a skill the game keeps hidden) only counted.</summary>
         private static List<string> Visible(Il2CppReferenceArray<TextMeshProUGUI> texts, out int hidden)

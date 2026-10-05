@@ -54,11 +54,14 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>A door volume that moves the player to another spot of this area as soon as it is walked into (WarpMap, 0.0.52): "Warp".</summary>
         public bool Warp;
 
-        /// <summary>Reached only through this many warps (WarpMap.RouteTo), 0 when it can be walked to.</summary>
+        /// <summary>Reached only through this many warps, ladders or doors of this area (WarpMap.RouteTo), 0 when it can be walked to.</summary>
         public int ViaWarps;
 
-        /// <summary>", through 2 warps", or "".</summary>
-        public string Via => ViaWarps == 0 ? "" : ViaWarps == 1 ? ", through 1 warp" : $", through {ViaWarps} warps";
+        /// <summary>Those legs by kind, "1 ladder", "2 warps and 1 ladder" (WarpMap.Phrase, 0.0.55).</summary>
+        public string ViaLegs = "";
+
+        /// <summary>", via 1 ladder", or "".</summary>
+        public string Via => ViaWarps == 0 ? "" : $", via {ViaLegs}";
 
         /// <summary>"explored" or "empty", or "".</summary>
         public string State => Explored ? "explored" : Empty ? "empty" : "";
@@ -260,8 +263,9 @@ namespace NocturneAccess.Systems.Navigation
                 kept.Add(q);
             }
             // Beyond warps (0.0.52): a point no walk reaches may be reached by taking warps (Francesco, 4 Oct 2026: parts of the Amala
-            // Network were missing from the list until he stood in them).
-            if (grid && !world && WarpMap.Zones(gb.fieldID, gb.areaID).Count > 0)
+            // Network were missing from the list until he stood in them). From 0.0.55 ladders and same-area doors too (the Ginza
+            // underpass, 5 Oct 2026: its rooms in one area are joined by ladders, and everything past one was left out).
+            if (grid && !world && WarpMap.All(gb.fieldID, gb.areaID).Any(w => w.HasDest))
                 foreach (Poi q in kept.Where(q => !q.Reachable))
                 {
                     List<Warp> legs = WarpMap.RouteTo(gb, q);
@@ -269,6 +273,7 @@ namespace NocturneAccess.Systems.Navigation
                     {
                         q.Reachable = true;
                         q.ViaWarps = legs.Count;   // 0: walked to (a warp next to the player's part of the area)
+                        q.ViaLegs = WarpMap.Phrase(legs);
                     }
                 }
             foreach (Poi q in kept)

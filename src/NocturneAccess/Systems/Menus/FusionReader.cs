@@ -116,6 +116,7 @@ namespace NocturneAccess.Systems.Menus
         }
 
         private static readonly Dictionary<string, sbyte> ResultIconTypes = new Dictionary<string, sbyte>();
+        private static int _resultIconLogs;
 
         /// <summary>Kept for the log only: which icon type the game drew for which row object.</summary>
         private static void AfterResultIcon(GameObject __0, sbyte __2)
@@ -123,9 +124,13 @@ namespace NocturneAccess.Systems.Menus
             try
             {
                 string name = __0 == null ? "(null)" : __0.name;
+                // The game draws each row's icon twice a frame with two types (21:47 session: 27 674 lines), so only the first
+                // few changes of the session are logged.
                 if (!ResultIconTypes.TryGetValue(name, out sbyte old) || old != __2)
                 {
                     ResultIconTypes[name] = __2;
+                    if (++_resultIconLogs > 40)
+                        return;
                     Log.Info($"{Tag} Result icon type {__2} on {(__0 == null ? "(null)" : UiUtil.PathOf(__0.transform))}.");
                 }
             }

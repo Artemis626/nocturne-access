@@ -168,8 +168,10 @@ namespace NocturneAccess.Systems.Navigation
         private static long _changeMs, _exploringSinceMs = -1;
         private static string _crossing;          // the door volume just left in this area, until it is known whether the player went through
         private static float _doorX, _doorZ, _entryX, _entryZ, _normalX, _normalZ;
-        private static float _lastX, _lastZ;
-        private static bool _hasLast;
+        private static float _lastX, _lastY, _lastZ;
+        private static bool _hasLast, _settled;
+        private static long _areaMs = long.MinValue / 2;
+        private const long SettleMs = 1000;   // jumps count from this long after an area change, once the player has control
         private static long _jumpMs = long.MinValue / 2;
 
         private static string Folder => Path.Combine(MelonEnvironment.UserDataDirectory, "NocturneAccess", "Explored");
@@ -271,6 +273,7 @@ namespace NocturneAccess.Systems.Navigation
             _cameFrom = null;
             _crossing = null;
             _hasLast = false;
+            _settled = false;
             _exploringSinceMs = -1;
         }
 
@@ -308,6 +311,8 @@ namespace NocturneAccess.Systems.Navigation
                 _leaving = null;
                 _crossing = null;
                 _hasLast = false;
+                _settled = false;
+                _areaMs = now;
                 return;
             }
 
@@ -380,18 +385,32 @@ namespace NocturneAccess.Systems.Navigation
         /// </summary>
         private static void CheckCrossing(fldGlobalWork_t gb, long now)
         {
-            float px = gb.playerX, pz = gb.playerZ;
-            bool jumpedNow = _hasLast && (px - _lastX) * (px - _lastX) + (pz - _lastZ) * (pz - _lastZ) > JumpReach * JumpReach;
+            float px = gb.playerX, py = gb.playerY, pz = gb.playerZ;
+            // Up or down counts too (0.0.55): a ladder moves the player 220 across and 800 up (Ginza underpass, 21:36 session).
+            bool jumpedNow = _hasLast && _settled
+                             && ((px - _lastX) * (px - _lastX) + (pz - _lastZ) * (pz - _lastZ) > JumpReach * JumpReach || Math.Abs(py - _lastY) > JumpReach);
             _lastX = px;
+            _lastY = py;
             _lastZ = pz;
             _hasLast = true;
+            // After an area change the player is put at the new area's entrance a few frames later: not a move inside the area
+            // ("Warped." on entering the Collector Manikin's room, 21:37:09). Jumps count again once the player has control.
+            if (FieldState.IsExploring && now - _areaMs >= SettleMs)
+                _settled = true;
             if (jumpedNow)
             {
+                _jumpMs = now;
                 // Said for every move by the game inside the area (Francesco, 4 Oct 2026: the Amala Network's warps are not
                 // shown, and the player must know the place changed). The floor banner the game shows again follows it.
-                _jumpMs = now;
-                SpeechManager.Say("Warped.", interrupt: false);
-                Log.Info($"{Tag} Moved by the game to {FieldData.F(px)} {FieldData.F(pz)} in the same area.");
+                // 0.0.55: only after leaving a door volume (a story event moved the player beside Loki for its scene, 20:42:45:
+                // "Warped."), and not after a ladder or door the player took with confirm, whose prompt already said it.
+                string took = _crossing ?? (_leaving != null && now - _leftMs <= LeaveWindowMs ? _leaving : null);
+                string res = took?.Substring(took.LastIndexOf('/') + 1);
+                bool chosen = res != null && DoorTable.SameAreaWarp(gb.fieldID, gb.areaID, res, out int moveType, out _) && moveType != 2;
+                if (took != null && !chosen)
+                    SpeechManager.Say("Warped.", interrupt: false);
+                Log.Info($"{Tag} Moved by the game to {FieldData.F(px)} {FieldData.F(py)} {FieldData.F(pz)} in the same area" +
+                         (took == null ? " (no door left just before: an event, not said)" : chosen ? $" ({res}, taken with confirm)" : $" (after {res})") + ".");
             }
             bool jumped = now - _jumpMs <= 500;
             if (_crossing == null)

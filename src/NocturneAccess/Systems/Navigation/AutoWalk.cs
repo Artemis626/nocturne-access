@@ -91,10 +91,14 @@ namespace NocturneAccess.Systems.Navigation
         private const long WarpWaitMs = 4000;         // a warp aimed for that has not moved the player by then
         private const long ResumeWaitMs = 8000;       // after the jump, until the game gives movement back
         private const int MaxWarps = 12;
+        // Ladders and same-area doors on the way (0.0.55): the walk stops in front of one and waits for the player's confirm (the
+        // mod never presses it), then goes on from where the game puts the player.
+        private const long ConfirmWaitMs = 60000;
+        private const float LadderJump = 300f;        // a ladder moves the player up or down (220 across, 800 up: underpass 01d_12)
         private static Poi _final;
-        private static bool _awaitWarp, _awaitPlanned, _jumped;
-        private static long _awaitMs;
-        private static float _awaitX, _awaitZ;
+        private static bool _awaitWarp, _awaitPlanned, _jumped, _awaitConfirm;
+        private static long _awaitMs, _confirmMs;
+        private static float _awaitX, _awaitY, _awaitZ;
         private static int _resumeTicks, _warpsTaken;
 
         internal static bool Active => _active;
@@ -246,6 +250,11 @@ namespace NocturneAccess.Systems.Navigation
                 bool noFacing = !_target.HasFront && flat < (_target.IsDoorLike ? DoorFacingMinDistance : FacingMinDistance);
                 if (noFacing || Facing(gb, face) || ++_facing > FaceTicks)
                 {
+                    if (_final != null && IsConfirmWarp(gb, _target))
+                    {
+                        BeginConfirm(gb);
+                        return;
+                    }
                     Stop($"the game's hit index is the target{(_facing > FaceTicks ? " (facing not reached)" : "")}", "Arrived.");
                     return;
                 }
@@ -374,6 +383,7 @@ namespace NocturneAccess.Systems.Navigation
             _startMs = Clock.ElapsedMilliseconds;
             _final = null;
             _awaitWarp = false;
+            _awaitConfirm = false;
             _warpsTaken = 0;
             if (!Plan(gb, "start") && !StartWarpLeg(gb, poi, "start"))
             {
@@ -385,6 +395,26 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         private static bool IsTouchWarp(fldGlobalWork_t gb, Poi p) => p != null && p.IsDoorLike && WarpMap.TouchWarp(gb, p.Index) != null;
+
+        /// <summary>A ladder or door of this area the player takes with confirm (WarpMap, not a touch warp).</summary>
+        private static bool IsConfirmWarp(fldGlobalWork_t gb, Poi p)
+        {
+            Warp w = p != null && p.IsDoorLike ? WarpMap.At(gb, p.Index) : null;
+            return w != null && !w.Touch;
+        }
+
+        /// <summary>
+        /// In front of a ladder or same-area door on the way: the player confirms ("Climb Ladder" is the game's prompt), and the
+        /// walk goes on after the game has moved them; any movement key ends it as usual.
+        /// </summary>
+        private static void BeginConfirm(fldGlobalWork_t gb)
+        {
+            BeginAwait(gb, planned: true);
+            _awaitConfirm = true;
+            _confirmMs = Clock.ElapsedMilliseconds;
+            Warp w = WarpMap.At(gb, _target.Index);
+            Say($"Arrived. Confirm to take the {w?.Word ?? "door"}; the walk then goes on.");
+        }
 
         /// <summary>
         /// The target cannot be walked to, but warps reach it (WarpMap.RouteTo): head for the first warp, keeping the target in
@@ -413,10 +443,12 @@ namespace NocturneAccess.Systems.Navigation
             PadInput.ReleaseAll();
             _awaitWarp = true;
             _awaitPlanned = planned;
+            _awaitConfirm = false;
             _jumped = false;
             _resumeTicks = 0;
             _awaitMs = Clock.ElapsedMilliseconds;
             _awaitX = gb.playerX;
+            _awaitY = gb.playerY;
             _awaitZ = gb.playerZ;
             _moveCount = FieldState.MoveCount;
             Log.Info($"[Nav:Walk] The game took movement at {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)}{(planned ? $" in warp {_target.ResName}" : "")}: waiting for a warp.");
@@ -429,12 +461,24 @@ namespace NocturneAccess.Systems.Navigation
         /// </summary>
         private static void AwaitWarp(fldGlobalWork_t gb)
         {
-            long waited = Clock.ElapsedMilliseconds - _awaitMs;
+            long now = Clock.ElapsedMilliseconds;
+            if (_awaitConfirm && !_jumped)
+            {
+                // Waiting for the player's confirm: the walk's own clocks stand still, the wait has its own limit.
+                _awaitMs = now;
+                _startMs = now;
+                if (now - _confirmMs > ConfirmWaitMs)
+                {
+                    Stop("the ladder or door was not taken", "Auto-walk stopped.");
+                    return;
+                }
+            }
+            long waited = now - _awaitMs;
             float moved = Dist(gb.playerX, gb.playerZ, _awaitX, _awaitZ);
             int moves = FieldState.MoveCount;
             bool moving = moves != _moveCount;
             _moveCount = moves;
-            if (!_jumped && moved > WarpJump)
+            if (!_jumped && (moved > WarpJump || Math.Abs(gb.playerY - _awaitY) > LadderJump))
             {
                 _jumped = true;
                 Log.Info($"[Nav:Walk] Warped {FieldData.F(moved)} to {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)} after {waited} ms.");
@@ -445,6 +489,7 @@ namespace NocturneAccess.Systems.Navigation
                 if (_resumeTicks >= 2)
                 {
                     _awaitWarp = false;
+                    _awaitConfirm = false;
                     ContinueAfterWarp(gb);
                 }
                 else if (waited > ResumeWaitMs)
@@ -453,6 +498,8 @@ namespace NocturneAccess.Systems.Navigation
                 }
                 return;
             }
+            if (_awaitConfirm)
+                return;
             if (!_awaitPlanned && waited > EventWaitMs)
                 Stop("the game stopped taking movement (event or dialogue)", "Walk interrupted by an event.");
             else if (_awaitPlanned && waited > WarpWaitMs)
@@ -743,6 +790,7 @@ namespace NocturneAccess.Systems.Navigation
             _active = false;
             _final = null;
             _awaitWarp = false;
+            _awaitConfirm = false;
             PadInput.ReleaseAll();
             fldGlobalWork_t gb = fldGlobal.fldGb;
             string at = gb == null ? "" : $" at {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)}";

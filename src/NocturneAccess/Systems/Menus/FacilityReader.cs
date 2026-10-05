@@ -161,7 +161,36 @@ namespace NocturneAccess.Systems.Menus
 
         /// <summary>The Fountain list's entry (1-based) and count when its cursor is on this row, else null.</summary>
         internal static (int, int)? FountainPosition(int slot)
-            => Position(fclRecoverInit.GBWK?.StockWindow?.CursorInfo?.CursorPos, slot);
+        {
+            // 16:40 session (0.0.54): "Art, 1 of 4", "High Pixie, 1 of 3"... the count came from the visible rows, so GBWK's cursor
+            // gave nothing. fclRecoverInit.rcv_data (also an fclDataRecover_t) is tried too; both are logged once to check.
+            cmpCursorPos_t a = null, b = null;
+            try
+            {
+                a = fclRecoverInit.GBWK?.StockWindow?.CursorInfo?.CursorPos;
+                b = fclRecoverInit.rcv_data?.StockWindow?.CursorInfo?.CursorPos;
+            }
+            catch
+            {
+            }
+            if (_fountainLogs++ < 6)
+                Log.Info($"{Tag} Fountain cursor (slot {slot}): GBWK {Describe(a)}; rcv_data {Describe(b)}.");
+            return Position(a, slot) ?? Position(b, slot);
+        }
+
+        private static int _fountainLogs;
+
+        private static string Describe(cmpCursorPos_t p)
+        {
+            try
+            {
+                return p == null ? "none" : $"Index {p.Index} Shift {p.Shift} ListNums {p.ListNums}";
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
 
         private static (int, int)? Position(cmpCursorPos_t pos, int slot)
         {

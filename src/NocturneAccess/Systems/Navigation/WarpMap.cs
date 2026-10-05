@@ -22,7 +22,11 @@ namespace NocturneAccess.Systems.Navigation
         public float FloorY;              // the volume's floor (box bottom; Y points down)
         public bool HasDest;
         public float DestX, DestY, DestZ;
+        public string DestFrom = "";      // how the arrival point was found, for the log
         public bool Touch => MoveType == 2;
+        public bool Ladder => MoveType == 5;
+        /// <summary>The mod's word for it: "warp" (fires when walked into), "ladder" (movetype 5), else "door" (confirmed).</summary>
+        public string Word => Touch ? "warp" : Ladder ? "ladder" : "door";
     }
 
     /// <summary>
@@ -78,21 +82,24 @@ namespace NocturneAccess.Systems.Navigation
                     var w = new Warp { Index = i, Name = name, MoveType = moveType, DestName = pos };
                     putevebox_s box = boxes != null && i < boxes.Length ? boxes[i] : null;
                     w.Zone = ZoneOf(box, h.sisei.pos, i, out w.FloorY);
-                    if (FindPoint(pos, out Vector4 p))
+                    if (FindPoint(pos, out Vector4 p, out string from))
                     {
                         w.HasDest = true;
                         w.DestX = p.x;
                         w.DestY = p.y;
                         w.DestZ = p.z;
+                        w.DestFrom = from;
                     }
                     _warps.Add(w);
                 }
+                foreach (Warp w in _warps.Where(w => w.Ladder && !w.HasDest))
+                    LandBesidePartner(w);
                 string key = $"{field}/{area}/{n}";
                 if (_warps.Count > 0 && Logged.Add(key))
                     Log.Info($"{Tag} Field {field} area {area}: {_warps.Count} warps: " + string.Join("; ", _warps.Select(w =>
                         $"{w.Name} (movetype {w.MoveType}) at {FieldData.F(w.Zone.X)} {FieldData.F(w.Zone.Z)} " +
                         $"{FieldData.F(w.Zone.HalfWidth * 2)} x {FieldData.F(w.Zone.HalfDepth * 2)} -> {w.DestName} " +
-                        (w.HasDest ? $"at {FieldData.F(w.DestX)} {FieldData.F(w.DestY)} {FieldData.F(w.DestZ)}" : "NOT FOUND"))));
+                        (w.HasDest ? $"at {FieldData.F(w.DestX)} {FieldData.F(w.DestY)} {FieldData.F(w.DestZ)} ({w.DestFrom})" : "NOT FOUND"))));
             }
             catch (Exception ex)
             {
@@ -100,6 +107,40 @@ namespace NocturneAccess.Systems.Navigation
             }
             return _warps;
         }
+
+        // A ladder's two ends are two movetype 5 volumes at one spot, one per floor (Ginza underpass area 8: 01d_12 at -9300 -200 on
+        // the floor y 0, 01d_16 above it on y -800). Climbing one lands LadderLanding in front of the other, along its facing:
+        // 01d_12 to -9300 -802 -50 (01d_16 faces +z), 01d_13 down to -3900 -2 2450 (01d_09 at z 2600 faces -z); 21:36 session,
+        // 5 Oct 2026. The arrival points (01pos_24, 01pos_05) are not readable in game.
+        private const float LadderLanding = 150f, LadderPartnerReach = 250f, LadderFloorGap = 300f;
+
+        /// <summary>A ladder whose arrival point was not found lands in front of its other end (partner on another floor, same spot).</summary>
+        private static void LandBesidePartner(Warp w)
+        {
+            Warp partner = _warps
+                .Where(o => o != w && o.Ladder && Math.Abs(o.FloorY - w.FloorY) >= LadderFloorGap
+                            && Math.Abs(o.Zone.X - w.Zone.X) <= LadderPartnerReach && Math.Abs(o.Zone.Z - w.Zone.Z) <= LadderPartnerReach)
+                .OrderBy(o => Math.Abs(o.Zone.X - w.Zone.X) + Math.Abs(o.Zone.Z - w.Zone.Z))
+                .FirstOrDefault();
+            if (partner == null)
+                return;
+            w.HasDest = true;
+            w.DestX = partner.Zone.X + partner.Zone.NX * LadderLanding;
+            w.DestZ = partner.Zone.Z + partner.Zone.NZ * LadderLanding;
+            w.DestY = partner.FloorY;
+            w.DestFrom = $"in front of {partner.Name}";
+        }
+
+        /// <summary>"1 ladder", "2 ladders and 1 warp": the legs of a route by kind, in the order first met.</summary>
+        internal static string Phrase(List<Warp> legs)
+        {
+            var parts = legs.GroupBy(w => w.Word).Select(g => $"{g.Count()} {g.Key}{(g.Count() == 1 ? "" : "s")}").ToList();
+            return parts.Count <= 1 ? string.Concat(parts) : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[parts.Count - 1];
+        }
+
+        /// <summary>The warp whose volume is gEvnRng[index] in the current area (any kind), or null.</summary>
+        internal static Warp At(fldGlobalWork_t gb, int index)
+            => gb == null ? null : All(gb.fieldID, gb.areaID).FirstOrDefault(w => w.Index == index);
 
         /// <summary>Forgets the cached warps and points (a destination was learned, or a save file loaded).</summary>
         internal static void Invalidate()
@@ -132,7 +173,9 @@ namespace NocturneAccess.Systems.Navigation
                 HashSet<int> goal = TargetRegions(gb, target);
                 if (goal.Contains(start))
                     return new List<Warp>();
-                List<Warp> warps = All(gb.fieldID, gb.areaID).Where(w => w.Touch && w.HasDest).ToList();
+                // Every warp with a known arrival: touch warps, and from 0.0.55 ladders and doors the player confirms (the Ginza
+                // underpass joins its rooms by ladders inside one area: Francesco, 5 Oct 2026, most of it missing from the list).
+                List<Warp> warps = All(gb.fieldID, gb.areaID).Where(w => w.HasDest).ToList();
                 if (warps.Count == 0 || goal.Count == 0)
                     return null;
                 var entries = warps.ToDictionary(w => w, w => WalkGrid.RegionsAround(w.Zone, w.FloorY, EntryMargin));
@@ -221,9 +264,10 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         /// <summary>The position of the area file's resource named name (an arrival point, "01pos_02").</summary>
-        private static bool FindPoint(string name, out Vector4 pos)
+        private static bool FindPoint(string name, out Vector4 pos, out string from)
         {
             pos = default;
+            from = "area file";
             var found = new List<(uint type, Vector4 p)>();
             foreach (var (_, tables) in TypeTables())
             {
@@ -240,10 +284,13 @@ namespace NocturneAccess.Systems.Navigation
                     }
                 }
             }
+            from = "game objects";
             if (found.Count == 0 && FindBasic(name, out pos))
                 return true;
+            from = "learned";
             if (found.Count == 0)
                 return ExploredDoors.LearnedArrival(_field, _area, name, out pos);
+            from = "area file";
             if (found.Count > 1 && Logged.Add("dup:" + name))
                 Log.Info($"{Tag} {found.Count} resources named {name}: " + string.Join("; ", found.Select(f => $"type {f.type} at {FieldData.F(f.p.x)} {FieldData.F(f.p.z)}")) + "; the first is used.");
             pos = found[0].p;

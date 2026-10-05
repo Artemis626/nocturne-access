@@ -88,11 +88,15 @@ namespace NocturneAccess.Systems.Navigation
             return "";
         }
 
+        // A name the game has no text for comes back as its id ("SUSPEND013_L0001", "AREA22_L0000": 15:21 session, 5 Oct 2026).
+        private static readonly System.Text.RegularExpressions.Regex TextId = new System.Text.RegularExpressions.Regex(@"^[A-Z]+\d*_L\d+$");
+
         private static string Clean(Func<string> read)
         {
             try
             {
-                return TextUtil.Clean(read() ?? "");
+                string text = TextUtil.Clean(read() ?? "");
+                return TextId.IsMatch(text) ? "" : text;
             }
             catch
             {

@@ -392,6 +392,19 @@ Sources: the 13:35 session of 5 Oct 2026 (log; F6 dump 13:42:11 at the Terminal'
 | `FldNameData.GetFieldName(int fld)`, `GetAreaName(int fld, int area)`, `GetSuspendPosName(int fld, int area)`, `_fldFieldNameTbl` (via `fldGlobal.fldNameData`) | Proxy | Name lookups; `WhereAmI` (0.0.54) says the field name (else the suspend name, the save list's "Ginza-B1") before the banner when it adds to it, and logs all three; the Shift+F6 dump lists the field name table. The area title shown on entering an area is an image (no text write at 14:03:09) |
 | Rag's Jewelry list cursor | Log 13:49:09 ("List opened ... ListNums 7") | 0.0.53 opened the lists but never spoke: its title test reset the opening every frame (fixed in 0.0.54) |
 
+### Ladders in the Ginza underpass, Fountain cursor (0.0.55, 5 Oct 2026)
+
+Sources: the 15:21, 16:40, 20:34 and 21:18 sessions of 5 Oct 2026 (logs; Shift+F6 dumps 21:26:33, field 22 area 8, and 21:55:17, field 17); proxy decompile.
+
+| Name | Source | Meaning |
+| --- | --- | --- |
+| Door table movetype 5 | Dump 21:26:33 (door_buff rows from area+1 9: `01d_09` to `01d_16`, "to field 0 area+1 0", arrival `01posNN`); log 21:36:14 ("Climb Ladder", "Descend Ladder") | A ladder: the player confirms, the game plays the climb (`fldPlayerCalcHasigo`) and puts the player at the arrival point in the same area. `DoorTable.SameAreaWarp` already returned them; `WarpMap` lists them as `Warp.Ladder` |
+| Ladder ends | Dump 21:26:33 (gEvnRng 7 `01d_12` at -9300 -125 -200, box y 0 to -250, boxnml 0 0 1; gEvnRng 13 `01d_16` at -9300 -925 -200, box y -800 to -1050); traces 21:36:16 to 21:36:20 and 21:36:56 to 21:36:59 | Two movetype 5 volumes at one spot, one per floor. Climbing `01d_12` landed at -9300 -802 -50, descending `01d_13` (-3900 -925 2600) at -3900 -2 2450: 150 in front of the other end along its facing, on its floor. `WarpMap.LandBesidePartner` uses this when the arrival point (`01pos_24`, `01pos_05`) is not found ("2 of the game's objects searched", 21:19:12) |
+| Area 4 of field 22 | Log 20:54:00 and 20:56:11 to 20:56:30 | Two separate parts: `01d_02` and `01d_03` on one, `01d_01` on the other (reached only through other areas). Not a ladder case; recorded for the cross-area design |
+| `fclRecoverInit.rcv_data` (`fclDataRecover_t`, `StockWindow`) | Proxy | Tried after `fclRecoverInit.GBWK` for the Fountain list's cursor: GBWK gave no position on 16:41:34 ("Art, 1 of 4", "High Pixie, 1 of 3"); both logged once per session as `[Facility] Fountain cursor` |
+| `statusUI(Clone)/comstatus_parts/commode/commode_menu/commode03/stretch_off/TextTM` = `<material="TMC01">RESULT</material>` | Log 21:48:12.392 | Written 2 ms after the summary was spoken (no tab in it): `StatusReader` now waits for a highlighted tab while tabs are shown |
+| `fclCombineDraw.cmbDrawCombineResultIcon` | Log 21:47 to 21:55 | Drawn twice a frame with two types per row: 27 674 log lines; now at most 40 per session |
+
 ## MelonLoader 0.6.1 API used by the mod
 
 | Name | Source | Used in |
