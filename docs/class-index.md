@@ -379,6 +379,19 @@ Sources: the 21:31 session of 4 Oct 2026 (log; F6 dumps 21:52 to 21:53 in Rag's 
 | `fldFileResolver.pF2Head` / `pF1Head` | Dump 21:49 | Did not give any resource table in game (the dump's table list was empty): 0.0.52's warp destinations were "not found" |
 | `dds3WorldBasic.dds3TheWorld`, `dds3GetActiveScene()`, `dds3GetControlScene()`; `Il2Cppbasic_H.dds3Basic_t` (`name`, `next`, `prev`, `worknext`, `workprev`, `workpointer`, `poseset` = `dds3PoseSet_t` with `pos`) | Proxy | The game's object list; points are added by `dds3PointBasic.dds3AddPointBasic(serialID, fldResourcePoint_t, name)`. `WarpMap.ReadBasics` (0.0.53) walks the links (reading only, at most 20 000) for names containing "pos"; not yet checked in game. Fallback: arrival points learned when the player is warped (`ExploredDoors.LearnArrival`, saved per file) |
 
+### Fusion grid, Amala Link, pay sums, place names (0.0.54, 5 Oct 2026)
+
+Sources: the 13:35 session of 5 Oct 2026 (log; F6 dump 13:42:11 at the Terminal's Amala Link; Shift+F6 dumps 13:56:29 and 13:56:42, Ginza area 1); proxy decompile.
+
+| Name | Source | Meaning |
+| --- | --- | --- |
+| Fusion first table, `comtable01_rowNN/comtable_iconMM` | Log 13:37:26 (`[Fusion] Table 1 row`) | One icon per demon of the list (column MM = entry MM - 1): sprites `comtable_oblique` (the demon itself), `comtable_ok`, `comtable_no`, `comtable_rup`, `comtable_rdown`, `comtable_pwup`. Level counter `lvnum`; second table `lvnum01` (the demon), `lvnum02` (the result), result icon `comtable_icon` with one sprite child |
+| `Localize.GetLocalizeText("<COMBINE_L0030>")` ... `L0034` | Log 13:37:26 | "OK", "N/A", "Rank Up", "Rank Down", "Power Up" (also L0018 "CANNOT FUSE", L0019 to L0021 "DEMON 1", "DEMON 2", "RESULT"). The legend's own texts (`Text_comicon01TM`..) stay Japanese placeholders while hidden ("合体可能" ...) |
+| Amala Link destinations | F6 dump 13:42:11 | `terminalUI/menu_tmnl/tmnlmenu_window/tmnlmenu_top|baseNN/tmnl_text/TextTM` (TMC01 highlighted; unused rows "(null)"), title `terminalUI/tmnltitle/Text_tmnltitleTM` ("Amala Link"), current place `terminalUI/tmnlcurrent/stretch/TextTM` |
+| `fclUI.DrawPayMoney(string name, CounterCtr ctr, uint col, int val)` | Proxy | The shared drawing of a shop's sum and the Fountain's fee; the wrappers `shpDrawPayMoney` / `rcvDrawPayMoney` were never seen running (no sum, no fee in the 13:43 and 13:47 sessions), so `FacilityReader` hooks this |
+| `FldNameData.GetFieldName(int fld)`, `GetAreaName(int fld, int area)`, `GetSuspendPosName(int fld, int area)`, `_fldFieldNameTbl` (via `fldGlobal.fldNameData`) | Proxy | Name lookups; `WhereAmI` (0.0.54) says the field name (else the suspend name, the save list's "Ginza-B1") before the banner when it adds to it, and logs all three; the Shift+F6 dump lists the field name table. The area title shown on entering an area is an image (no text write at 14:03:09) |
+| Rag's Jewelry list cursor | Log 13:49:09 ("List opened ... ListNums 7") | 0.0.53 opened the lists but never spoke: its title test reset the opening every frame (fixed in 0.0.54) |
+
 ## MelonLoader 0.6.1 API used by the mod
 
 | Name | Source | Used in |

@@ -55,6 +55,51 @@ namespace NocturneAccess.Systems.Navigation
 
         private static readonly string[] Compass = { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" };
 
+        /// <summary>
+        /// The place's name from the game's name table (fldGlobal.fldNameData, FldNameData): GetFieldName(field) (the field, as the
+        /// title shown on entering an area or loading a save; that title is an image, no text is written), else
+        /// GetSuspendPosName(field, area) (the save list's "Ginza-B1", "Amala Network 1-B3"). "" when the table has none, or when
+        /// the banner already says it. Every name is logged, to check which one matches the title card (0.0.54).
+        /// </summary>
+        private static string PlaceTitle(fldGlobalWork_t gb, string banner)
+        {
+            string field = "", area = "", suspend = "";
+            try
+            {
+                FldNameData names = fldGlobal.fldNameData;
+                if (names == null)
+                    return "";
+                field = Clean(() => names.GetFieldName(gb.fieldID));
+                area = Clean(() => names.GetAreaName(gb.fieldID, gb.areaID));
+                suspend = Clean(() => names.GetSuspendPosName(gb.fieldID, gb.areaID));
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[Nav:Where] Place names could not be read: {ex.Message}");
+            }
+            Log.Info($"[Nav:Where] Names for field {gb.fieldID} area {gb.areaID}: field \"{field}\", area \"{area}\", suspend \"{suspend}\", banner \"{banner}\".");
+            foreach (string candidate in new[] { field, suspend })
+            {
+                if (candidate.Length > 0 && !banner.Contains(candidate) && !candidate.Equals(banner, StringComparison.OrdinalIgnoreCase))
+                    return candidate;
+                if (candidate.Length > 0)
+                    return "";   // the banner already says it
+            }
+            return "";
+        }
+
+        private static string Clean(Func<string> read)
+        {
+            try
+            {
+                return TextUtil.Clean(read() ?? "");
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
         internal static void Speak()
         {
             var parts = new List<string>();
@@ -64,8 +109,15 @@ namespace NocturneAccess.Systems.Navigation
             bool world = exploring && FieldState.WorldMap(gb);
             if (world)
                 parts.Add(place.Length > 0 ? $"Overworld, {place}" : "Overworld");
-            else if (place.Length > 0)
-                parts.Add(place);
+            else
+            {
+                // The place's own name before the banner, which is often only the floor ("B1"): Francesco, 5 Oct 2026.
+                string title = exploring ? PlaceTitle(gb, place) : "";
+                if (title.Length > 0)
+                    parts.Add(place.Length > 0 ? $"{title}, {place}" : title);
+                else if (place.Length > 0)
+                    parts.Add(place);
+            }
 
             if (exploring)
             {

@@ -48,7 +48,7 @@ namespace NocturneAccess.Systems.Menus
         private static int _key = -1, _pendingKey = -1;
         private static long _pendingSince;
         private static long _holdSince = -1;
-        private static bool _rowsLogged;
+        private static bool _rowsLogged, _titleSpoken;
         private static int _errors;
 
         internal static string LastUtterance { get; private set; } = "";
@@ -122,6 +122,10 @@ namespace NocturneAccess.Systems.Menus
                     _openedAt = now;
                     _key = -1;
                     _rowsLogged = false;
+                    // Kept at once: comparing with the title last spoken reset this every frame until it was spoken, so
+                    // nothing ever was (13:49 session, 5 Oct 2026: four lists opened, no entry said).
+                    _title = title;
+                    _titleSpoken = false;
                 }
                 if (key != _pendingKey)
                 {
@@ -138,9 +142,9 @@ namespace NocturneAccess.Systems.Menus
                     return;
                 _holdSince = -1;
                 _key = key;
-                if (opening && title.Length > 0)
+                if (!_titleSpoken && title.Length > 0)
                     text = title + ". " + text;
-                _title = title;
+                _titleSpoken = true;
                 Say(text, interrupt: !opening);
             }
             catch (Exception ex)

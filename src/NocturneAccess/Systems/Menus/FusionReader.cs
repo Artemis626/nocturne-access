@@ -31,9 +31,10 @@ namespace NocturneAccess.Systems.Menus
     ///   datCalc.datGetLevelForDraw); in the second table lvnum01 is the demon's and lvnum02 the result's (object names
     ///   from the game's string literals).
     /// - The result icon: cmbDrawDevilIcon / cmbDrawCombineResultIcon switch on one child of the row's icon object, named
-    ///   from fclCombineDraw.cmbIconName (comtable_oblique, _no, _ok, _rdown, _rup, _pwup, _majin; read offline). Its words
-    ///   come from the screen's legend (comguide_iconNN, Text_comiconNNTM, shown with M) when the legend shows the same
-    ///   icon; otherwise nothing is said and the icon is logged.
+    ///   from fclCombineDraw.cmbIconName (comtable_oblique, _no, _ok, _rdown, _rup, _pwup, _majin; read offline). The legend's
+    ///   texts stayed Japanese placeholders (13:37 session, 5 Oct 2026), so from 0.0.54 the words are the game's own English
+    ///   texts COMBINE_L0030 to L0034 ("OK", "N/A", "Rank Up", "Rank Down", "Power Up", Localize.GetLocalizeText), matched to
+    ///   the sprite names. The first table's rows hold one icon per demon of the list (a fusion grid): see Partners.
     /// </summary>
     internal static class FusionReader
     {
@@ -43,7 +44,6 @@ namespace NocturneAccess.Systems.Menus
         private const long OpenDelayMs = 150;
         private const long SettleMs = 80;
 
-        private static readonly Regex IconName = new Regex(@"^comtable_(oblique|no|ok|rdown|rup|pwup|majin)$", RegexOptions.Compiled);
         private static readonly Regex LegendIcon = new Regex(@"^comguide_icon(?<n>\d\d)$", RegexOptions.Compiled);
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
 
@@ -62,7 +62,6 @@ namespace NocturneAccess.Systems.Menus
         private static long _holdSince = -1;
         private static bool _vocabularyLogged;
         private static readonly HashSet<int> RowsLogged = new HashSet<int>();
-        private static readonly HashSet<string> IconsLogged = new HashSet<string>();
         private static int _errors;
 
         internal static string LastUtterance { get; private set; } = "";
@@ -184,7 +183,7 @@ namespace NocturneAccess.Systems.Menus
                 bool opening = table != _table || _covered;
                 if (opening && SpeechOrder.Hold("Fusion table", ref _holdSince, now))
                     return;
-                string text = Describe(table, pos.Shift + 1, entry, pos.ListNums);
+                string text = Describe(table, pos.Shift + 1, entry, pos.ListNums, pos.Index);
                 if (text.Length == 0)
                     return;   // the row is not written yet
                 _holdSince = -1;
@@ -207,7 +206,7 @@ namespace NocturneAccess.Systems.Menus
         }
 
         /// <summary>"Jack Frost, Fairy, level 7, 2 of 3. Result: Aeros, Element, level 9." or "" while the row is blank.</summary>
-        private static string Describe(int table, int row, int entry, int count)
+        private static string Describe(int table, int row, int entry, int count, int top)
         {
             string rowPath = $"combmenu/comtable0{table}/comtable_row/comtable0{table}_row{row:D2}";
             Transform rowObj = Find(rowPath);
@@ -219,7 +218,7 @@ namespace NocturneAccess.Systems.Menus
             if (name.Length == 0)
                 return "";
             string race = Text(rowObj.Find(table == 1 ? "Text_raceTM" : "Text_race01TM"));
-            Levels(rowObj, table, out int? level, out int? resultLevel);
+            Levels(rowObj, out int? level, out int? resultLevel);
 
             var first = new List<string> { name };
             if (race.Length > 0)
@@ -230,7 +229,6 @@ namespace NocturneAccess.Systems.Menus
                 first.Add($"{entry + 1} of {count}");
             string text = string.Join(", ", first) + ".";
 
-            string icon = IconWords(rowObj);
             if (table == 2)
             {
                 string result = Text(rowObj.Find("Text_name02TM"));
@@ -244,87 +242,112 @@ namespace NocturneAccess.Systems.Menus
                     var second = new List<string> { result, resultRace };
                     if (resultLevel.HasValue)
                         second.Add($"level {resultLevel.Value}");
-                    if (icon.Length > 0)
+                    // The result icon (comtable_icon): only Rank Up, Rank Down and Power Up add to what is said; OK is every
+                    // fusable row and N/A comes with "CANNOT FUSE".
+                    string icon = IconWord(SpriteName(ActiveChild(rowObj.Find("comtable_icon"))));
+                    if (icon.Length > 0 && icon != Word("ok") && icon != Word("no"))
                         second.Add(icon);
                     text += " Result: " + string.Join(", ", second) + ".";
                 }
             }
-            else if (icon.Length > 0)
+            else
             {
-                text += " " + Sentence(icon);
+                string partners = Partners(rowObj, entry, top);
+                if (partners.Length > 0)
+                    text += " " + partners;
             }
             return text;
         }
 
-        /// <summary>The level counters under the row: in the second table the one named ...02 is the result's.</summary>
-        private static void Levels(Transform rowObj, int table, out int? level, out int? resultLevel)
+        /// <summary>
+        /// The first table's grid (13:37 session, 5 Oct 2026): each row has comtable_icon01..NN, one per demon of the list in
+        /// order, each showing one sprite: comtable_oblique on the demon itself, comtable_ok, comtable_no, comtable_rup,
+        /// comtable_rdown, comtable_pwup. Said grouped in the game's own words (Localize COMBINE_L0030 to L0034, "OK", "N/A",
+        /// "Rank Up", "Rank Down", "Power Up"), the partners named from the list's rows: "OK: Jack Frost, Lilim. N/A: Hua Po."
+        /// </summary>
+        private static string Partners(Transform rowObj, int entry, int top)
+        {
+            var groups = new List<(string word, List<string> names)>();
+            for (int k = 1; k <= 30; k++)
+            {
+                Transform cell = rowObj.Find($"comtable_icon{k:D2}");
+                if (cell == null)
+                    break;
+                if (!cell.gameObject.activeInHierarchy)
+                    continue;
+                string word = IconWord(SpriteName(ActiveChild(cell)));
+                if (word.Length == 0 || k - 1 == entry)
+                    continue;
+                // Column k is list entry k - 1; its name is on the row showing that entry, when it is on screen.
+                string partner = Text(Find($"combmenu/comtable01/comtable_row/comtable01_row{k - top:D2}/Text_nameTM"));
+                if (partner.Length == 0)
+                    partner = $"number {k}";
+                var g = groups.FirstOrDefault(x => x.word == word);
+                if (g.names == null)
+                    groups.Add((word, new List<string> { partner }));
+                else
+                    g.names.Add(partner);
+            }
+            return string.Join(" ", groups.Select(g => $"{g.word}: {string.Join(", ", g.names)}."));
+        }
+
+        private static Transform ActiveChild(Transform t)
+        {
+            if (t == null)
+                return null;
+            for (int i = 0; i < t.childCount; i++)
+            {
+                Transform c = t.GetChild(i);
+                if (c.gameObject.activeInHierarchy && SpriteName(c).Length > 0)
+                    return c;
+            }
+            return null;
+        }
+
+        /// <summary>The game's word for an icon sprite (COMBINE_L0030 "OK" ... L0034 "Power Up"), "" for the demon itself or another.</summary>
+        private static string IconWord(string sprite)
+        {
+            if (!sprite.StartsWith("comtable_", StringComparison.Ordinal))
+                return "";
+            return Word(sprite.Substring("comtable_".Length));
+        }
+
+        private static readonly Dictionary<string, string> Words = new Dictionary<string, string>();
+
+        private static string Word(string icon)
+        {
+            if (Words.TryGetValue(icon, out string w))
+                return w;
+            int id = icon == "ok" ? 30 : icon == "no" ? 31 : icon == "rup" ? 32 : icon == "rdown" ? 33 : icon == "pwup" ? 34 : -1;
+            w = "";
+            if (id >= 0)
+            {
+                try
+                {
+                    string t = Localize.GetLocalizeText($"<COMBINE_L{id:D4}>") ?? "";
+                    w = t.StartsWith("COMBINE_", StringComparison.Ordinal) ? "" : TextUtil.Clean(t);
+                }
+                catch
+                {
+                    w = "";
+                }
+            }
+            Words[icon] = w;
+            return w;
+        }
+
+        /// <summary>The level counters under the row (CounterCtr on lvnum, lvnum01 the demon's, lvnum02 the result's; 13:37 log).</summary>
+        private static void Levels(Transform rowObj, out int? level, out int? resultLevel)
         {
             level = resultLevel = null;
             foreach (CounterCtr c in rowObj.GetComponentsInChildren<CounterCtr>(false))
             {
                 string own = c.gameObject.name;
-                string parent = c.transform.parent != null ? c.transform.parent.name : "";
-                bool result = table == 2 && (own.Contains("02") || parent.EndsWith("2", StringComparison.Ordinal));
-                if (result && !resultLevel.HasValue)
-                    resultLevel = c.value;
-                else if (!result && !level.HasValue)
-                    level = c.value;
+                if (own == "lvnum02")
+                    resultLevel ??= c.value;
+                else if (own == "lvnum" || own == "lvnum01")
+                    level ??= c.value;
             }
-        }
-
-        /// <summary>The legend's words for the icon shown on the row, or "".</summary>
-        private static string IconWords(Transform rowObj)
-        {
-            // The names are either the objects' or their sprites' (not known before a test): an icon is an active object
-            // named or drawn comtable_rup etc., or an active object with "icon" in its name that draws a sprite.
-            Transform icon = null;
-            foreach (Transform t in rowObj.GetComponentsInChildren<Transform>(false))
-            {
-                string s = SpriteName(t);
-                if (IconName.IsMatch(t.name) || IconName.IsMatch(s))
-                {
-                    icon = t;
-                    break;
-                }
-                if (icon == null && s.Length > 0 && t.name.IndexOf("icon", StringComparison.OrdinalIgnoreCase) >= 0)
-                    icon = t;
-            }
-            if (icon != null)
-            {
-                Transform t = icon;
-                string sprite = SpriteName(t);
-                string words = LegendFor(t.name, sprite);
-                string logKey = t.name + "|" + words;
-                if (IconsLogged.Add(logKey))
-                    Log.Info($"{Tag} Icon {t.name} (sprite \"{sprite}\") on {t.parent?.name}: legend \"{words}\".");
-                return words;
-            }
-            return "";
-        }
-
-        /// <summary>The legend entry showing the same icon (same object name or same sprite), or "".</summary>
-        private static string LegendFor(string iconName, string sprite)
-        {
-            foreach (Transform t in _root.GetComponentsInChildren<Transform>(true))
-            {
-                Match m = LegendIcon.Match(t.name);
-                if (!m.Success)
-                    continue;
-                bool same = false;
-                foreach (Transform d in t.GetComponentsInChildren<Transform>(true))
-                {
-                    if ((sprite.Length > 0 && SpriteName(d) == sprite) || (sprite.Length == 0 && d.name == iconName))
-                    {
-                        same = true;
-                        break;
-                    }
-                }
-                if (!same)
-                    continue;
-                TMP_Text label = FindText(_root, "Text_comicon" + m.Groups["n"].Value + "TM");
-                return label == null ? "" : TextUtil.Clean(label.text);
-            }
-            return "";
         }
 
         private static string SpriteName(Transform t)

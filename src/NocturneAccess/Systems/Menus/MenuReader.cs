@@ -120,6 +120,16 @@ namespace NocturneAccess.Systems.Menus
             },
             new MenuSpec
             {
+                // The Terminal's Amala Link destinations (13:42 session, 5 Oct 2026, F6 dump): "Amala Link" title, one place per
+                // row (TMC01 highlighted; unused rows hold "(null)"), "> Select your destination." is a dialogue page. 0.0.54.
+                Name = "Amala Link",
+                Item = new Regex(@"^Canvas_UI/terminalUI/menu_tmnl/tmnlmenu_window/tmnlmenu_(?<slot>top|base\d\d)/tmnl_text/TextTM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC01\">",
+                TitlePath = "Canvas_UI/terminalUI/tmnltitle/Text_tmnltitleTM",
+                CloseWhenUnhighlighted = true,
+            },
+            new MenuSpec
+            {
                 // Junk Shop lists (21:21 session): "BUY" / "SELL" title, one item name per row (TMC01 highlighted), the item's help
                 // in shophelp/Text01TM..Text03TM (a wrapped sentence). Prices, counts and the position in a list longer than
                 // its 9 rows come from the game (FacilityReader, 0.0.50).
@@ -273,6 +283,8 @@ namespace NocturneAccess.Systems.Menus
         private static void OnItem(MenuState state, int slot, TMP_Text component, string raw)
         {
             string text = TextUtil.Clean(raw);
+            if (text == "(null)")
+                text = "";   // the game's placeholder in unused rows (Amala Link list): neither an item nor counted
             if (!state.Slots.TryGetValue(slot, out Slot s))
                 state.Slots[slot] = s = new Slot();
             s.Component = component;

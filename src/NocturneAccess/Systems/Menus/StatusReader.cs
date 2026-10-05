@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using Il2Cpp;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppTMPro;
@@ -61,8 +62,15 @@ namespace NocturneAccess.Systems.Menus
         {
             if (!Config.MenusEnabled.Value)
                 return;
-            TmpRouter.Register("StatusReader", path => path == AnchorPath ? OnAnchor : null);
+            TmpRouter.Register("StatusReader", path => path == AnchorPath ? OnAnchor
+                : TabPath.IsMatch(path) ? (component, raw) => Tabs[component.GetInstanceID()] = component
+                : (TmpRouter.Handler)null);
         }
+
+        // The Cathedral's tabs as the game writes them (0.0.54: looking them up under statusUI found nothing in the 13:37 session).
+        private static readonly System.Text.RegularExpressions.Regex TabPath = new System.Text.RegularExpressions.Regex(
+            @"/statusUI\(Clone\)/comstatus_parts/commode/commode_menu/commode\d\d/stretch_off/TextTM$", System.Text.RegularExpressions.RegexOptions.Compiled);
+        private static readonly Dictionary<int, TMP_Text> Tabs = new Dictionary<int, TMP_Text>();
 
         private static void OnAnchor(TMP_Text component, string raw)
         {
@@ -285,24 +293,33 @@ namespace NocturneAccess.Systems.Menus
         /// </summary>
         private static string FusionTab()
         {
-            const string MenuPath = "comstatus_parts/commode/commode_menu";
-            Transform menu = _ui.transform.Find(MenuPath);
-            for (Transform t = _anchor != null ? _anchor.transform : null; menu == null && t != null; t = t.parent)
+            var seen = new List<string>();
+            foreach (TMP_Text text in Tabs.Values)
             {
-                if (t.name == "statusUI(Clone)")
-                    menu = t.Find(MenuPath);
+                string raw;
+                try
+                {
+                    if (!UiUtil.IsVisible(text))
+                        continue;
+                    raw = text.text ?? "";
+                }
+                catch
+                {
+                    continue;   // a destroyed copy
+                }
+                seen.Add(raw);
+                if (raw.Contains("<material=\"TMC01\">"))
+                    return TextUtil.Clean(raw);
             }
-            if (menu == null || !menu.gameObject.activeInHierarchy)
-                return "";
-            for (int i = 0; i < menu.childCount; i++)
+            if (seen.Count > 0 && !_tabLogged)
             {
-                Transform label = menu.GetChild(i).Find("stretch_off/TextTM");
-                TMP_Text text = label == null ? null : label.GetComponent<TMP_Text>();
-                if (UiUtil.IsVisible(text) && (text.text ?? "").Contains("<material=\"TMC01\">"))
-                    return TextUtil.Clean(text.text);
+                _tabLogged = true;
+                Log.Info($"{Tag} Fusion tabs shown, none highlighted: {string.Join(" | ", seen.Select(UiUtil.Escape))}");
             }
             return "";
         }
+
+        private static bool _tabLogged;
 
         /// <summary>The visible, non-empty texts in order; "？" (a skill the game keeps hidden) only counted.</summary>
         private static List<string> Visible(Il2CppReferenceArray<TextMeshProUGUI> texts, out int hidden)

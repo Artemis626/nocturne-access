@@ -136,6 +136,25 @@ namespace NocturneAccess.Capture
                 Both($"field_name: {fieldNames.Length} entries; [{s.FieldId}] {raw}");
             }
 
+            // The name table Where am I reads (0.0.54): FldNameData.GetFieldName, GetSuspendPosName, and every field name it holds.
+            try
+            {
+                FldNameData nd = fldGlobal.fldNameData;
+                if (nd != null)
+                {
+                    Both($"FldNameData: field {Q(nd.GetFieldName(s.FieldId))}, area {Q(nd.GetAreaName(s.FieldId, s.AreaId))}, suspend {Q(nd.GetSuspendPosName(s.FieldId, s.AreaId))}");
+                    var all = new List<string>();
+                    Il2CppSystem.Collections.Generic.List<string> tbl = nd._fldFieldNameTbl;
+                    for (int i = 0; tbl != null && i < tbl.Count; i++)
+                        all.Add($"{i} {Q(tbl[i])}");
+                    FileOnly("FldNameData field names: " + string.Join("; ", all));
+                }
+            }
+            catch (Exception ex)
+            {
+                Both($"FldNameData could not be read: {ex.Message}");
+            }
+
             Il2CppReferenceArray<fldAreaName_t> areas = fldGlobal.area_name;
             Il2CppReferenceArray<fldBasyoName_t> places = fldGlobal.basyo_name;
             Il2CppReferenceArray<fldFloorName_t> floors = fldGlobal.floor_name;

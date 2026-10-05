@@ -72,12 +72,33 @@ namespace NocturneAccess.Systems.Menus
             Patcher.Postfix("Shop prices", typeof(fclShopDraw), nameof(fclShopDraw.shpDrawNumsControl),
                 new[] { typeof(cmpCursorInfo_t), typeof(int), typeof(sbyte) },
                 AccessTools.Method(typeof(FacilityReader), nameof(AfterShopQuantity)));
-            Patcher.Postfix("Shop prices", typeof(fclShopDraw), nameof(fclShopDraw.shpDrawPayMoney),
-                new[] { typeof(uint), typeof(int) },
-                AccessTools.Method(typeof(FacilityReader), nameof(AfterShopPay)));
-            Patcher.Postfix("Fountain fees", typeof(fclRecoverDraw), nameof(fclRecoverDraw.rcvDrawPayMoney),
-                new[] { typeof(uint), typeof(int) },
-                AccessTools.Method(typeof(FacilityReader), nameof(AfterFee)));
+            // The wrappers shpDrawPayMoney / rcvDrawPayMoney never ran in the 13:43 and 13:47 sessions (5 Oct 2026: no sum, no fee),
+            // so the drawing they share is hooked: fclUI.DrawPayMoney(string name, CounterCtr ctr, uint col, int val). 0.0.54.
+            Patcher.Postfix("Shop and Fountain sums", typeof(fclUI), nameof(fclUI.DrawPayMoney),
+                new[] { typeof(string), typeof(CounterCtr), typeof(uint), typeof(int) },
+                AccessTools.Method(typeof(FacilityReader), nameof(AfterPayMoney)));
+        }
+
+        private static readonly HashSet<string> PayNamesLogged = new HashSet<string>();
+
+        /// <summary>While the shop's quantity is being chosen the sum is the shop's; otherwise it is the Fountain's fee.</summary>
+        private static void AfterPayMoney(string __0, int __3)
+        {
+            long now = Clock.ElapsedMilliseconds;
+            if (PayNamesLogged.Add(__0 ?? ""))
+                Log.Info($"{Tag} Pay drawn as \"{__0}\": {__3}.");
+            if (now - _quantityAt <= DrawnWithinMs)
+            {
+                if (__3 != _shopPay)
+                    _quantityChangedAt = now;   // the sum follows the number: speak both together
+                _shopPay = __3;
+                _shopPayAt = now;
+                return;
+            }
+            if (__3 != _fee)
+                Log.Info($"{Tag} Fountain fee {__3}.");
+            _fee = __3;
+            _feeAt = now;
         }
 
         private static void AfterShopItem(string __0, ushort __2, int __3)
@@ -99,20 +120,6 @@ namespace NocturneAccess.Systems.Menus
                 _quantityChangedAt = now;
             }
             _quantityAt = now;
-        }
-
-        private static void AfterShopPay(int __1)
-        {
-            _shopPay = __1;
-            _shopPayAt = Clock.ElapsedMilliseconds;
-        }
-
-        private static void AfterFee(int __1)
-        {
-            if (__1 != _fee)
-                Log.Info($"{Tag} Fountain fee {__1}.");
-            _fee = __1;
-            _feeAt = Clock.ElapsedMilliseconds;
         }
 
         /// <summary>"50 Macca, have 3" for a shop row, or "" when its price or item is not known.</summary>
@@ -178,7 +185,7 @@ namespace NocturneAccess.Systems.Menus
             try
             {
                 Transform row = component?.transform.parent;
-                int? hp = null, max = null;
+                int? hp = null, max = null, mp = null, mpMax = null;
                 var names = new List<string>();
                 if (row != null)
                 {
@@ -190,12 +197,18 @@ namespace NocturneAccess.Systems.Menus
                             hp = c.value;
                         else if (n.Contains("hpnum_full") && !max.HasValue)
                             max = c.value;
+                        else if (n.Contains("mpnum_current") && !mp.HasValue)
+                            mp = c.value;
+                        else if (n.Contains("mpnum_full") && !mpMax.HasValue)
+                            mpMax = c.value;
                     }
                 }
                 if (PathsLogged.Add("fountain:" + (row != null ? row.name : "")))
                     Log.Info($"{Tag} Fountain row {(row != null ? row.name : "?")}: {string.Join("; ", names)}.");
                 if (hp.HasValue && max.HasValue)
                     parts.Add($"HP {hp.Value} of {max.Value}");
+                if (mp.HasValue && mpMax.HasValue)
+                    parts.Add($"MP {mp.Value} of {mpMax.Value}");
                 if (Clock.ElapsedMilliseconds - _feeAt <= DrawnWithinMs && _fee >= 0)
                     parts.Add($"{_fee.ToString(CultureInfo.InvariantCulture)} Macca");
             }

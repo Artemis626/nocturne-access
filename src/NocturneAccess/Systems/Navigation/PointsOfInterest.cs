@@ -493,14 +493,22 @@ namespace NocturneAccess.Systems.Navigation
         private const float MapBand = 300f;
         private static PoiCategory _filter = PoiCategory.All;
 
-        private static void NewArea(fldGlobalWork_t gb)
+        /// <summary>
+        /// A new area clears the selection and puts the filter back to All, returning true when a filter was on (Francesco, 5 Oct
+        /// 2026: the Ginza stairs to the overworld and Harumi's ladder seemed missing; they were listed, under Exits and Rooms,
+        /// while the Doors filter chosen in an earlier area was still on).
+        /// </summary>
+        private static bool NewArea(fldGlobalWork_t gb)
         {
             if (gb.fieldID == _field && gb.areaID == _area)
-                return;
+                return false;
             _field = gb.fieldID;
             _area = gb.areaID;
             _selected = -1;
             Selected = null;
+            bool wasFiltered = _filter != PoiCategory.All;
+            _filter = PoiCategory.All;
+            return wasFiltered;
         }
 
         /// <summary>Page Up (+1) / Page Down (-1).</summary>
@@ -512,7 +520,7 @@ namespace NocturneAccess.Systems.Navigation
                 SpeechManager.Say("No points of interest here.", interrupt: true);
                 return;
             }
-            NewArea(gb);
+            string reset = NewArea(gb) ? "All. " : "";
 
             List<Poi> list = Listed(gb, log: true);
             if (list.Count == 0)
@@ -528,7 +536,7 @@ namespace NocturneAccess.Systems.Navigation
             Poi poi = list[at];
             _selected = poi.Index;
             Selected = poi;
-            SpeechManager.Say($"{poi.Spoken}, {Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}{poi.Via}. {at + 1} of {list.Count}.", interrupt: true);
+            SpeechManager.Say($"{reset}{poi.Spoken}, {Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}{poi.Via}. {at + 1} of {list.Count}.", interrupt: true);
         }
 
         /// <summary>

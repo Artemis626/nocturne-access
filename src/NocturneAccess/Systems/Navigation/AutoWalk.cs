@@ -203,6 +203,17 @@ namespace NocturneAccess.Systems.Navigation
             {
                 if (prompt.Value)
                 {
+                    // A story volume needs the player turned to it, as a door does (Francesco, 5 Oct 2026: in Nyx's Lounge the
+                    // "Talk" and "Open Door" of Loki and his room did nothing until he turned): face it first (0.0.54).
+                    if (_target.Kind == PoiKind.Event && !_world)
+                    {
+                        float faceEvent = Bearing(x, z, _target.X, _target.Z);
+                        if (!Facing(gb, faceEvent) && ++_facing <= FaceTicks)
+                        {
+                            FaceTowards(gb, faceEvent);
+                            return;
+                        }
+                    }
                     Stop("the game's prompt is shown and its hit index is the target", "Arrived.");
                     return;
                 }
