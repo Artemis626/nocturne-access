@@ -367,6 +367,12 @@ namespace NocturneAccess.Systems.Navigation
                 Say("Select a point of interest first, with Page Up.");
                 return;
             }
+            if (poi.Beyond)
+            {
+                // A landmark listed with no known way there (0.0.59): say where it is; the player finds the doors towards it.
+                Say($"No known way there yet. {TextUtil.Capitalize(poi.InSentence)}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}, beyond doors.");
+                return;
+            }
             // Home on the next door of a route through other areas goes on with it; any other point ends the route.
             bool onJourney = _journey != null && gb.fieldID == _journey.Field && gb.areaID == _journey.ExitArea && poi.Index == _journey.ExitIndex;
             if (_journey != null && !onJourney)
@@ -741,10 +747,21 @@ namespace NocturneAccess.Systems.Navigation
             }
             aim = "nearest";
             runs = WalkGrid.Plan(px, py, pz, target.X, target.FloorY, target.Z, target.IsDoorLike ? 0f : 120f, firstPerson, out gx, out gz, allow);
-            if (runs != null && !target.NearVolume(gx, gz))
-                return null;
-            return runs;
+            if (runs != null && target.NearVolume(gx, gz))
+                return runs;
+            // A same-area door or ladder in a thick wall (Ginza 01d_08, 6 Oct 2026): walk to where its partner lands, right in
+            // front of it; the approach then steps on into its volume (0.0.59).
+            if (target.IsDoorLike && WarpMap.EntryPoint(gb, target.Index, out float ex, out float ey, out float ez))
+            {
+                aim = "where its other side lands";
+                runs = WalkGrid.Plan(px, py, pz, ex, ey, ez, 0f, firstPerson, out gx, out gz, allow);
+                if (runs != null && Dist(gx, gz, ex, ez) <= EntryTolerance)
+                    return runs;
+            }
+            return null;
         }
+
+        private const float EntryTolerance = 90f;
 
         /// <summary>The compass bearing the player should face at the end: into a door (against its facing), else towards the target.</summary>
         internal static float FaceBearing(Poi target, float x, float z)

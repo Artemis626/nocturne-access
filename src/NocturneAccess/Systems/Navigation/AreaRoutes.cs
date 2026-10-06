@@ -48,7 +48,7 @@ namespace NocturneAccess.Systems.Navigation
         private static readonly Dictionary<int, HashSet<int>> Closures = new Dictionary<int, HashSet<int>>();
         private static string _learnedKey = "";
 
-        internal static bool Enabled => Config.AreaRoutes?.Value ?? true;
+        internal static bool Enabled => Config.AreaRoutes?.Value ?? false;
 
         internal static string Summary => $"{Passes.Sum(p => p.Value.Count)} ways through doors, door links of {Reach.Keys.Select(AreaOf).Distinct().Count()} areas";
 

@@ -78,7 +78,7 @@ namespace NocturneAccess.Systems.Navigation
         private static int _field = int.MinValue;
         private static bool _loggedEmpty;
 
-        /// <summary>"room", "passage", "exit" or "" for door volume resName in (field, area).</summary>
+        /// <summary>"room", "passage", "exit", "to exit" (a room whose only other way out leaves the field, 0.0.59) or "" for door volume resName in (field, area).</summary>
         internal static string KindOf(int field, int area, string resName)
         {
             if (!(Config.DoorKinds?.Value ?? true))
@@ -95,7 +95,7 @@ namespace NocturneAccess.Systems.Navigation
                 int toArea = e.ToAreaPlus1 == 0 ? area : e.ToAreaPlus1 - 1;
                 if (toArea == area)
                     return "";
-                bool any = false;
+                bool any = false, exit = false;
                 foreach (string name in Entries.Where(x => x.AreaPlus1 == toArea + 1 && x.Name.Length > 0).Select(x => x.Name).Distinct())
                 {
                     Entry back = Find(toArea, name);
@@ -106,10 +106,16 @@ namespace NocturneAccess.Systems.Navigation
                         return "passage";   // a Terminal or event door leads on
                     int f = back.ToField == 0 ? field : back.ToField;
                     int a = back.ToAreaPlus1 == 0 ? toArea : back.ToAreaPlus1 - 1;
-                    if (back.WarpType == 1 || f != field || (a != area && a != toArea))
+                    // A room whose only other way out leaves the field (stairs to the overworld): "to exit" (Francesco, 6 Oct 2026).
+                    if (back.WarpType == 0 && f != field)
+                    {
+                        exit = true;
+                        continue;
+                    }
+                    if (back.WarpType == 1 || (a != area && a != toArea))
                         return "passage";
                 }
-                return any ? "room" : "";
+                return exit ? "to exit" : any ? "room" : "";
             }
             catch (Exception ex)
             {

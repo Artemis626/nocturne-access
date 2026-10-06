@@ -86,6 +86,8 @@ namespace NocturneAccess.Systems.Navigation
             if (!WalkGrid.Ensure(gb.fieldID, gb.areaID, gb.playerX, gb.playerY, gb.playerZ))
                 return "No path.";
             List<PathRun> runs = AutoWalk.Route(gb, target, firstPerson, out float gx, out float gz, out string aim);
+            if (runs == null && target.Beyond)
+                return $"Beyond doors, no known way yet: {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, target)}, in a straight line.";
             if (runs == null && target.Route != null)
             {
                 // Through other areas (0.0.56): the way to the first door. "Via 1 other area. First Door, passage: ahead, 12 metres."

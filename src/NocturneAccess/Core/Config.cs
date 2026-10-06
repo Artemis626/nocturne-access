@@ -130,7 +130,7 @@ namespace NocturneAccess.Core
                 "Page Up / Page Down, Home and End say whether a plain door leads to a room, a passage or an exit (from the game's door table). Turn off to go back to plain \"Door\".");
             PoiMapOrder = navigation.CreateEntry("PoiMapOrder", true, "Points of interest in map order",
                 "Page Up / Page Down go through an area's points in a fixed order, north to south and west to east, so each keeps its number while you walk. Turn off for the old order, nearest first (it changes as you move).");
-            AreaRoutes = navigation.CreateEntry("AreaRoutes", true, "Routes through other areas",
+            AreaRoutes = navigation.CreateEntry("AreaRoutes", false, "Routes through other areas",
                 "Page Up / Page Down also list points of the area reached only by going through other areas, by doors you have gone through (\"via 1 other area\"); Home walks there door by door, End gives the way to the first door. F7 toggles it in game.");
 
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");

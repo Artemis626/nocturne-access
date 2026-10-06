@@ -57,6 +57,7 @@ namespace NocturneAccess.Systems.Navigation
         private static float _dx, _dz, _startX, _startZ, _target, _lastAlong;
         private static int _stall, _ticks;
         private static long _snapStartMs;
+        private static int _snapDoor = -1, _snapVolume = -1;   // the game's hit indexes when the snap started
 
         // speech baseline
         private static bool _haveView;
@@ -280,6 +281,8 @@ namespace NocturneAccess.Systems.Navigation
             _stall = 0;
             _ticks = 0;
             _snapStartMs = Clock.ElapsedMilliseconds;
+            _snapDoor = fldEveHit.OldHitDoor;
+            _snapVolume = fldEveHit.gFldEveRngIdx;
             _snapping = true;
             PadInput.Hold(SDF_PADMAP.SDF_PADMAP_U, true);
             Log.Info($"[Nav:Blob] Snap: W released at {FieldData.F(x)} {FieldData.F(z)}, facing {facing}, {FieldData.F(_target)} to the next centre.");
@@ -300,6 +303,15 @@ namespace NocturneAccess.Systems.Navigation
             if (GridSense.Normalize90(gb.PlayerKakudoGoal) != _snapFacing)
             {
                 StopSnap("facing changed");
+                return;
+            }
+            // The game took a door or a story volume into account: no further push into it (0.0.59). On 6 Oct 2026, 14:01:45, a
+            // snap carried the player 214 units on, 40 past the underpass Terminal door's centre, and the game then ignored every
+            // key until Alt+F4; whether the push caused it is not known, but the door's own prompt needs no more walking.
+            int door = fldEveHit.OldHitDoor, volume = fldEveHit.gFldEveRngIdx;
+            if ((door >= 0 && door != _snapDoor) || (volume >= 0 && volume != _snapVolume && IsStoryVolume(volume)))
+            {
+                StopSnap($"the game's hit is volume {(door >= 0 ? door : volume)}");
                 return;
             }
 
@@ -324,6 +336,16 @@ namespace NocturneAccess.Systems.Navigation
 
             if (Clock.ElapsedMilliseconds - _snapStartMs > SnapTimeoutMs)
                 EndSnap(gb, along, "timed out");
+        }
+
+        /// <summary>A story volume ("01eve_01"), not a person's or a box's talk range (those fire well before reaching them).</summary>
+        private static bool IsStoryVolume(int index)
+        {
+            Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2Cppfield_H.fldResHead_t> ranges = fldEveHit.gEvnRng;
+            if (ranges == null || index >= Math.Min(fldEveHit.gEvnRngNum, ranges.Length))
+                return false;
+            string name = ranges[index]?.resourceName ?? "";
+            return FieldData.EventVolume.IsMatch(name);
         }
 
         private static void EndSnap(fldGlobalWork_t gb, float along, string how)

@@ -23,6 +23,7 @@ namespace NocturneAccess.Systems.Navigation
         public bool HasDest;
         public float DestX, DestY, DestZ;
         public string DestFrom = "";      // how the arrival point was found, for the log
+        public Warp Partner;              // a ladder's other end, a same-area door's other side (WarpMap.PairUp), or null
         public bool Touch => MoveType == 2;
         public bool Ladder => MoveType == 5;
         /// <summary>The mod's word for it: "warp" (fires when walked into), "ladder" (movetype 5), else "door" (confirmed).</summary>
@@ -92,8 +93,7 @@ namespace NocturneAccess.Systems.Navigation
                     }
                     _warps.Add(w);
                 }
-                foreach (Warp w in _warps.Where(w => w.Ladder && !w.HasDest))
-                    LandBesidePartner(w);
+                PairUp();
                 string key = $"{field}/{area}/{n}";
                 if (_warps.Count > 0 && Logged.Add(key))
                     Log.Info($"{Tag} Field {field} area {area}: {_warps.Count} warps: " + string.Join("; ", _warps.Select(w =>
@@ -114,21 +114,64 @@ namespace NocturneAccess.Systems.Navigation
         // 5 Oct 2026. The arrival points (01pos_24, 01pos_05) are not readable in game.
         private const float LadderLanding = 150f, LadderPartnerReach = 250f, LadderFloorGap = 300f;
 
-        /// <summary>A ladder whose arrival point was not found lands in front of its other end (partner on another floor, same spot).</summary>
-        private static void LandBesidePartner(Warp w)
+        // A door of the same area is two volumes too, one each side of its wall, facing away from each other, and going through one
+        // lands LadderLanding in front of the other (Ginza area 2, learned 4 Oct 2026: 01d_08 at z -1440 lands at -3700 -1910,
+        // 150 beyond 01d_09 at -1760; 01d_09 lands at -3600 -1290, 150 in front of 01d_08). 0.0.59.
+        private const float DoorPartnerReach = 600f, SameFloor = 200f;
+
+        /// <summary>
+        /// Each ladder's other end and each same-area door's other side (Warp.Partner); a warp whose arrival point was not found
+        /// lands in front of its partner. The partner's landing is also where the player stands to use this one (EntryPoint).
+        /// </summary>
+        private static void PairUp()
         {
-            Warp partner = _warps
-                .Where(o => o != w && o.Ladder && Math.Abs(o.FloorY - w.FloorY) >= LadderFloorGap
-                            && Math.Abs(o.Zone.X - w.Zone.X) <= LadderPartnerReach && Math.Abs(o.Zone.Z - w.Zone.Z) <= LadderPartnerReach)
-                .OrderBy(o => Math.Abs(o.Zone.X - w.Zone.X) + Math.Abs(o.Zone.Z - w.Zone.Z))
-                .FirstOrDefault();
-            if (partner == null)
-                return;
-            w.HasDest = true;
-            w.DestX = partner.Zone.X + partner.Zone.NX * LadderLanding;
-            w.DestZ = partner.Zone.Z + partner.Zone.NZ * LadderLanding;
-            w.DestY = partner.FloorY;
-            w.DestFrom = $"in front of {partner.Name}";
+            foreach (Warp w in _warps.Where(w => !w.Touch))
+            {
+                IEnumerable<Warp> candidates = w.Ladder
+                    ? _warps.Where(o => o != w && o.Ladder && Math.Abs(o.FloorY - w.FloorY) >= LadderFloorGap
+                                        && Math.Abs(o.Zone.X - w.Zone.X) <= LadderPartnerReach && Math.Abs(o.Zone.Z - w.Zone.Z) <= LadderPartnerReach)
+                    : _warps.Where(o => o != w && !o.Touch && !o.Ladder && Math.Abs(o.FloorY - w.FloorY) < SameFloor
+                                        && (o.Zone.X - w.Zone.X) * (o.Zone.X - w.Zone.X) + (o.Zone.Z - w.Zone.Z) * (o.Zone.Z - w.Zone.Z) <= DoorPartnerReach * DoorPartnerReach
+                                        && (o.Zone.NX * w.Zone.NX + o.Zone.NZ * w.Zone.NZ < -0.5f || LandsBeside(o, w)));
+                w.Partner = candidates.OrderBy(o => Math.Abs(o.Zone.X - w.Zone.X) + Math.Abs(o.Zone.Z - w.Zone.Z)).FirstOrDefault();
+            }
+            foreach (Warp w in _warps.Where(w => !w.HasDest && w.Partner != null))
+            {
+                Warp p = w.Partner;
+                w.HasDest = true;
+                w.DestX = p.Zone.X + p.Zone.NX * LadderLanding;
+                w.DestZ = p.Zone.Z + p.Zone.NZ * LadderLanding;
+                w.DestY = p.FloorY;
+                w.DestFrom = $"in front of {p.Name}";
+            }
+        }
+
+        /// <summary>o's known landing lies within EntryReach of w's volume centre: o leads to w's side of the wall.</summary>
+        private static bool LandsBeside(Warp o, Warp w)
+            => o.HasDest && (o.DestX - w.Zone.X) * (o.DestX - w.Zone.X) + (o.DestZ - w.Zone.Z) * (o.DestZ - w.Zone.Z) <= EntryReach * EntryReach;
+
+        private const float EntryReach = 300f;
+
+        /// <summary>
+        /// Where the player stands to use the warp at gEvnRng[index]: its partner's landing (a door in a thick wall has no walkable
+        /// cell near its volume: Ginza 01d_08, 6 Oct 2026). False without a partner whose landing is known.
+        /// </summary>
+        internal static bool EntryPoint(fldGlobalWork_t gb, int index, out float x, out float y, out float z)
+        {
+            Warp p = At(gb, index)?.Partner;
+            x = p?.DestX ?? 0f;
+            y = p?.DestY ?? 0f;
+            z = p?.DestZ ?? 0f;
+            return p != null && p.HasDest;
+        }
+
+        /// <summary>For a ladder end with a known landing: +1 it goes up, -1 down (Y points down), 0 not known.</summary>
+        internal static int LadderDirection(fldGlobalWork_t gb, int index)
+        {
+            Warp w = At(gb, index);
+            if (w == null || !w.Ladder || !w.HasDest)
+                return 0;
+            return w.DestY < w.FloorY - SameFloor ? 1 : w.DestY > w.FloorY + SameFloor ? -1 : 0;
         }
 
         /// <summary>"1 ladder", "2 ladders and 1 warp": the legs of a route by kind, in the order first met.</summary>
@@ -239,6 +282,14 @@ namespace NocturneAccess.Systems.Navigation
                 g.Entries[w] = WalkGrid.RegionsAround(w.Zone, w.FloorY, EntryMargin);
                 g.Dests[w] = WalkGrid.RegionAt(w.DestX, w.DestY, w.DestZ);
             }
+            // Entered from where its partner lands (0.0.59): the ring round a door in a thick wall holds no walkable cell.
+            foreach (Warp w in g.Warps)
+                if (w.Partner != null && w.Partner.HasDest)
+                {
+                    int r = WalkGrid.RegionAt(w.Partner.DestX, w.Partner.DestY, w.Partner.DestZ);
+                    if (r >= 0)
+                        g.Entries[w].Add(r);
+                }
             _graph = g;
             return g;
         }
@@ -267,12 +318,17 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>The regions a walk to the target can end in: around a warp's volume, or near the target.</summary>
         internal static HashSet<int> TargetRegions(fldGlobalWork_t gb, Poi target)
         {
-            // Any warp, ladder or same-area door: the ring around its volume (Ginza area 2, 6 Oct 2026: door 01d_08 into the room
-            // with the overworld stairs sits in a thick wall, no walkable cell within 120 of its centre, so it and the exit beyond
-            // were "not reachable", 0.0.58).
+            // Any warp, ladder or same-area door: the ring around its volume and the spot its partner lands on (Ginza area 2, 6 Oct
+            // 2026: door 01d_08 into the room with the overworld stairs sits in a thick wall, no walkable cell within 120 of its
+            // centre nor in the ring, so it and the exit beyond were "not reachable"; 0.0.58 ring, 0.0.59 partner landing).
             Warp w = target.IsDoorLike ? At(gb, target.Index) : null;
             if (w != null)
-                return WalkGrid.RegionsAround(w.Zone, w.FloorY, EntryMargin);
+            {
+                Graph g = GraphOf(gb);
+                return g.Entries.TryGetValue(w, out HashSet<int> entries)
+                    ? new HashSet<int>(entries)
+                    : WalkGrid.RegionsAround(w.Zone, w.FloorY, EntryMargin);
+            }
             float radius = target.IsDoorLike ? Math.Max(target.ReachRadius, 120f) : target.ReachRadius;
             return WalkGrid.RegionsNear(target.X, target.FloorY, target.Z, radius);
         }

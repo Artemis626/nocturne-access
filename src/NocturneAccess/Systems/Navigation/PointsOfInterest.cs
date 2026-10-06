@@ -14,7 +14,7 @@ namespace NocturneAccess.Systems.Navigation
     internal enum PoiKind { Door, Person, ItemBox, Place, Event }
 
     /// <summary>The Page Up list's filters (Shift+Page Up / Page Down, Francesco 4 Oct 2026), in their order; All first.</summary>
-    internal enum PoiCategory { All, Doors, Rooms, Exits, Warps, Souls, Demons, ItemBoxes, Events }
+    internal enum PoiCategory { All, Doors, Rooms, Exits, Warps, Ladders, Souls, Demons, ItemBoxes, Events }
 
     internal sealed class Poi
     {
@@ -36,12 +36,12 @@ namespace NocturneAccess.Systems.Navigation
         public bool World;              // on the world map (FieldState.WorldMap): doors are entrances to places, heights are terrain
         public bool ToWorld;            // a dungeon door that leads to the world map (DoorTable.ToField below 10): "Exit to overworld" (0.0.44), never "explored" (0.0.45)
 
-        public string Label => Kind == PoiKind.Door ? (Warp ? "Warp" : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : "Door")
+        public string Label => Kind == PoiKind.Door ? (Warp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : "Door")
             : Kind == PoiKind.Place ? Name
             : Kind == PoiKind.Event ? (Name.Length > 0 ? "Event, " + Name : "Event")
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
 
-        public string DoorKind = "";    // a generic door: "room", "passage" or "exit", from the game's door table (DoorTable), or ""
+        public string DoorKind = "";    // a generic door: "room", "passage", "exit" or "to exit", from the game's door table (DoorTable), or ""
 
         /// <summary>
         /// The filter it belongs to: Exits lead off the field (door table "exit", "Exit to overworld"); Rooms are doors to a room
@@ -63,8 +63,24 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>Reached only by going out of this area and back in through other areas (AreaRoutes, F7, 0.0.56), or null.</summary>
         public AreaRoute Route;
 
-        /// <summary>", via 1 ladder", ", via 2 other areas", or "".</summary>
-        public string Via => Route != null ? $", via {Route.Phrase}" : ViaWarps == 0 ? "" : $", via {ViaLegs}";
+        /// <summary>", via 1 ladder", ", via 2 other areas", ", beyond doors", or "".</summary>
+        public string Via => Beyond ? ", beyond doors" : Route != null ? $", via {Route.Phrase}" : ViaWarps == 0 ? "" : $", via {ViaLegs}";
+
+        /// <summary>A landmark (Terminal, exit, stairs, named door, ladder) of this map with no known way there yet: listed anyway (0.0.59).</summary>
+        public bool Beyond;
+
+        /// <summary>The far end of a ladder whose near end the player can walk to: left out of the list (0.0.59).</summary>
+        public bool Redundant;
+
+        /// <summary>A ladder end (door table movetype 5): "Ladder up" / "Ladder down" (0.0.59).</summary>
+        public bool Ladder;
+        public int LadderDir;           // +1 up, -1 down, 0 not known
+
+        /// <summary>"Ladder up": the game's place name for it ("Ladder"), or the mod's word, and where it takes the player.</summary>
+        private string LadderLabel => (Name.Length > 0 ? Name : "Ladder") + (LadderDir > 0 ? " up" : LadderDir < 0 ? " down" : "");
+
+        /// <summary>In the list: reachable, or a landmark listed beyond doors.</summary>
+        public bool Listed => Reachable || Beyond;
 
         /// <summary>The names of other volumes merged into this one (a door listed twice at one spot), for AreaRoutes.</summary>
         public List<string> Aliases = new List<string>();
@@ -290,9 +306,62 @@ namespace NocturneAccess.Systems.Navigation
             // player has gone through (Ginza underpass area 4, 5 Oct 2026). Also learns this area's door links for later routes.
             if (grid && !world)
                 AreaRoutes.Mark(gb, kept);
+            if (!world)
+                MarkLaddersAndExits(gb, kept);
             foreach (Poi q in kept)
                 q.Category = CategoryOf(q, gb);
             return kept.OrderBy(q => q.Distance).ToList();
+        }
+
+        /// <summary>
+        /// Francesco, 6 Oct 2026 (after Matador):
+        /// - ladders are their own kind, said "Ladder up" or "Ladder down" from where their landing lies; the far end of a ladder
+        ///   the player can walk to is left out ("Ladder door, here, downstairs, via 1 ladder" was the top of the ladder in front);
+        /// - Terminal doors, stairs and other exits, and every named door, are always listed while on this map, even when no way
+        ///   there is known yet (Ginza's stairs to the overworld and the underpass Terminal were missing): ", beyond doors";
+        /// - a door into a room whose only way on is an exit says so: "Door, to exit".
+        /// </summary>
+        private static void MarkLaddersAndExits(fldGlobalWork_t gb, List<Poi> kept)
+        {
+            foreach (Poi q in kept.Where(q => q.Kind == PoiKind.Door))
+            {
+                Warp w = WarpMap.At(gb, q.Index);
+                if (w == null || !w.Ladder)
+                    continue;
+                q.Ladder = true;
+                q.LadderDir = WarpMap.LadderDirection(gb, q.Index);
+                q.DoorKind = "";
+                q.Explored = false;
+            }
+            foreach (Poi q in kept.Where(q => q.Ladder && q.Reachable && q.ViaWarps > 0))
+            {
+                Warp partner = WarpMap.At(gb, q.Index)?.Partner;
+                if (partner != null && kept.Any(o => o.Index == partner.Index && o.Reachable && o.ViaWarps == 0 && o.Route == null))
+                {
+                    q.Reachable = false;
+                    q.Redundant = true;
+                }
+            }
+            foreach (Poi q in kept.Where(q => !q.Reachable && !q.Redundant && q.Kind == PoiKind.Door && !q.Warp
+                                              && (q.Name.Length > 0 || q.ToWorld || q.Ladder || q.DoorKind == "exit")))
+                q.Beyond = true;
+
+            // Same-area doors that land in a room holding an exit the player cannot otherwise walk to (Ginza area 2, 01d_08).
+            List<Poi> exits = kept.Where(q => (q.ToWorld || q.DoorKind == "exit") && (q.ViaWarps > 0 || q.Beyond)).ToList();
+            if (exits.Count == 0)
+                return;
+            foreach (Poi q in kept.Where(q => q.Kind == PoiKind.Door && !q.Warp && !q.Ladder && !q.ToWorld && q.DoorKind != "exit"))
+            {
+                Warp w = WarpMap.At(gb, q.Index);
+                if (w == null || !w.HasDest)
+                    continue;
+                int landing = WalkGrid.RegionAt(w.DestX, w.DestY, w.DestZ);
+                if (landing >= 0 && exits.Any(e => WarpMap.TargetRegions(gb, e).Contains(landing)))
+                {
+                    q.DoorKind = "to exit";
+                    q.Explored = false;
+                }
+            }
         }
 
         private static PoiCategory CategoryOf(Poi q, fldGlobalWork_t gb)
@@ -310,6 +379,8 @@ namespace NocturneAccess.Systems.Navigation
             }
             if (q.Warp)
                 return PoiCategory.Warps;
+            if (q.Ladder)
+                return PoiCategory.Ladders;
             if (q.ToWorld)
                 return PoiCategory.Exits;
             if (q.World)
@@ -322,7 +393,7 @@ namespace NocturneAccess.Systems.Navigation
             return PoiCategory.Doors;
         }
 
-        private static readonly string[] CategoryNames = { "All", "Doors", "Rooms", "Exits", "Warps", "Souls", "Demons", "Item boxes", "Events" };
+        private static readonly string[] CategoryNames = { "All", "Doors", "Rooms", "Exits", "Warps", "Ladders", "Souls", "Demons", "Item boxes", "Events" };
 
         /// <summary>
         /// Whether an NPC is in the world: its object (fldNpc_tag.fldObj) is active. The basement keeps npc_hoji_01 (hojiID
@@ -502,8 +573,8 @@ namespace NocturneAccess.Systems.Navigation
             List<Poi> all = Build(gb);
             if (log)
                 Log.Info($"[Nav:Poi] {all.Count} in field {gb.fieldID} area {gb.areaID}: " +
-                         string.Join("; ", all.Select(q => $"{q.Index} {q.Spoken} [{q.Category}] {q.ResName} at {FieldData.F(q.X)} {FieldData.F(q.Z)} d {FieldData.F(q.Distance)}{(q.Reachable ? q.Via : " (not reachable, left out)")}")));
-            IEnumerable<Poi> list = all.Where(q => q.Reachable && (_filter == PoiCategory.All || q.Category == _filter));
+                         string.Join("; ", all.Select(q => $"{q.Index} {q.Spoken} [{q.Category}] {q.ResName} at {FieldData.F(q.X)} {FieldData.F(q.Z)} d {FieldData.F(q.Distance)}{(q.Listed ? q.Via : " (not reachable, left out)")}")));
+            IEnumerable<Poi> list = all.Where(q => q.Listed && (_filter == PoiCategory.All || q.Category == _filter));
             if (Config.PoiMapOrder?.Value ?? true)
                 list = list.OrderByDescending(q => (int)Math.Floor(q.Z / MapBand)).ThenBy(q => q.X).ThenBy(q => q.Index);
             return list.ToList();
@@ -571,7 +642,7 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
             NewArea(gb);
-            List<Poi> reachable = Build(gb).Where(q => q.Reachable).ToList();
+            List<Poi> reachable = Build(gb).Where(q => q.Listed).ToList();
             int count = CategoryNames.Length;
             PoiCategory next = _filter;
             for (int k = 1; k <= count; k++)
@@ -630,7 +701,7 @@ namespace NocturneAccess.Systems.Navigation
         {
             if (gb == null || gb.fieldID != _field || gb.areaID != _area || _selected < 0)
                 return null;
-            return Build(gb).FirstOrDefault(q => q.Index == _selected && q.Reachable);
+            return Build(gb).FirstOrDefault(q => q.Index == _selected && q.Listed);
         }
 
         /// <summary>"5 metres, south-east", plus ", upstairs" or ", downstairs" when the point is on another floor (not on

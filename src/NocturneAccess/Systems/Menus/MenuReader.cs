@@ -52,6 +52,7 @@ namespace NocturneAccess.Systems.Menus
             public bool LinesAreSentences;        // description lines are separate statements, not one wrapped sentence
             public Func<TMP_Text, string, string> RowDetail;   // game data for the highlighted row (a price), said after the item
             public Func<int, (int, int)?> GamePosition;        // the entry and count from the game's cursor for this slot, or null to count rows
+            public bool MultiHighlight;           // several items can be highlighted at once (a spell on the whole party): say them all
         }
 
         private sealed class Slot
@@ -79,6 +80,7 @@ namespace NocturneAccess.Systems.Menus
             public string LastTitleSpoken = "";
             public bool Yielded;        // stayed silent for its YieldTo menu since the last announcement
             public int LastSlot = -1;   // the item last announced or taken, kept across Close
+            public string HighlightSig = "";   // MultiHighlight: the highlighted items as last seen
             public string LastText;
         }
 
@@ -107,6 +109,7 @@ namespace NocturneAccess.Systems.Menus
                 TitlePath = "Canvas_UI/campUIBase/campUI/title_window/title_window_oubei/TextTM",
                 CloseWhenUnhighlighted = true,
                 Reshow = true,
+                MultiHighlight = true,
             },
             new MenuSpec
             {
@@ -291,6 +294,26 @@ namespace NocturneAccess.Systems.Menus
             s.Text = text;
             s.Highlighted = raw.Contains(state.Spec.Highlight) && text.Length > 0;
 
+            if (state.Spec.MultiHighlight)
+            {
+                // A spell on the whole party highlights every member, each rewritten every frame (Media, 6 Oct 2026, 14:51:04:
+                // only the first name was said, then the pending item flipped between rows and never settled). The set of
+                // highlighted items is what changes, announced once from its first item (0.0.59).
+                string sig = string.Join("|", state.Slots.Where(kv => kv.Value.Highlighted).OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}:{kv.Value.Text}"));
+                if (sig == state.HighlightSig)
+                    return;
+                state.HighlightSig = sig;
+                int first = state.Slots.Where(kv => kv.Value.Highlighted).Select(kv => kv.Key).DefaultIfEmpty(-1).Min();
+                if (first < 0)
+                    return;
+                if (state.PendingSlot < 0)
+                    state.PendingSince = Now;
+                state.PendingSlot = first;
+                state.PendingText = state.Slots[first].Text;
+                state.LastChange = Now;
+                return;
+            }
+
             if (!s.Highlighted)
                 return;
             // Menus rewrite the highlighted item every frame with identical text (0.0.5 test, 30 Sep 2026):
@@ -432,6 +455,13 @@ namespace NocturneAccess.Systems.Menus
                 detail = detail.Length > 0 ? $"{detail}, {rowDetail}" : rowDetail;
             string named = detail.Length > 0 ? $"{slot.Text}, {detail}" : slot.Text;
             string item = position > 0 && !state.Spec.NoPosition ? $"{named}, {position} of {count}" : named;
+            if (state.Spec.MultiHighlight)
+            {
+                List<string> all = state.Slots.Where(kv => kv.Value.Highlighted && UiUtil.IsVisible(kv.Value.Component))
+                    .OrderBy(kv => kv.Key).Select(kv => kv.Value.Text).ToList();
+                if (all.Count > 1)
+                    item = $"All {all.Count}: {string.Join(", ", all)}";   // "All 3: Art, Archangel, Ame-no-Uzume"
+            }
             if (opening && state.Spec.IsChoice)
                 item = $"Choice, {count} options. {item}";
 
@@ -495,6 +525,7 @@ namespace NocturneAccess.Systems.Menus
             state.CurrentText = null;
             state.CurrentComponent = null;
             state.LastTitleSpoken = "";
+            state.HighlightSig = "";
             Log.Info($"{Tag} {state.Spec.Name} closed.");
         }
     }
