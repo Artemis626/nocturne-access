@@ -152,7 +152,7 @@ namespace NocturneAccess.Core
             // "ProbeToggle" (Shift+F7) replaces the entry "ToggleProbe" (F7) of 0.0.55 and earlier, so saved configs pick up the new
             // default: F7 became the routes through other areas (0.0.56, Francesco: a function key; debug keys may use Shift).
             KeyToggleProbe = keys.CreateEntry("ProbeToggle", "Shift+F7", "Toggle probe key",
-                "Debug: pauses or resumes the text probe (only when Probe = true).");
+                "Debug: pauses or resumes the text probe (only when TextProbe = true).");
             // "NavigationDump" (Shift+F6) replaces the 0.0.12 entry "NavDump" (F5), so saved configs pick up the new default.
             KeyNavDump = keys.CreateEntry("NavigationDump", "Shift+F6", "Navigation dump key",
                 "Debug: writes the navigation data of the current area (position, place names, walls, auto-map, people, boxes, event volumes) to UserData/NocturneAccess/NavDumps, with a summary in Latest.log.");
@@ -183,8 +183,10 @@ namespace NocturneAccess.Core
             debug.SetFilePath(FilePath, true, false);
             VerboseLogging = debug.CreateEntry("VerboseLogging", false, "Verbose logging",
                 "Writes [DEBUG] lines to Latest.log, including lines dropped by the dedupe window.");
-            ProbeEnabled = debug.CreateEntry("Probe", true, "Text probe",
-                "Research tool: logs every UI text and message-engine call to Latest.log. Needs a restart. On during development; will default to off for players.");
+            // "TextProbe" (off) replaces the entry "Probe" (on) of 0.0.56 and earlier, so saved configs pick up the new default
+            // (Francesco, 6 Oct 2026: the probe off by default).
+            ProbeEnabled = debug.CreateEntry("TextProbe", false, "Text probe",
+                "Research tool: logs every UI text and message-engine call to Latest.log. Needs a restart. Off by default; set to true only to research a new screen.");
 
             // Write the file now so new settings appear with their defaults.
             speech.SaveToFile(false);

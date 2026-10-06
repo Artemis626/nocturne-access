@@ -5,7 +5,7 @@ namespace NocturneAccess.Capture
 {
     /// <summary>
     /// Switches the discovery probes (TMP text and message engine) as one unit.
-    /// The hooks are only installed when Probe = true in NocturneAccess.cfg at startup,
+    /// The hooks are only installed when TextProbe = true in NocturneAccess.cfg (off by default since 0.0.57) at startup,
     /// so players who never enable it pay nothing. The toggle key (default Shift+F7 since 0.0.56) then pauses
     /// and resumes logging without restarting the game.
     /// </summary>
@@ -17,7 +17,7 @@ namespace NocturneAccess.Capture
         {
             if (!Config.ProbeEnabled.Value)
             {
-                Log.Info("[Probe] Off (Probe = false in the config). Hooks not installed.");
+                Log.Info("[Probe] Off (TextProbe = false in the config). Hooks not installed.");
                 return;
             }
 
@@ -31,7 +31,7 @@ namespace NocturneAccess.Capture
         {
             if (!Installed)
             {
-                SpeechManager.Say("Text probe is not installed. Set Probe to true in the config and restart.", interrupt: true, force: true);
+                SpeechManager.Say("Text probe is not installed. Set TextProbe to true in the config and restart.", interrupt: true, force: true);
                 return;
             }
 

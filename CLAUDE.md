@@ -17,7 +17,7 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 
 ## Current state (5 Oct 2026) and focus
 
-- **Installed: 0.0.56 (built 6 Oct 2026, pushed, not yet tested; 0.0.55 untested too; 0.0.54 verified).** Test lists: `docs/HANDOFF.md`, last two entries (5 Oct 15:21 to 21:18: ladders in the Ginza underpass; 6 Oct: routes through other areas on F7, cleanup), and the version table in `docs/NEXT-SESSION.md`. Still untested from earlier: the Amala Network warps (0.0.52 to 0.0.53; Francesco keeps a save inside the Network, File 2).
+- **Installed: 0.0.57 (6 Oct 2026, pushed: 0.0.56 with the text probe off by default; not yet tested; 0.0.55 untested too; 0.0.54 verified).** Test lists: `docs/HANDOFF.md`, last two entries (5 Oct 15:21 to 21:18: ladders in the Ginza underpass; 6 Oct: routes through other areas on F7, cleanup), and the version table in `docs/NEXT-SESSION.md`. Still untested from earlier: the Amala Network warps (0.0.52 to 0.0.53; Francesco keeps a save inside the Network, File 2).
 - **Where Francesco is:** cleared the Amala Network, playing through Ginza (field 19), Harumi Warehouse (field 13), the Ginza underpass (field 22). He plays on and reports; read each session's log, fix, record (`docs/HANDOFF.md`, one entry per session, newest last).
 - **Systems built since 3 Oct (details in `docs/HANDOFF.md` and `docs/class-index.md`):** institution menus (Terminal, Fountain, Junk Shop, Cathedral, Rag's Jewelry, Amala Link); `FusionReader` (Cathedral tables from the game's cursor; first table's icon grid in the game's words "OK", "N/A", "Rank Up"... from `Localize` COMBINE_L0030 to L0034); `FacilityReader` (shop prices, owned counts, quantity and sum, Fountain HP/MP/fee via `fclUI.DrawPayMoney`); `RagReader`; `WarpMap` (hidden same-area warps: door table movetype 2; routes avoid them, walks chain them, arrival points from the game's object list or learned when warped); Page Up list in fixed map order, filters (Shift+Page Up / Down: All, Doors, Rooms, Exits, Warps, Souls, Demons, Item boxes, Events; reset to All in every new area), Insert for the selected point; story volumes listed as "Event" with the game's prompt learned per save file; "Warped." on same-area jumps; Where am I with the place name from `FldNameData`.
 - **Open:** routes through other areas (0.0.56) untested: they need doors walked and areas visited with 0.0.56 first; zig-zag routes in diagonal corridors (right-angle runs; 8-direction runs later); warp arrival-point lookup unverified in game; overworld step 6 (explored entrances) when Francesco asks; custom waypoints recorded only (`docs/EXPLORED-DOORS-PLAN.md` item 4); the Annex 1F item box reachable only after a ramp (`docs/HANDOFF.md`).
@@ -50,7 +50,7 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 
 - `dotnet build NocturneAccess.sln -c Release` builds and deploys to the game's `Mods` folder (the game must be closed). References come from `_dlls/` (`tools/copy-references.ps1`).
 - The Windows `python3` alias hangs: use perl or bash. Bump the version in `Core/ModMain.cs` and `NocturneAccess.csproj` together.
-- F6 dumps every visible text to the log; the probe (`Probe = true` in the config) logs every TMP write and message-engine call as `[Probe:TMP]` / `[Probe:Mes]`.
+- F6 dumps every visible text to the log; the probe (`TextProbe = true` in the config; off by default since 0.0.57) logs every TMP write and message-engine call as `[Probe:TMP]` / `[Probe:Mes]`.
 
 ## Architecture (src/NocturneAccess)
 
