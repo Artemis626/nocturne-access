@@ -140,6 +140,30 @@ namespace NocturneAccess.Systems.Navigation
             }
         }
 
+        /// <summary>
+        /// Where a plain door (warptype 0) leads now: its field and area (0.0.56, AreaRoutes: the door the player came in through
+        /// counts as the way back only when it leads back to the area left). False without an entry the game would take.
+        /// </summary>
+        internal static bool Leads(int field, int area, string resName, out int toField, out int toArea)
+        {
+            toField = toArea = -1;
+            try
+            {
+                Refresh(field);
+                Entry e = Find(area, resName);
+                if (e == null || e.WarpType != 0)
+                    return false;
+                toField = e.ToField == 0 ? field : e.ToField;
+                toArea = e.ToAreaPlus1 == 0 ? area : e.ToAreaPlus1 - 1;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[Nav:Doors] Destination of {field}/{area}/{resName} could not be read: {ex.Message}");
+                return false;
+            }
+        }
+
         /// <summary>The entry the game would take for this door now (fldWap.fldDoor_Find).</summary>
         private static Entry Find(int area, string name)
         {

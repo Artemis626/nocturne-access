@@ -46,7 +46,7 @@ namespace NocturneAccess.Systems.Navigation
     {
         private const string Tag = "[Nav:Warp]";
         private const float EntryMargin = 60f;    // the walkable ring around a warp's volume it is entered from
-        private static readonly Regex DoorName = new Regex(@"^\d+d_\d+$");
+        private static readonly Regex DoorName = FieldData.DoorVolume;
 
         private static int _field = int.MinValue, _area = int.MinValue, _count = -1;
         private static IntPtr _ranges;
@@ -173,13 +173,12 @@ namespace NocturneAccess.Systems.Navigation
                 HashSet<int> goal = TargetRegions(gb, target);
                 if (goal.Contains(start))
                     return new List<Warp>();
-                // Every warp with a known arrival: touch warps, and from 0.0.55 ladders and doors the player confirms (the Ginza
-                // underpass joins its rooms by ladders inside one area: Francesco, 5 Oct 2026, most of it missing from the list).
-                List<Warp> warps = All(gb.fieldID, gb.areaID).Where(w => w.HasDest).ToList();
+                Graph g = GraphOf(gb);
+                List<Warp> warps = g.Warps;
                 if (warps.Count == 0 || goal.Count == 0)
                     return null;
-                var entries = warps.ToDictionary(w => w, w => WalkGrid.RegionsAround(w.Zone, w.FloorY, EntryMargin));
-                var dests = warps.ToDictionary(w => w, w => WalkGrid.RegionAt(w.DestX, w.DestY, w.DestZ));
+                Dictionary<Warp, HashSet<int>> entries = g.Entries;
+                Dictionary<Warp, int> dests = g.Dests;
                 var prev = new Dictionary<int, (int from, Warp via)>();
                 var queue = new Queue<int>();
                 prev[start] = (-1, null);
@@ -213,8 +212,60 @@ namespace NocturneAccess.Systems.Navigation
             }
         }
 
+        /// <summary>
+        /// The walk grid's regions joined by this area's warps: every warp with a known arrival (touch warps, and from 0.0.55 ladders
+        /// and doors the player confirms: the Ginza underpass joins its rooms by ladders inside one area, Francesco 5 Oct 2026),
+        /// the regions each is entered from and the region it lands in. Built once per grid and warp list.
+        /// </summary>
+        private sealed class Graph
+        {
+            public List<Warp> Warps = new List<Warp>();
+            public Dictionary<Warp, HashSet<int>> Entries = new Dictionary<Warp, HashSet<int>>();
+            public Dictionary<Warp, int> Dests = new Dictionary<Warp, int>();
+            public int Builds = -1;
+            public List<Warp> Source;
+        }
+
+        private static Graph _graph = new Graph();
+
+        private static Graph GraphOf(fldGlobalWork_t gb)
+        {
+            List<Warp> all = All(gb.fieldID, gb.areaID);
+            if (_graph.Builds == WalkGrid.Builds && ReferenceEquals(_graph.Source, all))
+                return _graph;
+            var g = new Graph { Builds = WalkGrid.Builds, Source = all, Warps = all.Where(w => w.HasDest).ToList() };
+            foreach (Warp w in g.Warps)
+            {
+                g.Entries[w] = WalkGrid.RegionsAround(w.Zone, w.FloorY, EntryMargin);
+                g.Dests[w] = WalkGrid.RegionAt(w.DestX, w.DestY, w.DestZ);
+            }
+            _graph = g;
+            return g;
+        }
+
+        /// <summary>The regions reachable from the given ones, walking and taking every warp, ladder or door of the area with a known arrival.</summary>
+        internal static HashSet<int> Closure(fldGlobalWork_t gb, HashSet<int> from)
+        {
+            var seen = new HashSet<int>(from);
+            Graph g = GraphOf(gb);
+            var queue = new Queue<int>(from);
+            while (queue.Count > 0)
+            {
+                int r = queue.Dequeue();
+                foreach (Warp w in g.Warps)
+                {
+                    int d = g.Dests[w];
+                    if (d < 0 || seen.Contains(d) || !g.Entries[w].Contains(r))
+                        continue;
+                    seen.Add(d);
+                    queue.Enqueue(d);
+                }
+            }
+            return seen;
+        }
+
         /// <summary>The regions a walk to the target can end in: around a warp's volume, or near the target.</summary>
-        private static HashSet<int> TargetRegions(fldGlobalWork_t gb, Poi target)
+        internal static HashSet<int> TargetRegions(fldGlobalWork_t gb, Poi target)
         {
             Warp w = target.IsDoorLike ? TouchWarp(gb, target.Index) : null;
             if (w != null)

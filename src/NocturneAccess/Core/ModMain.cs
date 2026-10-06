@@ -20,7 +20,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.55";
+        internal const string ModVersion = "0.0.56";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
@@ -96,6 +96,7 @@ namespace NocturneAccess.Core
             ("first person", FirstPersonView.Tick),
             ("navigation probe", NavProbe.Tick),
             ("explored doors", ExploredDoors.Tick),
+            ("area routes", AreaRoutes.Tick),
             ("blobber exploring", BlobberMode.CheckExploring),
             ("blobber", BlobberMode.Tick),
             ("auto-walk", AutoWalk.Tick),
@@ -123,6 +124,10 @@ namespace NocturneAccess.Core
 
         public override void OnDeinitializeMelon()
         {
+            // Only the first 3 errors of each system are written as they happen: the totals show one that kept failing (0.0.56).
+            for (int i = 0; i < Updates.Length; i++)
+                if (UpdateErrors[i] > 3)
+                    Log.Warn($"[Update] {Updates[i].Name} failed {UpdateErrors[i]} times this session.");
             Probes.FlushAll();
             SpeechManager.Shutdown();
             LogArchive.ArchiveCurrentSession();

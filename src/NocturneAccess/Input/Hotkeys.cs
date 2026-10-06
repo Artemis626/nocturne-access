@@ -43,7 +43,8 @@ namespace NocturneAccess.Input
             Add("repeat", Config.KeyRepeat, KeyCode.F1, RepeatLast);
             Add("battle status", Config.KeyBattleStatus, KeyCode.F2, BattleReader.SpeakStatus);
             Add("dump UI", Config.KeyDumpUi, KeyCode.F6, UiTreeDumper.Dump);
-            Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle);
+            Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle, shift: true);
+            Add("routes through other areas", Config.KeyAreaRoutes, KeyCode.F7, AreaRoutes.Toggle);
             Add("navigation dump", Config.KeyNavDump, KeyCode.F6, NavDump.Dump, shift: true);
             Add("battle dump", Config.KeyBattleDump, KeyCode.F2, BattleDump.Dump, shift: true);
             Add("blobber mode", Config.KeyBlobber, KeyCode.F4, BlobberMode.Toggle);

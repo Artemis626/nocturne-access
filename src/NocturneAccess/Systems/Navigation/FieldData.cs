@@ -34,6 +34,12 @@ namespace NocturneAccess.Systems.Navigation
     /// </summary>
     internal static class FieldData
     {
+        /// <summary>A door volume's name in fldEveHit.gEvnRng ("01d_15"); one pattern for every navigation class (0.0.56).</summary>
+        internal static readonly System.Text.RegularExpressions.Regex DoorVolume = new System.Text.RegularExpressions.Regex(@"^\d+d_\d+$");
+
+        /// <summary>A story or event volume's name ("01eve_03").</summary>
+        internal static readonly System.Text.RegularExpressions.Regex EventVolume = new System.Text.RegularExpressions.Regex(@"^\d+eve_\d+$");
+
         internal static PlayerSnapshot ReadPlayer()
         {
             var s = new PlayerSnapshot();

@@ -15,7 +15,8 @@ namespace NocturneAccess.Core
     /// (the Logs folder its documentation mentions is never created). This copies Latest.log to
     /// UserData/NocturneAccess/Logs/session_[start time].log:
     /// - every 30 seconds while the game runs, on a background thread, so a session that ends
-    ///   without a clean quit (crash, killed process, closed console window) is still kept;
+    ///   without a clean quit (crash, killed process, closed console window) is still kept
+    ///   (only the new part of the log is appended, 0.0.56);
     /// - once more when the game closes normally, which also prunes the folder to the newest 20.
     /// </summary>
     internal static class LogArchive
@@ -100,19 +101,38 @@ namespace NocturneAccess.Core
             }
         }
 
+        // One copy at a time: the final copy at quit and a 30-second snapshot still running on its thread both opened the archive
+        // for writing, and the second failed (sharing violation), losing the session's last minutes (0.0.56).
+        private static readonly object CopyGate = new object();
+        private static long _copied;   // bytes of Latest.log already in the archive
+
+        /// <summary>
+        /// Appends what Latest.log gained since the last copy (it only grows during a session): a 5 MB log was copied whole every
+        /// 30 seconds before 0.0.56. A shorter source than what was copied starts the archive over.
+        /// </summary>
         private static void Copy()
         {
             string source = Path.Combine(MelonEnvironment.MelonLoaderDirectory, "Latest.log");
             if (!File.Exists(source))
                 return;
 
-            Directory.CreateDirectory(Folder);
-
-            // MelonLoader still has Latest.log open for writing, so share read/write access.
-            using (var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
-            using (var output = new FileStream(Target, FileMode.Create, FileAccess.Write, FileShare.Read))
+            lock (CopyGate)
             {
-                input.CopyTo(output);
+                Directory.CreateDirectory(Folder);
+                // MelonLoader still has Latest.log open for writing, so share read/write access.
+                using (var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                using (var output = new FileStream(Target, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+                {
+                    if (input.Length < _copied || output.Length != _copied)
+                    {
+                        _copied = 0;
+                        output.SetLength(0);
+                    }
+                    input.Seek(_copied, SeekOrigin.Begin);
+                    output.Seek(_copied, SeekOrigin.Begin);
+                    input.CopyTo(output);
+                    _copied = output.Position;
+                }
             }
         }
     }

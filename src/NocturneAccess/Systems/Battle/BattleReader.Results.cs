@@ -81,14 +81,7 @@ namespace NocturneAccess.Systems.Battle
         {
             bool on = !Config.SpeakHpLeft.Value;
             Config.SpeakHpLeft.Value = on;
-            try
-            {
-                Config.SpeakHpLeft.Category.SaveToFile(false);
-            }
-            catch (Exception ex)
-            {
-                Log.Warn($"[Battle] Could not save SpeakHpLeft: {ex.Message}");
-            }
+            Config.Save(Config.SpeakHpLeft);
             Log.Info($"[Battle] HP left after actions: {(on ? "on" : "off")}.");
             SpeechManager.Say(on ? "HP after actions on." : "HP after actions off.", interrupt: true, force: true);
         }

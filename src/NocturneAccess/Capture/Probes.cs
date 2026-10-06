@@ -6,7 +6,7 @@ namespace NocturneAccess.Capture
     /// <summary>
     /// Switches the discovery probes (TMP text and message engine) as one unit.
     /// The hooks are only installed when Probe = true in NocturneAccess.cfg at startup,
-    /// so players who never enable it pay nothing. The toggle key (default F7) then pauses
+    /// so players who never enable it pay nothing. The toggle key (default Shift+F7 since 0.0.56) then pauses
     /// and resumes logging without restarting the game.
     /// </summary>
     internal static class Probes

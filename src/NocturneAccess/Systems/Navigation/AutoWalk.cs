@@ -127,6 +127,7 @@ namespace NocturneAccess.Systems.Navigation
                 _requestMs = long.MinValue / 2;
                 TryStart(gb);
             }
+            JourneyTick(gb);
             if (!_active)
                 return;
 
@@ -170,7 +171,7 @@ namespace NocturneAccess.Systems.Navigation
                 float d = (float)Math.Sqrt((_target.X - gb.playerX) * (_target.X - gb.playerX) + (_target.Z - gb.playerZ) * (_target.Z - gb.playerZ));
                 if (_target.IsDoorLike && InReach(_target, d) && !(_final != null && IsTouchWarp(gb, _target)))
                 {
-                    Stop("the game took movement with the target door's hit active", "Arrived.");
+                    Arrived(gb, "the game took movement with the target door's hit active");
                     return;
                 }
                 // A warp on the way, or not: wait a moment to see whether the game moves the player (0.0.52).
@@ -194,7 +195,7 @@ namespace NocturneAccess.Systems.Navigation
             // 19:57, 3 Oct 14:07): in reach is arrival, at once. Pressing on towards the target would walk past it.
             if (_world && _target.IsDoorLike && InReach(_target, flat))
             {
-                Stop("the game's hit index is the target (world map)", "Arrived.");
+                Arrived(gb, "the game's hit index is the target (world map)");
                 return;
             }
 
@@ -218,7 +219,7 @@ namespace NocturneAccess.Systems.Navigation
                             return;
                         }
                     }
-                    Stop("the game's prompt is shown and its hit index is the target", "Arrived.");
+                    Arrived(gb, "the game's prompt is shown and its hit index is the target");
                     return;
                 }
                 if (_approach == 0)
@@ -228,7 +229,7 @@ namespace NocturneAccess.Systems.Navigation
             }
             if (_world && InReach(_target, flat))
             {
-                Stop("the game's hit index is the target (world map)", "Arrived.");
+                Arrived(gb, "the game's hit index is the target (world map)");
                 return;
             }
 
@@ -255,7 +256,7 @@ namespace NocturneAccess.Systems.Navigation
                         BeginConfirm(gb);
                         return;
                     }
-                    Stop($"the game's hit index is the target{(_facing > FaceTicks ? " (facing not reached)" : "")}", "Arrived.");
+                    Arrived(gb, $"the game's hit index is the target{(_facing > FaceTicks ? " (facing not reached)" : "")}");
                     return;
                 }
                 FaceTowards(gb, face);
@@ -366,8 +367,45 @@ namespace NocturneAccess.Systems.Navigation
                 Say("Select a point of interest first, with Page Up.");
                 return;
             }
+            // Home on the next door of a route through other areas goes on with it; any other point ends the route.
+            bool onJourney = _journey != null && gb.fieldID == _journey.Field && gb.areaID == _journey.ExitArea && poi.Index == _journey.ExitIndex;
+            if (_journey != null && !onJourney)
+                CancelJourney("another point chosen");
+            if (poi.Route != null)
+            {
+                Poi first = PointsOfInterest.Build(gb).FirstOrDefault(q => q.Index == poi.Route.FirstIndex && q.Reachable && q.Route == null);
+                if (first == null)
+                {
+                    Say("No path.");
+                    return;
+                }
+                _journey = new Journey
+                {
+                    Field = gb.fieldID,
+                    Area = gb.areaID,
+                    TargetRes = poi.ResName,
+                    TX = poi.X,
+                    TZ = poi.Z,
+                    GoalDoors = poi.Route.GoalDoors,
+                    ExitIndex = first.Index,
+                    ExitArea = gb.areaID,
+                    LastArea = gb.areaID,
+                    TouchedMs = Clock.ElapsedMilliseconds,
+                };
+                Log.Info($"[Nav:Walk] Route to {poi.ResName} through other areas: {string.Join(", ", poi.Route.Exits)}.");
+                Begin(gb, first, $"Walking to {poi.InSentence}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}{poi.Via}. " +
+                                 $"First, {first.InSentence}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, first)}{first.Via}.");
+                return;
+            }
+            Begin(gb, poi, $"Walking to {poi.InSentence}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}{poi.Via}.");
+        }
+
+        /// <summary>Starts a walk to the point (Home, or the next leg of a route through other areas) and says the given line.</summary>
+        private static void Begin(fldGlobalWork_t gb, Poi poi, string say)
+        {
             if (!WalkGrid.Ensure(gb.fieldID, gb.areaID, gb.playerX, gb.playerY, gb.playerZ))
             {
+                CancelJourney("no walking grid");
                 Say("No path.");
                 return;
             }
@@ -387,11 +425,136 @@ namespace NocturneAccess.Systems.Navigation
             _warpsTaken = 0;
             if (!Plan(gb, "start") && !StartWarpLeg(gb, poi, "start"))
             {
+                CancelJourney("no path to the next door");
                 Say("No path.");
                 return;
             }
             _active = true;
-            Say($"Walking to {poi.InSentence}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}{poi.Via}.");
+            Say(say);
+        }
+
+        // ---- Routes through other areas (0.0.56, AreaRoutes) ----
+        // Home on a point reached only through other areas walks to the first door; the player goes through it (the mod never
+        // presses confirm), and in each area after that the walk goes on by itself to the next door, then to the point.
+
+        private sealed class Journey
+        {
+            public int Field, Area;                 // the target's field and area
+            public string TargetRes = "";
+            public float TX, TZ;
+            public HashSet<string> GoalDoors = new HashSet<string>();
+            public int ExitIndex, ExitArea;         // the door walked to now, and its area
+            public int LastArea;                    // the area the route was last planned in
+            public long TouchedMs;                  // last walk or area change; idle routes end after JourneyIdleMs
+            public long SettleSince = -1;
+            public int Hops;
+        }
+
+        private const long JourneySettleMs = 1000;   // after coming in through a door: the arrival door marked, the grid built
+        private const long JourneyIdleMs = 120000;
+        private const int MaxJourneyHops = 16;
+        private static Journey _journey;
+
+        internal static void CancelJourney(string why)
+        {
+            if (_journey == null)
+                return;
+            Log.Info($"[Nav:Walk] Route through other areas to {_journey.TargetRes} ended: {why}.");
+            _journey = null;
+        }
+
+        /// <summary>Every field update: after going through a door on the route, the walk goes on in the new area.</summary>
+        private static void JourneyTick(fldGlobalWork_t gb)
+        {
+            if (_journey == null)
+                return;
+            long now = Clock.ElapsedMilliseconds;
+            if (_active)
+            {
+                _journey.TouchedMs = now;
+                return;
+            }
+            if (gb.fieldID != _journey.Field)
+                return;   // a battle field, or another field: the idle limit ends it
+            if (gb.areaID != _journey.LastArea)
+            {
+                if (_journey.SettleSince < 0)
+                    _journey.SettleSince = now;
+                if (now - _journey.SettleSince < JourneySettleMs || !FieldState.IsExploring)
+                    return;
+                _journey.LastArea = gb.areaID;
+                _journey.SettleSince = -1;
+                _journey.TouchedMs = now;
+                ContinueJourney(gb);
+                return;
+            }
+            _journey.SettleSince = -1;
+            if (now - _journey.TouchedMs > JourneyIdleMs)
+                CancelJourney("not followed for two minutes");
+        }
+
+        private static void ContinueJourney(fldGlobalWork_t gb)
+        {
+            if (++_journey.Hops > MaxJourneyHops)
+            {
+                CancelJourney($"more than {MaxJourneyHops} doors");
+                Say("Route lost.");
+                return;
+            }
+            List<Poi> pois = PointsOfInterest.Build(gb);
+            Poi next;
+            if (gb.areaID == _journey.Area)
+            {
+                Poi target = pois.Where(q => q.ResName == _journey.TargetRes && q.Reachable)
+                    .OrderBy(q => Dist(q.X, q.Z, _journey.TX, _journey.TZ)).FirstOrDefault();
+                if (target == null)
+                {
+                    CancelJourney("the target is not reachable from here");
+                    Say("No path from here.");
+                    return;
+                }
+                if (target.Route == null)
+                {
+                    _journey = null;
+                    PointsOfInterest.Select(gb, target);
+                    Begin(gb, target, $"Walking to {target.InSentence}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, target)}{target.Via}.");
+                    return;
+                }
+                next = pois.FirstOrDefault(q => q.Index == target.Route.FirstIndex && q.Reachable && q.Route == null);
+            }
+            else
+            {
+                AreaRoute onward = AreaRoutes.Onward(gb, pois, _journey.Area, _journey.GoalDoors);
+                next = onward == null ? null : pois.FirstOrDefault(q => q.Index == onward.FirstIndex && q.Reachable);
+                if (onward != null)
+                    Log.Info($"[Nav:Walk] Route on from {gb.fieldID}/{gb.areaID}: {string.Join(", ", onward.Exits)}.");
+            }
+            if (next == null)
+            {
+                CancelJourney($"no known way on from {gb.fieldID}/{gb.areaID}");
+                Say("No known way on from here.");
+                return;
+            }
+            _journey.ExitIndex = next.Index;
+            _journey.ExitArea = gb.areaID;
+            PointsOfInterest.Select(gb, next);
+            Begin(gb, next, $"Next, {next.InSentence}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, next)}{next.Via}.");
+        }
+
+        /// <summary>
+        /// The walk reached its target. At a door of a route through other areas the route waits for the player to go through;
+        /// at the route's target, or any other target, it is done.
+        /// </summary>
+        private static void Arrived(fldGlobalWork_t gb, string why)
+        {
+            if (_journey != null && _final == null && _target != null && gb.areaID == _journey.ExitArea && _target.Index == _journey.ExitIndex)
+            {
+                _journey.TouchedMs = Clock.ElapsedMilliseconds;
+                Stop(why, "Arrived. Go through; the route goes on in the next area.");
+                return;
+            }
+            CancelJourney("arrived");
+            Stop(why, "Arrived.");
         }
 
         private static bool IsTouchWarp(fldGlobalWork_t gb, Poi p) => p != null && p.IsDoorLike && WarpMap.TouchWarp(gb, p.Index) != null;

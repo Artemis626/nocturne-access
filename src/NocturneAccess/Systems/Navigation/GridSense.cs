@@ -35,7 +35,7 @@ namespace NocturneAccess.Systems.Navigation
         private const float DoorReachExtra = 100f;
         private const float DoorHalfWidth = 250f;
         private const uint NpcBoxAttr = 0x80;
-        private static readonly Regex DoorName = new Regex(@"^\d+d_\d+$");
+        private static readonly Regex DoorName = FieldData.DoorVolume;
 
         private struct Seg { public float Ax, Az, Bx, Bz; }
 

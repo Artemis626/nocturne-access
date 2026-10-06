@@ -48,7 +48,7 @@ namespace NocturneAccess.Systems.Navigation
         private const float CrossReach = 120f;     // beyond a door's plane: gone through it (0.0.51)
         private const float JumpReach = 300f;      // one frame's move beyond this: the game moved the player (walking is 16 a tick)
         private const float PairReach = 500f;      // a door's other volume (Amala 01d_02 and 01d_03: 360 apart)
-        private static readonly Regex DoorName = new Regex(@"^\d+d_\d+$");
+        private static readonly Regex DoorName = FieldData.DoorVolume;
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
 
         private static readonly HashSet<string> Doors = new HashSet<string>();
@@ -58,7 +58,7 @@ namespace NocturneAccess.Systems.Navigation
         private const long PromptStableMs = 300;
         private static int _promptIdx = -1;
         private static long _promptIdxMs;
-        private static readonly Regex EventName = new Regex(@"^\d+eve_\d+$");
+        private static readonly Regex EventName = FieldData.EventVolume;
 
         // Warp arrival points as the player landed on them (0.0.53): "field/area/01pos_02" -> position. WarpMap uses them when the
         // game's own data could not be read; every warp leading to that point then has its destination. Kept with the doors.
@@ -81,16 +81,25 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             Log.Info($"{Tag} Warp {leftKey} lands on {point} at {FieldData.F(pos.x)} {FieldData.F(pos.y)} {FieldData.F(pos.z)}: learned.");
             WarpMap.Invalidate();
+            Append(ArrivalLine(key, pos), $"the arrival {key}");
+        }
+
+        /// <summary>
+        /// Adds one line to the file in play, at once (a crash or a quit without saving keeps it). A new game not yet saved has no
+        /// file: everything is written at its first save (WriteAll).
+        /// </summary>
+        internal static void Append(string line, string what)
+        {
             if (_file < 0)
                 return;
             try
             {
                 Directory.CreateDirectory(Folder);
-                File.AppendAllLines(PathOf(_file), new[] { ArrivalLine(key, pos) });
+                File.AppendAllLines(PathOf(_file), new[] { line });
             }
             catch (Exception ex)
             {
-                Log.Warn($"{Tag} The arrival {key} could not be written: {ex.Message}");
+                Log.Warn($"{Tag} {what} could not be written: {ex.Message}");
             }
         }
 
@@ -146,19 +155,10 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             Prompts[key] = text;
             Log.Info($"{Tag} Event {key}: prompt \"{text}\".");
-            if (_file < 0)
-                return;
-            try
-            {
-                Directory.CreateDirectory(Folder);
-                File.AppendAllLines(PathOf(_file), new[] { $"prompt {key}\t{text}" });
-            }
-            catch (Exception ex)
-            {
-                Log.Warn($"{Tag} The prompt of {key} could not be written: {ex.Message}");
-            }
+            Append($"prompt {key}\t{text}", $"The prompt of {key}");
         }
-        private static int _file = -1;            // slMain.gslSelect of the file in play, -1 for a new game not saved yet
+
+        private static int _file = -1;           // slMain.gslSelect of the file in play, -1 for a new game not saved yet
 
         private static int _field = int.MinValue, _area = int.MinValue;
         private static int _hit = -1;
@@ -200,11 +200,8 @@ namespace NocturneAccess.Systems.Navigation
             try
             {
                 int file = slMain.gslSelect;
-                Doors.Clear();
-                Prompts.Clear();
-                Arrivals.Clear();
+                ClearAll();
                 _file = file;
-                ResetTracking();
                 string path = PathOf(file);
                 if (File.Exists(path))
                     foreach (string line in File.ReadAllLines(path))
@@ -214,8 +211,10 @@ namespace NocturneAccess.Systems.Navigation
                             Prompts[line.Substring(7, line.IndexOf('\t') - 7)] = line.Substring(line.IndexOf('\t') + 1).Trim();
                         else if (line.StartsWith("arrival ", StringComparison.Ordinal))
                             ReadArrival(line);
+                        else
+                            AreaRoutes.ReadLine(line);
                 WarpMap.Invalidate();
-                Log.Info($"{Tag} File {file + 1} loaded (gslSelect {slMain.gslSelect}, gslSelTop {slMain.gslSelTop}, slChooseSaveIndex {slMain.slChooseSaveIndex}): {Doors.Count} explored doors, {Prompts.Count} event prompts.");
+                Log.Info($"{Tag} File {file + 1} loaded (gslSelect {slMain.gslSelect}, gslSelTop {slMain.gslSelTop}, slChooseSaveIndex {slMain.slChooseSaveIndex}): {Doors.Count} explored doors, {Prompts.Count} event prompts, {Arrivals.Count} warp arrivals, {AreaRoutes.Summary}.");
             }
             catch (Exception ex)
             {
@@ -246,10 +245,18 @@ namespace NocturneAccess.Systems.Navigation
         {
             if (Doors.Count > 0 || _file >= 0)
                 Log.Info($"{Tag} Title screen: the explored list of file {_file + 1} is put away ({Doors.Count} doors); a new game starts with none.");
+            ClearAll();
+            _file = -1;
+            WarpMap.Invalidate();
+        }
+
+        /// <summary>Everything kept per save file, emptied before a file is read or a new game starts.</summary>
+        private static void ClearAll()
+        {
             Doors.Clear();
             Prompts.Clear();
             Arrivals.Clear();
-            _file = -1;
+            AreaRoutes.Clear();
             ResetTracking();
         }
 
@@ -260,7 +267,8 @@ namespace NocturneAccess.Systems.Navigation
             Directory.CreateDirectory(Folder);
             File.WriteAllLines(PathOf(file), Doors.OrderBy(d => d, StringComparer.Ordinal).Select(d => "door " + d)
                 .Concat(Prompts.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => $"prompt {p.Key}\t{p.Value}"))
-                .Concat(Arrivals.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => ArrivalLine(p.Key, p.Value))));
+                .Concat(Arrivals.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => ArrivalLine(p.Key, p.Value)))
+                .Concat(AreaRoutes.Lines()));
         }
 
         // ---- Going through doors ----
@@ -341,9 +349,13 @@ namespace NocturneAccess.Systems.Navigation
                         _entryX = gb.playerX - _doorX;
                         _entryZ = gb.playerZ - _doorZ;
                     }
-                    if (key != null && _cameFrom != null)
+                    // Only a door at the arrival point: within ArriveHitMs the player may already have walked into another one,
+                    // which would teach AreaRoutes a wrong way through (0.0.56).
+                    bool atArrival = _exploringSinceMs < 0
+                                     || (_doorX - _arriveX) * (_doorX - _arriveX) + (_doorZ - _arriveZ) * (_doorZ - _arriveZ) <= ArriveReach * ArriveReach;
+                    if (key != null && _cameFrom != null && atArrival)
                     {
-                        Mark(key, $"came in through it from {_cameFrom}");
+                        Arrived(key, $"came in through it from {_cameFrom}");
                         _cameFrom = null;
                     }
                 }
@@ -362,15 +374,31 @@ namespace NocturneAccess.Systems.Navigation
             if (!FieldState.IsExploring)
                 return;
             if (_exploringSinceMs < 0)
+            {
+                // Where the game put the player: by ArriveHitMs they may have walked on (underpass area 4, 20:56:11: 900 north
+                // of the door within 1.5 s, "No door within 300 of the arrival point").
                 _exploringSinceMs = now;
+                _arriveX = gb.playerX;
+                _arriveY = gb.playerY;
+                _arriveZ = gb.playerZ;
+            }
             if (now - _exploringSinceMs < ArriveHitMs)
                 return;
-            string near = NearestDoor(gb, out float d);
+            string near = NearestDoor(gb, _arriveX, _arriveY, _arriveZ, out float d);
             if (near != null)
-                Mark(near, $"came in through it from {_cameFrom} (nearest door, {FieldData.F(d)} away)");
+                Arrived(near, $"came in through it from {_cameFrom} (nearest door, {FieldData.F(d)} away)");
             else
                 Log.Info($"{Tag} No door within {ArriveReach} of the arrival point from {_cameFrom}.");
             _cameFrom = null;
+        }
+
+        private static float _arriveX, _arriveY, _arriveZ;
+
+        /// <summary>The door the player came in through after an area change: marked, and the way through learned (AreaRoutes).</summary>
+        private static void Arrived(string key, string how)
+        {
+            Mark(key, how);
+            AreaRoutes.LearnPass(_cameFrom, key);
         }
 
         /// <summary>
@@ -443,7 +471,7 @@ namespace NocturneAccess.Systems.Navigation
                 // back): that door counts as come in through, as after an area change (0.0.52; Francesco: standard areas mark
                 // both sides at once, the Amala Network only the side walked into).
                 LearnArrival(gb, key);
-                string near = NearestDoor(gb, out float d);
+                string near = NearestDoor(gb, gb.playerX, gb.playerY, gb.playerZ, out float d);
                 if (near != null && near != key)
                     Mark(near, $"arrived beside it from {key} ({FieldData.F(d)} away)");
                 return;
@@ -500,7 +528,8 @@ namespace NocturneAccess.Systems.Navigation
             return h != null && h.resourceType == 10 && DoorName.IsMatch(name) ? Key(field, area, name) : null;
         }
 
-        private static string NearestDoor(fldGlobalWork_t gb, out float best)
+        /// <summary>The door volume nearest (x, y, z) within ArriveReach on that floor, as its key, or null.</summary>
+        private static string NearestDoor(fldGlobalWork_t gb, float x, float y, float z, out float best)
         {
             best = ArriveReach;
             string found = null;
@@ -511,9 +540,9 @@ namespace NocturneAccess.Systems.Navigation
                 fldResHead_t h = ranges[i];
                 if (h == null || h.sisei == null || h.resourceType != 10 || !DoorName.IsMatch(h.resourceName ?? ""))
                     continue;
-                float dx = h.sisei.pos.x - gb.playerX, dz = h.sisei.pos.z - gb.playerZ;
+                float dx = h.sisei.pos.x - x, dz = h.sisei.pos.z - z;
                 float dist = (float)Math.Sqrt(dx * dx + dz * dz);
-                if (dist <= best && Math.Abs(h.sisei.pos.y + 100f - gb.playerY) < 200f)
+                if (dist <= best && Math.Abs(h.sisei.pos.y + 100f - y) < 200f)
                 {
                     best = dist;
                     found = Key(gb.fieldID, gb.areaID, h.resourceName);
@@ -530,17 +559,7 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
             Log.Info($"{Tag} {key} marked ({how}).");
-            if (_file < 0)
-                return;   // a new game: written at the first save
-            try
-            {
-                Directory.CreateDirectory(Folder);
-                File.AppendAllLines(PathOf(_file), new[] { "door " + key });
-            }
-            catch (Exception ex)
-            {
-                Log.Warn($"{Tag} {key} could not be written: {ex.Message}");
-            }
+            Append("door " + key, key);
         }
     }
 }

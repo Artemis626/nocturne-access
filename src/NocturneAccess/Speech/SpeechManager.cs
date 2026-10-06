@@ -21,6 +21,7 @@ namespace NocturneAccess.Speech
     {
         private static readonly object Gate = new object();
         private static readonly Queue<string> Pending = new Queue<string>();
+        private const int MaxPending = 64;
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
 
         private static ISpeechBackend _backend;
@@ -89,6 +90,9 @@ namespace NocturneAccess.Speech
                     Pending.Clear();
                     _cancelRequested = true;
                 }
+                // A screen reader that stops taking lines must not make the queue grow without end: the oldest go first.
+                while (Pending.Count >= MaxPending)
+                    Pending.Dequeue();
                 Pending.Enqueue(text);
                 Monitor.Pulse(Gate);
             }

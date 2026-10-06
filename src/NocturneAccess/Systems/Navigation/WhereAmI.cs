@@ -127,7 +127,7 @@ namespace NocturneAccess.Systems.Navigation
             {
                 if (!world && gb.cammode == 0 && FirstPersonView.On)
                     parts.Add("Facing " + Compass[(int)(Mod360((float)Math.Round(Mod360(180f - gb.PlayerKakudo) / 45.0) * 45f) / 45) % 8]);
-                Poi nearest = PointsOfInterest.Build(gb).FirstOrDefault(q => q.Reachable);
+                Poi nearest = PointsOfInterest.Build(gb).FirstOrDefault(q => q.Reachable && q.Route == null);   // not one through other areas
                 if (nearest != null)
                     parts.Add($"Nearest: {nearest.Spoken}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, nearest)}");
             }

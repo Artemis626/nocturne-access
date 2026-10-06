@@ -50,6 +50,7 @@ namespace NocturneAccess.Systems.Menus
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static readonly Dictionary<int, int> Owners = new Dictionary<int, int>();          // component ID -> slot index
         private static readonly Dictionary<int, string> Highlighted = new Dictionary<int, string>(); // component ID -> last highlighted text
+        private const int MaxRemembered = 2000;
 
         private static int _current = -1;
         private static TMP_Text _currentComponent;
@@ -81,6 +82,12 @@ namespace NocturneAccess.Systems.Menus
                 return;
 
             int id = component.GetInstanceID();
+            // Every save screen is a new copy with new IDs: start over now and then rather than keep them all session (0.0.56).
+            if (Highlighted.Count > MaxRemembered || Owners.Count > MaxRemembered)
+            {
+                Highlighted.Clear();
+                Owners.Clear();
+            }
             bool changed = !Highlighted.TryGetValue(id, out string last) || last != text;
             Highlighted[id] = text;
 

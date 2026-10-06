@@ -317,25 +317,37 @@ namespace NocturneAccess.Systems.Menus
         {
             seen = new List<string>();
             shown = false;
-            foreach (TMP_Text text in Tabs.Values)
+            string found = "";
+            List<int> dead = null;
+            foreach (KeyValuePair<int, TMP_Text> kv in Tabs)
             {
+                TMP_Text text = kv.Value;
                 string raw;
                 try
                 {
+                    if (text == null)
+                    {
+                        (dead ??= new List<int>()).Add(kv.Key);   // a destroyed copy (each Cathedral visit makes new ones)
+                        continue;
+                    }
                     if (!UiUtil.IsVisible(text))
                         continue;
                     raw = text.text ?? "";
                 }
                 catch
                 {
-                    continue;   // a destroyed copy
+                    (dead ??= new List<int>()).Add(kv.Key);
+                    continue;
                 }
                 shown = true;
                 seen.Add(raw);
-                if (raw.Contains("<material=\"TMC01\">"))
-                    return TextUtil.Clean(raw);
+                if (found.Length == 0 && raw.Contains("<material=\"TMC01\">"))
+                    found = TextUtil.Clean(raw);
             }
-            return "";
+            if (dead != null)
+                foreach (int id in dead)
+                    Tabs.Remove(id);
+            return found;
         }
 
         /// <summary>The visible, non-empty texts in order; "？" (a skill the game keeps hidden) only counted.</summary>

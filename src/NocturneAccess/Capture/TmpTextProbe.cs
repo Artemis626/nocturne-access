@@ -26,6 +26,7 @@ namespace NocturneAccess.Capture
         private const string Tag = "[Probe:TMP]";
         private const long SettleMs = 200;
         private const int NoisyChangesPerSecond = 30;
+        private const int MaxEntries = 20000;
 
         private sealed class Entry
         {
@@ -55,6 +56,13 @@ namespace NocturneAccess.Capture
             string text = TextUtil.RemoveTypewriter(raw);
             if (!Entries.TryGetValue(id, out Entry e))
             {
+                // One entry per component ever written, and every battle and menu makes new copies: the map grew all session
+                // (0.0.56). Starting over costs one more log line per component; queued entries still flush.
+                if (Entries.Count >= MaxEntries)
+                {
+                    Log.Info($"{Tag} {MaxEntries} components followed: the list starts over.");
+                    Entries.Clear();
+                }
                 e = new Entry();
                 Entries[id] = e;
             }

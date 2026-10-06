@@ -60,8 +60,17 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>Those legs by kind, "1 ladder", "2 warps and 1 ladder" (WarpMap.Phrase, 0.0.55).</summary>
         public string ViaLegs = "";
 
-        /// <summary>", via 1 ladder", or "".</summary>
-        public string Via => ViaWarps == 0 ? "" : $", via {ViaLegs}";
+        /// <summary>Reached only by going out of this area and back in through other areas (AreaRoutes, F7, 0.0.56), or null.</summary>
+        public AreaRoute Route;
+
+        /// <summary>", via 1 ladder", ", via 2 other areas", or "".</summary>
+        public string Via => Route != null ? $", via {Route.Phrase}" : ViaWarps == 0 ? "" : $", via {ViaLegs}";
+
+        /// <summary>The names of other volumes merged into this one (a door listed twice at one spot), for AreaRoutes.</summary>
+        public List<string> Aliases = new List<string>();
+
+        /// <summary>Its volume name and those of the volumes merged into it.</summary>
+        public IEnumerable<string> Names => new[] { ResName }.Concat(Aliases);
 
         /// <summary>"explored" or "empty", or "".</summary>
         public string State => Explored ? "explored" : Empty ? "empty" : "";
@@ -122,8 +131,8 @@ namespace NocturneAccess.Systems.Navigation
     /// </summary>
     internal static class PointsOfInterest
     {
-        private static readonly Regex DoorName = new Regex(@"^\d+d_\d+$");
-        private static readonly Regex EventName = new Regex(@"^\d+eve_\d+$");
+        private static readonly Regex DoorName = FieldData.DoorVolume;
+        private static readonly Regex EventName = FieldData.EventVolume;
         private const float PadReach = 300f;      // a place pad this close to a door names it
         // Larger place polygons are whole rooms, not door pads. Ginza's door pads are 800 x 400 (field 19, 4 Oct 2026: the Terminal,
         // Rag's Jewelry and the Cathedral lost their names and were taken for plain doors, "explored"); Shibuya's were under 700.
@@ -243,6 +252,7 @@ namespace NocturneAccess.Systems.Navigation
                 Poi same = kept.FirstOrDefault(d => d.Kind == q.Kind && Near(d, q, 20f) && Math.Abs(d.Y - q.Y) < 50f);
                 if (same != null)
                 {
+                    same.Aliases.Add(q.ResName);
                     same.Explored |= q.Explored;   // either volume of a door listed twice may be the one gone through
                     same.Empty |= q.Empty;
                     same.ToWorld |= q.ToWorld;
@@ -276,6 +286,10 @@ namespace NocturneAccess.Systems.Navigation
                         q.ViaLegs = WarpMap.Phrase(legs);
                     }
                 }
+            // Beyond other areas (0.0.56, F7): a part of this area joined to the player's only through other areas, by doors the
+            // player has gone through (Ginza underpass area 4, 5 Oct 2026). Also learns this area's door links for later routes.
+            if (grid && !world)
+                AreaRoutes.Mark(gb, kept);
             foreach (Poi q in kept)
                 q.Category = CategoryOf(q, gb);
             return kept.OrderBy(q => q.Distance).ToList();
@@ -601,6 +615,14 @@ namespace NocturneAccess.Systems.Navigation
             Poi poi = list[at];
             Selected = poi;
             SpeechManager.Say($"{poi.Spoken}, {Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}{poi.Via}. {at + 1} of {list.Count}.{filter}", interrupt: true);
+        }
+
+        /// <summary>Selects a point (AutoWalk, the next door of a route through other areas), so Insert, End and Home use it.</summary>
+        internal static void Select(fldGlobalWork_t gb, Poi poi)
+        {
+            NewArea(gb);
+            _selected = poi.Index;
+            Selected = poi;
         }
 
         /// <summary>The selected point of interest, re-read from the game's list (null if none or the area changed).</summary>

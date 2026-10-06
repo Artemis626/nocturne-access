@@ -81,6 +81,8 @@ namespace NocturneAccess.Systems.Navigation
 
         internal static int Width => _w;
         internal static int Height => _h;
+        /// <summary>Counts grid builds: anything derived from the grid (regions, warp graph, door links) is stale when it changes.</summary>
+        internal static int Builds => _builds;
 
         /// <summary>Builds the grid if the area or the collision copy changed, or the player left it. False if there is no floor.</summary>
         internal static bool Ensure(int field, int area, float px, float py, float pz) => Ensure(field, area, px, py, pz, everyFrame: false);

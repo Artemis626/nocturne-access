@@ -64,6 +64,8 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyPoiFilterPrevious { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiCurrent { get; private set; }
         internal static MelonPreferences_Entry<bool> PoiMapOrder { get; private set; }
+        internal static MelonPreferences_Entry<bool> AreaRoutes { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyAreaRoutes { get; private set; }
 
         // Debug
         internal static MelonPreferences_Entry<bool> VerboseLogging { get; private set; }
@@ -128,6 +130,8 @@ namespace NocturneAccess.Core
                 "Page Up / Page Down, Home and End say whether a plain door leads to a room, a passage or an exit (from the game's door table). Turn off to go back to plain \"Door\".");
             PoiMapOrder = navigation.CreateEntry("PoiMapOrder", true, "Points of interest in map order",
                 "Page Up / Page Down go through an area's points in a fixed order, north to south and west to east, so each keeps its number while you walk. Turn off for the old order, nearest first (it changes as you move).");
+            AreaRoutes = navigation.CreateEntry("AreaRoutes", true, "Routes through other areas",
+                "Page Up / Page Down also list points of the area reached only by going through other areas, by doors you have gone through (\"via 1 other area\"); Home walks there door by door, End gives the way to the first door. F7 toggles it in game.");
 
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);
@@ -145,7 +149,9 @@ namespace NocturneAccess.Core
                 "Battle: what happened in the previous side's turn and the current one so far (actions, damage, weakness and critical hits). Kept until the next battle.");
             KeyDumpUi = keys.CreateEntry("DumpUi", "F6", "Dump UI key",
                 "Debug: writes every text currently visible on screen to Latest.log.");
-            KeyToggleProbe = keys.CreateEntry("ToggleProbe", "F7", "Toggle probe key",
+            // "ProbeToggle" (Shift+F7) replaces the entry "ToggleProbe" (F7) of 0.0.55 and earlier, so saved configs pick up the new
+            // default: F7 became the routes through other areas (0.0.56, Francesco: a function key; debug keys may use Shift).
+            KeyToggleProbe = keys.CreateEntry("ProbeToggle", "Shift+F7", "Toggle probe key",
                 "Debug: pauses or resumes the text probe (only when Probe = true).");
             // "NavigationDump" (Shift+F6) replaces the 0.0.12 entry "NavDump" (F5), so saved configs pick up the new default.
             KeyNavDump = keys.CreateEntry("NavigationDump", "Shift+F6", "Navigation dump key",
@@ -170,6 +176,8 @@ namespace NocturneAccess.Core
                 "Walks to the selected point of interest through the game's own movement (fixed-camera rooms and first person). Any movement key stops it. Enter (the game's confirm) then interacts as usual.");
             KeyPoiGuide = keys.CreateEntry("PoiGuide", "End", "Directions to point of interest key",
                 "Speaks directions from where you stand to the selected point of interest (first person: ahead, left, right; fixed-camera rooms: the key direction on screen). Press again for new directions as you go.");
+            KeyAreaRoutes = keys.CreateEntry("AreaRoutes", "F7", "Routes through other areas key",
+                "Turns on or off the routes through other areas in the Page Up list, Home and End.");
 
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);
@@ -186,6 +194,19 @@ namespace NocturneAccess.Core
             navigation.SaveToFile(false);
             keys.SaveToFile(false);
             debug.SaveToFile(false);
+        }
+
+        /// <summary>Writes a setting changed in game (F7, F8) to the file; a failure is logged, never thrown.</summary>
+        internal static void Save<T>(MelonPreferences_Entry<T> entry)
+        {
+            try
+            {
+                entry.Category.SaveToFile(false);
+            }
+            catch (System.Exception ex)
+            {
+                Log.Warn($"[Config] Could not save {entry.Identifier}: {ex.Message}");
+            }
         }
     }
 }
