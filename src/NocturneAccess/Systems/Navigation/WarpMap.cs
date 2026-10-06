@@ -267,7 +267,10 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>The regions a walk to the target can end in: around a warp's volume, or near the target.</summary>
         internal static HashSet<int> TargetRegions(fldGlobalWork_t gb, Poi target)
         {
-            Warp w = target.IsDoorLike ? TouchWarp(gb, target.Index) : null;
+            // Any warp, ladder or same-area door: the ring around its volume (Ginza area 2, 6 Oct 2026: door 01d_08 into the room
+            // with the overworld stairs sits in a thick wall, no walkable cell within 120 of its centre, so it and the exit beyond
+            // were "not reachable", 0.0.58).
+            Warp w = target.IsDoorLike ? At(gb, target.Index) : null;
             if (w != null)
                 return WalkGrid.RegionsAround(w.Zone, w.FloorY, EntryMargin);
             float radius = target.IsDoorLike ? Math.Max(target.ReachRadius, 120f) : target.ReachRadius;
