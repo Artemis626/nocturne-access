@@ -14,6 +14,7 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 5. **Pending work:** `docs/EXPLORED-DOORS-PLAN.md` (items 1 to 3 built in 0.0.35: explored doors per save file, empty item boxes; item 4, custom waypoints, recorded for later, not to build yet). Done earlier: `docs/REFACTOR-PLAN.md` (0.0.31).
 6. **Shops, Fountain, fusion, Amala, Ginza (from 3 Oct 2026):** `docs/HANDOFF-SHOPS-FUSION.md` and the latest entries of `docs/HANDOFF.md`.
 7. Overworld (2 to 3 Oct 2026, done): `docs/HANDOFF-OVERWORLD.md`.
+8. **Navigation lessons for other games** (SMT, blobbers, dungeon crawlers; principles, research method, walking-map pitfalls, build order): `docs/NAVIGATION-PLAYBOOK.md`. Keep it current when a navigation lesson is learned.
 
 ## Current state (7 Oct 2026) and focus
 
