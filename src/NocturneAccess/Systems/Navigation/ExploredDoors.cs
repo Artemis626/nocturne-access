@@ -434,7 +434,11 @@ namespace NocturneAccess.Systems.Navigation
                 // "Warped."), and not after a ladder or door the player took with confirm, whose prompt already said it.
                 string took = _crossing ?? (_leaving != null && now - _leftMs <= LeaveWindowMs ? _leaving : null);
                 string res = took?.Substring(took.LastIndexOf('/') + 1);
-                bool chosen = res != null && DoorTable.SameAreaWarp(gb.fieldID, gb.areaID, res, out int moveType, out _) && moveType != 2;
+                // 0.0.60: any door the game does not fire by walking in, also one to another area: the underpass's ladder doors
+                // (field 22 area 10, 01d_01 to area 13) lift the player 270 up the ladder before the area changes ("Descend
+                // Ladder", then "Warped.", 22:02:58).
+                int moveType = res == null ? -1 : DoorTable.MoveTypeOf(gb.fieldID, gb.areaID, res);
+                bool chosen = moveType >= 0 && moveType != 2;
                 if (took != null && !chosen)
                     SpeechManager.Say("Warped.", interrupt: false);
                 Log.Info($"{Tag} Moved by the game to {FieldData.F(px)} {FieldData.F(py)} {FieldData.F(pz)} in the same area" +

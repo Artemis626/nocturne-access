@@ -29,25 +29,28 @@ namespace NocturneAccess.Systems.Navigation
     /// - A node (cell, layer) is walkable unless a vertical polygon that overlaps the body above that floor (StepHeight to
     ///   BodyHigh units up; game Y points down) lies closer than Clearance: walls, closed doors, furniture, NPC boxes.
     ///   Stair steps lower than StepHeight do not block. The game stops the player 60 units from a wall.
-    /// - Moves join neighbouring nodes whose heights differ by MaxStep or less (stairs, ramps), 8 directions or 4 in first
-    ///   person (the game turns in 90-degree steps), no cutting past a blocked corner. Cost: 1 per cell (1.414 diagonal),
+    /// - Moves join neighbouring nodes whose heights differ by MaxStep or less (stairs, ramps), to every such layer of the
+    ///   neighbour (0.0.60), 8 directions or 4 in first person (the game turns in 90-degree steps), no cutting past a
+    ///   blocked corner. Cost: 1 per cell (1.414 diagonal),
     ///   up to 1 + NearCost times more within NearRange of a wall (routes keep to the middle), plus TurnPenalty per turn.
     /// - The goal is the reachable node nearest the target in X and Z, at least minDist away and within TargetBand of
     ///   the target's height.
     /// - The world map (fieldID below 10, 0.0.41) has its own walls: see WorldClearance and BlockWorldWalls; from 0.0.43 no move may cross one (BlockWorldMoves).
-    /// Rebuilt when the collision copy changes (CollisionCache.Version), the area changes or the player leaves the window.
+    /// Rebuilt when the collision copy changes (CollisionCache.Version), the area changes or the player leaves the window
+    /// (only areas larger than MaxCells squared in all, the world map, are cut to a window; 0.0.60).
     /// </summary>
     internal static class WalkGrid
     {
         internal const float CellSize = 30f;
-        private const int Layers = 3;
+        private const int Layers = 4;   // 3 until 0.0.60; heights past the limit are counted in the grid's log line
         private const float Clearance = 65f;
         private const float StepHeight = 30f, BodyHigh = 180f;
         private const float MaxStep = 45f;
         private const float MergeBand = 20f;
         private const float TargetBand = 200f;
         private const float StartBand = 80f;
-        private const int MaxCells = 400;          // per side; larger areas get a window around the player
+        private const int MaxCells = 400;          // per side of the window, used only when the whole area holds more than MaxCells squared
+        private const int MaxSide = 2000;          // per side of a whole area (a long, narrow tunnel), 60 000 units
         private const float TurnPenalty = 2f;
         private const float NearRange = 300f;
         private const float NearCost = 2f;
@@ -221,13 +224,23 @@ namespace NocturneAccess.Systems.Navigation
             // Only an area larger than the window is cut, and then the window slides to hold the player while staying inside
             // the area. Centring it on the player cut areas that fit: back in B1 from the Healing Room (z -5650), a window
             // ending at z 350 left out the elevator at z 850 (13:23 session, 2 Oct 2026: "not reachable, left out").
-            float span = (MaxCells - 1) * CellSize;
-            Window(ref minX, ref maxX, px, span);
-            Window(ref minZ, ref maxZ, pz, span);
+            // 0.0.60: the window is used only for areas larger than MaxCells squared in all (the world map). The Ginza
+            // underpass tunnels are 12 630 units long and 3 000 wide: a 400-cell side (11 970) cut one end off, and its
+            // ladders and doors were "not reachable" until the player walked there and the window slid (6 Oct 21:58, area 14).
+            int side = MaxCells;
+            double wholeX = (maxX - minX) / CellSize + 2, wholeZ = (maxZ - minZ) / CellSize + 2;
+            if (wholeX * wholeZ <= (double)MaxCells * MaxCells && wholeX <= MaxSide && wholeZ <= MaxSide)
+                side = MaxSide;
+            else
+            {
+                float span = (MaxCells - 1) * CellSize;
+                Window(ref minX, ref maxX, px, span);
+                Window(ref minZ, ref maxZ, pz, span);
+            }
             _x0 = (float)Math.Floor(minX / CellSize) * CellSize + CellSize / 2;
             _z0 = (float)Math.Floor(minZ / CellSize) * CellSize + CellSize / 2;
-            _w = Math.Min(MaxCells, (int)Math.Ceiling((maxX - _x0) / CellSize) + 1);
-            _h = Math.Min(MaxCells, (int)Math.Ceiling((maxZ - _z0) / CellSize) + 1);
+            _w = Math.Min(side, (int)Math.Ceiling((maxX - _x0) / CellSize) + 1);
+            _h = Math.Min(side, (int)Math.Ceiling((maxZ - _z0) / CellSize) + 1);
             int cells = _w * _h;
             _count = new byte[cells];
             _blockedMoves = Array.Empty<byte>();
@@ -236,6 +249,7 @@ namespace NocturneAccess.Systems.Navigation
             _state = new byte[cells * Layers];
             _near = new float[cells * Layers];
 
+            int dropped = 0;
             foreach (CollisionPoly f in floors)
             {
                 float fx0 = float.MaxValue, fz0 = float.MaxValue, fx1 = float.MinValue, fz1 = float.MinValue;
@@ -254,7 +268,10 @@ namespace NocturneAccess.Systems.Navigation
                         if (Math.Abs(_height[c * Layers + l] - y) <= MergeBand)
                             return;
                     if (n >= Layers)
+                    {
+                        dropped++;
                         return;
+                    }
                     _height[c * Layers + n] = y;
                     _state[c * Layers + n] = 1;
                     _near[c * Layers + n] = NearRange;
@@ -305,7 +322,8 @@ namespace NocturneAccess.Systems.Navigation
                         walkable++;
             }
             Log.Info($"[Nav:Walk] Grid for field {field} area {area}: {_w} x {_h} cells of {CellSize} from {FieldData.F(_x0)} {FieldData.F(_z0)}, " +
-                     $"{floors.Count} floors, {(world ? worldWalls.Count + " world-map" : walls.Count.ToString())} walls, {(world ? crossings + " moves through walls blocked, " : "")}{walkable} walkable places, {multi} cells with more than one level, {clock.ElapsedMilliseconds} ms.");
+                     $"{floors.Count} floors, {(world ? worldWalls.Count + " world-map" : walls.Count.ToString())} walls, {(world ? crossings + " moves through walls blocked, " : "")}{walkable} walkable places, {multi} cells with more than one level" +
+                     $"{(dropped > 0 ? $", {dropped} floor heights over the limit of {Layers} left out" : "")}, {clock.ElapsedMilliseconds} ms.");
             ApplyAvoid(world ? new List<Zone>() : WarpMap.Zones(field, area));
         }
 
@@ -382,7 +400,7 @@ namespace NocturneAccess.Systems.Navigation
                 for (int l = 0; l < _count[c]; l++)
                 {
                     int k = c * Layers + l;
-                    if (_component[k] >= 0 && Math.Abs(_height[k] - y) <= TargetBand)
+                    if (_component[k] >= 0 && AtHeight(k, y))
                         set.Add(_component[k]);
                 }
             });
@@ -401,7 +419,7 @@ namespace NocturneAccess.Systems.Navigation
                 for (int l = 0; l < _count[c]; l++)
                 {
                     int k = c * Layers + l;
-                    if (_component[k] >= 0 && Math.Abs(_height[k] - y) <= TargetBand)
+                    if (_component[k] >= 0 && AtHeight(k, y))
                         set.Add(_component[k]);
                 }
             });
@@ -434,13 +452,19 @@ namespace NocturneAccess.Systems.Navigation
                     float y = _height[cur];
                     for (int s = 0; s < 8; s++)
                     {
-                        int nk = Step(ci + Dx[s], cj + Dz[s], y);
-                        if (nk < 0 || _component[nk] >= 0 || MoveBlocked(cur, s))
+                        if (MoveBlocked(cur, s))
                             continue;
                         if (Dx[s] != 0 && Dz[s] != 0 && (Step(ci + Dx[s], cj, y) < 0 || Step(ci, cj + Dz[s], y) < 0))
                             continue;
-                        _component[nk] = label;
-                        queue.Enqueue(nk);
+                        int m = Steps(ci + Dx[s], cj + Dz[s], y);
+                        for (int t = 0; t < m; t++)
+                        {
+                            int nk = StepBuf[t];
+                            if (_component[nk] >= 0)
+                                continue;
+                            _component[nk] = label;
+                            queue.Enqueue(nk);
+                        }
                     }
                 }
                 label++;
@@ -775,20 +799,24 @@ namespace NocturneAccess.Systems.Navigation
                 float y = _height[cur];
                 for (int s = 0; s < 8; s += fourWay ? 2 : 1)
                 {
-                    int nk = Step(ci + Dx[s], cj + Dz[s], y);
-                    if (nk < 0 || MoveBlocked(cur, s))
+                    if (MoveBlocked(cur, s))
                         continue;
                     bool diagonal = Dx[s] != 0 && Dz[s] != 0;
                     if (diagonal && (Step(ci + Dx[s], cj, y) < 0 || Step(ci, cj + Dz[s], y) < 0))
                         continue;
-                    float near = 1f - _near[nk] / NearRange;
-                    float nd = d + (diagonal ? 1.4142f : 1f) * (1f + NearCost * near * near) + (dir[cur] >= 0 && dir[cur] != s ? TurnPenalty : 0f);
-                    if (nd < dist[nk])
+                    int m = Steps(ci + Dx[s], cj + Dz[s], y);
+                    for (int t = 0; t < m; t++)
                     {
-                        dist[nk] = nd;
-                        from[nk] = cur;
-                        dir[nk] = (sbyte)s;
-                        open.Enqueue(nk, nd);
+                        int nk = StepBuf[t];
+                        float near = 1f - _near[nk] / NearRange;
+                        float nd = d + (diagonal ? 1.4142f : 1f) * (1f + NearCost * near * near) + (dir[cur] >= 0 && dir[cur] != s ? TurnPenalty : 0f);
+                        if (nd < dist[nk])
+                        {
+                            dist[nk] = nd;
+                            from[nk] = cur;
+                            dir[nk] = (sbyte)s;
+                            open.Enqueue(nk, nd);
+                        }
                     }
                 }
             }
@@ -797,7 +825,7 @@ namespace NocturneAccess.Systems.Navigation
             float best = float.MaxValue;
             for (int k = 0; k < n; k++)
             {
-                if (dist[k] == float.MaxValue || Math.Abs(_height[k] - ty) > TargetBand)
+                if (dist[k] == float.MaxValue || !AtHeight(k, ty))
                     continue;
                 CellCentre(k / Layers, out float x, out float z);
                 float e = (float)Math.Sqrt((x - tx) * (x - tx) + (z - tz) * (z - tz));
@@ -818,6 +846,45 @@ namespace NocturneAccess.Systems.Navigation
             LastPath.Reverse();
             CellCentre(goal / Layers, out goalX, out goalZ);
             return Runs(LastPath, dir);
+        }
+
+        // Every walkable node of a neighbouring cell within MaxStep, not only the nearest in height (0.0.60). Under each stair of
+        // the Ginza underpass (field 22) the track bed (y 200) runs on as a floor beneath the steps (y 175 to 25), so a cell at the
+        // stair's foot holds both; Step took the track bed coming along the tracks and the stair coming down it, and the
+        // platforms and the tracks were never joined (dump 6 Oct 14:01, area 8: three B2 regions, one for the tracks, while
+        // Francesco walked between them; tools/navregions.pl). The moves are now the same in both directions.
+        private static readonly int[] StepBuf = new int[Layers];
+
+        /// <summary>
+        /// Node k stands for a target at height y: within TargetBand, and no other floor of its cell is nearer y (0.0.60). With
+        /// the moves of Steps the track bed under a platform (200 below it) can join the tracks; it must not stand in for the
+        /// platform itself, which may be reached only by a ladder.
+        /// </summary>
+        private static bool AtHeight(int k, float y)
+        {
+            float d = Math.Abs(_height[k] - y);
+            if (d > TargetBand)
+                return false;
+            int c = k / Layers;
+            for (int l = 0; l < _count[c]; l++)
+                if (Math.Abs(_height[c * Layers + l] - y) < d)
+                    return false;
+            return true;
+        }
+
+        /// <summary>Every walkable node of cell (i, j) within MaxStep of height y, into StepBuf; returns how many.</summary>
+        private static int Steps(int i, int j, float y)
+        {
+            if (i < 0 || j < 0 || i >= _w || j >= _h)
+                return 0;
+            int c = j * _w + i, n = 0;
+            for (int l = 0; l < _count[c]; l++)
+            {
+                int k = c * Layers + l;
+                if (_state[k] == 1 && Math.Abs(_height[k] - y) <= MaxStep && !Avoided(k))
+                    StepBuf[n++] = k;
+            }
+            return n;
         }
 
         /// <summary>The walkable node of cell (i, j) reachable from a floor at height y (within MaxStep), or -1.</summary>
@@ -917,7 +984,7 @@ namespace NocturneAccess.Systems.Navigation
                     for (int l = 0; l < _count[c]; l++)
                     {
                         int k = c * Layers + l;
-                        if (_reach[k] && Math.Abs(_height[k] - y) <= TargetBand)
+                        if (_reach[k] && AtHeight(k, y))
                             return true;
                     }
                 }
@@ -944,7 +1011,7 @@ namespace NocturneAccess.Systems.Navigation
                     for (int l = 0; l < _count[c]; l++)
                     {
                         int k = c * Layers + l;
-                        if (_reach[k] && Math.Abs(_height[k] - y) <= TargetBand)
+                        if (_reach[k] && AtHeight(k, y))
                             return true;
                     }
                 }
@@ -967,13 +1034,19 @@ namespace NocturneAccess.Systems.Navigation
                 float y = _height[cur];
                 for (int s = 0; s < 8; s++)
                 {
-                    int nk = Step(ci + Dx[s], cj + Dz[s], y);
-                    if (nk < 0 || _reach[nk] || MoveBlocked(cur, s))
+                    if (MoveBlocked(cur, s))
                         continue;
                     if (Dx[s] != 0 && Dz[s] != 0 && (Step(ci + Dx[s], cj, y) < 0 || Step(ci, cj + Dz[s], y) < 0))
                         continue;
-                    _reach[nk] = true;
-                    queue.Enqueue(nk);
+                    int m = Steps(ci + Dx[s], cj + Dz[s], y);
+                    for (int t = 0; t < m; t++)
+                    {
+                        int nk = StepBuf[t];
+                        if (_reach[nk])
+                            continue;
+                        _reach[nk] = true;
+                        queue.Enqueue(nk);
+                    }
                 }
             }
         }
