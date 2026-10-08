@@ -333,7 +333,11 @@ namespace NocturneAccess.Systems.Navigation
                 q.DoorKind = "";
                 q.Explored = false;
             }
-            foreach (Poi q in kept.Where(q => q.Ladder && q.Reachable && q.ViaWarps > 0))
+            // The far side of a same-area door is the same door (0.0.62): Ginza area 1, 8 Oct 2026, 21:04:00, through 01d_04 into the
+            // exit corridor, the Doors list held 01d_05 (2 metres, the door just come through) and 01d_04 "via 1 door" (its other
+            // side, in the hall). Left out like a ladder's far end while its own side is walked to.
+            foreach (Poi q in kept.Where(q => q.Kind == PoiKind.Door && q.Reachable && q.ViaWarps > 0
+                                              && WarpMap.At(gb, q.Index) is Warp w && !w.Touch && w.Partner != null))
             {
                 Warp partner = WarpMap.At(gb, q.Index)?.Partner;
                 if (partner != null && kept.Any(o => o.Index == partner.Index && o.Reachable && o.ViaWarps == 0 && o.Route == null))

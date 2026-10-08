@@ -590,8 +590,48 @@ namespace NocturneAccess.Systems.Navigation
             return false;
         }
 
-        /// <summary>The move from node k in direction s goes through a wall (world map only; dungeons have no such list).</summary>
-        private static bool MoveBlocked(int k, int s) => _blockedMoves.Length == _state.Length && (_blockedMoves[k] & (1 << s)) != 0;
+        /// <summary>The move from node k in direction s goes through a wall (world map), or the game refused it on a walk (learned).</summary>
+        private static bool MoveBlocked(int k, int s)
+        {
+            if (_blockedMoves.Length == _state.Length && (_blockedMoves[k] & (1 << s)) != 0)
+                return true;
+            if (Learned.Count == 0 || _learnedField != _field || _learnedArea != _area)
+                return false;
+            CellCentre(k / Layers, out float x, out float z);
+            return Learned.Contains((AbsCell(x), AbsCell(z), s));
+        }
+
+        // ---- Moves the game refused (0.0.62) ----
+        // The world map's highway (field 3, 8 Oct 2026, 21:27): at -1506 -2690 the route's first move east was walkable on the map,
+        // but the game pushed the marker back each time; six identical re-plans, then "Blocked." (a nudge by hand got past). When a
+        // walk stalls, AutoWalk blocks the move from the player's cell along the run, and the next one, both ways, so the re-plan
+        // goes round. Kept until the area changes; cells by absolute position, so a moved world-map window keeps them.
+        private static readonly HashSet<(int, int, int)> Learned = new HashSet<(int, int, int)>();
+        private static int _learnedField = int.MinValue, _learnedArea = int.MinValue;
+
+        private static int AbsCell(float v) => (int)Math.Floor(v / CellSize);
+
+        /// <summary>Blocks the moves from (x, z) along direction dir (0 north, clockwise in 45s) for 'steps' cells, both ways.</summary>
+        internal static void LearnBlocked(int field, int area, float x, float z, int dir, int steps)
+        {
+            if (field != _learnedField || area != _learnedArea)
+            {
+                Learned.Clear();
+                _learnedField = field;
+                _learnedArea = area;
+            }
+            int ai = AbsCell(x), aj = AbsCell(z), back = (dir + 4) % 8;
+            for (int n = 0; n < steps; n++)
+            {
+                Learned.Add((ai, aj, dir));
+                ai += Dx[dir];
+                aj += Dz[dir];
+                Learned.Add((ai, aj, back));
+            }
+            _reachBuild = -1;        // floods and regions are stale
+            _componentBuild = -1;
+            Log.Info($"[Nav:Walk] Learned: the game refused the move {dir * 45} degrees from {FieldData.F(x)} {FieldData.F(z)}; {steps} cells blocked both ways ({Learned.Count} learned in this area).");
+        }
 
         /// <summary>
         /// World map: the straight line from the player to a candidate start cell goes through a wall, checked against the walls

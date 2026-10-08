@@ -773,6 +773,14 @@ namespace NocturneAccess.Systems.Navigation
 
         private static float Dist(float ax, float az, float bx, float bz) => (float)Math.Sqrt((ax - bx) * (ax - bx) + (az - bz) * (az - bz));
 
+        /// <summary>Distance in X and Z from (x, z) to a run's segment.</summary>
+        private static float SegmentDistance(float x, float z, PathRun r)
+        {
+            float dx = r.Bx - r.Ax, dz = r.Bz - r.Az, len2 = dx * dx + dz * dz;
+            float t = len2 <= 0 ? 0 : Math.Clamp(((x - r.Ax) * dx + (z - r.Az) * dz) / len2, 0f, 1f);
+            return Dist(x, z, r.Ax + t * dx, r.Az + t * dz);
+        }
+
         private static bool Plan(fldGlobalWork_t gb, string why)
         {
             var clock = Stopwatch.StartNew();
@@ -819,6 +827,25 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
             WalkGrid.Ensure(gb.fieldID, gb.areaID, gb.playerX, gb.playerY, gb.playerZ);
+            // Stalled on a move the walking map allows: the game refuses it (a ledge or rail the map does not hold). From the second
+            // stall on, block it so the re-plan goes round instead of repeating the same route (0.0.62, the highway, 8 Oct 21:27).
+            // The run is the one whose segment the player stands on: pushed back by the game, the marker may already count as on the
+            // next run (21:27:07: "next run 2" at -1470, then back at -1506 on run 1).
+            if (_replans >= 2 && !_firstPerson && _runs != null && _runs.Count > 0 && (why.StartsWith("still") || why.StartsWith("no progress")))
+            {
+                int best = 0;
+                float bestD = float.MaxValue;
+                for (int i = 0; i <= Math.Min(_run, _runs.Count - 1); i++)
+                {
+                    float d = SegmentDistance(gb.playerX, gb.playerZ, _runs[i]);
+                    if (d < bestD)
+                    {
+                        bestD = d;
+                        best = i;
+                    }
+                }
+                WalkGrid.LearnBlocked(gb.fieldID, gb.areaID, gb.playerX, gb.playerZ, _runs[best].Dir, 2);
+            }
             if (!Plan(gb, $"re-plan {_replans}: {why}"))
                 Stop("no path on re-plan", "No path.");
         }
