@@ -16,7 +16,12 @@ namespace NocturneAccess.Systems.Battle
         private static void OnResult(TMP_Text component, string raw)
         {
             // The results text is rewritten every frame (20:44 session): once per battle.
-            if (!_active || _resultsShown)
+            if (_resultsShown)
+                return;
+            // A boss's death scene hides the battle UI long enough to count as gone (Yaksini, 7 Oct 2026: "Battle UI gone" at
+            // 21:38:50, results on screen at 21:38:59, never spoken). Still the same battle while the game's field has not
+            // changed since it began (0.0.61).
+            if (!_active && (_battleField == int.MinValue || _leftBattleField || CurrentField() != _battleField))
                 return;
             _resultsShown = true;
             LogData(force: true);

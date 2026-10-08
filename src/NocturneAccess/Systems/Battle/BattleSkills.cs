@@ -48,6 +48,43 @@ namespace NocturneAccess.Systems.Battle
             return -1;
         }
 
+        /// <summary>
+        /// The Summon list's stock demon by name (0.0.61): "level 17, HP 156 of 162, MP 6 of 72", which the screen draws as
+        /// images. From dds3GlobalWork.DDS3_GBWK.unitwork (datUnitWork_t: id named by datDevilName.Get, level, hp, maxhp, mp,
+        /// maxmp); entry 0 is the player. "" when no unit has that name.
+        /// </summary>
+        internal static string StockDetail(string name)
+        {
+            try
+            {
+                var units = dds3GlobalWork.DDS3_GBWK?.unitwork;
+                if (units == null || string.IsNullOrEmpty(name))
+                    return "";
+                for (int k = 1; k < units.Length; k++)
+                {
+                    datUnitWork_t w = units[k];
+                    if (w == null || w.maxhp == 0)
+                        continue;
+                    string n;
+                    try
+                    {
+                        n = TextUtil.Clean(datDevilName.Get(w.id) ?? "");
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                    if (n == name)
+                        return $"level {w.level}, HP {w.hp} of {w.maxhp}, MP {w.mp} of {w.maxmp}";
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[Battle] Stock demon {name}: {ex.Message}");
+            }
+            return "";
+        }
+
         /// <summary>"4 HP", "2 MP", or "" (no cost, or not a skill of the unit acting now).</summary>
         internal static string CostOfActing(string itemText)
         {

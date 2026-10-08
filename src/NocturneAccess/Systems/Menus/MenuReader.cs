@@ -53,6 +53,7 @@ namespace NocturneAccess.Systems.Menus
             public Func<TMP_Text, string, string> RowDetail;   // game data for the highlighted row (a price), said after the item
             public Func<int, (int, int)?> GamePosition;        // the entry and count from the game's cursor for this slot, or null to count rows
             public bool MultiHighlight;           // several items can be highlighted at once (a spell on the whole party): say them all
+            public Func<bool, string> Prefix;     // said before the item on any announcement (argument: opening), if not empty; after RowDetail ran
         }
 
         private sealed class Slot
@@ -175,6 +176,30 @@ namespace NocturneAccess.Systems.Menus
                 Description = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bhelp_window/text_mask/TextTM$", RegexOptions.Compiled),
                 ItemDetail = BattleSkills.CostOfActing,          // "Lunge, 4 HP": the cost is drawn as images (2 Oct 2026)
                 OpeningPrefix = BattleReader.TurnAnnouncement,   // "Pixie's turn" (22:14 session: the acting unit was never said)
+            },
+            new MenuSpec
+            {
+                // Summon in battle (F6 dump 7 Oct 2026, 20:49:28): the stock demons in summon_command/bmenu_command/
+                // bmenu_command_sNN/bmenu_text01TM, highlighted TMC01. The "_s" kept them out of the battle menu's pattern, so the
+                // list was silent (0.0.61). Its own slots: the command rows 01.. stay in the battle menu's.
+                Name = "Summon list",
+                Item = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bmenu/[^/]+/bmenu_command/bmenu_command_s(?<slot>\d\d)/bmenu_text01TM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC01\">",   // no help line is shown (dump 20:49:28)
+                CloseWhenUnhighlighted = true,
+                RowDetail = (component, name) => BattleSkills.StockDetail(name),
+            },
+            new MenuSpec
+            {
+                // The Cathedral's Compendium, View (F6 dump 7 Oct 2026, 20:23:05): title "VIEW" (comtitle), rows
+                // combUI_oubei/dlistsum/dlistsum_row/dlistsum_rowNN/Text_nameTM and Text_raceTM, highlighted TMC01; sort tabs
+                // "By Race" / "By Level" (Q / E). Race, level, the sort and the position in the whole list: CompendiumReader (0.0.61).
+                Name = "Compendium",
+                Item = new Regex(@"^Canvas_UI/combUI_oubei/dlistsum/dlistsum_row/dlistsum_row(?<slot>\d\d)/Text_nameTM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC01\">",
+                CloseWhenUnhighlighted = true,
+                RowDetail = CompendiumReader.RowDetail,
+                GamePosition = CompendiumReader.Position,
+                Prefix = CompendiumReader.Prefix,
             },
             new MenuSpec
             {
@@ -477,6 +502,9 @@ namespace NocturneAccess.Systems.Menus
                 parts.Add(state.Title);
                 state.LastTitleSpoken = state.Title;
             }
+            string prefix2 = state.Spec.Prefix?.Invoke(opening) ?? "";
+            if (prefix2.Length > 0)
+                parts.Add(prefix2);
             parts.Add(item);
 
             // Each line as it is now: a line emptied by the game is a blank write, which never reaches the readers, so the
