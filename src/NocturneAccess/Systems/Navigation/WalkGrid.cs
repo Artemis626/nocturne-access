@@ -26,7 +26,7 @@ namespace NocturneAccess.Systems.Navigation
     ///   |normal.y| 0.5 or more, Attr 0 or 0x80 (CollisionPoly.IsGroundAttr, 0.0.63); overlays with Attr 0x800 / 0x1000 / 0x8000 reach past walls and are not floors)
     ///   whose outline contains the cell centre, at their plane height there. One cell can hold a ground floor and a
     ///   landing above it (the stairwell of the Medical Center, field 14 area 14, has its 2F door right above the 1F door).
-    /// - A node (cell, layer) is walkable unless a vertical polygon that overlaps the body above that floor (StepHeight to
+    /// - A node (cell, layer) is walkable unless a vertical polygon that overlaps the body above that floor (StepHeight, 55 since 0.0.64, to
     ///   BodyHigh units up; game Y points down) lies closer than Clearance: walls, closed doors, furniture, NPC boxes.
     ///   Stair steps lower than StepHeight do not block. The game stops the player 60 units from a wall.
     /// - Moves join neighbouring nodes whose heights differ by MaxStep or less (stairs, ramps), to every such layer of the
@@ -44,8 +44,12 @@ namespace NocturneAccess.Systems.Navigation
         internal const float CellSize = 30f;
         private const int Layers = 6;   // 3 until 0.0.60, 4 until 0.0.62 (the Mantra pyramid and field 24 area 9 stack more); heights past the limit are counted in the grid's log line
         private const float Clearance = 65f;
-        private const float StepHeight = 30f, BodyHigh = 180f;
-        private const float MaxStep = 45f;
+        // 0.0.63: 55 and 55 (were 30 and 45). The Assembly of Nihilo's long corridor (field 20 area 6, dump 9 Oct 20:33:11) goes
+        // down in 50-unit steps the player walks (stood at y 48 one step below the door at 0): each riser counted as a wall and
+        // the corridor fell into 9 pieces, nothing reachable. Field 24 area 5's stairs have 40-unit risers, walls too (352
+        // places reachable instead of 2 211). Checked offline on every saved dump (tools/navregions.pl NAVSTEP="55 55").
+        private const float StepHeight = 55f, BodyHigh = 180f;
+        private const float MaxStep = 55f;
         private const float MergeBand = 20f;
         private const float TargetBand = 200f;
         private const float StartBand = 80f;

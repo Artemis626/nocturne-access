@@ -9,6 +9,8 @@ use strict; use warnings; use POSIX qw(floor ceil);
 my ($file, $maxCells, $layers, $px, $pz) = @ARGV;
 $maxCells ||= 400; $layers ||= 3;
 my $C = 30; my ($Clear, $Step, $Body, $MaxStep, $Merge, $NearR) = (65, 30, 180, 45, 20, 300);
+# NAVSTEP="step maxstep": the body's lowest blocking height and the largest height change of a move (0.0.63: 55 55).
+($Step, $MaxStep) = split ' ', $ENV{NAVSTEP} if $ENV{NAVSTEP};
 
 my (%poly, @pois, @landings, $player);
 open my $F, '<', $file or die "$file: $!";
