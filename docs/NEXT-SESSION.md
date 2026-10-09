@@ -92,7 +92,7 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.60** | Walking map: moves reach every floor layer within a step (stairs and ramps over hidden floors joined), points use the floor nearest their height, no window for areas under 400 x 400 cells, 4 heights per cell; no "Warped." after ladder doors to another area | Verified 7 Oct 20:13 (Ikebukuro, three bosses: 47 walks arrived, nothing "beyond doors") |
 | **0.0.61** | Battle Summon list (with level, HP, MP), boss battle results, Cathedral Compendium View list (race, level, sort, position) | Verified 8 Oct (Summon with level, HP, MP; Raidou results; Compendium View; list position only from the rows on screen) |
 | **0.0.62** | Walks learn moves the game refuses (blocked after a second stall, re-planned round); the far side of a same-area door left out | Built 8 Oct 2026, not yet tested |
-| **0.0.63** | Walking-map floors include `Attr 0x80` (the Mantra pyramid, field 24 area 17, was all 0x80: nothing reachable); 6 floor heights per cell | Built 9 Oct 2026, not yet tested |
+| **0.0.63** | Walking-map floors include `Attr 0x80` (the Mantra pyramid, field 24 area 17, was all 0x80: nothing reachable); 6 floor heights per cell | Verified 9 Oct (Francesco: the pyramid "worked perfectly") |
 | **0.0.64** | Steps and risers up to 55 walkable (were 30 / 45): the Assembly of Nihilo corridor (field 20 area 6), field 24 area 5 stairs | Built 9 Oct 2026, not yet tested |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
