@@ -23,7 +23,7 @@ namespace NocturneAccess.Systems.Navigation
     /// <summary>
     /// Walkability grid of the current area, on several levels, and a search over it (docs/PATHFINDING.md sections 2.2, 6).
     /// - Cells of CellSize units in X and Z. Each cell has up to Layers floor heights: the floor polygons (horizontal,
-    ///   |normal.y| 0.5 or more, Attr 0; overlays with Attr 0x800 / 0x1000 / 0x8000 reach past walls and are not floors)
+    ///   |normal.y| 0.5 or more, Attr 0 or 0x80 (CollisionPoly.IsGroundAttr, 0.0.63); overlays with Attr 0x800 / 0x1000 / 0x8000 reach past walls and are not floors)
     ///   whose outline contains the cell centre, at their plane height there. One cell can hold a ground floor and a
     ///   landing above it (the stairwell of the Medical Center, field 14 area 14, has its 2F door right above the 1F door).
     /// - A node (cell, layer) is walkable unless a vertical polygon that overlaps the body above that floor (StepHeight to
@@ -42,7 +42,7 @@ namespace NocturneAccess.Systems.Navigation
     internal static class WalkGrid
     {
         internal const float CellSize = 30f;
-        private const int Layers = 4;   // 3 until 0.0.60; heights past the limit are counted in the grid's log line
+        private const int Layers = 6;   // 3 until 0.0.60, 4 until 0.0.62 (the Mantra pyramid and field 24 area 9 stack more); heights past the limit are counted in the grid's log line
         private const float Clearance = 65f;
         private const float StepHeight = 30f, BodyHigh = 180f;
         private const float MaxStep = 45f;
@@ -183,7 +183,7 @@ namespace NocturneAccess.Systems.Navigation
                     continue;
                 if (Math.Abs(p.Normal.y) >= 0.5f)
                 {
-                    if (p.Points.Length < 3 || p.Attr != 0)
+                    if (p.Points.Length < 3 || !p.IsGroundAttr)
                         continue;
                     floors.Add(p);
                     foreach (Vector4 v in p.Points)

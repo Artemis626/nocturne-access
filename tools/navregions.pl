@@ -38,7 +38,8 @@ for my $q (sort { $a->{id} <=> $b->{id} } values %poly) {
     my @p = @{ $q->{p} };
     next if @p < 2;
     if (abs($q->{ny}) >= 0.5) {
-        next if @p < 3 || $q->{attr};
+        # NAVATTR80=1: Attr 0x80 floors count too (0.0.63; the Mantra pyramid, field 24 area 17, has its floors in 0x80).
+        next if @p < 3 || ($q->{attr} && !($ENV{NAVATTR80} && $q->{attr} == 0x80));
         push @floors, $q;
         for (@p) { $x0 = $_->[0] if $_->[0] < $x0; $x1 = $_->[0] if $_->[0] > $x1; $z0 = $_->[2] if $_->[2] < $z0; $z1 = $_->[2] if $_->[2] > $z1; }
     } elsif (abs($q->{ny}) < 0.2) {

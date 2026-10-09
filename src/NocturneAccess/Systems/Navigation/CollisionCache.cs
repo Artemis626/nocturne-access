@@ -28,6 +28,14 @@ namespace NocturneAccess.Systems.Navigation
 
         /// <summary>Floor-like by its normal (to verify which axis is up and which polygons are walls).</summary>
         public bool IsFloorLike => Math.Abs(Normal.y) >= 0.5f;
+
+        /// <summary>
+        /// A floor the player stands on: Attr 0, or 0x80 (0.0.63). The Mantra pyramid (field 24 area 17, dump 9 Oct 2026 14:07:59)
+        /// has its floors and walls in 0x80 with no NPC (hoji 0, npc -1): 241 of its 272 floors, the one under the player
+        /// among them, so the walking map had no floor there and nothing was reachable. In every other dump 0x80 is only on
+        /// vertical faces (NPC boxes). Overlays (0x800, 0x1000, 0x8000) still reach past walls and are not floors.
+        /// </summary>
+        public bool IsGroundAttr => Attr == 0 || Attr == 0x80;
     }
 
     /// <summary>
@@ -228,7 +236,7 @@ namespace NocturneAccess.Systems.Navigation
             planeY = 0;
             foreach (CollisionPoly p in Items)
             {
-                if (!p.IsFloorLike || p.Points.Length < 3 || !ContainsXZ(p.Points, x, z) || (groundOnly && p.Attr != 0))
+                if (!p.IsFloorLike || p.Points.Length < 3 || !ContainsXZ(p.Points, x, z) || (groundOnly && !p.IsGroundAttr))
                     continue;   // groundOnly: the walking map's floors (Attr 0), not the 0x800 / 0x1000 / 0x8000 overlays
 
                 Vector4 a = p.Points[0];
