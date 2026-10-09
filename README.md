@@ -4,7 +4,24 @@ A screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaste
 
 ## Status
 
-Early development, not yet usable. Phase 0: the mod loads and speaks through NVDA. See `docs/HANDOFF.md` for the roadmap.
+In active development and playable. It speaks the game's own text through NVDA: nothing is guessed or made up.
+
+### What you can do in game right now
+
+- **Story and menus:** dialogue with speaker names, choices, prompts, every menu, saving and loading, config, name entry.
+- **Battles:** whose turn it is, Press Turns, enemy actions, damage and healing, weaknesses and critical hits, Analyze results, skill costs, summoning with each demon's level, HP and MP, and battle results including bosses. Status keys read your party and the enemies at any time, and a battle log repeats what just happened.
+- **Shops and services:** the Junk Shop with prices and owned counts, the Fountain of Life with fees, the Terminal and Amala Link travel, Rag's Jewelry trades. At the Cathedral of Shadows: both fusion tables with results and the Demon Compendium.
+- **Exploration:** a list of nearby points of interest (doors, exits, ladders, people, demons, item boxes, events); auto-walk to any of them, or spoken directions to walk there yourself; first-person blobber mode that keeps the game's own controls and announces walls and openings; "Where am I"; a memory of the doors you've been through, and of opened boxes. This works in dungeons, fixed-camera rooms and on the overworld map.
+
+### How effective it is
+
+The game has been played from the start through Shinjuku, Shibuya, the Amala Network, Ginza, the Ginza Underpass, Ikebukuro and into the Assembly of Nihilo, beating bosses such as Matador, Orthrus, Yaksini, Thor and Raidou, now in long sessions with eyes completely closed. Handling stairs, ramps and ladders properly made areas that used to be a maze quick to cross.
+
+### Why play through to the end
+
+Every new area of Nocturne has brought something the mod had never met: hidden warps in the Amala Network, ladders in the Underpass, a pyramid built differently from everything before it, corridors of steps. Each one blocked progress until it was found and fixed, often within the same day. The only way to make sure a blind player can finish the game is to play it to the end, find those spots and fix them. Every fix also carries over to the areas still ahead.
+
+Keys: `docs/KEYS.md`. Project state and roadmap: `docs/HANDOFF.md`.
 
 ## Requirements
 
