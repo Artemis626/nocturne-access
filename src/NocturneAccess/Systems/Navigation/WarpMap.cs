@@ -141,7 +141,9 @@ namespace NocturneAccess.Systems.Navigation
                 w.HasDest = true;
                 w.DestX = p.Zone.X + p.Zone.NX * LadderLanding;
                 w.DestZ = p.Zone.Z + p.Zone.NZ * LadderLanding;
-                w.DestY = p.FloorY;
+                // The floor there, nearest the partner's volume bottom (0.0.65): the cube hall's door volumes reach 150 under the
+                // floor (box bottom y 100, floor -50), and a landing at 100 fell on no walkable node.
+                w.DestY = CollisionCache.FloorUnder(w.DestX, p.FloorY, w.DestZ, out float floorY, groundOnly: true, upOnly: true) != null ? floorY : p.FloorY;
                 w.DestFrom = $"in front of {p.Name}";
             }
         }
@@ -377,6 +379,12 @@ namespace NocturneAccess.Systems.Navigation
         private static bool FindPoint(string name, out Vector4 pos, out string from)
         {
             pos = default;
+            // Where the player really landed comes first (0.0.65): the cube hall of the Assembly of Nihilo (field 20 area 17, dump
+            // 9 Oct 21:27:11) has 01pos_02 in the game's objects at y 100, 150 under the floor (y -50); the player landed at -52.
+            // The landing fell on no walkable node, so the door pair 01d_02 / 01d_03 gave no route and the south part was missing.
+            from = "learned";
+            if (ExploredDoors.LearnedArrival(_field, _area, name, out pos))
+                return true;
             from = "area file";
             var found = new List<(uint type, Vector4 p)>();
             foreach (var (_, tables) in TypeTables())
@@ -397,9 +405,8 @@ namespace NocturneAccess.Systems.Navigation
             from = "game objects";
             if (found.Count == 0 && FindBasic(name, out pos))
                 return true;
-            from = "learned";
             if (found.Count == 0)
-                return ExploredDoors.LearnedArrival(_field, _area, name, out pos);
+                return false;
             from = "area file";
             if (found.Count > 1 && Logged.Add("dup:" + name))
                 Log.Info($"{Tag} {found.Count} resources named {name}: " + string.Join("; ", found.Select(f => $"type {f.type} at {FieldData.F(f.p.x)} {FieldData.F(f.p.z)}")) + "; the first is used.");

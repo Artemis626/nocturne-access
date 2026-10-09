@@ -187,7 +187,10 @@ namespace NocturneAccess.Systems.Navigation
                     continue;
                 if (Math.Abs(p.Normal.y) >= 0.5f)
                 {
-                    if (p.Points.Length < 3 || !p.IsGroundAttr)
+                    // Faces looking down (Y points down: Normal.y > 0) are ceilings and the undersides of blocks, never walked on
+                    // (0.0.65): the cube hall's 450-unit blocks have their undersides 50 under the floor, which steps of 55 would
+                    // join. The floor under the player faces up in all 60 saved dumps.
+                    if (p.Points.Length < 3 || !p.IsGroundAttr || p.Normal.y > 0f)
                         continue;
                     floors.Add(p);
                     foreach (Vector4 v in p.Points)

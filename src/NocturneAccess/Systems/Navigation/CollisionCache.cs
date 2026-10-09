@@ -67,7 +67,7 @@ namespace NocturneAccess.Systems.Navigation
             Il2CppReferenceArray<collision_s> array = fldHit.gfldCollision;
             int count = fldHit.gfldCollsionNum;
             IntPtr ptr = array == null ? IntPtr.Zero : array.Pointer;
-            if (!force && ptr == _arrayPtr && count == _count && field == _field && area == _area)
+            if (!force && ptr == _arrayPtr && count == _count && field == _field && area == _area && !Moved(array))
             {
                 RefreshSwitches(field, area, rebuilt: false);
                 return false;
@@ -102,6 +102,44 @@ namespace NocturneAccess.Systems.Navigation
             }
             RefreshSwitches(field, area, rebuilt: true);
             return true;
+        }
+
+        // ---- Polygons that move (0.0.65) ----
+        // The copy was rebuilt only when the array or the count changed. The cube hall of the Assembly of Nihilo (field 20 area 17,
+        // 9 Oct 2026) has 450-unit cubes and a switch event beside one: if the game moves polygons in place, the walking map would
+        // keep the old shape. Every MoveCheckMs the first point of each polygon is compared with the copy; any change rebuilds,
+        // logged. Not yet seen moving: the log line will tell.
+        private const long MoveCheckMs = 1000;
+        private static long _moveCheckMs = long.MinValue / 2;
+
+        private static bool Moved(Il2CppReferenceArray<collision_s> array)
+        {
+            long now = Clock.ElapsedMilliseconds;
+            if (array == null || now - _moveCheckMs < MoveCheckMs)
+                return false;
+            _moveCheckMs = now;
+            try
+            {
+                foreach (CollisionPoly p in Items)
+                {
+                    if (p.Points.Length == 0 || p.Index >= array.Length)
+                        continue;
+                    Il2CppStructArray<Vector4> pts = array[p.Index]?.point;
+                    if (pts == null || pts.Length == 0)
+                        continue;
+                    Vector4 a = pts[0], b = p.Points[0];
+                    if (Math.Abs(a.x - b.x) > 1f || Math.Abs(a.y - b.y) > 1f || Math.Abs(a.z - b.z) > 1f)
+                    {
+                        Log.Info($"[Nav] Collision polygon {p.Index} moved from {FieldData.F(b.x)} {FieldData.F(b.y)} {FieldData.F(b.z)} to {FieldData.F(a.x)} {FieldData.F(a.y)} {FieldData.F(a.z)}: the walking map is rebuilt.");
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[Nav] Collision move check: {ex.Message}");
+            }
+            return false;
         }
 
         // ---- The game's own switches ----
@@ -229,15 +267,16 @@ namespace NocturneAccess.Systems.Navigation
         /// The floor-like polygon whose outline contains (x, z) and whose plane is nearest to y, or null.
         /// Assumes the polygon points are in the same space as fldGb.playerX/Y/Z: the diagnostic run checks that.
         /// </summary>
-        internal static CollisionPoly FloorUnder(float x, float y, float z, out float planeY, bool groundOnly = false)
+        internal static CollisionPoly FloorUnder(float x, float y, float z, out float planeY, bool groundOnly = false, bool upOnly = false)
         {
             CollisionPoly best = null;
             float bestDist = float.MaxValue;
             planeY = 0;
             foreach (CollisionPoly p in Items)
             {
-                if (!p.IsFloorLike || p.Points.Length < 3 || !ContainsXZ(p.Points, x, z) || (groundOnly && !p.IsGroundAttr))
-                    continue;   // groundOnly: the walking map's floors (Attr 0), not the 0x800 / 0x1000 / 0x8000 overlays
+                if (!p.IsFloorLike || p.Points.Length < 3 || !ContainsXZ(p.Points, x, z) || (groundOnly && !p.IsGroundAttr) || (upOnly && p.Normal.y >= 0f))
+                    continue;   // groundOnly: the walking map's floors, not the 0x800 / 0x1000 / 0x8000 overlays; upOnly: faces looking up
+                                // (Y points down), not the undersides of blocks (0.0.65)
 
                 Vector4 a = p.Points[0];
                 float py = a.y - (p.Normal.x * (x - a.x) + p.Normal.z * (z - a.z)) / p.Normal.y;
