@@ -95,7 +95,7 @@ Nocturne Access is a free, GPL-3.0 screen reader mod for Shin Megami Tensei III 
 | **0.0.63** | Walking-map floors include `Attr 0x80` (the Mantra pyramid, field 24 area 17, was all 0x80: nothing reachable); 6 floor heights per cell | Verified 9 Oct (Francesco: the pyramid "worked perfectly") |
 | **0.0.64** | Steps and risers up to 55 walkable (were 30 / 45): the Assembly of Nihilo corridor (field 20 area 6), field 24 area 5 stairs | Built 9 Oct 2026, not yet tested |
 | **0.0.65** | Learned warp arrivals win (door pair landing under the floor), ceilings and block undersides not floors, collision rebuilt when polygons move (Nihilo cube hall) | Built 9 Oct 2026; the south part via the door pair verified 10 Oct |
-| **0.0.66** | The game's collision switches read by the right ids (hit by held object, NPC by NPC id; were block and held object since 0.0.34), every hit / NPC / gimmick flag the game sets logged; Compendium Register list spoken, list cursor from ListWindow | Built 10 Oct 2026, not yet tested |
+| **0.0.66** | Collision follows moving objects (matter position added; the Nihilo cube hall gates); The game's collision switches read by the right ids (hit by held object, NPC by NPC id; were block and held object since 0.0.34), every hit / NPC / gimmick flag the game sets logged; Compendium Register list spoken, list cursor from ListWindow | Built 10 Oct 2026, not yet tested |
 
 Last commits: `9d773ef` (0.0.10), then the analysis-only docs commit of the 22:05 session (includes the new `CLAUDE.md`).
 
