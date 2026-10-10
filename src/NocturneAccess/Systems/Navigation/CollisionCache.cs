@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Il2Cpp;
+using Il2Cppbasic_H;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2Cppfield_H;
 using NocturneAccess.Core;
@@ -19,6 +20,12 @@ namespace NocturneAccess.Systems.Navigation
         public float[] Min = Array.Empty<float>(), Max = Array.Empty<float>(), EdgeNums = Array.Empty<float>();
         public Vector4[] Points = Array.Empty<Vector4>(), EdgeNormals = Array.Empty<Vector4>();
         public int PointArrayLength;
+
+        /// <summary>
+        /// The position of the polygon's moving object (collision_s.matter.poseset.pos), already added to Points and Num;
+        /// null when the polygon has no matter. See CollisionCache.MatterOffset.
+        /// </summary>
+        public Vector3? MatterPos;
 
         public bool HasFace;
         public uint Attr;
@@ -104,13 +111,31 @@ namespace NocturneAccess.Systems.Navigation
             return true;
         }
 
-        // ---- Polygons that move (0.0.65) ----
-        // The copy was rebuilt only when the array or the count changed. The cube hall of the Assembly of Nihilo (field 20 area 17,
-        // 9 Oct 2026) has 450-unit cubes and a switch event beside one: if the game moves polygons in place, the walking map would
-        // keep the old shape. Every MoveCheckMs the first point of each polygon is compared with the copy; any change rebuilds,
-        // logged. Not yet seen moving: the log line will tell.
+        // ---- Polygons that move (0.0.65, 0.0.66) ----
+        // The game's hit test (fldHitChkUnit, disassembly 10 Oct 2026, from RVA 0x20F5714) does not move polygons: for a polygon
+        // with a matter (collision_s.matter, a dds3Basic_t) it subtracts matter.poseset.pos (dds3PoseSet_t.pos, x y z) from the
+        // player's position before testing the stored points. So the polygon really stands at its points plus that position.
+        // The Nihilo cube hall (field 20 area 17) authors its gates twice: closed at x 1000 to 3600 and open 5000 further east;
+        // when a switch moves a held object's matter 5000 west (its gimmick at the path end), the open gates stand in the room
+        // and the closed ones 5000 west of it. Francesco walked through "solid" cubes on 10 Oct 2026, 21:35 (x 1318, z 600 to
+        // 2340); the mod's map, reading the stored points, had nothing reachable there ("0 of 0").
+        // The copy adds the matter position to the points and the plane; every MoveCheckMs each polygon's point plus its current
+        // matter position is compared with the copy, so a moving gimmick rebuilds the map, logged.
         private const long MoveCheckMs = 1000;
         private static long _moveCheckMs = long.MinValue / 2;
+
+        /// <summary>The position the game subtracts from the player for this polygon's hit test (zero without a matter).</summary>
+        private static Vector3? MatterOffset(collision_s c)
+        {
+            dds3Basic_t matter = c.matter;
+            if (matter == null)
+                return null;
+            dds3PoseSet_t pose = matter.poseset;
+            if (pose == null)
+                return null;
+            Vector4 pos = pose.pos;
+            return new Vector3(pos.x, pos.y, pos.z);
+        }
 
         private static bool Moved(Il2CppReferenceArray<collision_s> array)
         {
@@ -124,10 +149,14 @@ namespace NocturneAccess.Systems.Navigation
                 {
                     if (p.Points.Length == 0 || p.Index >= array.Length)
                         continue;
-                    Il2CppStructArray<Vector4> pts = array[p.Index]?.point;
+                    collision_s c = array[p.Index];
+                    Il2CppStructArray<Vector4> pts = c?.point;
                     if (pts == null || pts.Length == 0)
                         continue;
                     Vector4 a = pts[0], b = p.Points[0];
+                    Vector3? m = MatterOffset(c);
+                    if (m.HasValue)
+                        a = new Vector4(a.x + m.Value.x, a.y + m.Value.y, a.z + m.Value.z, a.w);
                     if (Math.Abs(a.x - b.x) > 1f || Math.Abs(a.y - b.y) > 1f || Math.Abs(a.z - b.z) > 1f)
                     {
                         Log.Info($"[Nav] Collision polygon {p.Index} moved from {FieldData.F(b.x)} {FieldData.F(b.y)} {FieldData.F(b.z)} to {FieldData.F(a.x)} {FieldData.F(a.y)} {FieldData.F(a.z)}: the walking map is rebuilt.");
@@ -247,6 +276,17 @@ namespace NocturneAccess.Systems.Navigation
                 p.Points = new Vector4[k];
                 for (int j = 0; j < k; j++)
                     p.Points[j] = points[j];
+            }
+
+            // The matter's position, as the hit test applies it (see MatterOffset): points and plane in world space.
+            Vector3? m = MatterOffset(c);
+            if (m.HasValue)
+            {
+                p.MatterPos = m;
+                Vector3 o = m.Value;
+                for (int j = 0; j < p.Points.Length; j++)
+                    p.Points[j] = new Vector4(p.Points[j].x + o.x, p.Points[j].y + o.y, p.Points[j].z + o.z, p.Points[j].w);
+                p.Num += p.Normal.x * o.x + p.Normal.y * o.y + p.Normal.z * o.z;
             }
 
             Il2CppStructArray<Vector4> edges = c.e_normal;

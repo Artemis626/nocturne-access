@@ -40,6 +40,7 @@ $//;
 }
 close $F;
 ($px, $pz) = ($player->[0], $player->[2]) unless defined $pz;
+($player->[0], $player->[2]) = ($px, $pz);   # a given "player x z" also starts the flood there
 
 my (@floors, @walls);
 my ($x0, $z0, $x1, $z1) = (1e9, 1e9, -1e9, -1e9);

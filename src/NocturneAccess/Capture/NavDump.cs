@@ -269,7 +269,9 @@ namespace NocturneAccess.Capture
                 : "no face";
             return $"#{p.Index} mode2D {p.Mode2D} edges {p.NumEdges} n {V(p.Normal)} num {F(p.Num)} " +
                    $"min [{string.Join(" ", p.Min.Select(F))}] max [{string.Join(" ", p.Max.Select(F))}] block {p.BlockId} hit {p.HitFlag} " +
-                   $"res {p.ResId} hoji {p.HojiId} npc {p.NpcId} elv {V(p.Elv)} | {face} | pts {string.Join(" | ", p.Points.Select(V))}";
+                   $"res {p.ResId} hoji {p.HojiId} npc {p.NpcId} elv {V(p.Elv)}" +
+                   (p.MatterPos.HasValue ? $" matter {F(p.MatterPos.Value.x)} {F(p.MatterPos.Value.y)} {F(p.MatterPos.Value.z)}" : "") +
+                   $" | {face} | pts {string.Join(" | ", p.Points.Select(V))}";   // points with the matter position added (0.0.66)
         }
 
         private static string Histogram<T>(IReadOnlyCollection<T> items, Func<T, string> key)
