@@ -56,7 +56,7 @@ Runtime probing of the first-person lock went nowhere for three builds (forcing 
 | Names | Name tables (area, place, floor); small floor pads in front of doors carry the place number that names the room behind |
 | In reach | The game's hit index for doors and people, and the prompt text on screen |
 | People and boxes | NPC list (hidden NPCs have an inactive object), item box table with an opened phase |
-| Switches | The game's own "this block's collision is off" and "this NPC is not placed" checks, which its collision code applies |
+| Switches | The game's own "this held object's collision is off" and "this NPC is not placed" checks, which its collision code applies (by the polygon's held-object id and NPC id, not its block id), and the setters events call |
 | Map | The auto-map's areas, sub-blocks and icons (not needed in the end) |
 
 ### 2.3 Log everything, read every log, keep dumps
@@ -165,7 +165,9 @@ Nocturne's fixed-camera rooms force third person.
 | A room in the same area listed though walled off | The area's event list covers rooms not joined to the player's | Reachability flood; list only what is reachable, log the rest | 0.0.22 |
 | The world map's routes go through buildings | The cell test lets cells on both sides of a thin wall be walkable, and floors continue under buildings | Block every move whose segment crosses a wall polygon | 0.0.43 |
 | "Blocked." at once beside a person who isn't there | A hidden NPC's collision box stays in the collision copy | Skip boxes of NPCs whose object is inactive | 0.0.25 |
-| A gate still blocks after it opened | Its polygons stay; the game skips them by block switch | Apply the game's own switch checks | 0.0.34 |
+| A gate still blocks after it opened | Its polygons stay; the game skips them by a switch flag | Apply the game's own switch checks | 0.0.34 |
+| Walls dropped that are real, a switched-off gate kept (only where ids differ) | **The switch check was called with the wrong field**: the collision code passes the polygon's held-object id to the hit check and its NPC id to the NPC check; the mod passed the block id and the held-object id, equal only in some areas | Read the check against the struct's field offsets (not the callee's parameter names); survey every dump for areas where the ids differ | 0.0.66 |
+| A switch event plays (camera cut) but nothing opens in the map | Collision of moving gimmicks is static and doubled: closed and open gates both authored, one set far outside the room; only a flag decides | Log every flag the game sets (hook the setters), replay the dump with the flag off offline before changing the map | 0.0.66 |
 | A talk event under the floor is missing | Volume centre below the floor, outside the target band | Use the box's span, not the centre | 0.0.27 |
 | Snaps end against walls | Square grid offset wrong for the area | Choose the offset per area | 0.0.27 |
 | "Arrived." facing away from a door | Facing check skipped within 80 units | Skip it only within 15 for doors | 0.0.26 |

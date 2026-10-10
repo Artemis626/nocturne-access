@@ -242,6 +242,14 @@ namespace NocturneAccess.Capture
             CollisionPoly under = CollisionCache.FloorUnder(s.X, s.Y, s.Z, out float planeY);
             Both(under == null ? "floor under the player: none" : $"floor under the player (plane y {F(planeY)}): {Describe(under)}");
 
+            // The game's switches (0.0.66): the hit test skips a polygon whose hoji's hit is off or whose NPC (npc > 0) is off.
+            // tools/navregions.pl reads this line and leaves those polygons out.
+            Both($"switches: {CollisionCache.SwitchState}");
+            foreach (var g in polys.Where(p => p.HojiId > 0 && p.Points.Length > 0).GroupBy(p => p.HojiId).OrderBy(g => g.Key))
+                Both($"  hoji {g.Key}: {g.Count()} polygons, blocks [{string.Join(" ", g.Select(p => p.BlockId).Distinct())}], " +
+                     $"x {F(g.Min(p => p.Points.Min(q => q.x)))}..{F(g.Max(p => p.Points.Max(q => q.x)))} " +
+                     $"z {F(g.Min(p => p.Points.Min(q => q.z)))}..{F(g.Max(p => p.Points.Max(q => q.z)))}");
+
             Both($"nearest {NearestCollision} polygons to the player (horizontal distance):");
             foreach (var item in polys.Select(p => (p, d: CollisionCache.DistanceXZ(p, s.X, s.Z))).OrderBy(x => x.d).Take(NearestCollision))
                 Both($"  d {F(item.d)} {Describe(item.p)}");

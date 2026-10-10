@@ -15,10 +15,11 @@ namespace NocturneAccess.Systems.Menus
     ///   the title combUI_oubei/comtitle/Text_comtitleTM ("VIEW"); sort tabs dlistsum/dlistsumlr_base/dlistsortNN/Text_sortTM
     ///   ("By Race", "By Level"), the current one TMC01.
     /// - Levels are sprite digits, as in the fusion tables: a CounterCtr under the row (FusionReader.Levels).
-    /// - The cursor: fclCombineInit.CMB_GBWK (cmbGlobalWork_t).ZensyoSelInfo (cmpCmdSelInfo_t).CursorInfo.CursorPos, Index the
-    ///   list's top, Shift the row, ListNums the count, as in the fusion tables and the camp lists ("Zensyo" is the game's
-    ///   word for the Compendium; ZensyoList holds its units). Used only when its row matches the highlighted one; logged on
-    ///   every change so the next session can verify it.
+    /// - The cursor: fclCombineInit.CMB_GBWK (cmbGlobalWork_t).ListWindow (lstListWindow_t).CursorInfo.CursorPos, Index the
+    ///   list's top, Shift the row, ListNums the count, as in the shops (0.0.66; ZensyoSelInfo, used in 0.0.61, is the
+    ///   Compendium menu). Used only when its row matches the highlighted one; logged on every change so the next session
+    ///   can verify it.
+    /// - The Register list (0.0.66) shares RowDetail and Prefix (title "REGISTER"); its rows are counted on screen.
     /// </summary>
     internal static class CompendiumReader
     {
@@ -58,7 +59,10 @@ namespace NocturneAccess.Systems.Menus
         {
             try
             {
-                Il2Cppcamp_H.cmpCursorPos_t pos = fclCombineInit.CMB_GBWK?.ZensyoSelInfo?.CursorInfo?.CursorPos;
+                // ZensyoSelInfo (0.0.61) is the Compendium menu (Register, View, Quit): Index 0 Shift 1 ListNums 3 on View, so
+                // row 2 of the list read "2 of 3" (10 Oct 2026, 11:23). ListWindow is the list window the shops use for their
+                // lists (fclShopInit.GBWK.ListWindow); unverified here, so the same row check guards it and every change is logged.
+                Il2Cppcamp_H.cmpCursorPos_t pos = fclCombineInit.CMB_GBWK?.ListWindow?.CursorInfo?.CursorPos;
                 if (pos == null)
                     return null;
                 string cursor = $"Index {pos.Index} Shift {pos.Shift} ListNums {pos.ListNums} ShiftMax {pos.ShiftMax}";

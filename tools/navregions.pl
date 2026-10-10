@@ -12,7 +12,9 @@ my $C = 30; my ($Clear, $Step, $Body, $MaxStep, $Merge, $NearR) = (65, 30, 180, 
 # NAVSTEP="step maxstep": the body's lowest blocking height and the largest height change of a move (0.0.63: 55 55).
 ($Step, $MaxStep) = split ' ', $ENV{NAVSTEP} if $ENV{NAVSTEP};
 
-my (%poly, @pois, @landings, $player);
+my (%poly, @pois, @landings, $player, %hitOff, %npcOff);
+# NAVHITOFF="1 2": treat these hojis' hit as off (to try a switch's effect on an older dump).
+$hitOff{$_} = 1 for split ' ', ($ENV{NAVHITOFF} // '');
 open my $F, '<', $file or die "$file: $!";
 my $sect = '';
 while (my $l = <$F>) {
@@ -20,11 +22,16 @@ while (my $l = <$F>) {
 $//;
     $sect = $1 if $l =~ /^== (.*)/;
     if (!defined $player && $l =~ /^player (-?[\d.]+) (-?[\d.]+) (-?[\d.]+);/) { $player = [$1, $2, $3]; }
-    if ($sect eq 'Collision' && $l =~ /#(\d+) mode2D \d+ edges \d+ n (\S+) (\S+) (\S+) .*? block (\d+) .*?attr (0x[0-9a-f]+) .*\| pts (.*)$/) {
-        my ($id, $nx, $ny, $nz, $blk, $attr, $pts) = ($1, $2, $3, $4, $5, hex($6), $7);
+    # The game's switches (dumps from 0.0.66): polygons whose hoji's hit is off, or whose NPC (npc > 0) is off, are left out.
+    if ($sect eq 'Collision' && $l =~ /^switches: hit off for held objects \[([\d ]*)\], NPCs off \[([\d ]*)\]/) {
+        $hitOff{$_} = 1 for split ' ', $1;
+        $npcOff{$_} = 1 for split ' ', $2;
+    }
+    if ($sect eq 'Collision' && $l =~ /#(\d+) mode2D \d+ edges \d+ n (\S+) (\S+) (\S+) .*? block (\d+) .*? hoji (-?\d+) npc (-?\d+) .*?attr (0x[0-9a-f]+) .*\| pts (.*)$/) {
+        my ($id, $nx, $ny, $nz, $blk, $hoji, $npc, $attr, $pts) = ($1, $2, $3, $4, $5, $6, $7, hex($8), $9);
         next if $poly{$id};
         my @p = map { [split ' '] } split /\s*\|\s*/, $pts;
-        $poly{$id} = { id => $id, nx => $nx, ny => $ny, nz => $nz, attr => $attr, p => \@p };
+        $poly{$id} = { id => $id, nx => $nx, ny => $ny, nz => $nz, attr => $attr, hoji => $hoji, npc => $npc, p => \@p };
     }
     if ($sect =~ /^Points of interest/ && $l =~ /^  gEvnRng (\d+) (.*?) "(\S+)" at (-?[\d.]+) (-?[\d.]+) d/) { push @pois, [$3, $2, $4, $5]; }
     if ($sect =~ /^Warps/ && $l =~ /^  (\S+) gEvnRng \d+ movetype (\d+) at (-?[\d.]+) (-?[\d.]+) .*-> (\S+) at (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)/) {
@@ -39,6 +46,7 @@ my ($x0, $z0, $x1, $z1) = (1e9, 1e9, -1e9, -1e9);
 for my $q (sort { $a->{id} <=> $b->{id} } values %poly) {
     my @p = @{ $q->{p} };
     next if @p < 2;
+    next if $hitOff{$q->{hoji}} || ($q->{npc} > 0 && $npcOff{$q->{npc}});
     if (abs($q->{ny}) >= 0.5) {
         # NAVATTR80=1: Attr 0x80 floors count too (0.0.63; the Mantra pyramid, field 24 area 17, has its floors in 0x80).
         next if @p < 3 || ($q->{attr} && !($ENV{NAVATTR80} && $q->{attr} == 0x80));

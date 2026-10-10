@@ -144,23 +144,39 @@ namespace NocturneAccess.Systems.Navigation
 
         // ---- The game's own switches ----
 
-        // fldHit.fldHitChkUnit (read offline, 2 Oct 2026) skips a polygon when fldGlobal.fldGbChkHit(fieldID, areaID + 1,
-        // blockID) is not 0, or, for hojiID above 0, when fldGbChkNpc(fieldID, areaID + 1, hojiID) is not 0. The annex gate
-        // (field 15 area 2, block 1, x 250 to 350 across the walkway) stays in the collision copy after the Annex Gate Pass
-        // opens it; the walking map took it for a wall, so the Soul and the door past it were "not reachable" (13:58 session).
-        private static readonly HashSet<int> OffBlocks = new HashSet<int>(), OffHojis = new HashSet<int>();
+        // fldHit.fldHitChkUnit (disassembly, re-read 10 Oct 2026 against the field offsets of collision_s) skips a polygon when
+        // fldGlobal.fldGbChkHit(fieldID, areaID + 1, hojiID) is not 0 (hojiID at +0x80), or, for npcID above 0, when
+        // fldGbChkNpc(fieldID, areaID + 1, npcID) is not 0 (npcID at +0x84). Until 0.0.66 the mod asked fldGbChkHit with the
+        // blockID and fldGbChkNpc with the hojiID: right only where the two ids match (the annex gate, field 15 area 2: block 1
+        // hoji 1; the Nihilo cube hall, field 20 area 17: blocks 1 and 2 are hojis 1 and 2). In the Mantra Headquarters
+        // (field 24 area 7: "blocks off [3]") block 3 is 16 walls of hoji 0 and hoji 3 is block 11: the walking map dropped real
+        // walls and kept the switched-off one. The same check runs in fldHitChkCamera, fldHitChkEnemy and the other ChkUnit
+        // variants (fldGbChkNpc also in fldEveHit_ChkEveHit and the NPC code).
+        //
+        // Gimmicks: fldGbChkGimic(fieldID, areaID + 1, hojiID) is read only by fldFileResolver.fldMakeObjectBasic3 (area load),
+        // which puts a held object at the end of its path; evtCommand_OBJ_PATH_MOVE moves it and records the end
+        // (fldGbSetGimic). The hit test itself never reads it: the polygons stay where the area file put them. Logged with the
+        // switches so a session shows what a switch event changed (the Nihilo cube hall switch, 10 Oct 2026, 11:30: nothing
+        // in the hit flags).
+        private static readonly HashSet<int> OffHits = new HashSet<int>(), OffNpcs = new HashSet<int>(), Gimmicks = new HashSet<int>();
         private static readonly HashSet<int> Seen = new HashSet<int>();
         private static readonly System.Diagnostics.Stopwatch Clock = System.Diagnostics.Stopwatch.StartNew();
         private static long _switchReadMs = long.MinValue / 2;
         private static string _switchKey = "";
         private const long SwitchPollMs = 500;
 
-        /// <summary>The game ignores this polygon now (its block's hit is off, or its held NPC is not placed).</summary>
+        /// <summary>The game ignores this polygon now (its held object's hit is off, or its NPC is switched off).</summary>
         internal static bool SwitchedOff(CollisionPoly p)
-            => OffBlocks.Contains(p.BlockId) || (p.HojiId > 0 && OffHojis.Contains(p.HojiId));
+            => OffHits.Contains(p.HojiId) || (p.NpcId > 0 && OffNpcs.Contains(p.NpcId));
+
+        /// <summary>The switches as last read: "hit off for held objects [..], NPCs off [..], gimmicks at path end [..]".</summary>
+        internal static string SwitchState => _switchKey;
+
+        /// <summary>The game just set a hit, NPC or gimmick flag (GameFlagWatch): read the switches on the next refresh.</summary>
+        internal static void SwitchesChanged() => _switchReadMs = long.MinValue / 2;
 
         /// <summary>
-        /// Asks the game's two checks for every block and hoji id in the copy: after a rebuild at once, otherwise at most every
+        /// Asks the game's checks for every hoji and NPC id in the copy: after a rebuild at once, otherwise at most every
         /// SwitchPollMs. A change counts as a collision change (Version), so the walking map and the wall cues refresh.
         /// </summary>
         private static void RefreshSwitches(int field, int area, bool rebuilt)
@@ -169,24 +185,32 @@ namespace NocturneAccess.Systems.Navigation
             if (!rebuilt && now - _switchReadMs < SwitchPollMs)
                 return;
             _switchReadMs = now;
-            OffBlocks.Clear();
-            OffHojis.Clear();
+            OffHits.Clear();
+            OffNpcs.Clear();
+            Gimmicks.Clear();
             try
             {
                 Seen.Clear();
                 foreach (CollisionPoly p in Items)
-                    if (Seen.Add(p.BlockId) && fldGlobal.fldGbChkHit(field, area + 1, p.BlockId) != 0)
-                        OffBlocks.Add(p.BlockId);
+                {
+                    if (!Seen.Add(p.HojiId))
+                        continue;
+                    if (fldGlobal.fldGbChkHit(field, area + 1, p.HojiId) != 0)
+                        OffHits.Add(p.HojiId);
+                    if (p.HojiId > 0 && fldGlobal.fldGbChkGimic(field, area + 1, p.HojiId) != 0)
+                        Gimmicks.Add(p.HojiId);
+                }
                 Seen.Clear();
                 foreach (CollisionPoly p in Items)
-                    if (p.HojiId > 0 && Seen.Add(p.HojiId) && fldGlobal.fldGbChkNpc(field, area + 1, p.HojiId) != 0)
-                        OffHojis.Add(p.HojiId);
+                    if (p.NpcId > 0 && Seen.Add(p.NpcId) && fldGlobal.fldGbChkNpc(field, area + 1, p.NpcId) != 0)
+                        OffNpcs.Add(p.NpcId);
             }
             catch (Exception ex)
             {
                 Log.Warn($"[Nav] Collision switches could not be read: {ex.Message}");
             }
-            string key = $"blocks off [{string.Join(" ", OffBlocks)}], held NPCs off [{string.Join(" ", OffHojis)}]";
+            string key = $"hit off for held objects [{string.Join(" ", OffHits)}], NPCs off [{string.Join(" ", OffNpcs)}], " +
+                         $"gimmicks at path end [{string.Join(" ", Gimmicks)}]";
             if (key == _switchKey)
                 return;
             _switchKey = key;

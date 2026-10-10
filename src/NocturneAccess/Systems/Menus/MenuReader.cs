@@ -203,6 +203,18 @@ namespace NocturneAccess.Systems.Menus
             },
             new MenuSpec
             {
+                // The Compendium's Register list (F6 dump 10 Oct 2026, 11:21:05): title "REGISTER", rows
+                // combUI_oubei/dlistrec/dlistsum_row/dlistrec_rowNN/Text_nameTM and Text_raceTM, highlighted TMC01. Its rows are
+                // under dlistrec, not dlistsum, so the Compendium spec never matched them (0.0.66). The rows on screen are counted.
+                Name = "Compendium register",
+                Item = new Regex(@"^Canvas_UI/combUI_oubei/dlistrec/dlistsum_row/dlistrec_row(?<slot>\d\d)/Text_nameTM$", RegexOptions.Compiled),
+                Highlight = "<material=\"TMC01\">",
+                CloseWhenUnhighlighted = true,
+                RowDetail = CompendiumReader.RowDetail,
+                Prefix = CompendiumReader.Prefix,
+            },
+            new MenuSpec
+            {
                 // Magatama (13:51 session, 2 Oct 2026): one name slot shows the magatama under the cursor (TMC19), with its
                 // notes ("Imparts Physical skills", "Normal resistance"); the stat bonuses are images.
                 Name = "Magatama",
