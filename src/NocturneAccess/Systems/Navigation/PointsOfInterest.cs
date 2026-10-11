@@ -150,6 +150,12 @@ namespace NocturneAccess.Systems.Navigation
         private static readonly Regex DoorName = FieldData.DoorVolume;
         private static readonly Regex EventName = FieldData.EventVolume;
         private const float PadReach = 300f;      // a place pad this close to a door names it
+        // An event volume takes a place's name only from a pad it lies on: the place's own triggers sit on it (0 to 32 in all
+        // 67 dumps to 11 Oct 2026: the overworld entrance rings, the basement elevator, Ginza), things beside a place lie off
+        // it. The Assembly of Nihilo B12 switches (field 20 area 19, 01eve_01, 02, 06, "Examine") lie 180 to 240 from a
+        // ladder's pad, took its name and were dropped as copies of the ladder door (11 Oct 2026, 21:28 session); 0.0.68
+        // measured from the door instead and would have listed the overworld rings as events.
+        private const float EventOnPad = 100f;
         // Larger place polygons are whole rooms, not door pads. Ginza's door pads are 800 x 400 (field 19, 4 Oct 2026: the Terminal,
         // Rag's Jewelry and the Cathedral lost their names and were taken for plain doors, "explored"); Shibuya's were under 700.
         private const float PadMaxSize = 1000f;
@@ -185,7 +191,7 @@ namespace NocturneAccess.Systems.Navigation
                 putevebox_s box = boxes != null && i < boxes.Length ? boxes[i] : null;
                 PoiKind? kind = null;
                 Vector4 p = h.sisei.pos;
-                string placeName = h.resourceType == 10 ? PlaceName(gb.fieldID, pads, p.x, p.y, p.z) : "";
+                string placeName = h.resourceType == 10 ? PlaceName(gb.fieldID, pads, p.x, p.y, p.z, EventName.IsMatch(name) ? EventOnPad : PadReach) : "";
                 bool soul = false;
                 bool demon = false;
                 int takara = box != null && box.TakaraIdx >= 0 ? box.TakaraIdx : -1;
@@ -255,22 +261,13 @@ namespace NocturneAccess.Systems.Navigation
                 });
             }
 
-            // Event volumes next to doors carry the door's place name ("Room A203"): such a volume is a place only when no real
-            // door has that name nearby; otherwise it is a plain event, left out below when it sits on the door. The Nihilo
-            // switches (field 20 area 19, 01eve_01, 02, 06, "Examine") lie 180 to 240 from a ladder's pad and took its name
-            // ("Ladder"), so they were dropped as copies of the ladder door 340 to 360 away (11 Oct 2026, 21:28 session).
-            // Doors listed twice at one spot (two volumes) are merged.
+            // Event volumes next to doors carry the door's place name ("Room A203"): keep one only when no real door has
+            // that name nearby. Doors listed twice at one spot (two volumes) are merged.
             var kept = new List<Poi>();
             foreach (Poi q in list)
             {
                 if (q.Kind == PoiKind.Place && list.Any(d => d.Kind == PoiKind.Door && d.Name == q.Name && Near(d, q, 800f)))
-                {
-                    q.Kind = PoiKind.Event;
-                    q.Name = ExploredDoors.PromptOf(gb.fieldID, gb.areaID, q.ResName);
-                    q.NX = q.NZ = 0f;
-                    if (!q.HasBox)
-                        q.FloorY = q.Y;   // as for events: the volume's centre, not a door's 100 above its floor
-                }
+                    continue;
                 if (q.Kind == PoiKind.Event && list.Any(d => d.Kind == PoiKind.Door && Near(d, q, 100f)))
                     continue;   // a story volume on a door: the door is listed
                 Poi same = kept.FirstOrDefault(d => d.Kind == q.Kind && Near(d, q, 20f) && Math.Abs(d.Y - q.Y) < 50f);
@@ -521,12 +518,12 @@ namespace NocturneAccess.Systems.Navigation
             return pads;
         }
 
-        /// <summary>The game's name of the nearest place pad within PadReach of (x, z) on the door's floor (a door volume
+        /// <summary>The game's name of the nearest place pad within reach of (x, z) (PadReach for doors, EventOnPad for events) on the door's floor (a door volume
         /// centre is about 100 above its floor; the stairwell has doors above each other), or "".</summary>
-        private static string PlaceName(int field, List<CollisionPoly> pads, float x, float y, float z)
+        private static string PlaceName(int field, List<CollisionPoly> pads, float x, float y, float z, float reach)
         {
             CollisionPoly best = null;
-            float bestD = PadReach;
+            float bestD = reach;
             foreach (CollisionPoly c in pads)
             {
                 if (Math.Abs(c.Points[0].y - (y + 100f)) > 150f)
