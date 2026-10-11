@@ -11,7 +11,7 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 2. `docs/HANDOFF.md`: project source of truth (roadmap, per-version state and test results, known issues).
 3. `docs/class-index.md`: every verified class, method, field and UI path, with its source.
 4. `docs/KEYS.md` (mod keys, reserved keys, game bindings) and `docs/TEXT-HOOKING-HANDOFF.md` (Francesco's Suikoden design notes the readers follow).
-5. **Pending work:** `docs/EXPLORED-DOORS-PLAN.md` (items 1 to 3 built in 0.0.35: explored doors per save file, empty item boxes; item 4, custom waypoints, recorded for later, not to build yet). Done earlier: `docs/REFACTOR-PLAN.md` (0.0.31).
+5. **Pending work:** `docs/EVENT-PROMPTS-PLAN.md` (11 Oct 2026: event prompts read from the game's own FlowScript procedures before any visit; scouted, step 1 not built). `docs/EXPLORED-DOORS-PLAN.md` (items 1 to 3 built in 0.0.35: explored doors per save file, empty item boxes; item 4, custom waypoints, recorded for later, not to build yet). Done earlier: `docs/REFACTOR-PLAN.md` (0.0.31).
 6. **Shops, Fountain, fusion, Amala, Ginza (from 3 Oct 2026):** `docs/HANDOFF-SHOPS-FUSION.md` and the latest entries of `docs/HANDOFF.md`.
 7. Overworld (2 to 3 Oct 2026, done): `docs/HANDOFF-OVERWORLD.md`.
 8. **Navigation lessons for other games** (SMT, blobbers, dungeon crawlers; principles, research method, walking-map pitfalls, build order): `docs/NAVIGATION-PLAYBOOK.md`. Keep it current when a navigation lesson is learned.

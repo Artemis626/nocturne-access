@@ -1,0 +1,25 @@
+# Event prompts from the game's own scripts (plan, 11 Oct 2026)
+
+Francesco, 11 Oct 2026 (after the 21:47 session): identify events by the action prompt they show ("Examine", "Jump off"), not only once visited. Read-only scouting of `GameAssembly.dll` and the proxy decompile; nothing built yet.
+
+## Today (0.0.53 to 0.0.69)
+
+`ExploredDoors.LearnPrompt` waits until the game's hit index `fldEveHit.gFldEveRngIdx` has pointed at an `NNeve_MM` volume for 300 ms within 400 units of the player, then copies the text of the on-screen prompt (`fieldUI/fannounce/guidetext/TextTM`, `AnnouncementReader.InteractionPromptText`) and keeps it per save file. So a prompt is known only for a volume the player has stood in, and only when the prompt was drawn while the mod was looking. The 21:47 session listed 6 events on B12: 2 said "Examine", the other 4 were invisible story triggers, "Near the event." with nothing to do.
+
+## How the game shows a prompt (found)
+
+1. Walking into a volume, `fldEveHit.fldEveHit_ChkEveHit` (RVA 0x243F410) asks for the volume's procedure name: `fldInf.fldInf_FindTypeEveNpc(ref string evename)` for events and people, `fldWap.fldDoor_Find2(ref string evename)` for doors; then `fldEveHit.fldEveHit_ScriptStart(ref string pScriptName, int idx)` starts it with `dds3SceneBasic.dds3SceneBasicStartScript(ref dds3Basic_t scene, string procname)` in the scene's script.
+2. The scene's script is an Atlus FlowScript file (`scr_H`): `scrHeader_t` (FileType, UserID, FileSize, MagicCode, TypeTableCount...), a type table (`SCR_DATATYPE`: PROCTABLE, LABELTABLE, SCRDATA, MESSAGE, STRINGS), procedures `scrProcTable_t` (Name bytes, CodeAddress), bytecode `scrCode_t` (4 bytes: `s0` opcode, `s1` operand). The loaded file hangs on the scene: `dds3SceneBasic_t.pScrFileData` (object), also what `ScrScriptProcess.scrSearchProcedureName(object scrdata, string procname)` searches. Running scripts: `ScrScriptProcess.scrHandleFirst` / `scrHandleLast` (linked `scrProcessWork_s`, with `ProcTable`, `Code`).
+3. The prompt is the script command `fldCommand.fldCommand_ACT_WIN_DSP()` (RVA 0x24286C0; also `_ACT_WIN_DSP2`, `_ACT_WIN_DSP3`): it finds the volume (`fldEveHit.fldEveHitResID_Find`), checks the facing (`fldEveHit_ChkDir`, only when a `fldCommand` static array at 0x48 has more than 10 entries), takes the script's first integer parameter (`ScrTraceCode.scrGetIntPara(0)`) and calls `fldPanel.fldInputPanelSetMessage(int no)`, which stores `no` in the input panel's process data (+0x12). Then `fldPanel.fldInputPanelCheckKey()` returns 1 when confirm is pressed.
+4. The panel draws `Localize.GetLocalizeText(fldPanel.inputpanel_mes0[no])` (`fldPanel.fldInputPanelProcess2`, static offset 0x10 is `inputpanel_mes0`). **The words are the game's own localized strings, indexed by a number in the script.**
+5. A script command is `COMM` with its 16-bit operand indexing a command table: `ScrTraceCode.CodeFunc_Comm` reads `Code[CP].s1` and looks it up in a table of 16-byte entries at the first static of `ScrTraceCode` (`scrCommandTable_t`: `comm` delegate, `paranum`). The integer before it is pushed by `PUSHI` / `PUSHIS` (`ScrTraceCode.CodeFunc_PushI`, `CodeFunc_PushIS`).
+
+Also seen, not followed yet: `fldInf.gFldInf` (`FLD_INF_ALL_t`: `pack` of `FLD_INF_PACK_t` {Idx, EveHit[] of `FLD_INF_PACK2_t` {area, EveName}}, `set` of `FLD_INF_SET_t` {st `FLD_INF_START_t` {Type, Area, **Action**, EveHit}, fl, ms `FLD_INF_MSG_t` {Type, Msg, ...}}), loaded per field by `fldInf.fldInfLoad(int field)`, and `fldInf.scriptlabel` (string array): the table that maps a volume name to its procedure; `Action` may itself be the prompt kind for "information" events.
+
+## Plan (one step per test run)
+
+1. **Diagnostic only (Shift+F6):** for every event volume of the area, write the procedure name (`fldInf_FindTypeEveNpc` logic read from `gFldInf`, or the volume name), whether the scene's script has it, and every `PUSHI(S) n; COMM k` in its code up to its end, with k's command name (the delegate's method in the command table) and, for `ACT_WIN_DSP*`, `inputpanel_mes0[n]` through `Localize.GetLocalizeText`. Check against the 32 prompts already learned in save file 21 (ground truth) and against Nihilo B12 (switches "Examine", four triggers with none). Nothing spoken changes.
+2. **Speak it:** "Event, Examine" from the script before any visit; a volume whose procedure shows no prompt is a walk-in trigger, said as such (wording for Francesco: for example "Trigger" or "Story event") or filtered apart; the learned prompt stays as the fallback.
+3. **Fallback without a script parse:** a postfix on `fldPanel.fldInputPanelSetMessage(int no)` gives the exact number and text the moment the game sets it, instead of reading the screen; still learned per visit.
+
+Open questions for step 1: whether `pScrFileData` is the raw file (`byte[]`) or a parsed handle; procedures that call others or branch on story flags (a prompt behind a flag); the command table is filled at runtime (read it then, never guess an index).

@@ -41,3 +41,9 @@ IL2CPP notes: static methods take their arguments in rcx, rdx, r8, r9 and a trai
    ```
 
    `typeinfo.pl` (about 7 s) lists, for every global followed by the class-init test `testb $0x2, 0x12f(reg)`, the classes whose methods use it, most often first. The first name is usually the class itself, not always: a static class used everywhere is named by its heaviest user. Check with the static field offsets. Verified: `0x182e4e678` is `fldGlobal` (its `fldGb` at static offset 0x48, although `fldCommand` is listed first), `0x182e44900` is `dds3Basic`, `0x182e4eeb8` `fldPlayer`, `0x182e4deb0` `fldMain`. `consts.pl` reads the `.xdata` section (virtual address 0x1828BE000, file offset 0x28BC800), where the code's float constants live.
+
+5. Callers of a method (11 Oct 2026, the event prompt scouting): every direct `call` (E8 rel32) in `.text` to the given RVAs, named by the symbol map. Indirect calls (through delegates or virtual tables) are not found.
+
+   ```
+   perl tools/native/callers.pl "<game>/GameAssembly.dll" research/native/symmap.txt 2444830 24286C0
+   ```
