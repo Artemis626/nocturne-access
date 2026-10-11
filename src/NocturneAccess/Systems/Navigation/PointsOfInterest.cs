@@ -255,13 +255,22 @@ namespace NocturneAccess.Systems.Navigation
                 });
             }
 
-            // Event volumes next to doors carry the door's place name ("Room A203"): keep one only when no real door has
-            // that name nearby. Doors listed twice at one spot (two volumes) are merged.
+            // Event volumes next to doors carry the door's place name ("Room A203"): such a volume is a place only when no real
+            // door has that name nearby; otherwise it is a plain event, left out below when it sits on the door. The Nihilo
+            // switches (field 20 area 19, 01eve_01, 02, 06, "Examine") lie 180 to 240 from a ladder's pad and took its name
+            // ("Ladder"), so they were dropped as copies of the ladder door 340 to 360 away (11 Oct 2026, 21:28 session).
+            // Doors listed twice at one spot (two volumes) are merged.
             var kept = new List<Poi>();
             foreach (Poi q in list)
             {
                 if (q.Kind == PoiKind.Place && list.Any(d => d.Kind == PoiKind.Door && d.Name == q.Name && Near(d, q, 800f)))
-                    continue;
+                {
+                    q.Kind = PoiKind.Event;
+                    q.Name = ExploredDoors.PromptOf(gb.fieldID, gb.areaID, q.ResName);
+                    q.NX = q.NZ = 0f;
+                    if (!q.HasBox)
+                        q.FloorY = q.Y;   // as for events: the volume's centre, not a door's 100 above its floor
+                }
                 if (q.Kind == PoiKind.Event && list.Any(d => d.Kind == PoiKind.Door && Near(d, q, 100f)))
                     continue;   // a story volume on a door: the door is listed
                 Poi same = kept.FirstOrDefault(d => d.Kind == q.Kind && Near(d, q, 20f) && Math.Abs(d.Y - q.Y) < 50f);
