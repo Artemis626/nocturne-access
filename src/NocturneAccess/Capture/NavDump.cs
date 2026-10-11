@@ -56,6 +56,7 @@ namespace NocturneAccess.Capture
             Section("NPCs", () => DumpNpcs(s));
             Section("Item boxes", () => DumpBoxes(s));
             Section("Event volumes", () => DumpEvents(s));
+            Section("Event scripts (0.0.70)", () => { if (fldGlobal.fldGb != null) EventScripts.Dump(Both, FileOnly, fldGlobal.fldGb); });
             Section("Door warp table", () => DumpDoorTable(s));
             Section("Warps of this area (0.0.52)", () =>
             {
