@@ -507,17 +507,7 @@ namespace NocturneAccess.Systems.Navigation
             x = ranges[index].sisei.pos.x;
             z = ranges[index].sisei.pos.z;
             Il2CppReferenceArray<putevebox_s> boxes = fldEveHit.gEvnRngBox;
-            putevebox_s box = boxes != null && index < boxes.Length ? boxes[index] : null;
-            if (box != null)
-            {
-                UnityEngine.Vector4 v = box.boxnml;
-                float len = (float)Math.Sqrt(v.x * v.x + v.z * v.z);
-                if (len > 0.5f && Math.Abs(v.y) < 0.5f)
-                {
-                    nx = v.x / len;
-                    nz = v.z / len;
-                }
-            }
+            FieldData.BoxFacing(boxes != null && index < boxes.Length ? boxes[index] : null, out nx, out nz);
             return true;
         }
 

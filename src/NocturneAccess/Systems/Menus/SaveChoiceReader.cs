@@ -57,9 +57,6 @@ namespace NocturneAccess.Systems.Menus
         private static bool _mismatchLogged;
         private static int _errors;
 
-        /// <summary>The prompt with the highlighted option, for the repeat key.</summary>
-        internal static string LastUtterance { get; private set; } = "";
-        internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
 
         internal static void Install()
         {
@@ -187,8 +184,7 @@ namespace NocturneAccess.Systems.Menus
 
             string option = Describe(options, _index);
             _spoken = _index;
-            LastUtterance = Join(PromptText(ui), option);
-            LastUtteranceAt = Environment.TickCount64;
+            RepeatBuffer.Record(Join(PromptText(ui), option));
 
             if (!_announced)
             {

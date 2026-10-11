@@ -62,9 +62,6 @@ namespace NocturneAccess.Systems.Menus
         private static long _lastPoll;
         private static int _lookupFailures;
 
-        /// <summary>The last slot announcement, for the repeat key.</summary>
-        internal static string LastUtterance { get; private set; } = "";
-        internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
 
         internal static void Install()
         {
@@ -194,8 +191,7 @@ namespace NocturneAccess.Systems.Menus
             if (utterance.Length == 0)
                 return;
 
-            LastUtterance = utterance;
-            LastUtteranceAt = Environment.TickCount64;
+            RepeatBuffer.Record(utterance);
             if (opening)
                 Log.Info($"{Tag} Opened.");
             SpeechManager.Say(utterance, interrupt: !opening, force: true);

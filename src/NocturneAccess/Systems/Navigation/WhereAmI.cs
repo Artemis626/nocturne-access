@@ -53,7 +53,6 @@ namespace NocturneAccess.Systems.Navigation
             }
         }
 
-        private static readonly string[] Compass = { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" };
 
         /// <summary>
         /// The place's name from the game's name table (fldGlobal.fldNameData, FldNameData): GetFieldName(field) (the field, as the
@@ -126,7 +125,7 @@ namespace NocturneAccess.Systems.Navigation
             if (exploring)
             {
                 if (!world && gb.cammode == 0 && FirstPersonView.On)
-                    parts.Add("Facing " + Compass[(int)(Mod360((float)Math.Round(Mod360(180f - gb.PlayerKakudo) / 45.0) * 45f) / 45) % 8]);
+                    parts.Add("Facing " + CompassWord(180f - gb.PlayerKakudo));
                 Poi nearest = PointsOfInterest.Build(gb).FirstOrDefault(q => q.Reachable && q.Route == null);   // not one through other areas
                 if (nearest != null)
                     parts.Add($"Nearest: {nearest.Spoken}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, nearest)}");

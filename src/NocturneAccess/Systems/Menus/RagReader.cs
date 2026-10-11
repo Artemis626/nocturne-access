@@ -51,8 +51,6 @@ namespace NocturneAccess.Systems.Menus
         private static bool _rowsLogged, _titleSpoken;
         private static int _errors;
 
-        internal static string LastUtterance { get; private set; } = "";
-        internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
 
         internal static void Install()
         {
@@ -222,18 +220,11 @@ namespace NocturneAccess.Systems.Menus
             return list;
         }
 
-        private static string Text(Transform t)
-        {
-            if (t == null || !t.gameObject.activeInHierarchy)
-                return "";
-            TMP_Text text = t.GetComponent<TMP_Text>();
-            return text == null ? "" : TextUtil.Clean(text.text);
-        }
+        private static string Text(Transform t) => UiUtil.TextOf(t);
 
         private static void Say(string text, bool interrupt)
         {
-            LastUtterance = text;
-            LastUtteranceAt = Environment.TickCount64;
+            RepeatBuffer.Record(text);
             SpeechManager.Say(text, interrupt: interrupt, force: true);
         }
     }

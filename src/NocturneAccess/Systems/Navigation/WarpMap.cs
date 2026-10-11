@@ -353,12 +353,11 @@ namespace NocturneAccess.Systems.Navigation
             zone.X = sx / vtx.Length;
             zone.Z = sz / vtx.Length;
             floorY = bottom;
-            Vector4 n = box.boxnml;
-            float len = (float)Math.Sqrt(n.x * n.x + n.z * n.z);
-            if (len > 0.5f && Math.Abs(n.y) < 0.5f)
+            FieldData.BoxFacing(box, out float nx, out float nz);
+            if (nx != 0f || nz != 0f)
             {
-                zone.NX = n.x / len;
-                zone.NZ = n.z / len;
+                zone.NX = nx;
+                zone.NZ = nz;
             }
             float hd = 0f, hw = 0f;
             for (int k = 0; k < vtx.Length; k++)

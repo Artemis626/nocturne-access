@@ -63,7 +63,6 @@ namespace NocturneAccess.Systems.Dialogue
 
         /// <summary>The last page with its speaker, for the repeat key.</summary>
         internal static string LastUtterance { get; private set; } = "";
-        internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
 
         internal static void Install()
         {
@@ -193,7 +192,7 @@ namespace NocturneAccess.Systems.Dialogue
                           && (Config.SpeakerEveryPage.Value || speaker != _lastSpeakerSpoken || _windowReopened);
 
             LastUtterance = speaker.Length > 0 ? $"{speaker}: {page}" : page;
-            LastUtteranceAt = Environment.TickCount64;
+            RepeatBuffer.RecordDialogue();
             _lastPage = page;
             _lastSpokenAt = Clock.ElapsedMilliseconds;
             _lastSpeakerSpoken = speaker;
@@ -205,21 +204,6 @@ namespace NocturneAccess.Systems.Dialogue
             SpeechManager.Say(nameIt ? $"{speaker}: {page}" : page, interrupt: true, force: true);
         }
 
-        private static bool AnyLineVisible()
-        {
-            foreach (TMP_Text component in LineComponents)
-            {
-                try
-                {
-                    if (component != null && component.gameObject.activeInHierarchy)
-                        return true;
-                }
-                catch
-                {
-                    // Destroyed component: ignore it.
-                }
-            }
-            return false;
-        }
+        private static bool AnyLineVisible() => LineComponents.Any(UiUtil.IsVisible);
     }
 }

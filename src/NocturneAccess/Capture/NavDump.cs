@@ -17,9 +17,9 @@ namespace NocturneAccess.Capture
     /// <summary>
     /// Shift+F6 (debug; F5 until 0.0.19): writes the navigation data of the loaded field, read only, to
     /// UserData/NocturneAccess/NavDumps/navdump_[time].txt, and a summary to Latest.log as [Nav:Dump] lines.
-    /// Sections: player and camera, place names, New Game+ statics, collision polygons with their face flags,
-    /// auto-map areas, sub-blocks and icons, NPCs, item boxes, event volumes, and the input and story-flag
-    /// tables gathered by NavProbe. Every name read here is in docs/class-index.md "Field navigation".
+    /// Sections: player and camera, place names, collision polygons with their face flags and the game's switches, auto-map
+    /// areas, sub-blocks and icons, NPCs, item boxes, event volumes, the door warp table, warps, points of interest and the
+    /// walk grid. Every name read here is in docs/class-index.md "Field navigation".
     /// Each section is guarded on its own, so one failing read does not lose the rest.
     /// </summary>
     internal static class NavDump
@@ -51,7 +51,6 @@ namespace NocturneAccess.Capture
             FileOnly($"Nocturne Access {ModMain.ModVersion} navigation dump, {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Section("Player", () => s = DumpPlayer());
             Section("Names", () => DumpNames(s));
-            Section("New Game+", () => Both(NavProbe.NewGame2Line()));
             Section("Collision", () => DumpCollision(s));
             Section("Auto-map", () => DumpAutoMap(s));
             Section("NPCs", () => DumpNpcs(s));
@@ -71,7 +70,6 @@ namespace NocturneAccess.Capture
                     FileOnly(line);
             });
             Section("Points of interest and walk grid", () => DumpWalkGrid(s));
-            Section("Input and flags", DumpInputAndFlags);
 
             _dump.Save();
             _dump = null;
@@ -82,7 +80,7 @@ namespace NocturneAccess.Capture
         private static PlayerSnapshot DumpPlayer()
         {
             PlayerSnapshot s = ReadPlayer();
-            Both($"exploring {FieldState.IsExploring}; fldPlayerCalc calls {FieldState.CalcCount} (Nml {NavProbe.NmlCalls}, syukan {NavProbe.SyukanCalls})");
+            Both($"exploring {FieldState.IsExploring}; fldPlayerCalc calls {FieldState.CalcCount} (Nml {FieldState.NmlCount}, syukan {FieldState.SyukanCount}, world map {FieldState.WmCount})");
             if (!s.Valid)
             {
                 Both("fldGlobal.fldGb is null: not in a field.");
@@ -404,31 +402,20 @@ namespace NocturneAccess.Capture
                 doormovetbl_s e = table[i];
                 if (e == null)
                     continue;
-                string from = Chars(e.union02);
+                string from = DoorTable.Chars(e.union02);
                 if (e.movetype == 0 && from.Length == 0)
                     continue;
                 used++;
                 string line = $"  door {i} movetype {(int)e.movetype} flagmode {(int)e.flagmode} flag {e.flag} from area+1 {e.union01} {Q(from)} | " +
-                              $"u03 {e.union03} u04 {e.union04} u05 {e.union05} u06 {Q(Chars(e.union06))} u07 {Q(Chars(e.union07))} | " +
-                              $"warptype {(int)e.warptype} attr {(int)e.warp_attr} to field {e.union08} area+1 {e.union09} u10 {e.union10} at {Q(Chars(e.warp_pos))} | " +
-                              $"cam {(int)e.warp_cammode}/{(int)e.warp_camtbl} {Q(Chars(e.warp_camname))} bgm {(int)e.warp_bgm} foot {(int)e.warp_foot} after {(int)e.after_flag} {Q(Chars(e.after_scr))}";
+                              $"u03 {e.union03} u04 {e.union04} u05 {e.union05} u06 {Q(DoorTable.Chars(e.union06))} u07 {Q(DoorTable.Chars(e.union07))} | " +
+                              $"warptype {(int)e.warptype} attr {(int)e.warp_attr} to field {e.union08} area+1 {e.union09} u10 {e.union10} at {Q(DoorTable.Chars(e.warp_pos))} | " +
+                              $"cam {(int)e.warp_cammode}/{(int)e.warp_camtbl} {Q(DoorTable.Chars(e.warp_camname))} bgm {(int)e.warp_bgm} foot {(int)e.warp_foot} after {(int)e.after_flag} {Q(DoorTable.Chars(e.after_scr))}";
                 if (e.union01 == gb.areaID + 1)
                     Both(line);
                 else
                     FileOnly(line);
             }
             Both($"{used} entries used");
-        }
-
-        /// <summary>A game char array up to its first NUL.</summary>
-        private static string Chars(Il2CppStructArray<char> a)
-        {
-            if (a == null)
-                return "";
-            var sb = new StringBuilder();
-            for (int i = 0; i < a.Length && a[i] != '\0'; i++)
-                sb.Append(a[i]);
-            return sb.ToString();
         }
 
         private static string Dist(PlayerSnapshot s, float x, float y, float z)
@@ -541,43 +528,6 @@ namespace NocturneAccess.Capture
             string verts = vtx == null ? "null" : string.Join(" | ", Enumerable.Range(0, vtx.Length).Select(k => V(vtx[k])));
             return $"type {b.type} size {F(b.sizex)} {F(b.sizey)} {F(b.sizez)} TakaraIdx {b.TakaraIdx} npc hoji {b.npcHoji} hit {b.npcHit} idx {b.npcIdx} " +
                    $"mode2D {b.mode2D} facehit {b.facehit} serial {b.put_serialID} boxnml {V(b.boxnml)} vtx {verts}";
-        }
-
-        // ---- input and story flags ----
-
-        private static void DumpInputAndFlags()
-        {
-            if (!NavProbe.Installed)
-            {
-                Both("probe hooks not installed (Diagnostics = false)");
-                return;
-            }
-
-            Both($"padcheck pad indexes seen: mask 0x{NavProbe.PadIndexMask:X}");
-            Both("padcheck actions that answered true (and FD_Subjectivity):");
-            foreach (string line in NavProbe.PadcheckLines(onlyInteresting: true))
-                Both("  " + line);
-            FileOnly("padcheck, every action:");
-            foreach (string line in NavProbe.PadcheckLines(onlyInteresting: false))
-                FileOnly("  " + line);
-            Both("analog channels asked (dds3PadManager.GetPadAnalog):");
-            foreach (string line in AnalogInput.ChannelLines())
-                Both("  " + line);
-
-            DumpChecks("evtBitCheck", NavProbe.EvtBits, annotate: true);
-            DumpChecks("cfgGetBit", NavProbe.CfgBits, annotate: false);
-        }
-
-        private static void DumpChecks(string name, CheckRecorder recorder, bool annotate)
-        {
-            Dictionary<int, CheckStat> baseline = recorder.BaselineCopy();
-            var inCalc = baseline.Where(kv => kv.Value.InCalc > 0).OrderBy(kv => kv.Key).ToList();
-            Both($"{name}: {baseline.Count} distinct values checked outside V captures; {inCalc.Count} of them inside fldPlayerCalc:");
-            foreach (KeyValuePair<int, CheckStat> kv in inCalc)
-                Both($"  {kv.Key}{(annotate ? NavProbe.NewGame2Name(kv.Key) : "")}: {kv.Value}");
-            FileOnly($"{name}, every value:");
-            foreach (KeyValuePair<int, CheckStat> kv in baseline.OrderBy(kv => kv.Key))
-                FileOnly($"  {kv.Key.ToString(CultureInfo.InvariantCulture)}{(annotate ? NavProbe.NewGame2Name(kv.Key) : "")}: {kv.Value}");
         }
     }
 }

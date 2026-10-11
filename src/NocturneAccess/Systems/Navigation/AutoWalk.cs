@@ -168,7 +168,7 @@ namespace NocturneAccess.Systems.Navigation
             {
                 // A door that moves the player itself (the Underground Mall stairs, 3 Oct 20:49:45: its hit was the target, then the
                 // game walked the player through) takes movement as soon as it fires: that is arrival, not an interruption.
-                float d = (float)Math.Sqrt((_target.X - gb.playerX) * (_target.X - gb.playerX) + (_target.Z - gb.playerZ) * (_target.Z - gb.playerZ));
+                float d = Dist(_target.X, _target.Z, gb.playerX, gb.playerZ);
                 if (_target.IsDoorLike && InReach(_target, d) && !(_final != null && IsTouchWarp(gb, _target)))
                 {
                     Arrived(gb, "the game took movement with the target door's hit active");
@@ -190,7 +190,7 @@ namespace NocturneAccess.Systems.Navigation
                 _still = 0;   // fldPlayerCalc_Wm2 ignores the pads then (read offline): waiting, not blocked
 
             float toTarget = Bearing(x, z, _target.X, _target.Z);
-            float flat = (float)Math.Sqrt((_target.X - x) * (_target.X - x) + (_target.Z - z) * (_target.Z - z));
+            float flat = Dist(_target.X, _target.Z, x, z);
             // The world map: the game's prompt ("Enter", "Talk") fires on entering range, the marker has no facing (logs 1 Oct
             // 19:57, 3 Oct 14:07): in reach is arrival, at once. Pressing on towards the target would walk past it.
             if (_world && _target.IsDoorLike && InReach(_target, flat))
@@ -212,10 +212,9 @@ namespace NocturneAccess.Systems.Navigation
                     // "Talk" and "Open Door" of Loki and his room did nothing until he turned): face it first (0.0.54).
                     if (_target.Kind == PoiKind.Event && !_world)
                     {
-                        float faceEvent = Bearing(x, z, _target.X, _target.Z);
-                        if (!Facing(gb, faceEvent) && ++_facing <= FaceTicks)
+                        if (!Facing(gb, toTarget) && ++_facing <= FaceTicks)
                         {
-                            FaceTowards(gb, faceEvent);
+                            FaceTowards(gb, toTarget);
                             return;
                         }
                     }
@@ -773,14 +772,6 @@ namespace NocturneAccess.Systems.Navigation
 
         private static float Dist(float ax, float az, float bx, float bz) => (float)Math.Sqrt((ax - bx) * (ax - bx) + (az - bz) * (az - bz));
 
-        /// <summary>Distance in X and Z from (x, z) to a run's segment.</summary>
-        private static float SegmentDistance(float x, float z, PathRun r)
-        {
-            float dx = r.Bx - r.Ax, dz = r.Bz - r.Az, len2 = dx * dx + dz * dz;
-            float t = len2 <= 0 ? 0 : Math.Clamp(((x - r.Ax) * dx + (z - r.Az) * dz) / len2, 0f, 1f);
-            return Dist(x, z, r.Ax + t * dx, r.Az + t * dz);
-        }
-
         private static bool Plan(fldGlobalWork_t gb, string why)
         {
             var clock = Stopwatch.StartNew();
@@ -837,7 +828,8 @@ namespace NocturneAccess.Systems.Navigation
                 float bestD = float.MaxValue;
                 for (int i = 0; i <= Math.Min(_run, _runs.Count - 1); i++)
                 {
-                    float d = SegmentDistance(gb.playerX, gb.playerZ, _runs[i]);
+                    PathRun r = _runs[i];
+                    float d = CollisionCache.SegmentDistance(gb.playerX, gb.playerZ, r.Ax, r.Az, r.Bx, r.Bz);
                     if (d < bestD)
                     {
                         bestD = d;

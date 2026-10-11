@@ -113,7 +113,7 @@ namespace NocturneAccess.Core
             MelonPreferences_Category navigation = MelonPreferences.CreateCategory("NocturneAccess_Navigation", "Navigation");
             navigation.SetFilePath(FilePath, true, false);
             NavDiagnostics = navigation.CreateEntry("Diagnostics", true, "Navigation diagnostics",
-                "Development: logs the player's position, facing and input while exploring, place and event changes, and the story flags checked when V (Toggle POV) is pressed. Needs a restart.");
+                "Development: logs the player's position, facing and pad buttons while exploring, and place and event changes. Needs a restart.");
             // "TraceIntervalMsV2" (1000) replaces the entry "TraceIntervalMs" (250) of 0.0.30 and earlier, so saved configs pick
             // up the new default: the 250 ms trace lines were most of a session log.
             NavTraceIntervalMs = navigation.CreateEntry("TraceIntervalMsV2", 1000, "Trace interval (ms)",

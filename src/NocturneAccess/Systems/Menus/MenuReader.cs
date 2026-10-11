@@ -254,14 +254,7 @@ namespace NocturneAccess.Systems.Menus
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static long _lastPoll;
 
-        /// <summary>The last menu announcement and when it was made, for the repeat key.</summary>
-        internal static string LastUtterance { get; private set; } = "";
-        internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
         internal static long Now => Clock.ElapsedMilliseconds;
-
-        /// <summary>True while the named menu is shown or about to be announced.</summary>
-        internal static bool IsActive(string name)
-            => States.Any(s => s.Spec.Name == name && (s.Current >= 0 || s.PendingSlot >= 0));
 
         /// <summary>The screen title last written for the named menu ("What will you use?" for the pause menu's lists), or "".</summary>
         internal static string TitleOf(string name)
@@ -534,8 +527,7 @@ namespace NocturneAccess.Systems.Menus
                 parts.Add(description);
 
             string utterance = string.Join(". ", parts);
-            LastUtterance = utterance;
-            LastUtteranceAt = Environment.TickCount64;
+            RepeatBuffer.Record(utterance);
             if (opening)
                 Log.Info($"{Tag} {state.Spec.Name} opened.");
             SpeechManager.Say(utterance, interrupt: !opening, force: true);

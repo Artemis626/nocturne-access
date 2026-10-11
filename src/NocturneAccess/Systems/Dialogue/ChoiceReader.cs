@@ -155,15 +155,8 @@ namespace NocturneAccess.Systems.Dialogue
                     count = i + 1;
                     continue;
                 }
-                try
-                {
-                    if (_writtenMask == 0 && OptionComponents[i] != null && OptionComponents[i].gameObject.activeInHierarchy)
-                        count = i + 1;
-                }
-                catch
-                {
-                    // Destroyed component: not visible.
-                }
+                if (_writtenMask == 0 && UiUtil.IsVisible(OptionComponents[i]))
+                    count = i + 1;
             }
             return Math.Max(count, atLeastIndex + 1);
         }

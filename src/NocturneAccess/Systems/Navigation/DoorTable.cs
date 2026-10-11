@@ -26,6 +26,13 @@ namespace NocturneAccess.Systems.Navigation
         {
             public int AreaPlus1, Flag, WarpType, ToField, ToAreaPlus1, MoveType;
             public string Name = "", WarpPos = "";
+
+            /// <summary>Where it leads from (field, area): union08 0 means this field, union09 0 this area (else area + 1).</summary>
+            public void Dest(int field, int area, out int toField, out int toArea)
+            {
+                toField = ToField == 0 ? field : ToField;
+                toArea = ToAreaPlus1 == 0 ? area : ToAreaPlus1 - 1;
+            }
         }
 
         /// <summary>
@@ -44,8 +51,7 @@ namespace NocturneAccess.Systems.Navigation
                 Entry e = Find(area, resName);
                 if (e == null || e.WarpType != 0 || e.WarpPos.Length == 0)
                     return false;
-                int toField = e.ToField == 0 ? field : e.ToField;
-                int toArea = e.ToAreaPlus1 == 0 ? area : e.ToAreaPlus1 - 1;
+                e.Dest(field, area, out int toField, out int toArea);
                 if (toField != field || toArea != area)
                     return false;
                 moveType = e.MoveType;
@@ -89,10 +95,9 @@ namespace NocturneAccess.Systems.Navigation
                 Entry e = Find(area, resName);
                 if (e == null || e.WarpType != 0)
                     return "";
-                int toField = e.ToField == 0 ? field : e.ToField;
+                e.Dest(field, area, out int toField, out int toArea);
                 if (toField != field)
                     return "exit";
-                int toArea = e.ToAreaPlus1 == 0 ? area : e.ToAreaPlus1 - 1;
                 if (toArea == area)
                     return "";
                 bool any = false, exit = false;
@@ -104,8 +109,7 @@ namespace NocturneAccess.Systems.Navigation
                     any = true;
                     if (back.WarpType != 0 && back.WarpType != 1)
                         return "passage";   // a Terminal or event door leads on
-                    int f = back.ToField == 0 ? field : back.ToField;
-                    int a = back.ToAreaPlus1 == 0 ? toArea : back.ToAreaPlus1 - 1;
+                    back.Dest(field, toArea, out int f, out int a);
                     // A room whose only other way out leaves the field (stairs to the overworld): "to exit" (Francesco, 6 Oct 2026).
                     if (back.WarpType == 0 && f != field)
                     {
@@ -129,22 +133,7 @@ namespace NocturneAccess.Systems.Navigation
         /// named or not: "Exit to overworld" (0.0.44) for a door into a field below 10 (FieldState.WorldMapField), as Shibuya's
         /// 01d_05 and the Medical Center's Annex Lobby exit 01d_04 lead to field 2.
         /// </summary>
-        internal static int ToField(int field, int area, string resName)
-        {
-            try
-            {
-                Refresh(field);
-                Entry e = Find(area, resName);
-                if (e == null || e.WarpType != 0)
-                    return -1;
-                return e.ToField == 0 ? field : e.ToField;
-            }
-            catch (Exception ex)
-            {
-                Log.Warn($"[Nav:Doors] Destination of {field}/{area}/{resName} could not be read: {ex.Message}");
-                return -1;
-            }
-        }
+        internal static int ToField(int field, int area, string resName) => Leads(field, area, resName, out int toField, out _) ? toField : -1;
 
         /// <summary>
         /// Where a plain door (warptype 0) leads now: its field and area (0.0.56, AreaRoutes: the door the player came in through
@@ -159,8 +148,7 @@ namespace NocturneAccess.Systems.Navigation
                 Entry e = Find(area, resName);
                 if (e == null || e.WarpType != 0)
                     return false;
-                toField = e.ToField == 0 ? field : e.ToField;
-                toArea = e.ToAreaPlus1 == 0 ? area : e.ToAreaPlus1 - 1;
+                e.Dest(field, area, out toField, out toArea);
                 return true;
             }
             catch (Exception ex)
@@ -225,7 +213,8 @@ namespace NocturneAccess.Systems.Navigation
             Log.Info($"[Nav:Doors] Door table of field {field}: {Entries.Count} entries.");
         }
 
-        private static string Chars(Il2CppStructArray<char> a)
+        /// <summary>A game char array up to its first NUL (also the navigation dump).</summary>
+        internal static string Chars(Il2CppStructArray<char> a)
         {
             if (a == null)
                 return "";

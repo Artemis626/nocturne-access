@@ -72,8 +72,6 @@ namespace NocturneAccess.Systems.Navigation
         private static long _centreRequestMs = long.MinValue / 2;
         private static int _lastSyukan;
 
-        internal static bool Enabled => _enabled;
-
         internal static void Init()
         {
             _cell = Math.Max(100, Config.BlobberCellSize.Value);

@@ -64,8 +64,6 @@ namespace NocturneAccess.Systems.Menus
         private static readonly HashSet<int> RowsLogged = new HashSet<int>();
         private static int _errors;
 
-        internal static string LastUtterance { get; private set; } = "";
-        internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
 
         /// <summary>True while a demon table is drawn.</summary>
         internal static bool IsOpen => Clock.ElapsedMilliseconds - _drawnAt <= DrawnWithinMs;
@@ -98,15 +96,7 @@ namespace NocturneAccess.Systems.Menus
             };
         }
 
-        private static Transform FindRoot(Transform t)
-        {
-            for (int depth = 0; t != null && depth < 12; depth++, t = t.parent)
-            {
-                if (t.name == RootName)
-                    return t;
-            }
-            return null;
-        }
+        private static Transform FindRoot(Transform t) => UiUtil.FindAncestor(t, RootName);
 
         private static void AfterStockDevilInfo(cmpCursorInfo_t __2, byte __3)
         {
@@ -449,13 +439,7 @@ namespace NocturneAccess.Systems.Menus
 
         private static Transform Find(string path) => _root == null ? null : _root.Find(path);
 
-        private static string Text(Transform t)
-        {
-            if (t == null || !t.gameObject.activeInHierarchy)
-                return "";
-            TMP_Text text = t.GetComponent<TMP_Text>();
-            return text == null ? "" : TextUtil.Clean(text.text);
-        }
+        private static string Text(Transform t) => UiUtil.TextOf(t);
 
         private static string Sentence(string text)
         {
@@ -465,8 +449,7 @@ namespace NocturneAccess.Systems.Menus
 
         private static void Say(string text, bool interrupt)
         {
-            LastUtterance = text;
-            LastUtteranceAt = Environment.TickCount64;
+            RepeatBuffer.Record(text);
             SpeechManager.Say(text, interrupt: interrupt, force: true);
         }
     }

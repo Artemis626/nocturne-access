@@ -15,8 +15,6 @@ namespace NocturneAccess.Systems.Navigation
     internal struct CellView
     {
         public SideKind Ahead, Left, Right;
-
-        public bool SameAs(CellView o) => Ahead == o.Ahead && Left == o.Left && Right == o.Right;
     }
 
     /// <summary>
@@ -139,23 +137,9 @@ namespace NocturneAccess.Systems.Navigation
                 if (chest < minY || chest > maxY)
                     continue;
 
-                // The two points farthest apart in X and Z give the wall's footprint.
-                Vector4 a = p.Points[0], b = p.Points[0];
-                float best = -1;
-                for (int i = 0; i < p.Points.Length; i++)
-                    for (int j = i + 1; j < p.Points.Length; j++)
-                    {
-                        float ddx = p.Points[i].x - p.Points[j].x, ddz = p.Points[i].z - p.Points[j].z;
-                        float d = ddx * ddx + ddz * ddz;
-                        if (d > best)
-                        {
-                            best = d;
-                            a = p.Points[i];
-                            b = p.Points[j];
-                        }
-                    }
-                if (best > 1)
-                    Walls.Add(new Seg { Ax = a.x, Az = a.z, Bx = b.x, Bz = b.z });
+                CollisionCache.Footprint(p, out float ax, out float az, out float bx, out float bz);
+                if ((ax - bx) * (ax - bx) + (az - bz) * (az - bz) > 1)
+                    Walls.Add(new Seg { Ax = ax, Az = az, Bx = bx, Bz = bz });
             }
         }
 

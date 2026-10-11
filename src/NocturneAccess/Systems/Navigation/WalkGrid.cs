@@ -215,7 +215,7 @@ namespace NocturneAccess.Systems.Navigation
                         lo = Math.Min(lo, v.y);
                         hi = Math.Max(hi, v.y);
                     }
-                    Footprint(p, out float ax, out float az, out float bx, out float bz);
+                    CollisionCache.Footprint(p, out float ax, out float az, out float bx, out float bz);
                     walls.Add((ax, az, bx, bz, lo, hi));
                 }
             }
@@ -294,7 +294,7 @@ namespace NocturneAccess.Systems.Navigation
                         int n = _count[c];
                         if (n == 0)
                             return;
-                        float d = SegmentDistance(x, z, ax, az, bx, bz);
+                        float d = CollisionCache.SegmentDistance(x, z, ax, az, bx, bz);
                         if (d >= NearRange)
                             return;
                         for (int l = 0; l < n; l++)
@@ -1011,11 +1011,8 @@ namespace NocturneAccess.Systems.Navigation
         /// </summary>
         internal static bool ReachableNear(float px, float py, float pz, float x, float y, float z, float radius)
         {
-            int start = StartNode(px, py, pz);
-            if (start < 0)
+            if (!FloodFrom(px, py, pz))
                 return false;
-            if (start != _reachStart || _reach.Length != _state.Length || _reachBuild != _builds)
-                Flood(start);
 
             int r = (int)Math.Ceiling(radius / CellSize);
             int ci = (int)Math.Round((x - _x0) / CellSize), cj = (int)Math.Round((z - _z0) / CellSize);
@@ -1044,11 +1041,8 @@ namespace NocturneAccess.Systems.Navigation
         /// </summary>
         internal static bool ReachableInRect(float px, float py, float pz, float x0, float z0, float x1, float z1, float y)
         {
-            int start = StartNode(px, py, pz);
-            if (start < 0)
+            if (!FloodFrom(px, py, pz))
                 return false;
-            if (start != _reachStart || _reach.Length != _state.Length || _reachBuild != _builds)
-                Flood(start);
             int i0 = Math.Max(0, (int)Math.Ceiling((x0 - _x0) / CellSize)), i1 = Math.Min(_w - 1, (int)Math.Floor((x1 - _x0) / CellSize));
             int j0 = Math.Max(0, (int)Math.Ceiling((z0 - _z0) / CellSize)), j1 = Math.Min(_h - 1, (int)Math.Floor((z1 - _z0) / CellSize));
             for (int j = j0; j <= j1; j++)
@@ -1063,6 +1057,17 @@ namespace NocturneAccess.Systems.Navigation
                     }
                 }
             return false;
+        }
+
+        /// <summary>The player's flood (ReachableNear, ReachableInRect), redone when the grid or the player's node changed; false without a start.</summary>
+        private static bool FloodFrom(float px, float py, float pz)
+        {
+            int start = StartNode(px, py, pz);
+            if (start < 0)
+                return false;
+            if (start != _reachStart || _reach.Length != _state.Length || _reachBuild != _builds)
+                Flood(start);
+            return true;
         }
 
         private static void Flood(int start)
@@ -1170,33 +1175,5 @@ namespace NocturneAccess.Systems.Navigation
             return a.y - (p.Normal.x * (x - a.x) + p.Normal.z * (z - a.z)) / p.Normal.y;
         }
 
-        /// <summary>The two points farthest apart in X and Z (a vertical polygon's footprint), as in GridSense.</summary>
-        private static void Footprint(CollisionPoly p, out float ax, out float az, out float bx, out float bz)
-        {
-            Vector4 a = p.Points[0], b = p.Points[0];
-            float best = -1;
-            for (int i = 0; i < p.Points.Length; i++)
-                for (int j = i + 1; j < p.Points.Length; j++)
-                {
-                    float dx = p.Points[i].x - p.Points[j].x, dz = p.Points[i].z - p.Points[j].z;
-                    float d = dx * dx + dz * dz;
-                    if (d > best)
-                    {
-                        best = d;
-                        a = p.Points[i];
-                        b = p.Points[j];
-                    }
-                }
-            ax = a.x; az = a.z; bx = b.x; bz = b.z;
-        }
-
-        private static float SegmentDistance(float px, float pz, float ax, float az, float bx, float bz)
-        {
-            float dx = bx - ax, dz = bz - az;
-            float len2 = dx * dx + dz * dz;
-            float t = len2 <= 0 ? 0 : Math.Clamp(((px - ax) * dx + (pz - az) * dz) / len2, 0f, 1f);
-            float cx = ax + t * dx - px, cz = az + t * dz - pz;
-            return (float)Math.Sqrt(cx * cx + cz * cz);
-        }
     }
 }

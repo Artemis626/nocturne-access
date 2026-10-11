@@ -36,6 +36,26 @@ namespace NocturneAccess.Core
             }
         }
 
+        /// <summary>The cleaned text of the TextMeshPro component on a shown object, else "" (several readers, 0.0.67).</summary>
+        internal static string TextOf(Transform t)
+        {
+            if (t == null || !t.gameObject.activeInHierarchy)
+                return "";
+            Il2CppTMPro.TMP_Text text = t.GetComponent<Il2CppTMPro.TMP_Text>();
+            return text == null ? "" : TextUtil.Clean(text.text);
+        }
+
+        /// <summary>The nearest ancestor named name (the transform itself included), at most 12 levels up, or null.</summary>
+        internal static Transform FindAncestor(Transform t, string name)
+        {
+            for (int depth = 0; t != null && depth < 12; depth++, t = t.parent)
+            {
+                if (t.name == name)
+                    return t;
+            }
+            return null;
+        }
+
         /// <summary>Hierarchy path such as "Canvas/mesWindow/mes_textTM", root first.</summary>
         internal static string PathOf(Transform transform)
         {

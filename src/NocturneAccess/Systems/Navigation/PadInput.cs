@@ -35,8 +35,6 @@ namespace NocturneAccess.Systems.Navigation
 
         internal static bool Installed { get; private set; }
 
-        internal static long Injected { get; private set; }
-
         internal static void Install()
         {
             if (!Config.PadInjection.Value)
@@ -119,10 +117,7 @@ namespace NocturneAccess.Systems.Navigation
             if (__result)
                 TraceSeen[b] = true;
             else if (_anyHeld && Held[b])
-            {
                 __result = true;
-                Injected++;
-            }
         }
     }
 }

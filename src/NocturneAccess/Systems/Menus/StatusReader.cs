@@ -52,8 +52,6 @@ namespace NocturneAccess.Systems.Menus
         private static long _seenSince;
         private static long _waitSince = -1;
 
-        internal static string LastUtterance { get; private set; } = "";
-        internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
 
         /// <summary>True while the screen is shown and its summary has been spoken.</summary>
         internal static bool IsOpen => _open;
@@ -439,8 +437,7 @@ namespace NocturneAccess.Systems.Menus
         {
             if (text.Length == 0)
                 return;
-            LastUtterance = text;
-            LastUtteranceAt = Environment.TickCount64;
+            RepeatBuffer.Record(text);
             SpeechManager.Say(text, interrupt: interrupt, force: true);
         }
     }

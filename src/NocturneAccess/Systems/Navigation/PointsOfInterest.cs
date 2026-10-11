@@ -153,7 +153,6 @@ namespace NocturneAccess.Systems.Navigation
         // Larger place polygons are whole rooms, not door pads. Ginza's door pads are 800 x 400 (field 19, 4 Oct 2026: the Terminal,
         // Rag's Jewelry and the Cathedral lost their names and were taken for plain doors, "explored"); Shibuya's were under 700.
         private const float PadMaxSize = 1000f;
-        private static readonly string[] Compass = { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" };
 
         private static int _selected = -1;     // gEvnRng index
         private static int _field = int.MinValue, _area = int.MinValue;
@@ -403,10 +402,10 @@ namespace NocturneAccess.Systems.Navigation
         /// Whether an NPC is in the world: its object (fldNpc_tag.fldObj) is active. The basement keeps npc_hoji_01 (hojiID
         /// 1, a Soul model) with its object inactive: the game never fires its hit, its collision box (Attr 0x80) does not stop
         /// the player, and walking to it ended in a spin (0.0.24 test).
-        /// </summary>
         /// An NPC with no object at all is shown: the talking demons of the annex (14:07 and 14:30 sessions, 2 Oct 2026:
         /// "01npc_01" in area 12, "01npc_02" in area 13, "02npc_01"; tType 1, tCamera 2, fldObj null) were left out as hidden,
         /// while the game spoke them as "Demon".
+        /// </summary>
         internal static bool Shown(fldNpc_tag npc)
         {
             if (npc == null)
@@ -423,16 +422,9 @@ namespace NocturneAccess.Systems.Navigation
         private static void VolumeSpan(putevebox_s box, float playerY, out float floorY, out float nx, out float nz)
         {
             floorY = float.NaN;
-            nx = nz = 0f;
+            FieldData.BoxFacing(box, out nx, out nz);
             if (box == null)
                 return;
-            Vector4 n = box.boxnml;
-            float len = (float)Math.Sqrt(n.x * n.x + n.z * n.z);
-            if (len > 0.5f && Math.Abs(n.y) < 0.5f)
-            {
-                nx = n.x / len;
-                nz = n.z / len;
-            }
             Il2CppStructArray<Vector4> vtx = box.vtx;
             if (vtx == null || vtx.Length == 0)
                 return;
@@ -718,7 +710,7 @@ namespace NocturneAccess.Systems.Navigation
             if (metres >= 1)
             {
                 double bearing = (Math.Atan2(dx, dz) * 180.0 / Math.PI + 360) % 360;   // 0 = +Z = north, 90 = +X = east
-                text += $", {Compass[(int)Math.Round(bearing / 45.0) % 8]}";
+                text += $", {Angles.CompassWord((float)bearing)}";
             }
             if (p.World)
                 return text;

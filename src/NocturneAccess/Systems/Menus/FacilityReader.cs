@@ -59,8 +59,6 @@ namespace NocturneAccess.Systems.Menus
         private static long _feeAt = long.MinValue / 2;
         private static int _errors;
 
-        internal static string LastUtterance { get; private set; } = "";
-        internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
 
         internal static void Install()
         {
@@ -275,8 +273,7 @@ namespace NocturneAccess.Systems.Menus
                 string text = _quantity.ToString(CultureInfo.InvariantCulture);
                 if (now - _shopPayAt <= DrawnWithinMs && _shopPay >= 0)
                     text += $", {_shopPay.ToString(CultureInfo.InvariantCulture)} Macca";
-                LastUtterance = text;
-                LastUtteranceAt = Environment.TickCount64;
+                RepeatBuffer.Record(text);
                 SpeechManager.Say(text, interrupt: !opening, force: true);
             }
             catch (Exception ex)

@@ -78,9 +78,6 @@ namespace NocturneAccess.Systems.Menus
         private static string _currentTab;
         private static string _spokenValue;
 
-        /// <summary>The current row with its tab and description, for the repeat key.</summary>
-        internal static string LastUtterance { get; private set; } = "";
-        internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
 
         internal static void Install()
         {
@@ -236,8 +233,7 @@ namespace NocturneAccess.Systems.Menus
 
             string description = Describe(row, value);
             string tab = TabNames.TryGetValue(row.Tab, out string name) && name.Length > 0 ? $"{name} tab. " : "";
-            LastUtterance = tab + description;
-            LastUtteranceAt = Environment.TickCount64;
+            RepeatBuffer.Record(tab + description);
             if (opening)
                 Log.Info($"{Tag} Opened.");
             SpeechManager.Say(newTab ? tab + description : description, interrupt: !opening, force: true);
@@ -249,8 +245,7 @@ namespace NocturneAccess.Systems.Menus
             if (_current != null)
             {
                 string tab = TabNames.TryGetValue(_current.Tab, out string name) && name.Length > 0 ? $"{name} tab. " : "";
-                LastUtterance = tab + Describe(_current, value);
-                LastUtteranceAt = Environment.TickCount64;
+                RepeatBuffer.Record(tab + Describe(_current, value));
             }
             SpeechManager.Say(value, interrupt: true, force: true);
         }

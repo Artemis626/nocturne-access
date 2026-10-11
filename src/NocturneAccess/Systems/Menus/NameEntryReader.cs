@@ -87,10 +87,6 @@ namespace NocturneAccess.Systems.Menus
         /// <summary>The confirmation summary is written but not spoken yet: its Yes/No waits behind it.</summary>
         internal static bool ConfirmDue => _confirmPending && Clock.ElapsedMilliseconds - _confirmAt < SpeechOrder.MaxHoldMs;
 
-        /// <summary>For the repeat key: the name so far and the letter under the cursor.</summary>
-        internal static string LastUtterance => _open ? CurrentState() : "";
-        internal static long LastUtteranceAt { get; private set; } = long.MinValue;   // Environment.TickCount64
-
         internal static void Install()
         {
             if (!Config.MenusEnabled.Value)
@@ -433,7 +429,7 @@ namespace NocturneAccess.Systems.Menus
 
         private static void Say(string text, bool interrupt)
         {
-            LastUtteranceAt = Environment.TickCount64;
+            RepeatBuffer.RecordLive(() => _open ? CurrentState() : "");   // the name so far and the letter under the cursor
             SpeechManager.Say(text, interrupt: interrupt, force: true);
         }
 

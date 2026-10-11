@@ -4,6 +4,7 @@ using MelonLoader;
 using NocturneAccess.Capture;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
+using NocturneAccess.Systems;
 using NocturneAccess.Systems.Battle;
 using NocturneAccess.Systems.Dialogue;
 using NocturneAccess.Systems.Menus;
@@ -111,20 +112,9 @@ namespace NocturneAccess.Input
 
         private static void RepeatLast()
         {
-            // Whichever screen spoke last: a menu, the save list, the save Yes/No (with its prompt), the config screen, or dialogue.
-            string latest = "";
-            long latestAt = long.MinValue;
-            Consider(MenuReader.LastUtterance, MenuReader.LastUtteranceAt, ref latest, ref latestAt);
-            Consider(SaveListReader.LastUtterance, SaveListReader.LastUtteranceAt, ref latest, ref latestAt);
-            Consider(SaveChoiceReader.LastUtterance, SaveChoiceReader.LastUtteranceAt, ref latest, ref latestAt);
-            Consider(ConfigReader.LastUtterance, ConfigReader.LastUtteranceAt, ref latest, ref latestAt);
-            Consider(NameEntryReader.LastUtterance, NameEntryReader.LastUtteranceAt, ref latest, ref latestAt);
-            Consider(StatusReader.LastUtterance, StatusReader.LastUtteranceAt, ref latest, ref latestAt);
-            Consider(CampListReader.LastUtterance, CampListReader.LastUtteranceAt, ref latest, ref latestAt);
-            Consider(FusionReader.LastUtterance, FusionReader.LastUtteranceAt, ref latest, ref latestAt);
-            Consider(FacilityReader.LastUtterance, FacilityReader.LastUtteranceAt, ref latest, ref latestAt);
-            Consider(RagReader.LastUtterance, RagReader.LastUtteranceAt, ref latest, ref latestAt);
-            if (latestAt > DialogueReader.LastUtteranceAt)
+            // Whichever screen spoke last (RepeatBuffer): a menu, a list, a prompt with its options, or dialogue.
+            string latest = RepeatBuffer.Text;
+            if (!RepeatBuffer.LastIsDialogue && latest.Length > 0)
             {
                 SpeechManager.Say(latest, interrupt: true, force: true);
                 return;
@@ -136,15 +126,6 @@ namespace NocturneAccess.Input
             if (option.Length > 0)
                 text += " Selected: " + option;
             SpeechManager.Say(text, interrupt: true, force: true);
-        }
-
-        private static void Consider(string text, long at, ref string latest, ref long latestAt)
-        {
-            if (text.Length > 0 && at > latestAt)
-            {
-                latest = text;
-                latestAt = at;
-            }
         }
 
         private static void Add(string name, MelonPreferences_Entry<string> entry, KeyCode fallback, Action action,

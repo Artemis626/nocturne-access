@@ -116,22 +116,8 @@ namespace NocturneAccess.Systems.Menus
 
         private static string Join(string a, string b) => a.Length == 0 ? b : b.Length == 0 ? a : $"{a}. {b}";
 
-        private static Transform FindRoot(Transform t)
-        {
-            for (int depth = 0; t != null && depth < 12; depth++, t = t.parent)
-            {
-                if (t.name == RootName)
-                    return t;
-            }
-            return null;
-        }
+        private static Transform FindRoot(Transform t) => UiUtil.FindAncestor(t, RootName);
 
-        private static string Text(Transform t)
-        {
-            if (t == null || !t.gameObject.activeInHierarchy)
-                return "";
-            TMP_Text text = t.GetComponent<TMP_Text>();
-            return text == null ? "" : TextUtil.Clean(text.text);
-        }
+        private static string Text(Transform t) => UiUtil.TextOf(t);
     }
 }

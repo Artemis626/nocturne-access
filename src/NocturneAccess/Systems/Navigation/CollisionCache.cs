@@ -147,7 +147,9 @@ namespace NocturneAccess.Systems.Navigation
             {
                 foreach (CollisionPoly p in Items)
                 {
-                    if (p.Points.Length == 0 || p.Index >= array.Length)
+                    // Only held objects move (0.0.67): in the dumps of 10 Oct 2026 a matter was set only on hoji 1 and 2's polygons
+                    // (54 of 355 in field 20 area 18, none of 679 in area 19), and the static world is most of every area.
+                    if ((p.HojiId <= 0 && !p.MatterPos.HasValue) || p.Points.Length == 0 || p.Index >= array.Length)
                         continue;
                     collision_s c = array[p.Index];
                     Il2CppStructArray<Vector4> pts = c?.point;
@@ -390,7 +392,28 @@ namespace NocturneAccess.Systems.Navigation
             return best;
         }
 
-        private static float SegmentDistance(float px, float pz, float ax, float az, float bx, float bz)
+        /// <summary>The two points of a polygon farthest apart in X and Z: a vertical polygon's footprint (WalkGrid, GridSense).</summary>
+        internal static void Footprint(CollisionPoly p, out float ax, out float az, out float bx, out float bz)
+        {
+            Vector4 a = p.Points[0], b = p.Points[0];
+            float best = -1;
+            for (int i = 0; i < p.Points.Length; i++)
+                for (int j = i + 1; j < p.Points.Length; j++)
+                {
+                    float dx = p.Points[i].x - p.Points[j].x, dz = p.Points[i].z - p.Points[j].z;
+                    float d = dx * dx + dz * dz;
+                    if (d > best)
+                    {
+                        best = d;
+                        a = p.Points[i];
+                        b = p.Points[j];
+                    }
+                }
+            ax = a.x; az = a.z; bx = b.x; bz = b.z;
+        }
+
+        /// <summary>Distance in X and Z from (px, pz) to the segment a-b (WalkGrid, AutoWalk).</summary>
+        internal static float SegmentDistance(float px, float pz, float ax, float az, float bx, float bz)
         {
             float dx = bx - ax, dz = bz - az;
             float len2 = dx * dx + dz * dz;

@@ -28,7 +28,6 @@ namespace NocturneAccess.Systems.Navigation
         private const float MinRun = 60f;            // shorter first runs (a half-cell jog onto the grid) are not spoken
         private const float FacingTolerance = 50f;
         private static readonly string[] Keys = { "up", "up-right", "right", "down-right", "down", "down-left", "left", "up-left" };
-        private static readonly string[] Compass = { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" };
         private const float JogLength = 90f;         // world map: a shorter run between two runs of one direction is folded into them
 
         /// <summary>End (OnUpdate).</summary>
@@ -156,8 +155,6 @@ namespace NocturneAccess.Systems.Navigation
             }
         }
 
-        /// <summary>World map: the compass word of a bearing (a multiple of 45), which is also the arrow key: north = up.</summary>
-        private static string CompassWord(float bearing) => Compass[(int)Mod360((float)Math.Round(bearing / 45.0) * 45f) / 45 % 8];
 
         /// <summary>First person: a compass bearing (multiple of 90) relative to the facing: "ahead", "turn right", "turn round", "turn left".</summary>
         private static string Relative(fldGlobalWork_t gb, float bearing)

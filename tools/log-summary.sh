@@ -55,10 +55,10 @@ fi
 
 if grep -a -q '\[Nav:' "$LOG"; then
   echo
-  echo "== Navigation (changes, V captures, dumps; full dumps in UserData/NocturneAccess/NavDumps)"
+  echo "== Navigation (changes, switches and moving collision, dumps; full dumps in UserData/NocturneAccess/NavDumps)"
   grep -a -E '\[Nav:Change\]' "$LOG" | cut -c1-220 | tail -n 30 | sed 's/^/   /'
   echo "   --"
-  grep -a -E '\[Nav:Gate\] (Capture|padcheck|fldPlayerCalc_Nml_syukan|NewGame2)' "$LOG" | cut -c1-260 | sed 's/^/   /'
+  grep -a -E '\[Nav\] (Collision switches|The game sets|Collision polygon)' "$LOG" | cut -c1-260 | tail -n 30 | sed 's/^/   /'
   echo "   --"
   grep -a -E '\[Nav:Dump\] Full dump' "$LOG" | cut -c1-220 | sed 's/^/   /'
 fi

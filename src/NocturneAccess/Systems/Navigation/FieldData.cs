@@ -40,6 +40,24 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>A story or event volume's name ("01eve_03").</summary>
         internal static readonly System.Text.RegularExpressions.Regex EventVolume = new System.Text.RegularExpressions.Regex(@"^\d+eve_\d+$");
 
+        /// <summary>
+        /// A volume box's horizontal facing (gEvnRngBox.boxnml, unit length in X and Z; doors point out to the side the player
+        /// stands on), or 0 0 when it has none (PointsOfInterest, WarpMap, ExploredDoors).
+        /// </summary>
+        internal static void BoxFacing(putevebox_s box, out float nx, out float nz)
+        {
+            nx = nz = 0f;
+            if (box == null)
+                return;
+            Vector4 n = box.boxnml;
+            float len = (float)Math.Sqrt(n.x * n.x + n.z * n.z);
+            if (len > 0.5f && Math.Abs(n.y) < 0.5f)
+            {
+                nx = n.x / len;
+                nz = n.z / len;
+            }
+        }
+
         internal static PlayerSnapshot ReadPlayer()
         {
             var s = new PlayerSnapshot();
@@ -140,6 +158,7 @@ namespace NocturneAccess.Systems.Navigation
 
         internal static string V(Vector4 v) => $"{F(v.x)} {F(v.y)} {F(v.z)} {F(v.w)}";
 
-        internal static string Q(string s) => s == null ? "null" : "\"" + s.Replace("\n", "\n").Replace("\r", "") + "\"";
+        /// <summary>A game string quoted on one log line ("null" for none); line breaks are written as \n (0.0.67: they were kept).</summary>
+        internal static string Q(string s) => s == null ? "null" : "\"" + s.Replace("\r", "").Replace("\n", "\\n") + "\"";
     }
 }

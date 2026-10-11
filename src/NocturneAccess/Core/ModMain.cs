@@ -20,7 +20,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.66";
+        internal const string ModVersion = "0.0.67";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
@@ -49,10 +49,7 @@ namespace NocturneAccess.Core
             BattleReader.Install();
             BattleAnalyze.Install();
             FieldState.Install();
-            // Before NavProbe, so the probe logs the answers these postfixes give.
             FirstPersonView.Install();
-            InputInjector.Install();
-            AnalogInput.Install();
             PadInput.Install();
             ExploredDoors.Install();
             GameFlagWatch.Install();

@@ -33,14 +33,6 @@ namespace NocturneAccess.Speech
         private static string _lastText;
         private static long _lastTimeMs;
 
-        private static volatile string _backendName = "starting";
-
-        /// <summary>Name of the active backend, for the status key and logs.</summary>
-        internal static string BackendName => _backendName;
-
-        /// <summary>The last line accepted for speech. Basis for a future repeat key.</summary>
-        internal static string LastSpoken { get; private set; } = string.Empty;
-
         internal static void Init()
         {
             lock (Gate)
@@ -82,7 +74,6 @@ namespace NocturneAccess.Speech
 
                 _lastText = text;
                 _lastTimeMs = now;
-                LastSpoken = text;
                 Log.Speech(text);
 
                 if (interrupt)
@@ -94,17 +85,6 @@ namespace NocturneAccess.Speech
                 while (Pending.Count >= MaxPending)
                     Pending.Dequeue();
                 Pending.Enqueue(text);
-                Monitor.Pulse(Gate);
-            }
-        }
-
-        /// <summary>Drops queued lines and silences current speech.</summary>
-        internal static void Stop()
-        {
-            lock (Gate)
-            {
-                Pending.Clear();
-                _cancelRequested = true;
                 Monitor.Pulse(Gate);
             }
         }
@@ -130,7 +110,6 @@ namespace NocturneAccess.Speech
                 Log.Error("Speech backend selection failed, using log only: " + ex);
                 _backend = new LogOnlyBackend();
             }
-            _backendName = _backend.Name;
 
             while (true)
             {

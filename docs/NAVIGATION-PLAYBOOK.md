@@ -272,7 +272,7 @@ All under `src/NocturneAccess/Systems/Navigation`:
 | `WhereAmI` | Delete |
 | `BlobberMode`, `CentreWalk` | Snap to squares; centring (F3) |
 | `GridSense` | Wall and door cues |
-| `PadInput`, `InputInjector` | The game's input |
+| `PadInput` | The game's input (pad buttons read and pressed during the field update) |
 | `FirstPersonView` | First-person flag answered in memory |
 
 Diagnostics: `Capture/NavDump.cs`, `Capture/NavProbe.cs`, `tools/*.pl`.
