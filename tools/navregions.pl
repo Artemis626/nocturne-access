@@ -1,14 +1,19 @@
 # Offline copy of WalkGrid on every level (docs/PATHFINDING.md section 2.2), from a navigation dump: builds the grid with
-# the same rules (Attr 0 floors, up to LAYERS heights per cell merged within 20, walls blocking within 65 of a vertical
-# polygon overlapping 30..180 above a floor, moves between heights within 45, 8 ways, no corner cutting), labels the
+# the same rules (Attr 0 and 0x80 floors, up to LAYERS heights per cell merged within 20, walls blocking within 65 of a vertical
+# polygon overlapping 55..180 above a floor, moves between heights within 55, 8 ways, no corner cutting), labels the
 # connected regions and prints them with their size and extent, the region of each point of interest and warp landing,
 # and a map per region level.
-# Usage: perl tools/navregions.pl <dump> [maxcells per side, default 400] [layers, default 3] [player x z]
+# Usage: perl tools/navregions.pl <dump> [maxcells per side, default 400] [layers, default 6] [player x z]
+# Defaults follow the game's WalkGrid (0.0.74): steps and risers 55, 6 layers, Attr 0x80 floors (NAVATTR80), no faces looking
+# down (NAVUP), every layer within a step (NAVMULTI), merged floors keep the higher (NAVMERGEHI), no drop under a continuing
+# floor (NAVCONT). Set any of them to 0 to see the older rules (12 Oct 2026: the stale defaults hid a corridor bug for an hour).
+# NAVHEAD=180 marks floors with another floor less than that above them (a diagnostic, not a game rule).
 # The window is placed as WalkGrid does (around the player when the area is wider than maxcells).
 use strict; use warnings; use POSIX qw(floor ceil);
+$ENV{$_} //= 1 for qw(NAVATTR80 NAVUP NAVMULTI NAVMERGEHI NAVCONT);
 my ($file, $maxCells, $layers, $px, $pz) = @ARGV;
-$maxCells ||= 400; $layers ||= 3;
-my $C = 30; my ($Clear, $Step, $Body, $MaxStep, $Merge, $NearR) = (65, 30, 180, 45, 20, 300);
+$maxCells ||= 400; $layers ||= 6;   # WalkGrid.Layers (6 since 0.0.62)
+my $C = 30; my ($Clear, $Step, $Body, $MaxStep, $Merge, $NearR) = (65, 55, 180, 55, 20, 300);   # WalkGrid since 0.0.63
 # NAVSTEP="step maxstep": the body's lowest blocking height and the largest height change of a move (0.0.63: 55 55).
 ($Step, $MaxStep) = split ' ', $ENV{NAVSTEP} if $ENV{NAVSTEP};
 
@@ -86,7 +91,8 @@ for my $f (@floors) {
         my ($x, $z) = ($gx + $i * $C, $gz + $j * $C);
         next unless inside($f->{p}, $x, $z);
         my $y = planey($f, $x, $z); my $c = $j * $W + $i; my $n = $cnt[$c] // 0;
-        for my $l (0 .. $n - 1) { next CELL if abs($hgt[$c * $layers + $l] - $y) <= $Merge; }
+        # NAVMERGEHI=1 (WalkGrid 0.0.74): floors merged within $Merge keep the higher one (smaller y), where the player stands.
+        for my $l (0 .. $n - 1) { my $k = $c * $layers + $l; if (abs($hgt[$k] - $y) <= $Merge) { $hgt[$k] = $y if $ENV{NAVMERGEHI} && $y < $hgt[$k]; next CELL; } }
         if ($n >= $layers) { $lost++; $dropped[$c] = 1; next; }
         $hgt[$c * $layers + $n] = $y; $st[$c * $layers + $n] = 1; $cnt[$c] = $n + 1;
     } }
@@ -102,8 +108,23 @@ for my $w (@walls) {
     } }
 }
 my @Dx = (0, 1, 1, 1, 0, -1, -1, -1); my @Dz = (1, 1, 0, -1, -1, -1, 0, 1);
+# NAVHEAD=180: a floor with another floor of its cell less than this above it (Y points down: a smaller y) is no place to
+# stand (WalkGrid 0.0.74, the Nihilo core's spiral ramp under its floor).
+if ($ENV{NAVHEAD}) {
+    my $headBlocked = 0; my %headPair;
+    for my $c (0 .. $W * $H - 1) { my $n = $cnt[$c] // 0; next if $n < 2;
+        for my $l (0 .. $n - 1) { my $k = $c * $layers + $l; next unless $st[$k] == 1;
+            for my $m (0 .. $n - 1) { next if $m == $l; my $above = $hgt[$k] - $hgt[$c * $layers + $m];
+                if ($above > 0 && $above < $ENV{NAVHEAD}) { $st[$k] = 2; $headBlocked++; $headPair{sprintf "%.0f under %.0f", $hgt[$k], $hgt[$c * $layers + $m]}++; last; } } } }
+    print "  $_: $headPair{$_}\n" for sort { $headPair{$b} <=> $headPair{$a} } keys %headPair;
+    print "no headroom (NAVHEAD $ENV{NAVHEAD}): $headBlocked places\n";
+}
 sub step { my ($i, $j, $y) = @_; return -1 if $i < 0 || $j < 0 || $i >= $W || $j >= $H; my $c = $j * $W + $i; my ($best, $bd) = (-1, $MaxStep); for my $l (0 .. ($cnt[$c] // 0) - 1) { my $k = $c * $layers + $l; my $d = abs($hgt[$k] - $y); if ($st[$k] == 1 && $d <= $bd) { $bd = $d; $best = $k; } } return $best; }
-sub steps { my ($i, $j, $y) = @_; return () if $i < 0 || $j < 0 || $i >= $W || $j >= $H; my $c = $j * $W + $i; return grep { $st[$_] == 1 && abs($hgt[$_] - $y) <= $MaxStep } map { $c * $layers + $_ } 0 .. ($cnt[$c] // 0) - 1; }
+sub steps { my ($i, $j, $y) = @_; return () if $i < 0 || $j < 0 || $i >= $W || $j >= $H; my $c = $j * $W + $i;
+    my @in = grep { abs($hgt[$_] - $y) <= $MaxStep } map { $c * $layers + $_ } 0 .. ($cnt[$c] // 0) - 1;
+    # NAVCONT=1 (WalkGrid 0.0.74): where the floor walked on continues into the cell (within 5), no move to a floor under it.
+    if ($ENV{NAVCONT}) { my @same = grep { abs($hgt[$_] - $y) <= 5 } @in; if (@same) { my $lim = (sort { $a <=> $b } map { $hgt[$_] } @same)[-1]; @in = grep { $hgt[$_] <= $lim } @in; } }
+    return grep { $st[$_] == 1 } @in; }
 my @comp; my @info; my $label = 0;
 for my $k0 (0 .. $W * $H * $layers - 1) {
     next unless ($st[$k0] // 0) == 1 && !defined $comp[$k0];
@@ -185,6 +206,6 @@ if ($ENV{NAVCELL}) {
     for my $p (@pois) {
         my ($x, $z) = ($p->[2], $p->[3]); my ($i0, $i1, $j0, $j1) = cells($x - 250, $z - 250, $x + 250, $z + 250); my %ys;
         for my $j ($j0 .. $j1) { for my $i ($i0 .. $i1) { my $c = $j * $W + $i; for my $l (0 .. ($cnt[$c] // 0) - 1) { my $k = $c * $layers + $l; $ys{ sprintf '%.0f', $hgt[$k] } = 1 if $reach[$k]; } } }
-        printf "  %-8s %-18s reached at y: %s\n", $p->[0], $p->[1], join(' ', sort { $a <=> $b } keys %ys) || 'none';
+        printf "  %-8s %-18s reached at y: %s\n", $p->[0], $p->[1], %ys ? join(' ', sort { $a <=> $b } keys %ys) : 'none';   # not "|| 'none'": a lone y 0 is false in perl
     }
 }

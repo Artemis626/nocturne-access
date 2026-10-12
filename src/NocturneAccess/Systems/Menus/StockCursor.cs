@@ -1,5 +1,8 @@
+using System.Collections.Generic;
 using Il2Cpp;
 using Il2Cppcamp_H;
+using Il2CppTMPro;
+using NocturneAccess.Core;
 
 namespace NocturneAccess.Systems.Menus
 {
@@ -7,26 +10,33 @@ namespace NocturneAccess.Systems.Menus
     /// The party and stock pick's cursor, read the way the game draws it (GameAssembly.dll, read offline, 12 Oct 2026):
     /// - cmpDrawStock.cmpdrawStock draws while cmpDrawStock.GBWK.SeqInfo.Flag has 0x2 (not 0x20), calling
     ///   cmpDrawStockInfo(GBWK.pStockInfo, 0).
-    /// - cmpDrawStockInfo picks the highlighted rows by pStockInfo.DrawMode: 1 and 2 a stock row (target 0), 3 and 5 a party
-    ///   row (target 1); 0, 4 and others none. The row is cmpMisc.cmpGetStockInfoIndex(info, target, 1):
-    ///   LocalStock[target].ListIdx[SelPos[target].CursorPos.Index + Shift].
-    /// - cmpChkStockCursorSel matches it against the party row (cmpDrawPartyPanel, type 1) or the stock draw position
-    ///   (cmpDrawStockPanel, type 0, counted from 0).
+    /// - cmpDrawStockInfo picks the highlighted rows by pStockInfo.DrawMode through cmpMisc.cmpGetStockInfoIndex
+    ///   (LocalStock[target].ListIdx[SelPos[target].CursorPos.Index + Shift]) and cmpChkStockCursorSel; what ListIdx holds
+    ///   is not a panel row (0.0.74, see PartyPickSlot), so only the cursor position is used.
     /// The name's material alone misses rows: cmpDrawStockPanel draws a dead (unit flag 0x2) or summoned (0x10) demon
     /// unhighlighted under the cursor (TMC05 dead Unicorn, 12 Oct 2026, 16:02:28 dump), so the pick fell silent there.
-    /// Read only, with bounds checks: the game's own helper throws on a bad index.
+    /// MenuReader asks for this cursor only while no row carries the highlight. Read only.
     /// </summary>
     internal static class StockCursor
     {
-        /// <summary>The Party pick slot under the game's cursor (1 to 4 party, 11 and up stock, as MenuReader numbers them), or -1.</summary>
-        internal static int PartyPickSlot(out string detail)
+        /// <summary>
+        /// The Party pick slot under the game's cursor, or -1. rows: MenuReader's slots in order (1 to 4 party, 11 and up stock)
+        /// with their text and component.
+        ///
+        /// SelPos[0].CursorPos.Index + Shift counts the names the pick can select, in screen order, skipping the stock list's
+        /// copies of summoned demons ("Summoned" beside them): 21:05:12 dump, 12 Oct 2026, Stats pick, DrawMode 1: positions
+        /// 0 to 4 were Art, Dís, Unicorn, Zouchouten (party) and Raiju (stock 03, after summoned Unicorn and Zouchouten).
+        /// ListIdx[position] is not a panel row (0, 2, 3, 5, 4 for those five): 0.0.72 mapped it as one and added a wrong
+        /// second name ("All 2: Art, Unicorn"). Only DrawMode 1 has been seen (Items, Skill, Stats picks).
+        /// </summary>
+        internal static int PartyPickSlot(IList<(int Slot, string Text, TMP_Text Component)> rows, out string detail)
         {
             detail = "";
             if (_failed)
                 return -1;
             try
             {
-                return Read(out detail);
+                return Read(rows, out detail);
             }
             catch (System.Exception ex)
             {
@@ -38,7 +48,7 @@ namespace NocturneAccess.Systems.Menus
 
         private static bool _failed;
 
-        private static int Read(out string detail)
+        private static int Read(IList<(int Slot, string Text, TMP_Text Component)> rows, out string detail)
         {
             detail = "";
             cmpDataStock_t gb = cmpDrawStock.GBWK;
@@ -48,44 +58,29 @@ namespace NocturneAccess.Systems.Menus
             if ((flag & 0x20) != 0 || (flag & 0x2) == 0)
                 return -1;
             cmpStockInfo_t info = gb.pStockInfo;
-            if (info == null)
+            if (info == null || info.DrawMode != 1)
                 return -1;
-
-            int mode = info.DrawMode;
-            int target;
-            bool party;
-            switch (mode)
-            {
-                case 1:
-                case 2:
-                    target = 0;
-                    party = false;
-                    break;
-                case 3:
-                case 5:
-                    target = 1;
-                    party = true;
-                    break;
-                default:
-                    return -1;
-            }
-
             var selPos = info.SelPos;
-            var local = info.LocalStock;
-            if (selPos == null || local == null || target >= selPos.Length || target >= local.Length)
+            if (selPos == null || selPos.Length < 1)
                 return -1;
-            cmpCursorPos_t cursor = selPos[target]?.CursorPos;
-            var listIdx = local[target]?.ListIdx;
-            if (cursor == null || listIdx == null)
+            cmpCursorPos_t cursor = selPos[0]?.CursorPos;
+            if (cursor == null)
                 return -1;
-            int at = (sbyte)(byte)(cursor.Index + cursor.Shift);
-            if (at < 0 || at >= listIdx.Length)
+            int at = cursor.Index + cursor.Shift;
+            detail = $"DrawMode 1, Index {cursor.Index} Shift {cursor.Shift}, position {at}";
+            if (at < 0)
                 return -1;
-            int row = listIdx[at];
-            detail = $"DrawMode {mode}, target {target}, Index {cursor.Index} Shift {cursor.Shift}, row {row}";
-            if (row < 0)
-                return -1;
-            return party ? row + 1 : 11 + row;
+            int n = 0;
+            foreach (var (slot, text, component) in rows)
+            {
+                if (text.Length == 0 || !UiUtil.IsVisible(component))
+                    continue;
+                if (slot > 10 && UiUtil.TextOf(component.transform.parent?.Find("Tex_summonedTM")).Length > 0)
+                    continue;   // a summoned demon's copy in the stock list: the pick counts its party row
+                if (n++ == at)
+                    return slot;
+            }
+            return -1;
         }
     }
 }

@@ -57,7 +57,7 @@ namespace NocturneAccess.Systems.Menus
             public GameCursorFunc GameCursor;     // the slot under the game's own cursor, or -1: highlighted even when its material is not
         }
 
-        private delegate int GameCursorFunc(out string detail);
+        private delegate int GameCursorFunc(IList<(int Slot, string Text, TMP_Text Component)> rows, out string detail);
 
         private sealed class Slot
         {
@@ -439,10 +439,20 @@ namespace NocturneAccess.Systems.Menus
             }
         }
 
-        /// <summary>The game's cursor moved: the slot it left falls back to its material, the slot it reached counts as highlighted.</summary>
+        /// <summary>
+        /// The game's cursor moved: the slot it left falls back to its material, the slot it reached counts as highlighted.
+        /// Only while no visible slot carries the highlight material (a dead or ailing row drawn TMC05): the materials stay
+        /// the source everywhere else (0.0.74; 0.0.72 added the cursor beside them and said two names).
+        /// </summary>
         private static void FollowGameCursor(MenuState state)
         {
-            int slot = state.Spec.GameCursor(out string detail);
+            int slot = -1;
+            string detail = "highlight material shown";
+            if (!state.Slots.Values.Any(s => s.Material && UiUtil.IsVisible(s.Component)))
+            {
+                var rows = state.Slots.OrderBy(kv => kv.Key).Select(kv => (kv.Key, kv.Value.Text, kv.Value.Component)).ToList();
+                slot = state.Spec.GameCursor(rows, out detail);
+            }
             if (slot == state.GameSlot)
                 return;
             int old = state.GameSlot;

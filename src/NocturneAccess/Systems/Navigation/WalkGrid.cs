@@ -273,7 +273,15 @@ namespace NocturneAccess.Systems.Navigation
                     int n = _count[c];
                     for (int l = 0; l < n; l++)
                         if (Math.Abs(_height[c * Layers + l] - y) <= MergeBand)
+                        {
+                            // Merged floors keep the higher one (Y points down: the smaller y), where the player stands (0.0.74).
+                            // The Nihilo core (field 20 area 7): its spiral ramp passes 10 under the floor; merged at the ramp's
+                            // height, that strip joined the floor to the ramp, and a walk to the door at the spiral's foot circled
+                            // the room on the floor above the ramp (12 Oct 2026, 21:06).
+                            if (y < _height[c * Layers + l])
+                                _height[c * Layers + l] = y;
                             return;
+                        }
                     if (n >= Layers)
                     {
                         dropped++;
@@ -919,20 +927,34 @@ namespace NocturneAccess.Systems.Navigation
             return true;
         }
 
-        /// <summary>Every walkable node of cell (i, j) within MaxStep of height y, into StepBuf; returns how many.</summary>
+        /// <summary>
+        /// Every walkable node of cell (i, j) within MaxStep of height y, into StepBuf; returns how many. Where the floor walked
+        /// on (height y) goes on into the cell (a floor within ContinueBand of y), none under it: the player stays on that floor
+        /// and cannot drop through it (0.0.74, the Nihilo core's spiral ramp under its floor). Floors above it stay open, so a
+        /// stair whose foot lies on the Ginza track bed is still climbed from the tracks (0.0.60).
+        /// </summary>
         private static int Steps(int i, int j, float y)
         {
             if (i < 0 || j < 0 || i >= _w || j >= _h)
                 return 0;
             int c = j * _w + i, n = 0;
+            float lowest = float.MaxValue;   // Y points down: no node below the floor that continues here
+            for (int l = 0; l < _count[c]; l++)
+            {
+                float h = _height[c * Layers + l];
+                if (Math.Abs(h - y) <= ContinueBand)
+                    lowest = lowest == float.MaxValue ? h : Math.Max(lowest, h);
+            }
             for (int l = 0; l < _count[c]; l++)
             {
                 int k = c * Layers + l;
-                if (_state[k] == 1 && Math.Abs(_height[k] - y) <= MaxStep && !Avoided(k))
+                if (_state[k] == 1 && Math.Abs(_height[k] - y) <= MaxStep && _height[k] <= lowest && !Avoided(k))
                     StepBuf[n++] = k;
             }
             return n;
         }
+
+        private const float ContinueBand = 5f;
 
         /// <summary>The walkable node of cell (i, j) reachable from a floor at height y (within MaxStep), or -1.</summary>
         private static int Step(int i, int j, float y)

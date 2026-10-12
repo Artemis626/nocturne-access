@@ -85,6 +85,8 @@ Use them to:
 - try a fix;
 - run it over every saved dump to make sure nothing gets worse.
 
+**Keep the offline copy's defaults equal to the game's rules.** Nocturne's `navregions.pl` still defaulted to the step limits and layer count of three versions earlier, and to rules behind flags; a corridor bug looked impossible offline for an hour. A perl result printed with `|| 'none'` also hid a lone height of 0 (false in perl). Check the offline copy's walkable count against the game's grid log line first: they must match.
+
 **The ground truth is the trace:** every position the player actually stood on must be reachable from where they came. A rule that passes that test can still be wrong the other way (the world map's walls, section 4.4), so also check that walls block.
 
 ## 3. Movement
@@ -144,7 +146,8 @@ Nocturne's fixed-camera rooms force third person.
 
 ### 4.2 Targets and heights
 
-- **Height to reach:** a point's floor height comes from its volume box. Use the player's height when it lies within the box's span (a stairwell with doors stacked on two floors), else the box bottom.
+- **Height to reach:** a point's floor height comes from its volume box. Use the player's height only when the volume has a floor at the player's height (a stairwell with doors stacked on two floors); else the volume's own floor, the one nearest the middle of its span; else the box bottom.
+  - Never the player's height just because it lies within the span: from 33 metres down a stepped corridor the player's height chose the hidden floor under the corridor at the door, and the door became "not reachable" (Nocturne 0.0.74).
   - On the world map, always use the floor under the volume. A 400-tall entrance volume made the player's own height the target from the low side.
 - **Door volumes sit partly in walls:**
   - **Volume behind a wall:** a door whose volume centre lies behind the wall, where the game never fires it, needs a tight reach radius (95), not 150.
@@ -176,6 +179,8 @@ Nocturne's fixed-camera rooms force third person.
 | A corridor or staircase cut into pieces, "0 points of interest" | Step rules tuned on early stairs (risers under 30 ignored, moves up to 45): the Assembly of Nihilo corridor has 50-unit steps, a later staircase 40-unit risers, each riser counted as a wall | Measure the steps the player actually walked (traces, floor heights in the dump) and set the riser and move limits above them (55 / 55); re-run every dump | 0.0.64 |
 | A walk stalls at one spot, re-plans the same route and says "Blocked."; a nudge by hand gets past | The game refuses a move the walking map allows (a rail or ledge it does not hold; the world map's highway) | Learn it: after a second stall, block the move along the run the player stands on (both ways, absolute cells, until the area changes) so the re-plan goes round | 0.0.62, `WalkGrid.LearnBlocked` |
 | A "clone" of the door just walked through, "via 1 door" | Both sides of a same-area door are volumes; the far one is reached through the near one | Leave out the far side of any same-area pair while its own side is walked to | 0.0.62 |
+| Auto-walk circles a round room forever, the player never leaving the floor | **A ramp passes just under the floor** (a spiral down to a lower door, 10 under the room's floor): merged within 20 at the ramp's height, the strip joined the floor to the ramp, and the plan followed the spiral's outline while the player stayed on the floor above it | Merged floors keep the higher one (where the player stands); a walk on a floor that continues into the next cell never drops to a floor under it there (floors above stay open, so stairs on a track bed still join). Found by listing every move from the floor's height to another height (`JUNC` in a scratch copy of `tools/navregions.pl`) | 0.0.74, `WalkGrid.Steps`, the floor merge |
+| A cross-area ladder missing from the list | Ladders were recognised only when both ends are in one area | Take ladders from the door table's movetype, whatever the destination | 0.0.74 |
 | A walk "blocked" during dialogue | Field update runs, movement routine does not | Count only ticks where the movement routine ran; an event ends the walk ("Walk interrupted by an event.") | 0.0.19, 0.0.24 |
 
 **Rule of thumb:**

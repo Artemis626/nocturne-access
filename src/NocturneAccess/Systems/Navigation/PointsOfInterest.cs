@@ -171,7 +171,7 @@ namespace NocturneAccess.Systems.Navigation
         private const float EventOnPad = 100f;
         // A door the game jumps down through: door table movetype 4, whose handlers (tobiwarp_label, tobi2warp_label in every
         // field script; fldWap.fldDoor_Find2 case 4) wait on prompt 3, "Jump Off" (ETC_EN PANELMES_L0003).
-        private const int JumpMoveType = 4, JumpPrompt = 3;
+        private const int JumpMoveType = 4, JumpPrompt = 3, LadderMoveType = 5;
 
         /// <summary>Event volumes the last Build left out because their script has nothing to do now (for the log).</summary>
         internal static readonly List<string> Skipped = new List<string>();
@@ -381,8 +381,12 @@ namespace NocturneAccess.Systems.Navigation
         {
             foreach (Poi q in kept.Where(q => q.Kind == PoiKind.Door))
             {
+                // A ladder into another area is not in WarpMap (same-area moves only): the door table's movetype says ladder
+                // (0.0.74; the cube hall's 01d_04, 12 Oct 2026, 21:28: listed as "Door, passage", left out while not reachable,
+                // so Francesco did not find it in front of him). Its far end is in the other area: no up or down.
                 Warp w = WarpMap.At(gb, q.Index);
-                if (w == null || !w.Ladder)
+                bool ladder = w != null ? w.Ladder : DoorTable.MoveTypeOf(gb.fieldID, gb.areaID, q.ResName) == LadderMoveType;
+                if (!ladder)
                     continue;
                 q.Ladder = true;
                 q.LadderDir = WarpMap.LadderDirection(gb, q.Index);
@@ -487,20 +491,35 @@ namespace NocturneAccess.Systems.Navigation
             Il2CppStructArray<Vector4> vtx = box.vtx;
             if (vtx == null || vtx.Length == 0)
                 return;
-            float lo = float.MaxValue, hi = float.MinValue, spread = 0f;
+            float lo = float.MaxValue, hi = float.MinValue, spread = 0f, cx = 0f, cz = 0f;
             for (int k = 0; k < vtx.Length; k++)
             {
                 Vector4 v = vtx[k];
                 lo = Math.Min(lo, v.y);
                 hi = Math.Max(hi, v.y);
                 spread += Math.Abs(v.x) + Math.Abs(v.z);
+                cx += v.x / vtx.Length;
+                cz += v.z / vtx.Length;
             }
             if (spread < 1f)
                 return;   // no box (size 0 0 0)
-            // Y points down: hi is the bottom of the box. Inside the span the game's hit can fire where the player stands; outside
-            // it the floor is under the box (the stairwell's 1F door seen from 2F must stay downstairs).
-            floorY = playerY >= lo - 50f && playerY <= hi + 50f ? playerY : hi;
+            // Y points down: hi is the bottom of the box. Where the volume has a floor at the player's own height, the game's hit
+            // can fire where the player stands: that height. Otherwise the volume's own floor, the one nearest the middle of its
+            // span; else the bottom (the stairwell's 1F door seen from 2F must stay downstairs). 0.0.74: the player's height
+            // counted whenever it lay within 50 of the span, from anywhere: in the Nihilo corridor (field 20 area 29, 12 Oct
+            // 21:12:00) the player at y -2, 33 metres away, made the White Treasure Room door's floor -2, nearer the base floor
+            // (y 50) under the raised corridor than the corridor itself (y -150): "no known way there yet".
+            bool InSpan(float y) => y >= lo - 50f && y <= hi + 50f;
+            if (InSpan(playerY) && CollisionCache.FloorUnder(cx, playerY, cz, out float atPlayer, groundOnly: true, upOnly: true) != null
+                && Math.Abs(atPlayer - playerY) <= PlayerOnFloor)
+                floorY = playerY;
+            else if (CollisionCache.FloorUnder(cx, (lo + hi) / 2f, cz, out float own, groundOnly: true, upOnly: true) != null && InSpan(own))
+                floorY = own;
+            else
+                floorY = hi;
         }
+
+        private const float PlayerOnFloor = 10f;   // the player stands about 2 above the floor (y -2 on the floor at 0)
 
         /// <summary>A story volume as big as a room (more than 1500 across): a trigger for walking into an area, not a thing to go to.</summary>
         private static bool RoomSized(putevebox_s box)
