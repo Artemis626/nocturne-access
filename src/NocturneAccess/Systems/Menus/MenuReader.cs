@@ -54,13 +54,17 @@ namespace NocturneAccess.Systems.Menus
             public Func<int, (int, int)?> GamePosition;        // the entry and count from the game's cursor for this slot, or null to count rows
             public bool MultiHighlight;           // several items can be highlighted at once (a spell on the whole party): say them all
             public Func<bool, string> Prefix;     // said before the item on any announcement (argument: opening), if not empty; after RowDetail ran
+            public GameCursorFunc GameCursor;     // the slot under the game's own cursor, or -1: highlighted even when its material is not
         }
+
+        private delegate int GameCursorFunc(out string detail);
 
         private sealed class Slot
         {
             public TMP_Text Component;
             public string Text;
-            public bool Highlighted;    // the last write carried the highlight material
+            public bool Material;       // the last write carried the highlight material
+            public bool Highlighted;    // Material, or the game's cursor is on this slot (MenuSpec.GameCursor)
         }
 
         private sealed class MenuState
@@ -83,6 +87,7 @@ namespace NocturneAccess.Systems.Menus
             public int LastSlot = -1;   // the item last announced or taken, kept across Close
             public string HighlightSig = "";   // MultiHighlight: the highlighted items as last seen
             public string LastText;
+            public int GameSlot = -1;   // MenuSpec.GameCursor as last read
         }
 
         // Paths and materials: probe logs of 30 Sep 2026, see docs/class-index.md.
@@ -111,6 +116,8 @@ namespace NocturneAccess.Systems.Menus
                 CloseWhenUnhighlighted = true,
                 Reshow = true,
                 MultiHighlight = true,
+                // A dead or summoned demon stays drawn TMC05 / TMC02 under the cursor (12 Oct 2026): the game's cursor (0.0.72).
+                GameCursor = StockCursor.PartyPickSlot,
             },
             new MenuSpec
             {
@@ -322,8 +329,15 @@ namespace NocturneAccess.Systems.Menus
                 state.Slots[slot] = s = new Slot();
             s.Component = component;
             s.Text = text;
-            s.Highlighted = raw.Contains(state.Spec.Highlight) && text.Length > 0;
+            s.Material = raw.Contains(state.Spec.Highlight) && text.Length > 0;
+            s.Highlighted = s.Material || (slot == state.GameSlot && text.Length > 0);
+            ItemChanged(state, slot, s);
+        }
 
+        /// <summary>A slot's text or highlight may have changed: start or restart the announcement it needs.</summary>
+        private static void ItemChanged(MenuState state, int slot, Slot s)
+        {
+            string text = s.Text;
             if (state.Spec.MultiHighlight)
             {
                 // A spell on the whole party highlights every member, each rewritten every frame (Media, 6 Oct 2026, 14:51:04:
@@ -404,6 +418,8 @@ namespace NocturneAccess.Systems.Menus
             {
                 try
                 {
+                    if (state.Spec.GameCursor != null)
+                        FollowGameCursor(state);
                     if (state.PendingSlot >= 0 && now - state.LastChange >= SettleMs)
                         TryAnnounce(state, now);
                     else if (poll && state.Current >= 0 && state.PendingSlot < 0
@@ -418,6 +434,27 @@ namespace NocturneAccess.Systems.Menus
                     Log.Error($"{Tag} {state.Spec.Name}: {ex.Message}");
                     state.PendingSlot = -1;
                 }
+            }
+        }
+
+        /// <summary>The game's cursor moved: the slot it left falls back to its material, the slot it reached counts as highlighted.</summary>
+        private static void FollowGameCursor(MenuState state)
+        {
+            int slot = state.Spec.GameCursor(out string detail);
+            if (slot == state.GameSlot)
+                return;
+            int old = state.GameSlot;
+            state.GameSlot = slot;
+            Log.Info($"{Tag} {state.Spec.Name} game cursor: slot {slot} ({(detail.Length > 0 ? detail : "none")}).");
+            if (old >= 0 && state.Slots.TryGetValue(old, out Slot left))
+            {
+                left.Highlighted = left.Material;
+                ItemChanged(state, old, left);
+            }
+            if (slot >= 0 && state.Slots.TryGetValue(slot, out Slot reached))
+            {
+                reached.Highlighted = reached.Material || reached.Text.Length > 0;
+                ItemChanged(state, slot, reached);
             }
         }
 
