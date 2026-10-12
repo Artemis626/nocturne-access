@@ -198,6 +198,7 @@ Nocturne's fixed-camera rooms force third person.
   - Exit to overworld (the door table leads to a world-map field).
   - Room, passage, exit, to exit (from the door table: a side room is an area whose every door leads back here).
   - Ladder up / down; Soul / Person / Demon; Item box (empty); Event with the game's prompt learned once seen ("Event, Open Door"); Warp.
+  - **Classify event volumes from the game's own scripts, not their names** (Nocturne, 12 Oct 2026). A name pattern ("NNeve") mixed switches, scenes already played, scenes still to come and jump-offs filed as doors; the player walked to "events" where nothing happened. The field script (here a FlowScript file in the asset bundles, readable offline) says per volume: waits on a prompt (an action: speak the game's prompt and its first narration line, "Examine: There's a switch"), acts at once (a story scene), or ends at once behind story flags it set when played (leave it out). A dry run of the procedure with the live flags, following both ways on values it cannot know, decides; the door table's move type marks jumps and ladders.
 - **Format of each entry:** kind, explored / empty, distance in metres, compass direction, "upstairs" / "downstairs" when more than 150 above or below, then "N of M". Then "via 1 ladder" or "beyond doors" when the way is not on foot.
 - **Order:** map order, north to south then west to east, so numbers stay put; nearest-first is an option. Filters reset to All in every new area.
 

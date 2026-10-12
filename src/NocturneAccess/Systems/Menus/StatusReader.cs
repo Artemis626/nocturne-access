@@ -110,6 +110,9 @@ namespace NocturneAccess.Systems.Menus
                     _open = false;
                     _levelUp = false;
                     _shown = _seen = "";
+                    _skillRow = -1;
+                    _skillName = "";
+                    _skillPending = false;
                     _waitSince = -1;
                     return;
                 }
@@ -165,6 +168,7 @@ namespace NocturneAccess.Systems.Menus
 
                 if (_levelUp)
                     PollLevelUp();
+                PollSkillCursor(now);
             }
             catch (Exception ex)
             {
@@ -200,6 +204,85 @@ namespace NocturneAccess.Systems.Menus
             }
             if (parts.Count > 0)
                 Say(string.Join(". ", parts), interrupt: true);
+        }
+
+        /// <summary>
+        /// The skill cursor (0.0.71; Francesco, 12 Oct 2026: choosing the skill to give up at a level-up, "Skill slots are full.
+        /// Please select a skill to discard.", was silent). UI dump 15:02:35: the rows are obtainedText (sskill_obtained01..08),
+        /// the highlighted one drawn TMC21 ("Plead"), the others TMC00; its description in skillHelp (sfeature/skillhelp_mask/
+        /// TextTM_full, "Ask for Macca and items."). statusUI.skillCurObj holds one cursor object per row. A move is spoken
+        /// once the description has been rewritten (SkillSettleMs), as "Plead. Ask for Macca and items."; the first row only
+        /// when a description is shown, so the Stats summary is not followed by a skill each time it opens.
+        /// </summary>
+        private static void PollSkillCursor(long now)
+        {
+            int row = SkillCursorRow(out string name);
+            if (row != _skillRow || name != _skillName)
+            {
+                bool first = _skillRow < 0;
+                _skillRow = row;
+                _skillName = name;
+                _skillAt = now;
+                _skillPending = row >= 0 && name.Length > 0 && (!first || Text(_ui.skillHelp).Length > 0);
+                _skillQueue = first;   // the first row waits behind the game's line ("Please select a skill to discard.")
+                if (row >= 0 && first)
+                    Log.Info($"{Tag} Skill cursor on row {row} ({UiUtil.Escape(name)}); cursor objects {SkillCursorStates()}; help {UiUtil.Escape(Text(_ui.skillHelp))}.");
+                return;
+            }
+            if (!_skillPending || now - _skillAt < SkillSettleMs)
+                return;
+            _skillPending = false;
+            string help = Text(_ui.skillHelp);
+            Say(help.Length > 0 ? $"{name}. {help}" : name, interrupt: !_skillQueue);
+        }
+
+        private const long SkillSettleMs = 120;
+        private static int _skillRow = -1;
+        private static string _skillName = "";
+        private static long _skillAt;
+        private static bool _skillPending;
+        private static bool _skillQueue;
+
+        /// <summary>The highlighted skill row and its name: the shown statusUI.skillCurObj, and the row drawn TMC21 (the
+        /// highlight) when there is one; -1 with no cursor shown.</summary>
+        private static int SkillCursorRow(out string name)
+        {
+            name = "";
+            Il2CppReferenceArray<GameObject> cursors = _ui.skillCurObj;
+            int row = -1;
+            for (int i = 0; cursors != null && i < cursors.Length; i++)
+            {
+                if (cursors[i] != null && cursors[i].activeInHierarchy)
+                {
+                    row = i;
+                    break;
+                }
+            }
+            if (row < 0)
+                return -1;
+            Il2CppReferenceArray<TextMeshProUGUI> rows = _ui.obtainedText;
+            for (int i = 0; rows != null && i < rows.Length; i++)
+            {
+                if (UiUtil.IsVisible(rows[i]) && (rows[i].text ?? "").Contains("<material=\"TMC21\">"))
+                {
+                    name = Text(rows[i]);
+                    return row;
+                }
+            }
+            if (rows != null && row < rows.Length)
+                name = Text(rows[row]);
+            return row;
+        }
+
+        private static string SkillCursorStates()
+        {
+            Il2CppReferenceArray<GameObject> cursors = _ui.skillCurObj;
+            if (cursors == null)
+                return "none";
+            var s = new System.Text.StringBuilder();
+            for (int i = 0; i < cursors.Length; i++)
+                s.Append(cursors[i] != null && cursors[i].activeInHierarchy ? '1' : '0');
+            return s.ToString();
         }
 
         private static string StatText(int row, int value)

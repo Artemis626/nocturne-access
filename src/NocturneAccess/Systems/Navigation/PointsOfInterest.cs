@@ -14,7 +14,7 @@ namespace NocturneAccess.Systems.Navigation
     internal enum PoiKind { Door, Person, ItemBox, Place, Event }
 
     /// <summary>The Page Up list's filters (Shift+Page Up / Page Down, Francesco 4 Oct 2026), in their order; All first.</summary>
-    internal enum PoiCategory { All, Doors, Rooms, Exits, Warps, Ladders, Souls, Demons, ItemBoxes, Events }
+    internal enum PoiCategory { All, Doors, Rooms, Exits, Warps, Ladders, Souls, Demons, ItemBoxes, Actions, Events }
 
     internal sealed class Poi
     {
@@ -36,10 +36,22 @@ namespace NocturneAccess.Systems.Navigation
         public bool World;              // on the world map (FieldState.WorldMap): doors are entrances to places, heights are terrain
         public bool ToWorld;            // a dungeon door that leads to the world map (DoorTable.ToField below 10): "Exit to overworld" (0.0.44), never "explored" (0.0.45)
 
-        public string Label => Kind == PoiKind.Door ? (Warp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : "Door")
+        public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : "Door")
             : Kind == PoiKind.Place ? Name
-            : Kind == PoiKind.Event ? (Name.Length > 0 ? "Event, " + Name : "Event")
+            : Kind == PoiKind.Event ? (Action ? ActionLabel : Story ? "Story event" : Name.Length > 0 ? "Event, " + Name : "Event")
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
+
+        /// <summary>
+        /// From the volume's own script (FieldScript, 0.0.71): an action waits on the game's prompt ("Examine", "Talk", "Ride";
+        /// a door the game jumps down through, "Jump Off"); Detail is the game's first narration line after confirming ("There's
+        /// a switch"). A story event runs as soon as it is walked into. Neither: the old "Event" (the script could not tell).
+        /// </summary>
+        public bool Action, Story, Jump;
+        public string Prompt = "", Detail = "";
+        public string ScriptNote = "";   // the dry run's verdict, for the log
+
+        /// <summary>"Examine: There's a switch", or the prompt alone.</summary>
+        private string ActionLabel => Detail.Length > 0 ? $"{Prompt}: {Detail}" : Prompt;
 
         public string DoorKind = "";    // a generic door: "room", "passage", "exit" or "to exit", from the game's door table (DoorTable), or ""
 
@@ -96,7 +108,8 @@ namespace NocturneAccess.Systems.Navigation
 
         /// <summary>The label inside a sentence: game names and "Soul" keep their capitals, the mod's own words do not;
         /// "explored door", "empty item box"; a door with a kind as on Page Up: "door, explored, room".</summary>
-        public string InSentence => Kind == PoiKind.Event ? (Name.Length > 0 ? "event, " + Name : "event")
+        public string InSentence => Action ? Spoken   // the game's own words keep their capitals: "Walking to Examine: There's a switch"
+            : Kind == PoiKind.Event ? (Story ? "story event" : Name.Length > 0 ? "event, " + Name : "event")
             : DoorKind.Length > 0 || ToWorld ? Spoken.ToLowerInvariant()
             : (State.Length > 0 ? State + " " : "") + (Name.Length > 0 || Soul || Demon ? Label : Label.ToLowerInvariant());
 
@@ -156,6 +169,12 @@ namespace NocturneAccess.Systems.Navigation
         // ladder's pad, took its name and were dropped as copies of the ladder door (11 Oct 2026, 21:28 session); 0.0.68
         // measured from the door instead and would have listed the overworld rings as events.
         private const float EventOnPad = 100f;
+        // A door the game jumps down through: door table movetype 4, whose handlers (tobiwarp_label, tobi2warp_label in every
+        // field script; fldWap.fldDoor_Find2 case 4) wait on prompt 3, "Jump Off" (ETC_EN PANELMES_L0003).
+        private const int JumpMoveType = 4, JumpPrompt = 3;
+
+        /// <summary>Event volumes the last Build left out because their script has nothing to do now (for the log).</summary>
+        internal static readonly List<string> Skipped = new List<string>();
         // Larger place polygons are whole rooms, not door pads. Ginza's door pads are 800 x 400 (field 19, 4 Oct 2026: the Terminal,
         // Rag's Jewelry and the Cathedral lost their names and were taken for plain doors, "explored"); Shibuya's were under 700.
         private const float PadMaxSize = 1000f;
@@ -182,6 +201,7 @@ namespace NocturneAccess.Systems.Navigation
             int n = ranges == null ? 0 : Math.Min(fldEveHit.gEvnRngNum, ranges.Length);
             int npcCount = npcs == null ? 0 : Math.Min(fld_Npc.fldNpcNum, npcs.Length);
             List<CollisionPoly> pads = PlacePads();
+            Skipped.Clear();
             for (int i = 0; i < n; i++)
             {
                 fldResHead_t h = ranges[i];
@@ -217,6 +237,31 @@ namespace NocturneAccess.Systems.Navigation
                 }
                 if (kind == null)
                     continue;
+                // What the volume's own script does now (FieldScript, 0.0.71; Francesco, 12 Oct 2026: "Event" was too vague,
+                // switches and jump-offs are actions): an action is spoken with the game's prompt and narration, a story event
+                // as such, and one with nothing to do now (played already, or off in the game's on/off table) is left out.
+                ScriptVerdict script = null;
+                if (kind == PoiKind.Event && !world)
+                {
+                    if (!FieldScript.VolumeOn(gb.fieldID, gb.areaID, name))
+                    {
+                        Skipped.Add($"{name} off in the game's on/off table");
+                        continue;
+                    }
+                    script = FieldScript.Classify(gb.areaID, name);
+                    // A volume whose prompt the game has shown before stays listed (the old "Event, Examine") even when the dry
+                    // run finds nothing to do: a safety net while the dry run is new.
+                    if (script.Outcome == ScriptOutcome.Inactive && ExploredDoors.PromptOf(gb.fieldID, gb.areaID, name).Length > 0)
+                        script = new ScriptVerdict { Outcome = ScriptOutcome.Unknown, Procedure = script.Procedure, Reason = "idle by the dry run, but its prompt was seen: " + script.Reason };
+                    if (script.Outcome == ScriptOutcome.Inactive)
+                    {
+                        Skipped.Add($"{name} {script}");
+                        continue;
+                    }
+                }
+                // A door the game jumps down through (door table movetype 4: Assembly of Nihilo B12's 01d_03, 01d_05, 01d_06 land
+                // on B13; the game's prompt "Jump Off", 11 Oct 2026, 21:55:14): an action, not a room (Francesco, 12 Oct 2026).
+                bool jump = kind == PoiKind.Door && !world && DoorTable.MoveTypeOf(gb.fieldID, gb.areaID, name) == JumpMoveType;
                 bool generic = kind == PoiKind.Door && placeName.Length == 0 && !world;   // world map entrances lead to places, not rooms
                 int toField = kind == PoiKind.Door && !world ? DoorTable.ToField(gb.fieldID, gb.areaID, name) : -1;
                 bool toWorld = toField > 0 && FieldState.WorldMapField(toField);
@@ -257,7 +302,13 @@ namespace NocturneAccess.Systems.Navigation
                     BoxX1 = bx1,
                     BoxZ0 = bz0,
                     BoxZ1 = bz1,
-                    DoorKind = generic && !toWorld ? DoorTable.KindOf(gb.fieldID, gb.areaID, name) : "",
+                    DoorKind = generic && !toWorld && !jump ? DoorTable.KindOf(gb.fieldID, gb.areaID, name) : "",
+                    Jump = jump,
+                    Action = script?.Outcome == ScriptOutcome.Action || jump,
+                    Story = script?.Outcome == ScriptOutcome.Story,
+                    Prompt = jump ? FieldScript.PanelText(JumpPrompt) : script?.Outcome == ScriptOutcome.Action ? script.PromptText : "",
+                    Detail = script?.Outcome == ScriptOutcome.Action ? script.Detail : "",
+                    ScriptNote = script?.ToString() ?? "",
                 });
             }
 
@@ -384,8 +435,10 @@ namespace NocturneAccess.Systems.Navigation
                 case PoiKind.Place:
                     return PoiCategory.Rooms;
                 case PoiKind.Event:
-                    return PoiCategory.Events;
+                    return q.Action ? PoiCategory.Actions : PoiCategory.Events;
             }
+            if (q.Jump && q.Prompt.Length > 0)
+                return PoiCategory.Actions;
             if (q.Warp)
                 return PoiCategory.Warps;
             if (q.Ladder)
@@ -402,7 +455,7 @@ namespace NocturneAccess.Systems.Navigation
             return PoiCategory.Doors;
         }
 
-        private static readonly string[] CategoryNames = { "All", "Doors", "Rooms", "Exits", "Warps", "Ladders", "Souls", "Demons", "Item boxes", "Events" };
+        private static readonly string[] CategoryNames = { "All", "Doors", "Rooms", "Exits", "Warps", "Ladders", "Souls", "Demons", "Item boxes", "Actions", "Events" };
 
         /// <summary>
         /// Whether an NPC is in the world: its object (fldNpc_tag.fldObj) is active. The basement keeps npc_hoji_01 (hojiID
@@ -575,7 +628,9 @@ namespace NocturneAccess.Systems.Navigation
             List<Poi> all = Build(gb);
             if (log)
                 Log.Info($"[Nav:Poi] {all.Count} in field {gb.fieldID} area {gb.areaID}: " +
-                         string.Join("; ", all.Select(q => $"{q.Index} {q.Spoken} [{q.Category}] {q.ResName} at {FieldData.F(q.X)} {FieldData.F(q.Z)} d {FieldData.F(q.Distance)}{(q.Listed ? q.Via : " (not reachable, left out)")}")));
+                         string.Join("; ", all.Select(q => $"{q.Index} {q.Spoken} [{q.Category}] {q.ResName} at {FieldData.F(q.X)} {FieldData.F(q.Z)} d {FieldData.F(q.Distance)}" +
+                                                            $"{(q.ScriptNote.Length > 0 ? ", script " + q.ScriptNote : "")}{(q.Listed ? q.Via : " (not reachable, left out)")}")) +
+                         (Skipped.Count > 0 ? "; left out by their scripts: " + string.Join("; ", Skipped) : ""));
             IEnumerable<Poi> list = all.Where(q => q.Listed && (_filter == PoiCategory.All || q.Category == _filter));
             if (Config.PoiMapOrder?.Value ?? true)
                 list = list.OrderByDescending(q => (int)Math.Floor(q.Z / MapBand)).ThenBy(q => q.X).ThenBy(q => q.Index);

@@ -47,3 +47,11 @@ IL2CPP notes: static methods take their arguments in rcx, rdx, r8, r9 and a trai
    ```
    perl tools/native/callers.pl "<game>/GameAssembly.dll" research/native/symmap.txt 2444830 24286C0
    ```
+
+6. Readers of a global (12 Oct 2026, the script command table): every RIP-relative 64-bit load of the given addresses (a
+   class TypeInfo pointer from `typeinfo.txt`), named by the symbol map; code in no known method shows as "?" with the
+   method before it (static constructors are not in the map: `ScrCommandTable`'s builder was found this way at 0x14F04E3).
+
+   ```
+   perl tools/native/riprefs.pl "<game>/GameAssembly.dll" research/native/symmap.txt 182e49f40
+   ```
