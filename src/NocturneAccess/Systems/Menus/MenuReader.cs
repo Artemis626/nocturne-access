@@ -118,6 +118,8 @@ namespace NocturneAccess.Systems.Menus
                 MultiHighlight = true,
                 // A dead or summoned demon stays drawn TMC05 / TMC02 under the cursor (12 Oct 2026): the game's cursor (0.0.72).
                 GameCursor = StockCursor.PartyPickSlot,
+                // The status icon beside the name, in the game's words: "Dís, Mute, 3 of 11" (0.0.73).
+                RowDetail = PartyStatus.RowDetail,
             },
             new MenuSpec
             {
