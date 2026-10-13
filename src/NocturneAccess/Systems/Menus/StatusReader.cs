@@ -223,7 +223,8 @@ namespace NocturneAccess.Systems.Menus
                 _skillRow = row;
                 _skillName = name;
                 _skillAt = now;
-                _skillPending = row >= 0 && name.Length > 0 && (!first || Text(_ui.skillHelp).Length > 0);
+                _skillPending = row >= 0 && name.Length > 0;
+                _skillFirst = first;
                 _skillQueue = first;   // the first row waits behind the game's line ("Please select a skill to discard.")
                 if (row >= 0 && first)
                     Log.Info($"{Tag} Skill cursor on row {row} ({UiUtil.Escape(name)}); cursor objects {SkillCursorStates()}; help {UiUtil.Escape(Text(_ui.skillHelp))}.");
@@ -231,8 +232,17 @@ namespace NocturneAccess.Systems.Menus
             }
             if (!_skillPending || now - _skillAt < SkillSettleMs)
                 return;
-            _skillPending = false;
             string help = Text(_ui.skillHelp);
+            // The first row is said only once its description shows, so the Stats summary is not followed by a skill each time
+            // it opens; the description comes a moment after the cursor (13 Oct 2026, 14:25:41 and 14:43:01: the new skill at a
+            // level-up, row 8, was dropped with "help" still empty), so it is waited for (0.0.76).
+            if (_skillFirst && help.Length == 0)
+            {
+                if (now - _skillAt > FirstHelpWaitMs)
+                    _skillPending = false;
+                return;
+            }
+            _skillPending = false;
             Say(help.Length > 0 ? $"{name}. {help}" : name, interrupt: !_skillQueue);
         }
 
@@ -242,6 +252,8 @@ namespace NocturneAccess.Systems.Menus
         private static long _skillAt;
         private static bool _skillPending;
         private static bool _skillQueue;
+        private static bool _skillFirst;
+        private const long FirstHelpWaitMs = 3000;
 
         /// <summary>The highlighted skill row and its name: the shown statusUI.skillCurObj, and the row drawn TMC21 (the
         /// highlight) when there is one; -1 with no cursor shown.</summary>

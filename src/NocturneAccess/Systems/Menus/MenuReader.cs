@@ -513,6 +513,12 @@ namespace NocturneAccess.Systems.Menus
             state.HoldSince = -1;
             state.Yielded = false;
 
+            Fresh(state, all: true);
+            if (slot.Text.Length == 0)
+            {
+                state.PendingSlot = -1;   // emptied since its last write
+                return;
+            }
             state.Current = state.LastSlot = state.PendingSlot;
             state.CurrentText = state.LastText = slot.Text;
             state.CurrentComponent = slot.Component;
@@ -592,6 +598,7 @@ namespace NocturneAccess.Systems.Menus
         /// </summary>
         private static List<int> Lit(MenuState state, bool visibleOnly)
         {
+            Fresh(state, all: false);
             List<int> lit = state.Slots.Where(kv => kv.Value.Highlighted && (!visibleOnly || UiUtil.IsVisible(kv.Value.Component)))
                 .Select(kv => kv.Key).OrderBy(k => k).ToList();
             if (lit.Count == 2 && state.Spec.Bystander != null)
@@ -601,6 +608,27 @@ namespace NocturneAccess.Systems.Menus
                     return others;
             }
             return lit;
+        }
+
+        /// <summary>
+        /// Slots whose component is empty now lose their text and highlight (0.0.76). A row emptied by the game is a blank write,
+        /// which never reaches the readers (TmpRouter), so it kept its last name and highlight: Zouchouten, returned to stock
+        /// with the cursor on his row, stayed lit in party slot 4, and the Summon pick said "All 2: Zouchouten, Taraka" (13 Oct
+        /// 2026, 14:43:59; the F6 dump at 14:44:04 shows party_status04 empty and Taraka alone TMC01). all: every slot (before
+        /// counting positions), else only the highlighted ones (a few reads per write).
+        /// </summary>
+        private static void Fresh(MenuState state, bool all)
+        {
+            foreach (Slot s in state.Slots.Values)
+            {
+                if ((!all && !s.Highlighted) || s.Text.Length == 0 || s.Component == null)
+                    continue;
+                string live = TextUtil.Clean(s.Component.text ?? "");
+                if (live.Length > 0 && live != "(null)")
+                    continue;
+                s.Text = "";
+                s.Highlighted = s.Material = false;
+            }
         }
 
         private static bool HasVisibleHighlight(MenuState state)

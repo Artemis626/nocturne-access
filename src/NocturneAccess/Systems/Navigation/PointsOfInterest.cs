@@ -612,7 +612,11 @@ namespace NocturneAccess.Systems.Navigation
             float bestD = reach;
             foreach (CollisionPoly c in pads)
             {
-                if (Math.Abs(c.Points[0].y - (y + 100f)) > 150f)
+                // Within 150 of the span from the volume's centre to 100 under it (0.0.76): most door centres sit 100 above their
+                // floor, some on it. Nihilo B14's elevator door 01d_06 (centre y 0 on the floor, its "Elevator" pad at y -60) was
+                // 160 off the old single height and stayed a plain "Door" (13 Oct 2026, dump 16:19:45).
+                float py = c.Points[0].y, off = py < y ? y - py : py > y + 100f ? py - (y + 100f) : 0f;
+                if (off > 150f)
                     continue;
                 Bounds(c, out float x0, out float z0, out float x1, out float z1);
                 float dx = Math.Max(0, Math.Max(x0 - x, x - x1)), dz = Math.Max(0, Math.Max(z0 - z, z - z1));
