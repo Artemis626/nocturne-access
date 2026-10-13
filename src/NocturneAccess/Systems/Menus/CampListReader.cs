@@ -56,6 +56,10 @@ namespace NocturneAccess.Systems.Menus
         private static long _drawnAt = long.MinValue / 2;
 
         private static Kind _open;
+
+        /// <summary>The unit whose skill list is open (its pData), or null: the caster during the skill's target pick.</summary>
+        internal static datUnitWork_t SkillUser => _open == Kind.Skill ? _data?.TryCast<datUnitWork_t>() : null;
+
         private static long _openedAt;
         private static bool _announced;
         private static int _index = -1;

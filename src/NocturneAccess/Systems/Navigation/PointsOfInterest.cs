@@ -89,7 +89,20 @@ namespace NocturneAccess.Systems.Navigation
         public int LadderDir;           // +1 up, -1 down, 0 not known
 
         /// <summary>"Ladder up": the game's place name for it ("Ladder"), or the mod's word, and where it takes the player.</summary>
-        private string LadderLabel => (Name.Length > 0 ? Name : "Ladder") + (LadderDir > 0 ? " up" : LadderDir < 0 ? " down" : "");
+        private string LadderLabel
+        {
+            get
+            {
+                // The game's own prompt for it, "Climb Ladder" or "Descend Ladder" (PANELMES 6 / 7, 0.0.75; Francesco, 13 Oct
+                // 2026: ladders into other areas had lost their way since 0.0.74); else the place name and the mod's up / down.
+                string prompt = LadderDir > 0 ? FieldScript.PanelText(ClimbPrompt) : LadderDir < 0 ? FieldScript.PanelText(DescendPrompt) : "";
+                if (prompt.Length > 0)
+                    return prompt;
+                return (Name.Length > 0 ? Name : "Ladder") + (LadderDir > 0 ? " up" : LadderDir < 0 ? " down" : "");
+            }
+        }
+
+        private const int ClimbPrompt = 6, DescendPrompt = 7;
 
         /// <summary>In the list: reachable, or a landmark listed beyond doors.</summary>
         public bool Listed => Reachable || Beyond;
@@ -389,7 +402,8 @@ namespace NocturneAccess.Systems.Navigation
                 if (!ladder)
                     continue;
                 q.Ladder = true;
-                q.LadderDir = WarpMap.LadderDirection(gb, q.Index);
+                int way = DoorTable.LadderWay(gb.fieldID, gb.areaID, q.ResName);   // the game's own (union03), any destination
+                q.LadderDir = way != 0 ? way : WarpMap.LadderDirection(gb, q.Index);
                 q.DoorKind = "";
                 q.Explored = false;
             }

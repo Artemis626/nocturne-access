@@ -66,25 +66,55 @@ namespace NocturneAccess.Systems.Menus
             }
         }
 
-        private static string Read(TMP_Text component, string name)
+        /// <summary>
+        /// MenuSpec.Bystander for the party pick: the row is the unit using the chosen skill. Its name keeps the highlight
+        /// through the whole target pick (13 Oct 2026, 13:52:45: Dís casting Diarama, "All 2: Dís, Taraka" on every move).
+        /// </summary>
+        internal static bool IsSkillUser(TMP_Text component)
         {
+            datUnitWork_t user = CampListReader.SkillUser;
+            if (_failed || user == null || component == null)
+                return false;
+            try
+            {
+                datUnitWork_t unit = UnitOf(component, out _, out _);
+                return unit != null && unit.Pointer == user.Pointer;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>The row's unit: DDS3_GBWK.unitwork[CMP_GBWK.DrawList.StockIdx[row]], party rows first, or null.</summary>
+        private static datUnitWork_t UnitOf(TMP_Text component, out int row, out int index)
+        {
+            row = index = -1;
             var parent = component.transform.parent;
             Match m = parent == null ? Match.Empty : Slot.Match(parent.name);
             if (!m.Success)
-                return "";
+                return null;
             cmpLocalStock_t list = cmpInit.CMP_GBWK?.DrawList;
             var units = dds3GlobalWork.DDS3_GBWK?.unitwork;
             if (list == null || list.StockIdx == null || units == null)
-                return "";
-            int row = m.Groups["party"].Success
+                return null;
+            row = m.Groups["party"].Success
                 ? int.Parse(m.Groups["party"].Value) - 1
                 : list.PartyCnt + int.Parse(m.Groups["stock"].Value) - 1;
             if (row < 0 || row >= list.PartyCnt + list.StockCnt || row >= list.StockIdx.Length)
+                return null;
+            index = list.StockIdx[row];
+            if (index < 0 || index >= units.Length)
+                return null;
+            return units[index];
+        }
+
+        private static string Read(TMP_Text component, string name)
+        {
+            datUnitWork_t unit = UnitOf(component, out int row, out int index);
+            if (unit == null)
                 return "";
-            int index = list.StockIdx[row];
-            if (index < 0 || index >= units.Length || units[index] == null)
-                return "";
-            datUnitWork_t unit = units[index];
+            var parent = component.transform.parent;
             int bad = unit.badstatus;
 
             var words = new List<string>();

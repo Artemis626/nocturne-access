@@ -24,7 +24,7 @@ namespace NocturneAccess.Systems.Navigation
     {
         private sealed class Entry
         {
-            public int AreaPlus1, Flag, WarpType, ToField, ToAreaPlus1, MoveType;
+            public int AreaPlus1, Flag, WarpType, ToField, ToAreaPlus1, MoveType, Union03;
             public string Name = "", WarpPos = "";
 
             /// <summary>Where it leads from (field, area): union08 0 means this field, union09 0 this area (else area + 1).</summary>
@@ -76,6 +76,29 @@ namespace NocturneAccess.Systems.Navigation
             catch
             {
                 return -1;
+            }
+        }
+
+        /// <summary>
+        /// A ladder's way (movetype 5): +1 climb, -1 descend, 0 not known (0.0.75). The field script's shared ladder handler
+        /// (hasigo_label, f020.bf) shows prompt 6 "Climb Ladder" when fldCommand_FLD_WARP_HASIGO_GETTBL(0) is 0, else prompt 7
+        /// "Descend Ladder"; that value is the entry's union03: the Ginza underpass area 8 ladders with union03 0 land 800 above
+        /// (01d_09, 01d_11, 01d_12), those with 1 back on the floor (01d_13, 01d_15, 01d_16); the Nihilo cube hall's 01d_04
+        /// (union03 1) showed "Descend Ladder" (12 Oct 2026, 21:28:56), its far end in area 18 has 0.
+        /// </summary>
+        internal static int LadderWay(int field, int area, string resName)
+        {
+            try
+            {
+                Refresh(field);
+                Entry e = Find(area, resName);
+                if (e == null || e.MoveType != 5)
+                    return 0;
+                return e.Union03 == 0 ? 1 : e.Union03 == 1 ? -1 : 0;
+            }
+            catch
+            {
+                return 0;
             }
         }
 
@@ -206,6 +229,7 @@ namespace NocturneAccess.Systems.Navigation
                     ToField = d.union08,
                     ToAreaPlus1 = d.union09,
                     MoveType = d.movetype,
+                    Union03 = d.union03,
                     WarpPos = Chars(d.warp_pos),
                 });
             }

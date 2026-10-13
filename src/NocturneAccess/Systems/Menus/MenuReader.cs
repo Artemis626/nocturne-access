@@ -54,7 +54,8 @@ namespace NocturneAccess.Systems.Menus
             public Func<int, (int, int)?> GamePosition;        // the entry and count from the game's cursor for this slot, or null to count rows
             public bool MultiHighlight;           // several items can be highlighted at once (a spell on the whole party): say them all
             public Func<bool, string> Prefix;     // said before the item on any announcement (argument: opening), if not empty; after RowDetail ran
-            public GameCursorFunc GameCursor;     // the slot under the game's own cursor, or -1: highlighted even when its material is not
+            public GameCursorFunc GameCursor;
+            public Func<TMP_Text, bool> Bystander;   // MultiHighlight: a highlighted row that is not the cursor (the skill's user)     // the slot under the game's own cursor, or -1: highlighted even when its material is not
         }
 
         private delegate int GameCursorFunc(IList<(int Slot, string Text, TMP_Text Component)> rows, out string detail);
@@ -120,6 +121,8 @@ namespace NocturneAccess.Systems.Menus
                 GameCursor = StockCursor.PartyPickSlot,
                 // The status icon beside the name, in the game's words: "Dís, Mute, 3 of 11" (0.0.73).
                 RowDetail = PartyStatus.RowDetail,
+                // The skill's user stays highlighted while its target is picked (13 Oct 2026): "All 2: Dís, Taraka" (0.0.75).
+                Bystander = PartyStatus.IsSkillUser,
             },
             new MenuSpec
             {
@@ -345,11 +348,12 @@ namespace NocturneAccess.Systems.Menus
                 // A spell on the whole party highlights every member, each rewritten every frame (Media, 6 Oct 2026, 14:51:04:
                 // only the first name was said, then the pending item flipped between rows and never settled). The set of
                 // highlighted items is what changes, announced once from its first item (0.0.59).
-                string sig = string.Join("|", state.Slots.Where(kv => kv.Value.Highlighted).OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}:{kv.Value.Text}"));
+                List<int> lit = Lit(state, visibleOnly: false);
+                string sig = string.Join("|", lit.Select(k => $"{k}:{state.Slots[k].Text}"));
                 if (sig == state.HighlightSig)
                     return;
                 state.HighlightSig = sig;
-                int first = state.Slots.Where(kv => kv.Value.Highlighted).Select(kv => kv.Key).DefaultIfEmpty(-1).Min();
+                int first = lit.DefaultIfEmpty(-1).First();
                 if (first < 0)
                     return;
                 if (state.PendingSlot < 0)
@@ -536,8 +540,7 @@ namespace NocturneAccess.Systems.Menus
             string item = position > 0 && !state.Spec.NoPosition ? $"{named}, {position} of {count}" : named;
             if (state.Spec.MultiHighlight)
             {
-                List<string> all = state.Slots.Where(kv => kv.Value.Highlighted && UiUtil.IsVisible(kv.Value.Component))
-                    .OrderBy(kv => kv.Key).Select(kv => kv.Value.Text).ToList();
+                List<string> all = Lit(state, visibleOnly: true).Select(k => state.Slots[k].Text).ToList();
                 if (all.Count > 1)
                     item = $"All {all.Count}: {string.Join(", ", all)}";   // "All 3: Art, Archangel, Ame-no-Uzume"
             }
@@ -580,6 +583,24 @@ namespace NocturneAccess.Systems.Menus
             if (opening)
                 Log.Info($"{Tag} {state.Spec.Name} opened.");
             SpeechManager.Say(utterance, interrupt: !opening, force: true);
+        }
+
+        /// <summary>
+        /// MultiHighlight: the highlighted slots in order. With exactly two, one of them the spec's Bystander (the skill's user,
+        /// whose name stays highlighted through its target pick), only the other: the target under the cursor (0.0.75). A spell
+        /// on the whole party lights every member, the user too, and stays "All N".
+        /// </summary>
+        private static List<int> Lit(MenuState state, bool visibleOnly)
+        {
+            List<int> lit = state.Slots.Where(kv => kv.Value.Highlighted && (!visibleOnly || UiUtil.IsVisible(kv.Value.Component)))
+                .Select(kv => kv.Key).OrderBy(k => k).ToList();
+            if (lit.Count == 2 && state.Spec.Bystander != null)
+            {
+                List<int> others = lit.Where(k => !state.Spec.Bystander(state.Slots[k].Component)).ToList();
+                if (others.Count == 1)
+                    return others;
+            }
+            return lit;
         }
 
         private static bool HasVisibleHighlight(MenuState state)

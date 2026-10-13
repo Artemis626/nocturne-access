@@ -261,6 +261,17 @@ namespace NocturneAccess.Systems.Menus
             if (row < 0)
                 return -1;
             Il2CppReferenceArray<TextMeshProUGUI> rows = _ui.obtainedText;
+            // Past the learned skills: the new skill (0.0.75). F6 dump 13 Oct 2026, 13:54:30, slots full at a level-up: the
+            // cursor on row 8 (cursor objects 000000001), the new skill in sskill/sskill_await2_01/TextTM ("Heat Wave", TMC21,
+            // the others "？"), its help in skillHelp; the reader looked only at the eight learned rows and said nothing there.
+            if (rows != null && row >= rows.Length)
+            {
+                Transform newRow = _ui.transform.Find($"sskill/sskill_await2_{row - rows.Length + 1:D2}/TextTM");
+                name = UiUtil.TextOf(newRow);
+                if (name == "？" || name == "?")
+                    name = "";
+                return row;
+            }
             for (int i = 0; rows != null && i < rows.Length; i++)
             {
                 if (UiUtil.IsVisible(rows[i]) && (rows[i].text ?? "").Contains("<material=\"TMC21\">"))
