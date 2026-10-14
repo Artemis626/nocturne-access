@@ -36,7 +36,7 @@ namespace NocturneAccess.Systems.Navigation
         public bool World;              // on the world map (FieldState.WorldMap): doors are entrances to places, heights are terrain
         public bool ToWorld;            // a dungeon door that leads to the world map (DoorTable.ToField below 10): "Exit to overworld" (0.0.44), never "explored" (0.0.45)
 
-        public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : "Door")
+        public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : DoorWord)
             : Kind == PoiKind.Place ? Name
             : Kind == PoiKind.Event ? (Action ? ActionLabel : Story ? "Story event" : Name.Length > 0 ? "Event, " + Name : "Event")
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
@@ -116,18 +116,52 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>"explored" or "empty", or "".</summary>
         public string State => Explored ? "explored" : Empty ? "empty" : "";
 
-        /// <summary>Page Up / Page Down: "Door, explored, room", "Door, passage", "Item box, empty".</summary>
-        public string Spoken => Label + (State.Length > 0 ? ", " + State : "") + (DoorKind.Length > 0 ? ", " + DoorKind : "");
+        /// <summary>
+        /// Where a plain door leads (0.0.78; Francesco, 14 Oct 2026, options 1 and 2): the game's name of the field it leads into
+        /// (FldNameData.GetFieldName, known before any visit; DestinationIsField), else the location banner the game showed on
+        /// arriving through it (ExploredDoors.DestinationOf), unless that is the banner shown here. "" when not known.
+        /// </summary>
+        public string Destination = "";
+        public bool DestinationIsField;
+
+        /// <summary>A door walked into (movetype 2) at the end of a run of steep, shallow steps into another area of this field:
+        /// an escalator (Ikebukuro's East Hall, 14 Oct 2026; Francesco chose the word). EscalatorDir +1 up, -1 down, 0 not known.</summary>
+        public bool Escalator;
+        public int EscalatorDir;
+
+        private string DoorWord => Escalator ? (EscalatorDir > 0 ? "Escalator up" : EscalatorDir < 0 ? "Escalator down" : "Escalator") : "Door";
+
+        /// <summary>A door with no place name of its own: "Door", "Escalator up" (not a warp, ladder, jump, exit or world entrance).</summary>
+        private bool PlainDoor => Kind == PoiKind.Door && !Jump && !Warp && !Ladder && !ToWorld && !World && Name.Length == 0;
+
+        /// <summary>The door table's kind as said: "exit" is left out when the field it leads into is named.</summary>
+        private string ShownKind => DestinationIsField && DoorKind == "exit" ? "" : DoorKind;
+
+        /// <summary>"Explored door to East Hall 1F, passage", "Door to Mantra's Headquarters", "Escalator up, passage" (Francesco,
+        /// 14 Oct 2026: "explored" before the door); inside a sentence the mod's words in lower case, the game's names as they are.</summary>
+        private string DoorPhrase(bool inSentence)
+        {
+            string word = DoorWord;
+            string lower = char.ToLowerInvariant(word[0]) + word.Substring(1);
+            string head = Explored ? (inSentence ? "explored " : "Explored ") + lower : inSentence ? lower : word;
+            string kind = ShownKind;
+            return head + (Destination.Length > 0 ? " to " + Destination : "") + (kind.Length > 0 ? ", " + kind : "");
+        }
+
+        /// <summary>Page Up / Page Down: "Explored door, room", "Door, passage", "Explored door to B10", "Item box, empty".</summary>
+        public string Spoken => PlainDoor ? DoorPhrase(false)
+            : Label + (State.Length > 0 ? ", " + State : "") + (DoorKind.Length > 0 ? ", " + DoorKind : "");
 
         /// <summary>The label inside a sentence: game names and "Soul" keep their capitals, the mod's own words do not;
-        /// "explored door", "empty item box"; a door with a kind as on Page Up: "door, explored, room".</summary>
+        /// "explored door", "empty item box"; a door with a kind as on Page Up: "explored door, room".</summary>
         public string InSentence => Action ? Spoken   // the game's own words keep their capitals: "Walking to Examine: There's a switch"
             : Kind == PoiKind.Event ? (Story ? "story event" : Name.Length > 0 ? "event, " + Name : "event")
+            : PlainDoor ? DoorPhrase(true)
             : DoorKind.Length > 0 || ToWorld ? Spoken.ToLowerInvariant()
             : (State.Length > 0 ? State + " " : "") + (Name.Length > 0 || Soul || Demon ? Label : Label.ToLowerInvariant());
 
         /// <summary>Something beyond the plain label is known (End says it first).</summary>
-        public bool HasDetail => State.Length > 0 || DoorKind.Length > 0;
+        public bool HasDetail => State.Length > 0 || DoorKind.Length > 0 || Destination.Length > 0;
 
         /// <summary>Doors only: the in-reach check uses fldEveHit.OldHitDoor, which resets on leaving the volume (gFldEveRngIdx does not).</summary>
         public bool IsDoorLike => Kind == PoiKind.Door || Kind == PoiKind.Place;
@@ -208,6 +242,7 @@ namespace NocturneAccess.Systems.Navigation
             bool world = FieldState.WorldMap(gb);
             bool grid = WalkGrid.Ensure(gb.fieldID, gb.areaID, px, gb.playerY, pz);
             var list = new List<Poi>();
+            string here = Menus.AnnouncementReader.LocationText;   // a learned destination equal to this banner says nothing new
             Il2CppReferenceArray<fldResHead_t> ranges = fldEveHit.gEvnRng;
             Il2CppReferenceArray<putevebox_s> boxes = fldEveHit.gEvnRngBox;
             Il2CppReferenceArray<fldNpc_tag> npcs = fld_Npc.fldNpc;
@@ -242,6 +277,11 @@ namespace NocturneAccess.Systems.Navigation
                     GameObject obj = npc.fldObj;
                     if (!Shown(npc))
                         continue;   // a hidden NPC the story has not placed yet (basement npc_hoji_01, 0.0.24 test)
+                    if (NpcSwitchedOff(gb, npc))
+                    {
+                        Skipped.Add($"{name} gone: the game's NPC switch for held object {npc.hojiID} is off");
+                        continue;
+                    }
                     kind = npc.Type == 999 ? PoiKind.ItemBox : PoiKind.Person;
                     soul = obj != null && (obj.name ?? "").StartsWith("shinentai", StringComparison.Ordinal);
                     demon = obj == null;
@@ -262,6 +302,14 @@ namespace NocturneAccess.Systems.Navigation
                         continue;
                     }
                     script = FieldScript.Classify(gb.areaID, name);
+                    // No procedure for it in the field's script: the game has nothing to run there (0.0.78; Francesco, 14 Oct 2026:
+                    // Talk prompts in the Mantra Headquarters prison that did nothing). 01eve_04 of field 24 areas 13 and 14 was kept
+                    // as "Event, Talk" from a prompt learned while a prisoner stood beside it; the only such volumes in 92 dumps.
+                    if (script.Outcome == ScriptOutcome.Missing && script.Reason == "no such procedure")
+                    {
+                        Skipped.Add($"{name} {script}");
+                        continue;
+                    }
                     // A volume whose prompt the game has shown before stays listed (the old "Event, Examine") even when the dry
                     // run finds nothing to do: a safety net while the dry run is new.
                     if (script.Outcome == ScriptOutcome.Inactive && ExploredDoors.PromptOf(gb.fieldID, gb.areaID, name).Length > 0)
@@ -290,6 +338,22 @@ namespace NocturneAccess.Systems.Navigation
                     floorY = ground;
                 else if (world && doorLike && !float.IsNaN(floorY))
                     floorY = BoxBottom(box);
+                // Where a plain door leads, and whether it is an escalator (0.0.78).
+                string destination = "";
+                bool destinationIsField = false, escalator = false;
+                int escalatorDir = 0;
+                if (generic && !toWorld && !jump)
+                {
+                    if (toField >= 0 && toField != gb.fieldID)
+                        destinationIsField = (destination = WhereAmI.FieldName(toField)).Length > 0;
+                    if (destination.Length == 0)
+                    {
+                        string learned = ExploredDoors.DestinationOf(gb.fieldID, gb.areaID, name);
+                        if (!learned.Equals(here, StringComparison.OrdinalIgnoreCase))
+                            destination = learned;
+                    }
+                    escalator = EscalatorAt(gb, name, p.x, p.z, float.IsNaN(floorY) ? p.y + 100f : floorY, out escalatorDir);
+                }
                 list.Add(new Poi
                 {
                     Index = i,
@@ -316,6 +380,10 @@ namespace NocturneAccess.Systems.Navigation
                     BoxZ0 = bz0,
                     BoxZ1 = bz1,
                     DoorKind = generic && !toWorld && !jump ? DoorTable.KindOf(gb.fieldID, gb.areaID, name) : "",
+                    Destination = destination,
+                    DestinationIsField = destinationIsField,
+                    Escalator = escalator,
+                    EscalatorDir = escalatorDir,
                     Jump = jump,
                     Action = script?.Outcome == ScriptOutcome.Action || jump,
                     Story = script?.Outcome == ScriptOutcome.Story,
@@ -343,6 +411,16 @@ namespace NocturneAccess.Systems.Navigation
                     same.ToWorld |= q.ToWorld;
                     if (same.DoorKind.Length == 0)
                         same.DoorKind = q.DoorKind;
+                    if (same.Destination.Length == 0)
+                    {
+                        same.Destination = q.Destination;
+                        same.DestinationIsField = q.DestinationIsField;
+                    }
+                    if (!same.Escalator && q.Escalator)
+                    {
+                        same.Escalator = true;
+                        same.EscalatorDir = q.EscalatorDir;
+                    }
                     if (same.ToWorld)
                     {
                         same.DoorKind = "";   // "Exit to overworld" already says it
@@ -483,6 +561,25 @@ namespace NocturneAccess.Systems.Navigation
         /// "01npc_01" in area 12, "01npc_02" in area 13, "02npc_01"; tType 1, tCamera 2, fldObj null) were left out as hidden,
         /// while the game spoke them as "Demon".
         /// </summary>
+        /// <summary>
+        /// A held-object NPC (hojiID above 0) the game has switched off: fldGlobal.fldGbChkNpc(field, area + 1, hojiID) not 0,
+        /// as for its collision (CollisionCache). The Mantra Headquarters prison (field 24 area 14, dump 14 Oct 2026, 15:47:32):
+        /// the area's start procedure removes the freed prisoners npc_hoji_01 to 03 (no model, collision size 0, "NPCs off [1 2
+        /// 3]"), but their NPC records stay and were listed as "Demon"; walks to them ended "Near the Demon." (0.0.78). In 92
+        /// dumps no NPC with its object shown is switched off.
+        /// </summary>
+        private static bool NpcSwitchedOff(fldGlobalWork_t gb, fldNpc_tag npc)
+        {
+            try
+            {
+                return npc.hojiID > 0 && fldGlobal.fldGbChkNpc(gb.fieldID, gb.areaID + 1, npc.hojiID) != 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         internal static bool Shown(fldNpc_tag npc)
         {
             if (npc == null)
@@ -586,6 +683,85 @@ namespace NocturneAccess.Systems.Navigation
             }
             return false;
         }
+
+        /// <summary>
+        /// An escalator (0.0.78): a door volume walked into (door table movetype 2) that leads to another area of this field, with
+        /// a run of at least EscalatorSteps floor polygons within EscalatorReach of it that are shallow (20 to 50 deep, 80 or more
+        /// wide) and steep (median rise over median depth 0.5 or more). Ikebukuro's East Hall escalators (dumps 14 Oct 2026,
+        /// 16:34:13 and 16:33:50): steps 36 to 39 deep rising 25 to 28 (0.7), 155 or 670 wide, beside 01d_08 / 01d_09 (B1) and
+        /// 01d_02 / 01d_03 (1F). Shibuya's walk-in stairs (field 17, dump 3 Oct 20:49:51) are 54.5 deep rising 18 (0.33), the
+        /// Amala Network's walk-in doors have no steps: neither is one. dir: +1 the steps rise from the door (up), -1 they fall.
+        /// </summary>
+        private static bool EscalatorAt(fldGlobalWork_t gb, string name, float x, float z, float floorY, out int dir)
+        {
+            dir = 0;
+            string key = $"{gb.fieldID}/{gb.areaID}/{name}/{CollisionCache.Version}";
+            if (EscalatorCache.TryGetValue(key, out int cached))
+            {
+                dir = cached;
+                return cached != int.MinValue;
+            }
+            bool found = false;
+            try
+            {
+                if (DoorTable.MoveTypeOf(gb.fieldID, gb.areaID, name) == WalkInMoveType
+                    && DoorTable.Leads(gb.fieldID, gb.areaID, name, out int toField, out int toArea)
+                    && toField == gb.fieldID && toArea != gb.areaID)
+                {
+                    var heights = new List<float>();
+                    var depths = new List<float>();
+                    foreach (CollisionPoly c in CollisionCache.Polys)
+                    {
+                        if (!c.IsFloorLike || !c.IsGroundAttr || c.Points.Length < 3)
+                            continue;
+                        float x0 = float.MaxValue, x1 = float.MinValue, z0 = float.MaxValue, z1 = float.MinValue, y = 0f;
+                        foreach (Vector4 v in c.Points)
+                        {
+                            x0 = Math.Min(x0, v.x); x1 = Math.Max(x1, v.x);
+                            z0 = Math.Min(z0, v.z); z1 = Math.Max(z1, v.z);
+                            y += v.y;
+                        }
+                        float depth = Math.Min(x1 - x0, z1 - z0), width = Math.Max(x1 - x0, z1 - z0);
+                        float cx = (x0 + x1) / 2 - x, cz = (z0 + z1) / 2 - z;
+                        if (depth < 20f || depth > 50f || width < 80f || cx * cx + cz * cz > EscalatorReach * EscalatorReach)
+                            continue;
+                        y /= c.Points.Length;
+                        if (heights.Any(h => Math.Abs(h - y) < 3f))
+                            continue;   // one height per step (two escalators side by side)
+                        heights.Add(y);
+                        depths.Add(depth);
+                    }
+                    if (heights.Count >= EscalatorSteps)
+                    {
+                        heights.Sort();
+                        var rises = new List<float>();
+                        for (int k = 1; k < heights.Count; k++)
+                            rises.Add(heights[k] - heights[k - 1]);
+                        rises.Sort();
+                        depths.Sort();
+                        float rise = rises[rises.Count / 2], depth = depths[depths.Count / 2];
+                        found = rise >= 15f && rise <= 45f && rise / depth >= 0.5f;
+                        if (found)
+                        {
+                            float mean = heights.Average();   // Y points down: steps above the door's floor go up
+                            dir = mean < floorY - 20f ? 1 : mean > floorY + 20f ? -1 : 0;
+                        }
+                        Log.Info($"[Nav:Poi] {gb.fieldID}/{gb.areaID}/{name}: walk-in door to area {toArea}, {heights.Count} steps, rise {FieldData.F(rise)}, depth {FieldData.F(depth)}: " +
+                                 (found ? $"an escalator {(dir > 0 ? "up" : dir < 0 ? "down" : "")}" : "not an escalator") + ".");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[Nav:Poi] Escalator test of {name}: {ex.Message}");
+            }
+            EscalatorCache[key] = found ? dir : int.MinValue;
+            return found;
+        }
+
+        private const int WalkInMoveType = 2, EscalatorSteps = 6;
+        private const float EscalatorReach = 700f;
+        private static readonly Dictionary<string, int> EscalatorCache = new Dictionary<string, int>();
 
         private static bool Near(Poi a, Poi b, float d) => (a.X - b.X) * (a.X - b.X) + (a.Z - b.Z) * (a.Z - b.Z) <= d * d;
 

@@ -87,6 +87,14 @@ namespace NocturneAccess.Systems.Navigation
             return "";
         }
 
+        /// <summary>The game's name of a field ("Mantra's Headquarters", FldNameData.GetFieldName), or "" (0.0.78: doors into
+        /// another field say where they lead).</summary>
+        internal static string FieldName(int field)
+        {
+            FldNameData names = fldGlobal.fldNameData;
+            return names == null ? "" : Clean(() => names.GetFieldName(field));
+        }
+
         // A name the game has no text for comes back as its id ("SUSPEND013_L0001", "AREA22_L0000": 15:21 session, 5 Oct 2026).
         private static readonly System.Text.RegularExpressions.Regex TextId = new System.Text.RegularExpressions.Regex(@"^[A-Z]+\d*_L\d+$");
 

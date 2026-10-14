@@ -50,7 +50,7 @@ namespace NocturneAccess.Systems.Menus
         private static bool _failed;
 
         /// <summary>
-        /// Which cursor the pick moves, by DrawMode (cmpDrawStockInfo, read offline 14 Oct 2026): 1 and 2 draw SelPos[0], the
+        /// Which cursor the pick moves, by DrawMode (cmpDrawStockInfo, read offline 14 Oct 2026): 1 draws SelPos[0], the
         /// first pick (who uses a skill, Stats); 3 and 5 draw SelPos[1], the target pick (3 with the user's SelPos[0] lit beside
         /// it: a skill's target; 5 alone: an item's target). cmpUpdate.cmpUpdateSequence calls cmpUpdateDevilSelect(0) and
         /// cmpUpdateDevilSelect(1), which move SelPos[BufIdx] (cmpMisc.cmpMoveStockCursor). 0.0.74 read DrawMode 1 only, so the
@@ -58,10 +58,11 @@ namespace NocturneAccess.Systems.Menus
         /// </summary>
         private static int CursorOf(int drawMode)
         {
+            // DrawMode 2 lights only the chosen user while its skill or item list is open: no pick (14 Oct 2026, 16:08:07 and
+            // 16:08:12: read as one, backing out said "What will you use?. Zouchouten, 2 of 11"; 0.0.78).
             switch (drawMode)
             {
                 case 1:
-                case 2:
                     return 0;
                 case 3:
                 case 5:

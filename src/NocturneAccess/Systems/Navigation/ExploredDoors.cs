@@ -118,6 +118,39 @@ namespace NocturneAccess.Systems.Navigation
                 Arrivals[parts[1]] = new UnityEngine.Vector4(x, y, z, 1f);
         }
 
+        // Where each door led (0.0.78; Francesco, 14 Oct 2026: doors should say where they go, as landmarks do): the location
+        // banner the game showed first after going through it, "field/area/01d_09" -> "East Hall 1F". Kept with the doors.
+        private static readonly Dictionary<string, string> Destinations = new Dictionary<string, string>();
+        private static string _destKey;           // the door just gone through, until the banner shows in the new area
+        private static int _destShows, _destField, _destArea;
+        private static long _destMs;
+
+        /// <summary>The banner shown on arriving through door resName of (field, area), or "" when never gone through.</summary>
+        internal static string DestinationOf(int field, int area, string resName)
+            => Destinations.TryGetValue(Key(field, area, resName), out string d) ? d : "";
+
+        /// <summary>Every frame after going through a door: the first location banner shown in the new area is where it leads.</summary>
+        private static void LearnDestination(long now)
+        {
+            if (_destKey == null)
+                return;
+            if (now - _destMs > ArriveWindowMs)
+            {
+                Log.Info($"{Tag} No banner on arriving in {_destField}/{_destArea} through {_destKey}: no destination learned.");
+                _destKey = null;
+                return;
+            }
+            if (Menus.AnnouncementReader.LocationShows == _destShows)
+                return;
+            string key = _destKey, text = Menus.AnnouncementReader.LocationShownText.Trim();
+            _destKey = null;
+            if (text.Length == 0 || (Destinations.TryGetValue(key, out string old) && old == text))
+                return;
+            Destinations[key] = text;
+            Log.Info($"{Tag} {key} leads to \"{text}\" (the banner on arriving in {_destField}/{_destArea}).");
+            Append($"dest {key}\t{text}", $"The destination of {key}");
+        }
+
         /// <summary>The prompt the game showed for event volume resName, or "".</summary>
         internal static string PromptOf(int field, int area, string resName)
             => Prompts.TryGetValue(Key(field, area, resName), out string p) ? p : "";
@@ -215,10 +248,12 @@ namespace NocturneAccess.Systems.Navigation
                             Prompts[line.Substring(7, line.IndexOf('\t') - 7)] = line.Substring(line.IndexOf('\t') + 1).Trim();
                         else if (line.StartsWith("arrival ", StringComparison.Ordinal))
                             ReadArrival(line);
+                        else if (line.StartsWith("dest ", StringComparison.Ordinal) && line.IndexOf('\t') > 5)
+                            Destinations[line.Substring(5, line.IndexOf('\t') - 5)] = line.Substring(line.IndexOf('\t') + 1).Trim();
                         else
                             AreaRoutes.ReadLine(line);
                 WarpMap.Invalidate();
-                Log.Info($"{Tag} File {file + 1} loaded (gslSelect {slMain.gslSelect}, gslSelTop {slMain.gslSelTop}, slChooseSaveIndex {slMain.slChooseSaveIndex}): {Doors.Count} explored doors, {Prompts.Count} event prompts, {Arrivals.Count} warp arrivals, {AreaRoutes.Summary}.");
+                Log.Info($"{Tag} File {file + 1} loaded (gslSelect {slMain.gslSelect}, gslSelTop {slMain.gslSelTop}, slChooseSaveIndex {slMain.slChooseSaveIndex}): {Doors.Count} explored doors, {Prompts.Count} event prompts, {Arrivals.Count} warp arrivals, {Destinations.Count} door destinations, {AreaRoutes.Summary}.");
             }
             catch (Exception ex)
             {
@@ -260,6 +295,7 @@ namespace NocturneAccess.Systems.Navigation
             Doors.Clear();
             Prompts.Clear();
             Arrivals.Clear();
+            Destinations.Clear();
             AreaRoutes.Clear();
             ResetTracking();
         }
@@ -272,6 +308,7 @@ namespace NocturneAccess.Systems.Navigation
             File.WriteAllLines(PathOf(file), Doors.OrderBy(d => d, StringComparer.Ordinal).Select(d => "door " + d)
                 .Concat(Prompts.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => $"prompt {p.Key}\t{p.Value}"))
                 .Concat(Arrivals.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => ArrivalLine(p.Key, p.Value)))
+                .Concat(Destinations.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => $"dest {p.Key}\t{p.Value}"))
                 .Concat(AreaRoutes.Lines()));
         }
 
@@ -310,6 +347,7 @@ namespace NocturneAccess.Systems.Navigation
                 _area = area;
                 _hit = -1;
                 _exploringSinceMs = -1;
+                _destKey = null;   // another change before the banner (a battle): nothing learned
                 if (_leaving != null && now - _leftMs <= LeaveWindowMs && BattleField(field))
                 {
                     // An encounter is not a door (0.0.77): 14 Oct 2026, 13:32:00, walking away from 01d_08 in Ginza 1F, the battle
@@ -322,6 +360,11 @@ namespace NocturneAccess.Systems.Navigation
                     Mark(_leaving, $"left through it, {now - _leftMs} ms before the change to {field}/{area}");
                     _cameFrom = _leaving;
                     _changeMs = now;
+                    _destKey = _leaving;
+                    _destField = field;
+                    _destArea = area;
+                    _destMs = now;
+                    _destShows = Menus.AnnouncementReader.LocationShows;
                 }
                 else
                 {
@@ -335,6 +378,7 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
 
+            LearnDestination(now);
             CheckCrossing(gb, now);
             LearnPrompt(gb, now);
 

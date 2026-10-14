@@ -120,7 +120,7 @@ Nocturne's fixed-camera rooms force third person.
 
 ### 3.4 World map
 
-- **Different routine:** compass-fixed directions, 16 units per tick, collision radius 30 instead of 60.
+- **Different routine:** compass-fixed directions, 16 units per tick, collision radius 30 instead of 45 (dungeons; the player ends about 60 from walls, the test being made one step ahead).
 - **Terrain:** tilted walls and heights over 2000 units.
 - **Separate walking map:** it needs its own rules (section 4.4). Directions there are compass words, which are also the arrow keys.
 
@@ -182,6 +182,8 @@ Nocturne's fixed-camera rooms force third person.
 | Auto-walk circles a round room forever, the player never leaving the floor | **A ramp passes just under the floor** (a spiral down to a lower door, 10 under the room's floor): merged within 20 at the ramp's height, the strip joined the floor to the ramp, and the plan followed the spiral's outline while the player stayed on the floor above it | Merged floors keep the higher one (where the player stands); a walk on a floor that continues into the next cell never drops to a floor under it there (floors above stay open, so stairs on a track bed still join). Found by listing every move from the floor's height to another height (`JUNC` in a scratch copy of `tools/navregions.pl`) | 0.0.74, `WalkGrid.Steps`, the floor merge |
 | A cross-area ladder missing from the list | Ladders were recognised only when both ends are in one area | Take ladders from the door table's movetype, whatever the destination | 0.0.74 |
 | A small room the player walks into by hand is "not reachable", with the door in it and everything beyond (Ginza 1F's exit door) | **The two floors leave a seam narrower than a cell** (the hall ends at z -1090, the room starts at -1100) and a whole row of cell centres falls in it: no floor, two regions. Blamed on the door volume being in a thick wall for a week | Print the dump's grid over the gap and the floor polygons' edges; bridge an empty cell whose sides, half a cell away on opposite sides, lie on floors at one height; check the rule on every dump | 0.0.77 |
+| Escalators, narrow stairs and a passage beside an object never reachable, though the player walks them | **The wall clearance was sized on a measurement, not the game's radius**: the player stood 60 from walls because the hit test checks one step ahead; the radius is 45. A 65 clearance left no cell in passages under 130 wide (escalators 108 wide) | Read the collision constant offline; clearance just over it (46); keep routes central with a cost near walls, not by blocking; check every dump | 0.0.78 |
+| A person in the list that is not there ("Near the Demon" every time) | The story removed the NPC but its record stays (no model, collision size 0) | Ask the game's NPC switch for held objects (`fldGbChkNpc`), not only the object's visibility | 0.0.78 |
 | A walk "blocked" during dialogue | Field update runs, movement routine does not | Count only ticks where the movement routine ran; an event ends the walk ("Walk interrupted by an event.") | 0.0.19, 0.0.24 |
 
 **Rule of thumb:**

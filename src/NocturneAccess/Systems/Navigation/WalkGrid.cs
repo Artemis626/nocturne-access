@@ -28,7 +28,7 @@ namespace NocturneAccess.Systems.Navigation
     ///   landing above it (the stairwell of the Medical Center, field 14 area 14, has its 2F door right above the 1F door).
     /// - A node (cell, layer) is walkable unless a vertical polygon that overlaps the body above that floor (StepHeight, 55 since 0.0.64, to
     ///   BodyHigh units up; game Y points down) lies closer than Clearance: walls, closed doors, furniture, NPC boxes.
-    ///   Stair steps lower than StepHeight do not block. The game stops the player 60 units from a wall.
+    ///   Stair steps lower than StepHeight do not block. The game keeps the player 45 units from a wall (fldHit.fldHitChkUnit).
     /// - Moves join neighbouring nodes whose heights differ by MaxStep or less (stairs, ramps), to every such layer of the
     ///   neighbour (0.0.60), 8 directions or 4 in first person (the game turns in 90-degree steps), no cutting past a
     ///   blocked corner. Cost: 1 per cell (1.414 diagonal),
@@ -43,7 +43,13 @@ namespace NocturneAccess.Systems.Navigation
     {
         internal const float CellSize = 30f;
         private const int Layers = 6;   // 3 until 0.0.60, 4 until 0.0.62 (the Mantra pyramid and field 24 area 9 stack more); heights past the limit are counted in the grid's log line
-        private const float Clearance = 65f;
+        // 0.0.78: 46 (was 65), just over the game's own radius. fldHit.fldHitChkUnit (read offline, 14 Oct 2026) pushes the player
+        // 45 from a wall in dungeons (30 on the world map, 25 in one field); the 60 measured on 1 Oct is where the player ends,
+        // the test being made one 29-unit step ahead. With 65 a passage under 130 wide had no cell: Ikebukuro East Hall's
+        // escalators (108 wide) and the walkway beside the Mystical Chest (130 free) were cut. Checked on all 92 dumps
+        // (tools/navregions.pl NAVCLEAR=46): no point becomes unreachable, several become reachable. Routes still keep to the
+        // middle (NearCost).
+        private const float Clearance = 46f;
         // 0.0.63: 55 and 55 (were 30 and 45). The Assembly of Nihilo's long corridor (field 20 area 6, dump 9 Oct 20:33:11) goes
         // down in 50-unit steps the player walks (stood at y 48 one step below the door at 0): each riser counted as a wall and
         // the corridor fell into 9 pieces, nothing reachable. Field 24 area 5's stairs have 40-unit risers, walls too (352

@@ -13,7 +13,7 @@ use strict; use warnings; use POSIX qw(floor ceil);
 $ENV{$_} //= 1 for qw(NAVATTR80 NAVUP NAVMULTI NAVMERGEHI NAVCONT);
 my ($file, $maxCells, $layers, $px, $pz) = @ARGV;
 $maxCells ||= 400; $layers ||= 6;   # WalkGrid.Layers (6 since 0.0.62)
-my $C = 30; my ($Clear, $Step, $Body, $MaxStep, $Merge, $NearR) = ($ENV{NAVCLEAR} // 65, 55, 180, 55, 20, 300);   # WalkGrid since 0.0.63; NAVCLEAR tries another wall clearance
+my $C = 30; my ($Clear, $Step, $Body, $MaxStep, $Merge, $NearR) = ($ENV{NAVCLEAR} // 46, 55, 180, 55, 20, 300);   # WalkGrid since 0.0.78 (clearance 46, was 65); NAVCLEAR tries another
 # NAVSTEP="step maxstep": the body's lowest blocking height and the largest height change of a move (0.0.63: 55 55).
 ($Step, $MaxStep) = split ' ', $ENV{NAVSTEP} if $ENV{NAVSTEP};
 

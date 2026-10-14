@@ -108,6 +108,11 @@ namespace NocturneAccess.Systems.Menus
         }
 
         private const string LocationPath = "Canvas_UI/fieldUI/flocation/stretch/TextTM";
+
+        /// <summary>How many times the location banner has been shown (counted when it is spoken, or dropped as an elevator's
+        /// floor), and its text then: ExploredDoors takes the first banner after going through a door as where it leads (0.0.78).</summary>
+        internal static int LocationShows { get; private set; }
+        internal static string LocationShownText { get; private set; } = "";
         private const string PromptPath = "Canvas_UI/fieldUI/fannounce/guidetext/TextTM";
 
         /// <summary>
@@ -250,6 +255,11 @@ namespace NocturneAccess.Systems.Menus
                             e.WaitedForDialogue = false;
                             e.Pending = false;
                             e.Spoken = e.Text;
+                            if (EntryOfPath.TryGetValue(LocationPath, out Entry location) && location == e)
+                            {
+                                LocationShows++;
+                                LocationShownText = e.Text;
+                            }
                             if (waited && (e.Options & Options.DropAfterQuestion) != 0 && e.Text.Trim().Length <= 3)
                             {
                                 Log.Info($"{Tag} \"{e.Text}\" written with a dialogue page: the floor the elevator is on, not spoken.");

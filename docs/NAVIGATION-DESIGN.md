@@ -154,7 +154,7 @@ Source: `session_2026-10-01_12-04-33.log` and `UserData/NocturneAccess/NavDumps/
 - `PlayerKakudo` is in **degrees**: 0 faces -Z, 90 faces +X, 180 faces +Z, 270 faces -X. Forward vector in game XZ = (sin k, -cos k). Unity yaw = 180 - k (mod 360).
 - Keyboard movement is camera-relative and snapped to 8 directions: `PlayerKakudoGoal` jumps to a multiple of 45 and `PlayerKakudo` eases to it in about 0.5 s.
 - `fldPlayer.gKeyInputDir`: -1 none, 0 forward, 2 right, 4 back, 6 left (1, 3, 5, 7 the diagonals), relative to the camera. `fldPlayerAct`: 0 idle, 1 moving, 5 at a door. `playerRun` true while moving.
-- The field update runs 30 times a second; walking moves 29 units per tick (about 232 per 250 ms), the Ref's step constant 29. The player stops 60 units from a wall (collision radius 60).
+- The field update runs 30 times a second; walking moves 29 units per tick (about 232 per 250 ms), the Ref's step constant 29. The player stops about 60 units from a wall: the collision radius is 45 (`fldHit.fldHitChkUnit`, read 14 Oct 2026), the test made one step ahead.
 
 ### Geometry
 
