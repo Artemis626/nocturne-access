@@ -14,7 +14,9 @@ namespace NocturneAccess.Systems.Menus
     /// - Rows (F6 dump 7 Oct 2026, 20:23:05): combUI_oubei/dlistsum/dlistsum_row/dlistsum_rowNN/Text_nameTM, Text_raceTM;
     ///   the title combUI_oubei/comtitle/Text_comtitleTM ("VIEW"); sort tabs dlistsum/dlistsumlr_base/dlistsortNN/Text_sortTM
     ///   ("By Race", "By Level"), the current one TMC01.
-    /// - Levels are sprite digits, as in the fusion tables: a CounterCtr under the row (FusionReader.Levels).
+    /// - Levels are sprite digits, as in the fusion tables: a CounterCtr under the row (FusionReader.Levels), "lvnum".
+    /// - The summon cost (0.0.80) too: the row's "moneynum" CounterCtr (row prefab in the e800 bundle: Text_nameTM, Text_raceTM,
+    ///   lvnum, hatena, moneynum with six digits, dlisttex_summakka00 / 01), "Eligor, Fallen, level 29, 3200 macca".
     /// - The cursor: fclCombineInit.CMB_GBWK (cmbGlobalWork_t).ListWindow (lstListWindow_t).CursorInfo.CursorPos, Index the
     ///   list's top, Shift the row, ListNums the count, as in the shops (0.0.66; ZensyoSelInfo, used in 0.0.61, is the
     ///   Compendium menu). Used only when its row matches the highlighted one; logged on every change so the next session
@@ -39,18 +41,22 @@ namespace NocturneAccess.Systems.Menus
             if (_root == null)   // Unity's null test: a destroyed screen counts as null
                 _root = FindRoot(row);
             string race = Text(row.Find("Text_raceTM"));
-            int? level = null;
+            int? level = null, cost = null;
             foreach (CounterCtr c in row.GetComponentsInChildren<CounterCtr>(false))
             {
-                if (c.gameObject.name.StartsWith("lv", StringComparison.Ordinal))
-                {
+                string n = c.gameObject.name;
+                if (level == null && n.StartsWith("lv", StringComparison.Ordinal))
                     level = c.value;
-                    break;
-                }
+                else if (cost == null && n == "moneynum")
+                    cost = c.value;
             }
             string detail = race;
             if (level.HasValue)
                 detail = detail.Length > 0 ? $"{detail}, level {level.Value}" : $"level {level.Value}";
+            // The summon cost (0.0.80): the row's "moneynum" counter, set by fclEncyc.DrawReadListwinElem (CounterCtr.Set) and
+            // drawn as sprite digits; hidden (inactive) when the game draws no cost. Register rows have none.
+            if (cost.HasValue)
+                detail = detail.Length > 0 ? $"{detail}, {cost.Value} macca" : $"{cost.Value} macca";
             return detail;
         }
 

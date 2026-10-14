@@ -520,3 +520,17 @@ Sources: read-only disassembly of `GameAssembly.dll` (`tools/native/dis.sh`, `co
 | `dds3KernelDraw.dds3DrawFlag` (static uint, offset 0x170) | Proxy; `statics.pl` | `dds3FadeCheck()` returns `(dds3DrawFlag & 3) != 0` (when `ScrTraceCode.IsStartModelLoaded()`): a fade is active |
 | `dds3KernelDraw.fadergba` (static byte[], 0x1A0), `fadenow` (ushort, 0x1A8), `fademax` (ushort, 0x1AA) | Proxy; `statics.pl`; disassembly of `dds3FadeGetAlphaF` (RVA 0x24EAF70) | The fade's colour (r, g, b) and strength: `dds3FadeGetAlphaF` = `fadergba[3] * 0.0078125` clamped 0 to 1 while the fade is active, else 0 (128 covers the screen); `fadenow` / `fademax` its frame count. Read each frame by `Capture.FadeWatch` (log only) |
 | `dds3KernelDraw.dds3FadeIn / dds3FadeOut(r, g, b, frame)`, `dds3FadeIn2 / Out2(frame)`, `dds3FadeClear()`, `dds3FadeColorGet(out r, g, b, a)` | Proxy | The game's screen fade calls (not called by the mod) |
+
+### Macca, the Compendium View's cost (0.0.80, 14 Oct 2026)
+
+Sources: reference mod `research/refs/MatthiewNocturne/BetterNewGamePlus/BetterNewGamePlus.cs` (MIT); read-only disassembly of `GameAssembly.dll`; the `e800` asset bundle (GameObject and Transform walk); proxy `fclEncyc.cs`; F6 dump 14 Oct 2026 21:48:04; session log 21:11.
+
+| Name | Source | Meaning |
+| --- | --- | --- |
+| `dds3GlobalWork.DDS3_GBWK.maka` (`dds3GlobalWork_t`, int) | Proxy; reference BetterNewGamePlus (`s_macca = dds3GlobalWork.DDS3_GBWK.maka; // Macca`) | The player's macca. `Systems/Menus/Macca.cs` |
+| `DDS3_GBWK.unitwork[0]` (`Il2Cppnewdata_H.datUnitWork_t`: `level`, `maxhp`, `maxmp`, ushort) | Proxy; `BattleSkills.StockDetail` | The protagonist; `Macca.IsProtagonist` compares the Stats screen's level and maxima with it |
+| `fclEncyc` (static class: the Compendium), `g_pinst` (`instance_tag`), nested `readtopwork_tag.listwin` (`lstListWindow_t`), `readmainwork_tag.mak` | Proxy; `statics.pl` | The View list's own window; reached from the instance only through `mhwork` (memory handle): not read. `fclCombineInit.CMB_GBWK.ListWindow` is not the View cursor (stayed 0, 21:47) |
+| `fclEncyc.DrawReadListwinElem(GameObject obj, GameObject rule, instance_tag pinst)` (RVA 0x21C9890) | Disassembly | Draws a View row: `CounterCtr.Set2(min(level, 99))` and `CounterCtr.Set(cost)`, cost `(S * S / 20) * 100` with S the sum of `GetDevilParam(elem, 0)`, `(2)`, `(3)`, `(4)`, `(5)`, halved when `fclEncycGetRatio2()` >= 100, 0 for some ids (not set) |
+| `fclEncyc.DrawSummonMoney(instance_tag, bool)`, `PrepSummon(readmainwork_tag)`, `GetDevilParam(fclencyceelem_t, int)` | Proxy; disassembly (call lists) | The summon screen's money, the summon's checks (`datCalc.datCheckStockFull`, `fclMisc.CheckLevelLimit`), the demon's parameters |
+| View row prefab `dlistsum_rowNN` (bundle `e800`) | Asset walk | Children: `Text_race`, `Text_raceTM`, `Text_name`, `Text_nameTM`, `lvnum` (`num_lv01`, `02`), `hatena` (`mark`), `moneynum` (`num_lv01` to `06`), `dlisttex_summakka00`, `01`. `CompendiumReader.RowDetail` reads `lvnum` and `moneynum` (`CounterCtr.value`) |
+| `dds3KernelDraw` fade fields (0.0.79) | | The fade watch that read them was removed in 0.0.80 (no black screen again); the facts above (0.0.79 section) stay |

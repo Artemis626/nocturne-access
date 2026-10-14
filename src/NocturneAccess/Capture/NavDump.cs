@@ -50,7 +50,6 @@ namespace NocturneAccess.Capture
 
             FileOnly($"Nocturne Access {ModMain.ModVersion} navigation dump, {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Section("Player", () => s = DumpPlayer());
-            Section("Screen fade (0.0.79)", () => { FadeWatch.Read(out string fade); Both(fade); });
             Section("Names", () => DumpNames(s));
             Section("Collision", () => DumpCollision(s));
             Section("Auto-map", () => DumpAutoMap(s));

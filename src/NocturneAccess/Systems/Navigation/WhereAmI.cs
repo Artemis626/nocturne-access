@@ -19,6 +19,7 @@ namespace NocturneAccess.Systems.Navigation
     ///   dump, so the banner is the one name the game shows;
     /// - in first person, the facing ("Facing north");
     /// - the nearest reachable point of interest, as Page Up says it ("Nearest: Yoyogi Park entrance, 6 metres, south-east").
+    /// - the party's macca (0.0.80; first when not walking: in a shop, the Cathedral or the Fountain);
     /// - last, the moon phase (0.0.46), as the HUD shows it in the Vortex World, dungeons included ("Moon 3 eighths, waxing").
     /// "Overworld, Yoyogi Kamizonocho. Nearest: Soul, 6 metres, north-west. Moon 3 eighths, waxing."
     /// </summary>
@@ -137,6 +138,17 @@ namespace NocturneAccess.Systems.Navigation
                 Poi nearest = PointsOfInterest.Build(gb).FirstOrDefault(q => q.Reachable && q.Route == null);   // not one through other areas
                 if (nearest != null)
                     parts.Add($"Nearest: {nearest.Spoken}, {PointsOfInterest.Describe(gb.playerX, gb.playerY, gb.playerZ, nearest)}");
+            }
+
+            // The party's macca (0.0.80, Francesco, 14 Oct 2026): first in menus, shops and institutions, where it is what Delete is
+            // pressed for; while walking after the place and the nearest point, before the moon, which stays last.
+            string macca = Macca.Spoken();
+            if (macca.Length > 0)
+            {
+                if (exploring)
+                    parts.Add(macca);
+                else
+                    parts.Insert(0, macca);
             }
 
             string moon = MoonPhase();   // last, as Francesco asked (0.0.46)

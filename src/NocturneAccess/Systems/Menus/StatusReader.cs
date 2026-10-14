@@ -557,6 +557,13 @@ namespace NocturneAccess.Systems.Menus
                 parts.Add($"Level {level.Value}");
             AddPair(parts, "HP", Number(_ui.ObjNowHp), Number(_ui.ObjMaxHp));
             AddPair(parts, "MP", Number(_ui.ObjNowMp), Number(_ui.ObjMaxMp));
+            // The protagonist's briefing says the party's macca (0.0.80, Francesco); not on the Cathedral's tabs.
+            if (tab.Length == 0 && Macca.IsProtagonist(level, Number(_ui.ObjMaxHp), Number(_ui.ObjMaxMp)))
+            {
+                string macca = Macca.Spoken();
+                if (macca.Length > 0)
+                    parts.Add(macca);
+            }
 
             var stats = new List<string>();
             Il2CppReferenceArray<TextMeshProUGUI> labels = _ui.TextStatus;
