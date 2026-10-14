@@ -89,6 +89,7 @@ namespace NocturneAccess.Systems.Menus
             public string HighlightSig = "";   // MultiHighlight: the highlighted items as last seen
             public string LastText;
             public int GameSlot = -1;   // MenuSpec.GameCursor as last read
+            public string GameDetail = "";   // why the game cursor gave no row, as last logged
         }
 
         // Paths and materials: probe logs of 30 Sep 2026, see docs/class-index.md.
@@ -452,10 +453,18 @@ namespace NocturneAccess.Systems.Menus
         {
             int slot = -1;
             string detail = "highlight material shown";
-            if (!state.Slots.Values.Any(s => s.Material && UiUtil.IsVisible(s.Component)))
+            // The skill's user stays lit through its target pick (a bystander): a dead target under the cursor (Recarm) is
+            // still found by the game's cursor (0.0.77).
+            if (!state.Slots.Values.Any(s => s.Material && UiUtil.IsVisible(s.Component)
+                                             && !(state.Spec.Bystander != null && state.Spec.Bystander(s.Component))))
             {
                 var rows = state.Slots.OrderBy(kv => kv.Key).Select(kv => (kv.Key, kv.Value.Text, kv.Value.Component)).ToList();
                 slot = state.Spec.GameCursor(rows, out detail);
+                // Asked and not found: say why once per reading (13:46:50, 14 Oct 2026: the Items target pick fell silent and the
+                // log held nothing about the cursor).
+                if (slot < 0 && detail.Length > 0 && detail != state.GameDetail)
+                    Log.Info($"{Tag} {state.Spec.Name}: no row under the game cursor ({detail}).");
+                state.GameDetail = slot < 0 ? detail : "";
             }
             if (slot == state.GameSlot)
                 return;

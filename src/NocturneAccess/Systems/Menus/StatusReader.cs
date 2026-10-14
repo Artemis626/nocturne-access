@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using Il2Cpp;
+using Il2Cppfacility_H;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppTMPro;
 using NocturneAccess.Core;
@@ -114,6 +115,7 @@ namespace NocturneAccess.Systems.Menus
                     _skillName = "";
                     _skillPending = false;
                     _waitSince = -1;
+                    _inheritOpen = false;
                     return;
                 }
 
@@ -168,7 +170,8 @@ namespace NocturneAccess.Systems.Menus
 
                 if (_levelUp)
                     PollLevelUp();
-                PollSkillCursor(now);
+                if (!PollInherit(now))
+                    PollSkillCursor(now);
             }
             catch (Exception ex)
             {
@@ -246,6 +249,202 @@ namespace NocturneAccess.Systems.Menus
             Say(help.Length > 0 ? $"{name}. {help}" : name, interrupt: !_skillQueue);
         }
 
+        /// <summary>
+        /// The Cathedral's manual skill inheritance (0.0.77; Francesco, 14 Oct 2026: "Select Skills" on the fusion result was
+        /// silent). F6 dumps 13:36:22 and 13:36:27: the question in skill_select_parts/commode/TextTM ("Which skill will you
+        /// inherit?"), five list rows skill_select/menu_skill/menu_skill_window/menuskill_top and menuskill_base02..05 (TextTM,
+        /// the highlighted one TMC01, the window scrolls), the skill's description in skill_select/menu_skill/menu_note/
+        /// Text01TM..03TM, the skills chosen so far in the learned rows drawn TMC21 (Tetraja, Diarama). From the game
+        /// (GameAssembly.dll, read offline): fclCombineInit.CMB_GBWK.mSkillSelectCur is the window row (0 to 4; 5 and 6 the
+        /// scroll arrows, fclCombineUpdate.OnSkillSelectCallback), mSkillSelectPage the scroll, fclCombineCalcCore.
+        /// gKeisyoListAllBuf.SkillCnt the list's length; mSkillSelectCount of mSkillSelectMax skills chosen (a choice adds
+        /// one, cancel takes the last back; the screen returns when they are equal: cmbUpdateBirthDevilSelectSkill).
+        /// Speaks "Which skill will you inherit? Skills left to inherit: 2. Agilao, 1 of 12. Medium Fire damage to one foe.",
+        /// each move "Mahama, 2 of 12. ...", each change of the chosen skills "Inherited: Tetraja. Skills left to inherit: 1.",
+        /// and back on the result "Skills: ..." with the new ones. Returns true while the list is shown.
+        /// </summary>
+        private static bool PollInherit(long now)
+        {
+            Transform root = _ui.transform;
+            TMP_Text question = Component(root, "skill_select_parts/commode/TextTM");
+            bool shown = question != null && UiUtil.IsVisible(question) && UiUtil.IsVisible(_ui.menu_skill);
+            if (!shown)
+            {
+                if (_inheritOpen)
+                {
+                    _inheritOpen = false;
+                    Log.Info($"{Tag} Inheritance list closed.");
+                    List<string> learned = Visible(_ui.obtainedText, out _);
+                    if (learned.Count > 0)
+                        Say("Skills: " + string.Join(", ", learned) + ".", interrupt: false);
+                }
+                return false;
+            }
+
+            string name = InheritRow(root, out int windowRow);
+            string chosen = string.Join(", ", ChosenSkills());
+            int left = InheritLeft();
+            if (!_inheritOpen)
+            {
+                _inheritOpen = true;
+                _inheritName = name;
+                _inheritAt = now;
+                _inheritPending = true;
+                _inheritFirst = true;
+                _inheritChosen = chosen;
+                Log.Info($"{Tag} Inheritance list opened: {InheritRaw()}; row {windowRow} \"{UiUtil.Escape(name)}\"; chosen [{chosen}].");
+                return true;
+            }
+            if (chosen != _inheritChosen)
+            {
+                _inheritQueueNext = true;
+                _inheritChosen = chosen;
+                Log.Info($"{Tag} Inheritance chosen [{chosen}]: {InheritRaw()}.");
+                var parts = new List<string> { chosen.Length > 0 ? $"Inherited: {chosen}" : "Inherited: none" };
+                if (left >= 0)
+                    parts.Add($"Skills left to inherit: {left}");
+                Say(Sentences(parts), interrupt: true);
+            }
+            if (name != _inheritName)
+            {
+                _inheritName = name;
+                _inheritAt = now;
+                _inheritPending = name.Length > 0;
+                return true;
+            }
+            if (!_inheritPending || now - _inheritAt < SkillSettleMs)
+                return true;
+            _inheritPending = false;
+
+            var said = new List<string>();
+            if (_inheritFirst)
+            {
+                said.Add(TextUtil.Clean(question.text));
+                if (left >= 0)
+                    said.Add($"Skills left to inherit: {left}");
+            }
+            (int position, int count) = InheritPosition(windowRow);
+            said.Add(position > 0 ? $"{name}, {position} of {count}" : name);
+            string help = InheritHelp(root);
+            if (help.Length > 0)
+                said.Add(help);
+            Say(Sentences(said), interrupt: !_inheritFirst && !_inheritQueueNext);
+            _inheritFirst = _inheritQueueNext = false;
+            return true;
+        }
+
+        /// <summary>"Which skill will you inherit? Agilao, 1 of 12. Medium Fire damage to one foe.": a full stop only where none is.</summary>
+        private static string Sentences(IEnumerable<string> parts)
+            => string.Join(" ", parts.Select(p => p.Trim()).Where(p => p.Length > 0)
+                .Select(p => p.EndsWith(".") || p.EndsWith("?") || p.EndsWith("!") ? p : p + "."));
+
+        private static bool _inheritOpen;
+        private static bool _inheritPending;
+        private static bool _inheritFirst;
+        private static bool _inheritQueueNext;   // the next move queues behind "Inherited: ..."
+        private static string _inheritName = "";
+        private static string _inheritChosen = "";
+        private static long _inheritAt;
+
+        private static readonly string[] InheritRows = { "menuskill_top", "menuskill_base02", "menuskill_base03", "menuskill_base04", "menuskill_base05" };
+
+        /// <summary>The list row drawn TMC01 and its window row (0 to 4), or "" and -1.</summary>
+        private static string InheritRow(Transform root, out int windowRow)
+        {
+            windowRow = -1;
+            for (int i = 0; i < InheritRows.Length; i++)
+            {
+                TMP_Text row = Component(root, $"skill_select/menu_skill/menu_skill_window/{InheritRows[i]}/TextTM");
+                if (row == null || !UiUtil.IsVisible(row) || !(row.text ?? "").Contains("<material=\"TMC01\">"))
+                    continue;
+                windowRow = i;
+                return TextUtil.Clean(row.text);
+            }
+            return "";
+        }
+
+        /// <summary>The description lines joined: "Medium Fire damage to one foe."</summary>
+        private static string InheritHelp(Transform root)
+        {
+            var lines = new List<string>();
+            for (int i = 1; i <= 3; i++)
+            {
+                TMP_Text line = Component(root, $"skill_select/menu_skill/menu_note/Text{i:D2}TM");
+                string text = line != null && UiUtil.IsVisible(line) ? TextUtil.Clean(line.text) : "";
+                if (text.Length > 0)
+                    lines.Add(text);
+            }
+            return string.Join(" ", lines);
+        }
+
+        /// <summary>The learned rows drawn TMC21 while the list is shown: the skills chosen so far.</summary>
+        private static List<string> ChosenSkills()
+        {
+            var list = new List<string>();
+            Il2CppReferenceArray<TextMeshProUGUI> rows = _ui.obtainedText;
+            for (int i = 0; rows != null && i < rows.Length; i++)
+            {
+                if (UiUtil.IsVisible(rows[i]) && (rows[i].text ?? "").Contains("<material=\"TMC21\">"))
+                    list.Add(Text(rows[i]));
+            }
+            return list;
+        }
+
+        /// <summary>mSkillSelectMax - mSkillSelectCount, or -1 when unreadable.</summary>
+        private static int InheritLeft()
+        {
+            try
+            {
+                cmbGlobalWork_t gb = fclCombineInit.CMB_GBWK;
+                if (gb == null || gb.mSkillSelectMax <= 0)
+                    return -1;
+                return Math.Max(0, gb.mSkillSelectMax - gb.mSkillSelectCount);
+            }
+            catch
+            {
+                return -1;
+            }
+        }
+
+        /// <summary>The entry and the list's length from the game's cursor; (0, 0) when they do not fit the row on screen.</summary>
+        private static (int, int) InheritPosition(int windowRow)
+        {
+            try
+            {
+                cmbGlobalWork_t gb = fclCombineInit.CMB_GBWK;
+                int count = fclCombineCalcCore.gKeisyoListAllBuf?.SkillCnt ?? 0;
+                if (gb == null || count <= 0 || windowRow < 0 || gb.mSkillSelectCur != windowRow)
+                    return (0, 0);
+                int entry = gb.mSkillSelectPage + gb.mSkillSelectCur + 1;
+                return entry >= 1 && entry <= count ? (entry, count) : (0, 0);
+            }
+            catch
+            {
+                return (0, 0);
+            }
+        }
+
+        private static string InheritRaw()
+        {
+            try
+            {
+                cmbGlobalWork_t gb = fclCombineInit.CMB_GBWK;
+                int count = fclCombineCalcCore.gKeisyoListAllBuf?.SkillCnt ?? -1;
+                return gb == null ? "CMB_GBWK null"
+                    : $"Cur {gb.mSkillSelectCur} Page {gb.mSkillSelectPage} Page1 {gb.mSkillSelectPage1} Org {gb.mSkillSelectOrg} Count {gb.mSkillSelectCount} Max {gb.mSkillSelectMax} RandomSkillSw {gb.RandomSkillSw}, list {count}";
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
+
+        private static TMP_Text Component(Transform root, string path)
+        {
+            Transform t = root.Find(path);
+            return t != null ? t.GetComponent<TMP_Text>() : null;
+        }
+
         private const long SkillSettleMs = 120;
         private static int _skillRow = -1;
         private static string _skillName = "";
@@ -284,6 +483,14 @@ namespace NocturneAccess.Systems.Menus
                     name = "";
                 return row;
             }
+            // The row under the cursor object first: on the fusion result the learned rows drawn TMC21 are the inherited skills,
+            // not the cursor (F6 dump 14 Oct 2026, 13:36:22: Tetraja and Diarama both TMC21), and its "Current Skills" view moves
+            // a cursor over them (fclCombineUpdate.cmbUpdateBirthDevilConfSkill, CMB_GBWK.mSkillConfCur 0 to 7) (0.0.77).
+            if (rows != null && row < rows.Length && Text(rows[row]).Length > 0)
+            {
+                name = Text(rows[row]);
+                return row;
+            }
             for (int i = 0; rows != null && i < rows.Length; i++)
             {
                 if (UiUtil.IsVisible(rows[i]) && (rows[i].text ?? "").Contains("<material=\"TMC21\">"))
@@ -292,8 +499,6 @@ namespace NocturneAccess.Systems.Menus
                     return row;
                 }
             }
-            if (rows != null && row < rows.Length)
-                name = Text(rows[row]);
             return row;
         }
 

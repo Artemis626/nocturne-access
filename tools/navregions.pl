@@ -6,7 +6,7 @@
 # Usage: perl tools/navregions.pl <dump> [maxcells per side, default 400] [layers, default 6] [player x z]
 # Defaults follow the game's WalkGrid (0.0.74): steps and risers 55, 6 layers, Attr 0x80 floors (NAVATTR80), no faces looking
 # down (NAVUP), every layer within a step (NAVMULTI), merged floors keep the higher (NAVMERGEHI), no drop under a continuing
-# floor (NAVCONT). Set any of them to 0 to see the older rules (12 Oct 2026: the stale defaults hid a corridor bug for an hour).
+# floor (NAVCONT), seams narrower than a cell bridged (NAVSEAM, 0.0.77). Set any of them to 0 to see the older rules (12 Oct 2026: the stale defaults hid a corridor bug for an hour).
 # NAVHEAD=180 marks floors with another floor less than that above them (a diagnostic, not a game rule).
 # The window is placed as WalkGrid does (around the player when the area is wider than maxcells).
 use strict; use warnings; use POSIX qw(floor ceil);
@@ -98,6 +98,37 @@ for my $f (@floors) {
     } }
 }
 print "floor heights dropped by the layer cap: $lost cells\n";
+# NAVSEAM=1 (WalkGrid 0.0.77, default): a cell with no floor at its centre whose two sides, half a cell from the centre north and
+# south (or east and west), lie on floors within the merge band takes the higher of the two (Ginza 1F, field 19 area 2: the hall
+# floor ends at z -1090, the pocket in front of door 01d_08 starts at -1100, and the row of centres at -1095 cut it off).
+my $seamed = 0;
+if ($ENV{NAVSEAM} // 1) {
+    my $h = $C / 2;
+    my %side;   # cell -> axis*2+sign -> [heights]
+    for my $f (@floors) {
+        my ($fx0, $fz0, $fx1, $fz1) = (1e9, 1e9, -1e9, -1e9);
+        for (@{ $f->{p} }) { $fx0 = $_->[0] if $_->[0] < $fx0; $fx1 = $_->[0] if $_->[0] > $fx1; $fz0 = $_->[2] if $_->[2] < $fz0; $fz1 = $_->[2] if $_->[2] > $fz1; }
+        my ($i0, $i1, $j0, $j1) = cells($fx0 - $h, $fz0 - $h, $fx1 + $h, $fz1 + $h);
+        for my $j ($j0 .. $j1) { for my $i ($i0 .. $i1) {
+            my $c = $j * $W + $i; next if $cnt[$c];
+            my ($x, $z) = ($gx + $i * $C, $gz + $j * $C);
+            my @probe = ([$x, $z - $h], [$x, $z + $h], [$x - $h, $z], [$x + $h, $z]);
+            for my $s (0 .. 3) { my ($sx, $sz) = @{ $probe[$s] }; push @{ $side{$c}[$s] }, planey($f, $sx, $sz) if inside($f->{p}, $sx, $sz); }
+        } }
+    }
+    for my $c (keys %side) {
+        my $best;
+        for my $axis (0, 1) {
+            for my $ya (@{ $side{$c}[2 * $axis] // [] }) { for my $yb (@{ $side{$c}[2 * $axis + 1] // [] }) {
+                next if abs($ya - $yb) > $Merge;
+                my $y = $ya < $yb ? $ya : $yb; $best = $y if !defined $best || $y < $best;
+            } }
+        }
+        next unless defined $best;
+        $hgt[$c * $layers] = $best; $st[$c * $layers] = 1; $cnt[$c] = 1; $seamed++;
+    }
+    print "seam cells bridged: $seamed\n";
+}
 for my $w (@walls) {
     my ($ax, $az, $bx, $bz, $lo, $hi) = @$w;
     my ($i0, $i1, $j0, $j1) = cells(($ax < $bx ? $ax : $bx) - $Clear, ($az < $bz ? $az : $bz) - $Clear, ($ax > $bx ? $ax : $bx) + $Clear, ($az > $bz ? $az : $bz) + $Clear);

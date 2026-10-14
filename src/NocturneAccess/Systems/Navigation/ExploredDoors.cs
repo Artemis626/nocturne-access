@@ -178,6 +178,10 @@ namespace NocturneAccess.Systems.Navigation
 
         internal static string Key(int field, int area, string resName) => $"{field}/{area}/{resName}";
 
+        /// <summary>The game runs every battle in a field 200 to 299 (logs 10 to 14 Oct 2026: 85 changes, 202 on the world map, 217 to 223 in
+        /// the dungeons, each followed by the battle UI).</summary>
+        internal static bool BattleField(int field) => field >= 200 && field < 300;
+
         internal static bool IsExplored(int field, int area, string resName) => Doors.Contains(Key(field, area, resName));
 
         internal static void Install()
@@ -306,7 +310,14 @@ namespace NocturneAccess.Systems.Navigation
                 _area = area;
                 _hit = -1;
                 _exploringSinceMs = -1;
-                if (_leaving != null && now - _leftMs <= LeaveWindowMs)
+                if (_leaving != null && now - _leftMs <= LeaveWindowMs && BattleField(field))
+                {
+                    // An encounter is not a door (0.0.77): 14 Oct 2026, 13:32:00, walking away from 01d_08 in Ginza 1F, the battle
+                    // (field 219) 1941 ms after its hit was logged as "left through it" (already explored, so no harm that time).
+                    Log.Info($"{Tag} {_leaving} not marked: the change to {field}/{area} is a battle.");
+                    _cameFrom = null;
+                }
+                else if (_leaving != null && now - _leftMs <= LeaveWindowMs)
                 {
                     Mark(_leaving, $"left through it, {now - _leftMs} ms before the change to {field}/{area}");
                     _cameFrom = _leaving;

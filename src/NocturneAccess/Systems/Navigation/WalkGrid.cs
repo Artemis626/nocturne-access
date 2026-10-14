@@ -293,6 +293,7 @@ namespace NocturneAccess.Systems.Navigation
                     _count[c] = (byte)(n + 1);
                 });
             }
+            int seams = BridgeSeams(floors);
 
             foreach ((float ax, float az, float bx, float bz, float lo, float hi) in walls)
             {
@@ -338,8 +339,71 @@ namespace NocturneAccess.Systems.Navigation
             }
             Log.Info($"[Nav:Walk] Grid for field {field} area {area}: {_w} x {_h} cells of {CellSize} from {FieldData.F(_x0)} {FieldData.F(_z0)}, " +
                      $"{floors.Count} floors, {(world ? worldWalls.Count + " world-map" : walls.Count.ToString())} walls, {(world ? crossings + " moves through walls blocked, " : "")}{walkable} walkable places, {multi} cells with more than one level" +
-                     $"{(dropped > 0 ? $", {dropped} floor heights over the limit of {Layers} left out" : "")}, {clock.ElapsedMilliseconds} ms.");
+                     $"{(dropped > 0 ? $", {dropped} floor heights over the limit of {Layers} left out" : "")}" +
+                     $"{(seams > 0 ? $", {seams} seam cells bridged" : "")}, {clock.ElapsedMilliseconds} ms.");
             ApplyAvoid(world ? new List<Zone>() : WarpMap.Zones(field, area));
+        }
+
+        /// <summary>
+        /// A cell with no floor at its centre whose two sides, half a cell from the centre north and south (or east and west), lie on
+        /// floors within MergeBand of each other takes the higher of the two (0.0.77). Ginza 1F (field 19 area 2): the hall floor
+        /// ends at z -1090 and the pocket in front of same-area door 01d_08 starts at -1100; the row of cell centres at -1095 fell
+        /// in that seam, so the pocket, the door and the exit beyond it were "not reachable" from the hall, which Francesco walked
+        /// by hand (14 Oct 2026, 13:40; 4 and 6 Oct too). Checked on all 84 dumps (tools/navregions.pl, NAVSEAM): only Ginza 1F
+        /// changes reachability; elsewhere 1 to 4 cells are bridged, joining no region. Returns the cells bridged.
+        /// </summary>
+        private static int BridgeSeams(List<CollisionPoly> floors)
+        {
+            const float half = CellSize / 2;
+            var sides = new Dictionary<int, List<float>[]>();
+            foreach (CollisionPoly f in floors)
+            {
+                float fx0 = float.MaxValue, fz0 = float.MaxValue, fx1 = float.MinValue, fz1 = float.MinValue;
+                foreach (Vector4 v in f.Points)
+                {
+                    fx0 = Math.Min(fx0, v.x); fx1 = Math.Max(fx1, v.x);
+                    fz0 = Math.Min(fz0, v.z); fz1 = Math.Max(fz1, v.z);
+                }
+                ForCells(fx0 - half, fz0 - half, fx1 + half, fz1 + half, (c, x, z) =>
+                {
+                    if (_count[c] != 0)
+                        return;
+                    for (int s = 0; s < 4; s++)
+                    {
+                        float sx = s == 2 ? x - half : s == 3 ? x + half : x;
+                        float sz = s == 0 ? z - half : s == 1 ? z + half : z;
+                        if (!CollisionCache.ContainsXZ(f.Points, sx, sz))
+                            continue;
+                        if (!sides.TryGetValue(c, out List<float>[] lists))
+                            sides[c] = lists = new List<float>[4];
+                        (lists[s] ??= new List<float>()).Add(PlaneY(f, sx, sz));
+                    }
+                });
+            }
+            int bridged = 0;
+            foreach (KeyValuePair<int, List<float>[]> kv in sides)
+            {
+                float best = float.MaxValue;
+                for (int axis = 0; axis < 2; axis++)
+                {
+                    List<float> a = kv.Value[2 * axis], b = kv.Value[2 * axis + 1];
+                    if (a == null || b == null)
+                        continue;
+                    foreach (float ya in a)
+                        foreach (float yb in b)
+                            if (Math.Abs(ya - yb) <= MergeBand)
+                                best = Math.Min(best, Math.Min(ya, yb));   // Y points down: the higher floor
+                }
+                if (best == float.MaxValue)
+                    continue;
+                int c = kv.Key;
+                _height[c * Layers] = best;
+                _state[c * Layers] = 1;
+                _near[c * Layers] = NearRange;
+                _count[c] = 1;
+                bridged++;
+            }
+            return bridged;
         }
 
         // ---- Warps (0.0.52) ----
