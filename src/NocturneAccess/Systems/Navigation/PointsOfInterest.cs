@@ -710,6 +710,7 @@ namespace NocturneAccess.Systems.Navigation
                 {
                     var heights = new List<float>();
                     var depths = new List<float>();
+                    var near = new List<(float D, float Y)>();   // every step's distance from the door, for the direction
                     foreach (CollisionPoly c in CollisionCache.Polys)
                     {
                         if (!c.IsFloorLike || !c.IsGroundAttr || c.Points.Length < 3)
@@ -726,6 +727,7 @@ namespace NocturneAccess.Systems.Navigation
                         if (depth < 20f || depth > 50f || width < 80f || cx * cx + cz * cz > EscalatorReach * EscalatorReach)
                             continue;
                         y /= c.Points.Length;
+                        near.Add((cx * cx + cz * cz, y));
                         if (heights.Any(h => Math.Abs(h - y) < 3f))
                             continue;   // one height per step (two escalators side by side)
                         heights.Add(y);
@@ -745,6 +747,13 @@ namespace NocturneAccess.Systems.Navigation
                         {
                             float mean = heights.Average();   // Y points down: steps above the door's floor go up
                             dir = mean < floorY - 20f ? 1 : mean > floorY + 20f ? -1 : 0;
+                            if (dir == 0)
+                            {
+                                // Stairs up and down within reach of the door cancel out (West Hall B1, field 23 area 5, 14 Oct 2026, 20:06:38:
+                                // 32 steps, no direction): the steps nearest the door are its own escalator's (0.0.79).
+                                float nearMean = near.OrderBy(t => t.D).Take(EscalatorSteps).Average(t => t.Y);
+                                dir = nearMean < floorY - 20f ? 1 : nearMean > floorY + 20f ? -1 : 0;
+                            }
                         }
                         Log.Info($"[Nav:Poi] {gb.fieldID}/{gb.areaID}/{name}: walk-in door to area {toArea}, {heights.Count} steps, rise {FieldData.F(rise)}, depth {FieldData.F(depth)}: " +
                                  (found ? $"an escalator {(dir > 0 ? "up" : dir < 0 ? "down" : "")}" : "not an escalator") + ".");

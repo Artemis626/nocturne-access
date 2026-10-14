@@ -508,3 +508,15 @@ Sources: read-only disassembly of `GameAssembly.dll` (`tools/native/dis.sh`, `co
 | --- | --- | --- |
 | `nvdaControllerClient.dll` exports: `nvdaController_testIfRunning`, `nvdaController_speakText`, `nvdaController_cancelSpeech`, `nvdaController_brailleMessage`, `nvdaController_speakSsml`, `nvdaController_getProcessId`, `nvdaController_setOnSsmlMarkReachedCallback` | PE export table of the DLL in the game folder, 30 Sep 2026 | x64 build, NVDA 2024.1+ controller API. |
 | Tolk: `Tolk_Load`, `Tolk_Unload`, `Tolk_DetectScreenReader`, `Tolk_HasSpeech`, `Tolk_Speak`, `Tolk_Braille`, `Tolk_Silence` | Tolk.h (github.com/dkager/tolk) | Not installed; backend untested. |
+
+### World-map wall height, screen fade (0.0.79, 14 Oct 2026)
+
+Sources: read-only disassembly of `GameAssembly.dll` (`tools/native/dis.sh`, `consts.pl`, `statics.pl`); proxy `research/decomp/Assembly-CSharp/Il2Cpp/dds3KernelDraw.cs`; Shift+F6 dump 14 Oct 2026 20:22:34 (field 3); session log 20:04.
+
+| Name | Source | Meaning |
+| --- | --- | --- |
+| `fldHit.fldHitChkUnitVWM(Vector4 phys_pos)` (RVA 0x20F0B80) wall height | Disassembly (at 0x1820F1408) | After choosing the radius (30 below field 10), it takes `pos[1] - 35` (constant 0x1828C792C = 35; components 0, 1, 2 = x, y, z) for the wall test: walls are met 35 above the marker (Y points down, so minus is up). `WalkGrid.WorldLift` 35 (was 15) |
+| Highway wall #1584 (field 3) | Dump 20:22:34 | Normal -0.63 0 0.78, from (-1474, -2703) to (-1629, -2828), y -536 to -1337 (the road at -516): its bottom is 20 above the road. The marker held at -1505.687 -2690.175 lies 29.8 from it at 35 above; the ramp's side walls #784 and #793 close the corner |
+| `dds3KernelDraw.dds3DrawFlag` (static uint, offset 0x170) | Proxy; `statics.pl` | `dds3FadeCheck()` returns `(dds3DrawFlag & 3) != 0` (when `ScrTraceCode.IsStartModelLoaded()`): a fade is active |
+| `dds3KernelDraw.fadergba` (static byte[], 0x1A0), `fadenow` (ushort, 0x1A8), `fademax` (ushort, 0x1AA) | Proxy; `statics.pl`; disassembly of `dds3FadeGetAlphaF` (RVA 0x24EAF70) | The fade's colour (r, g, b) and strength: `dds3FadeGetAlphaF` = `fadergba[3] * 0.0078125` clamped 0 to 1 while the fade is active, else 0 (128 covers the screen); `fadenow` / `fademax` its frame count. Read each frame by `Capture.FadeWatch` (log only) |
+| `dds3KernelDraw.dds3FadeIn / dds3FadeOut(r, g, b, frame)`, `dds3FadeIn2 / Out2(frame)`, `dds3FadeClear()`, `dds3FadeColorGet(out r, g, b, a)` | Proxy | The game's screen fade calls (not called by the mod) |

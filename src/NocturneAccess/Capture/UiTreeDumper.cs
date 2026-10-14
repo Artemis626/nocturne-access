@@ -45,6 +45,15 @@ namespace NocturneAccess.Capture
             foreach (string line in lines)
                 Log.Info($"{Tag} {line}");
             Log.Info($"{Tag} ---- end ({notShown} inactive, disabled or not in a scene) ----");
+            try
+            {
+                FadeWatch.Read(out string fade);
+                Log.Info($"{Tag} Screen fade (0.0.79): {fade}.");
+            }
+            catch (Exception ex)
+            {
+                Log.Info($"{Tag} Screen fade unreadable: {ex.Message}");
+            }
 
             SpeechManager.Say($"UI dumped, {lines.Count} texts.", interrupt: true, force: true);
         }

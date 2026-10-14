@@ -565,7 +565,11 @@ namespace NocturneAccess.Systems.Navigation
         // (centre, then offsets of 6 and 12) clears every wall by WorldClearance, measured WorldLift above the floor:
         // checked offline against the Shinjuku dump, 22 puts all 92 traced positions on reachable cells and makes every
         // point of interest reachable; 24 already breaks the lane the player walked.
-        private const float WorldClearance = 22f, WorldLift = 15f, WorldBucketReach = 45f;   // 45: a diagonal move (42.4) crosses only walls this close
+        // WorldLift 35 (0.0.79): fldHitChkUnitVWM tests the walls 35 above the marker (pos.y minus the constant 35, 0x1828C792C,
+        // read offline 14 Oct 2026). At 15 the map tested under the highway's wall #1584, whose bottom is 20 above the road, so
+        // the corner at -1506 -2690 looked open while the game held the marker there, 29.8 from that wall (8 Oct, 9 Oct, 14 Oct
+        // 20:22). Over the 299 positions traced on field 3: none closer than 26 to a wall at 35; at 15 one sat 20 from wall #788.
+        private const float WorldClearance = 22f, WorldLift = 35f, WorldBucketReach = 45f;   // 45: a diagonal move (42.4) crosses only walls this close
         private static readonly float[] WorldOffsets = { 0f, -6f, 6f, -12f, 12f };
 
         /// <summary>World map: blocks the nodes with no point clear of the walls (see WorldClearance) and sets wall distances.</summary>
@@ -716,6 +720,18 @@ namespace NocturneAccess.Systems.Navigation
             _reachBuild = -1;        // floods and regions are stale
             _componentBuild = -1;
             Log.Info($"[Nav:Walk] Learned: the game refused the move {dir * 45} degrees from {FieldData.F(x)} {FieldData.F(z)}; {steps} cells blocked both ways ({Learned.Count} learned in this area).");
+            // The player came into this square, so some way out exists: refusals in all eight directions mean the marker is held
+            // (wedged in a corner), not that every move is a wall. Kept, they cut the player off from everything: "No path." and
+            // the Page Up list "All, 0" (14 Oct 2026, 20:22:32, the highway corner). Forget this square's refusals (0.0.79).
+            int pi = AbsCell(x), pj = AbsCell(z), refused = 0;
+            for (int s = 0; s < 8; s++)
+                if (Learned.Contains((pi, pj, s)))
+                    refused++;
+            if (refused == 8)
+            {
+                Learned.RemoveWhere(e => e.Item1 == pi && e.Item2 == pj);
+                Log.Info($"[Nav:Walk] Learned: every move from {FieldData.F(x)} {FieldData.F(z)} refused; the marker is held there, its square's refusals forgotten ({Learned.Count} learned in this area).");
+            }
         }
 
         /// <summary>
