@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using Il2Cpp;
 using Il2Cppfield_H;
@@ -41,6 +42,10 @@ namespace NocturneAccess.Systems.Navigation
 
         private static readonly Dictionary<string, HashSet<string>> Passes = new Dictionary<string, HashSet<string>>();
         private static readonly Dictionary<string, HashSet<string>> Reach = new Dictionary<string, HashSet<string>>();
+        // Landings of jumps (0.0.82): "field/area/J3-01eve_03" -> where the player landed after jumping off 25/3/01eve_03; a jump's
+        // "pass" leads to its landing, and the landing's "reach" lists the doors walked to from it. One way: nothing leads back.
+        private static readonly Dictionary<string, UnityEngine.Vector3> Landings = new Dictionary<string, UnityEngine.Vector3>();
+        private static readonly Dictionary<string, HashSet<int>> LandingClosures = new Dictionary<string, HashSet<int>>();
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
 
         // The current area's door regions and closures, once per walk grid.
@@ -58,6 +63,8 @@ namespace NocturneAccess.Systems.Navigation
         {
             Passes.Clear();
             Reach.Clear();
+            Landings.Clear();
+            LandingClosures.Clear();
             DoorRegions.Clear();
             Closures.Clear();
             _learnedKey = "";
@@ -72,11 +79,20 @@ namespace NocturneAccess.Systems.Navigation
                 Add(Passes, parts[1], parts[2]);
             else if (parts.Length >= 2 && parts[0] == "reach")
                 Reach[parts[1]] = new HashSet<string>(parts.Skip(2));   // the latest line wins
+            else if (parts.Length == 5 && parts[0] == "land" && Parse(parts[1], out _, out _, out _)
+                     && float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float x)
+                     && float.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float y)
+                     && float.TryParse(parts[4], NumberStyles.Float, CultureInfo.InvariantCulture, out float z))
+                Landings[parts[1]] = new UnityEngine.Vector3(x, y, z);
         }
 
         internal static IEnumerable<string> Lines()
             => Passes.OrderBy(p => p.Key, StringComparer.Ordinal).SelectMany(p => p.Value.OrderBy(t => t, StringComparer.Ordinal).Select(t => $"pass {p.Key} {t}"))
-                .Concat(Reach.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => ReachLine(p.Key, p.Value)));
+                .Concat(Reach.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => ReachLine(p.Key, p.Value)))
+                .Concat(Landings.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => LandLine(p.Key, p.Value)));
+
+        private static string LandLine(string key, UnityEngine.Vector3 p)
+            => string.Format(CultureInfo.InvariantCulture, "land {0} {1} {2} {3}", key, p.x, p.y, p.z);
 
         private static string ReachLine(string key, HashSet<string> names) => $"reach {key} {string.Join(" ", names.OrderBy(n => n, StringComparer.Ordinal))}".TrimEnd();
 
@@ -117,6 +133,26 @@ namespace NocturneAccess.Systems.Navigation
             }
         }
 
+        /// <summary>
+        /// ExploredDoors (0.0.82): the player jumped off "jump" and landed at (x, y, z) in another area, named landing there. One way:
+        /// the jump leads to the landing; the landing's door links are learned when its area is walked (Learn).
+        /// </summary>
+        internal static void LearnLanding(string jump, string landing, float x, float y, float z)
+        {
+            if (jump == null || landing == null || !Parse(jump, out _, out _, out _) || !Parse(landing, out _, out _, out _))
+                return;
+            bool known = Landings.ContainsKey(landing);
+            Landings[landing] = new UnityEngine.Vector3(x, y, z);
+            if (!known)
+                ExploredDoors.Append(LandLine(landing, Landings[landing]), $"The landing {landing}");
+            if (Add(Passes, jump, landing))
+            {
+                Log.Info($"{Tag} Jumping off {jump} lands at {FieldData.F(x)} {FieldData.F(y)} {FieldData.F(z)} ({landing}): learned.");
+                ExploredDoors.Append($"pass {jump} {landing}", $"The way through {jump}");
+            }
+            _learnedKey = "";   // the landing's links are learned on the next build here
+        }
+
         // ---- The current area ----
 
         private static string _tickKey = "";
@@ -153,7 +189,7 @@ namespace NocturneAccess.Systems.Navigation
         {
             try
             {
-                List<Poi> doors = pois.Where(q => q.Kind == PoiKind.Door && !q.Warp).ToList();
+                List<Poi> doors = pois.Where(q => (q.Kind == PoiKind.Door && !q.Warp) || q.JumpOff).ToList();
                 Learn(gb, doors);
                 if (!Enabled || Passes.Count == 0)
                     return;
@@ -166,6 +202,10 @@ namespace NocturneAccess.Systems.Navigation
                     if (regions.Count == 0)
                         continue;
                     var goal = new HashSet<string>(doors.Where(d => Closures.TryGetValue(d.Index, out HashSet<int> c) && c.Overlaps(regions)).SelectMany(d => d.Names));
+                    // Or a landing of this area it is walked to from (0.0.82): jumped into from the floor above.
+                    foreach (KeyValuePair<string, HashSet<int>> l in LandingClosures)
+                        if (l.Value.Overlaps(regions) && Parse(l.Key, out _, out _, out string landName))
+                            goal.Add(landName);
                     if (goal.Count == 0)
                         continue;
                     AreaRoute route = Search(gb.fieldID, gb.areaID, starts, gb.areaID, goal);
@@ -187,7 +227,7 @@ namespace NocturneAccess.Systems.Navigation
         /// </summary>
         internal static AreaRoute Onward(fldGlobalWork_t gb, List<Poi> pois, int goalArea, HashSet<string> goalDoors)
         {
-            List<Poi> starts = pois.Where(q => q.Kind == PoiKind.Door && !q.Warp && q.Reachable && q.Route == null).ToList();
+            List<Poi> starts = pois.Where(q => ((q.Kind == PoiKind.Door && !q.Warp) || q.JumpOff) && q.Reachable && q.Route == null).ToList();
             return starts.Count == 0 ? null : Search(gb.fieldID, gb.areaID, starts, goalArea, goalDoors);
         }
 
@@ -232,9 +272,28 @@ namespace NocturneAccess.Systems.Navigation
                     changed++;
                 }
             }
+            // The landings of jumps into this area (0.0.82): the doors and jumps walked to from each.
+            LandingClosures.Clear();
+            string prefix = $"{gb.fieldID}/{gb.areaID}/";
+            foreach (KeyValuePair<string, UnityEngine.Vector3> l in Landings.Where(l => l.Key.StartsWith(prefix, StringComparison.Ordinal)).ToList())
+            {
+                HashSet<int> regions = WalkGrid.RegionsNear(l.Value.x, l.Value.y, l.Value.z, LandingReach);
+                if (regions.Count == 0)
+                    continue;
+                HashSet<int> closure = WarpMap.Closure(gb, regions);
+                LandingClosures[l.Key] = closure;
+                var names = new HashSet<string>(doors.Where(e => DoorRegions[e.Index].Overlaps(closure)).SelectMany(e => e.Names));
+                if (Reach.TryGetValue(l.Key, out HashSet<string> old) && old.SetEquals(names))
+                    continue;
+                Reach[l.Key] = names;
+                ExploredDoors.Append(ReachLine(l.Key, names), $"The links of the landing {l.Key}");
+                changed++;
+            }
             if (changed > 0)
                 Log.Info($"{Tag} Field {gb.fieldID} area {gb.areaID}: {doors.Count} doors, {changed} links learned; parts: {string.Join(" | ", groups)}.");
         }
+
+        private const float LandingReach = 90f;   // the walk grid's regions this close to where the player landed
 
         /// <summary>
         /// Breadth first over "standing at a door": from the start doors (current area, reachable now) through the ways learned, then

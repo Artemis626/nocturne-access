@@ -719,7 +719,7 @@ namespace NocturneAccess.Systems.Navigation
         private static int AbsCell(float v) => (int)Math.Floor(v / CellSize);
 
         /// <summary>Blocks the moves from (x, z) along direction dir (0 north, clockwise in 45s) for 'steps' cells, both ways.</summary>
-        internal static void LearnBlocked(int field, int area, float x, float z, int dir, int steps)
+        internal static void LearnBlocked(int field, int area, float x, float z, int dir, int steps, bool fourWays = false)
         {
             if (field != _learnedField || area != _learnedArea)
             {
@@ -741,11 +741,12 @@ namespace NocturneAccess.Systems.Navigation
             // The player came into this square, so some way out exists: refusals in all eight directions mean the marker is held
             // (wedged in a corner), not that every move is a wall. Kept, they cut the player off from everything: "No path." and
             // the Page Up list "All, 0" (14 Oct 2026, 20:22:32, the highway corner). Forget this square's refusals (0.0.79).
+            // A first-person walk moves in four directions only (0.0.82): all four refused is the same sign.
             int pi = AbsCell(x), pj = AbsCell(z), refused = 0;
-            for (int s = 0; s < 8; s++)
+            for (int s = 0; s < 8; s += fourWays ? 2 : 1)
                 if (Learned.Contains((pi, pj, s)))
                     refused++;
-            if (refused == 8)
+            if (refused == (fourWays ? 4 : 8))
             {
                 Learned.RemoveWhere(e => e.Item1 == pi && e.Item2 == pj);
                 Log.Info($"[Nav:Walk] Learned: every move from {FieldData.F(x)} {FieldData.F(z)} refused; the marker is held there, its square's refusals forgotten ({Learned.Count} learned in this area).");

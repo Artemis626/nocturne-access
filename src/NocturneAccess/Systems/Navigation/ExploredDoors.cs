@@ -188,7 +188,67 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             Prompts[key] = text;
             Log.Info($"{Tag} Event {key}: prompt \"{text}\".");
+            _notJump = null;   // a jump may be known by its prompt now (TrackJump)
             Append($"prompt {key}\t{text}", $"The prompt of {key}");
+        }
+
+        // ---- Jump Off (0.0.82) ----
+        // Kabukicho Prison's "Jump Off" volumes are event volumes, not doors (field 25, 15 Oct 2026): confirming the prompt drops the
+        // player to the floor below, another area (13:56:09, 4F area 3 to 3F area 2; 14:06:45, area 18 to area 19), on a spot with
+        // no door. Leaving such a volume just before an area change is a jump: it is marked explored, the banner on landing is its
+        // destination ("Jump Off to 3F"), and the landing is kept for routes through other areas (AreaRoutes.LearnLanding).
+        private const int JumpOffPrompt = 3;      // fldPanel.inputpanel_mes0[3], "Jump Off" (PANELMES_L0003)
+        private static string _jumping;           // the "Jump Off" volume last stood in, as its key
+        private static long _jumpLeftMs = long.MinValue / 2;
+        private static string _notJump;           // the last event volume found not to be a jump
+        private static string _landingFrom;       // set at an area change after a jump, until the landing spot is recorded
+        private static long _landingMs;
+
+        /// <summary>Every frame: the event volume the player stands in, when it is a "Jump Off" (its learned prompt, or its script's).</summary>
+        private static void TrackJump(fldGlobalWork_t gb, long now)
+        {
+            int i = fldEveHit.gFldEveRngIdx;
+            if (i < 0)
+            {
+                _notJump = null;   // a volume left: its prompt may be learned the next time
+                return;
+            }
+            Il2CppReferenceArray<fldResHead_t> ranges = fldEveHit.gEvnRng;
+            if (ranges == null || i >= Math.Min(fldEveHit.gEvnRngNum, ranges.Length))
+                return;
+            fldResHead_t h = ranges[i];
+            string name = h?.resourceName ?? "";
+            if (h == null || h.resourceType != 10 || !EventName.IsMatch(name))
+                return;
+            string key = Key(gb.fieldID, gb.areaID, name);
+            // The jump itself runs as a scene (no exploring): the hit index stays on the volume until just before the area
+            // changes (0.2 s at 13:56:09), so the time keeps running then; a new volume is taken only while exploring.
+            if (key == _notJump || (key != _jumping && !FieldState.IsExploring))
+                return;
+            if (key != _jumping && !IsJumpOff(gb, name))
+            {
+                _notJump = key;   // asked once per volume stood in, not every frame
+                return;
+            }
+            _jumping = key;
+            _jumpLeftMs = now;
+        }
+
+        /// <summary>Event volume resName of the current area waits on the game's "Jump Off" prompt.</summary>
+        internal static bool IsJumpOff(fldGlobalWork_t gb, string resName)
+        {
+            string jumpText = FieldScript.PanelText(JumpOffPrompt);
+            if (jumpText.Length > 0 && PromptOf(gb.fieldID, gb.areaID, resName) == jumpText)
+                return true;
+            ScriptVerdict v = FieldScript.Classify(gb.areaID, resName);
+            return v != null && v.Outcome == ScriptOutcome.Action && v.Prompt == JumpOffPrompt;
+        }
+
+        /// <summary>The landing's name in the area jumped into: "J3-01eve_03" for 01eve_03 of area 3.</summary>
+        private static string LandingName(string jumpKey)
+        {
+            string[] parts = jumpKey.Split('/');
+            return parts.Length == 3 ? $"J{parts[1]}-{parts[2]}" : "J-" + jumpKey.Replace('/', '-');
         }
 
         private static int _file = -1;           // slMain.gslSelect of the file in play, -1 for a new game not saved yet
@@ -321,6 +381,8 @@ namespace NocturneAccess.Systems.Navigation
             _leaving = null;
             _cameFrom = null;
             _crossing = null;
+            _jumping = null;
+            _landingFrom = null;
             _hasLast = false;
             _settled = false;
             _exploringSinceMs = -1;
@@ -366,11 +428,25 @@ namespace NocturneAccess.Systems.Navigation
                     _destMs = now;
                     _destShows = Menus.AnnouncementReader.LocationShows;
                 }
+                else if (_jumping != null && now - _jumpLeftMs <= LeaveWindowMs && !BattleField(field))
+                {
+                    // A jump off (0.0.82): no door is come in through; the landing spot is recorded once the player has control.
+                    Mark(_jumping, $"jumped off, {now - _jumpLeftMs} ms before the change to {field}/{area}");
+                    _cameFrom = null;
+                    _landingFrom = _jumping;
+                    _landingMs = now;
+                    _destKey = _jumping;
+                    _destField = field;
+                    _destArea = area;
+                    _destMs = now;
+                    _destShows = Menus.AnnouncementReader.LocationShows;
+                }
                 else
                 {
                     _cameFrom = null;
                 }
                 _leaving = null;
+                _jumping = null;
                 _crossing = null;
                 _hasLast = false;
                 _settled = false;
@@ -381,6 +457,21 @@ namespace NocturneAccess.Systems.Navigation
             LearnDestination(now);
             CheckCrossing(gb, now);
             LearnPrompt(gb, now);
+            TrackJump(gb, now);
+            if (_landingFrom != null)
+            {
+                if (now - _landingMs > ArriveWindowMs)
+                {
+                    Log.Info($"{Tag} No landing recorded after {_landingFrom}: the player did not take control in time.");
+                    _landingFrom = null;
+                }
+                else if (FieldState.IsExploring && now - _areaMs >= SettleMs)
+                {
+                    // Where the game put the player, once settled (an area's start position comes a few frames after the change).
+                    AreaRoutes.LearnLanding(_landingFrom, Key(field, area, LandingName(_landingFrom)), gb.playerX, gb.playerY, gb.playerZ);
+                    _landingFrom = null;
+                }
+            }
 
             // The door volume the player stands in: its key is taken while exploring, when the area's own volumes are surely
             // loaded; the time keeps running while the door's transition (no longer exploring) starts.

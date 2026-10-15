@@ -544,3 +544,13 @@ Sources: read-only disassembly of `GameAssembly.dll` (`tools/native/dis.sh`, `co
 | `fldHit.fldHitChkUnit(Vector4 phys_pos)` wall height and radius | Disassembly (0x1820F4F7C, 0x1820F5369) | The wall test point is `pos[1] - 35` (constant 0x1828C792C, `r14d` = 1, the y component): 35 above the player, as on the world map. Per polygon, for `fieldID` above 10: radius 45 (0x1828C754C) when `collision_s.mode2D` (+0x10, short) is 1, else 60 (0x1828C74AC); a polygon with `normal.y` below -0.75 (0x182AF82AC, facing up) takes another branch (floors). `WalkGrid.RailTestLift` 35 |
 | Kabukicho Prison railings (field 25) | Dumps 13:41:24, 14:41:56 | Area 18: #120, #121 (normal 0 0 -1, x 600..1200, z 0, y -50..0) beside the "Jump Off" volume `01eve_03` (x 600..1200, z -100..0); floors #0 (y 0) on both sides, overlays #33 (`Attr 0x800`, y -10), #82 / #83 (y -13, 40 wide). Area 17: #127, #129 (slanted, y -50..0) by `01eve_06` / `01eve_07`; overlays `Attr 0x8000` at y -40 (#178, #179). No floor at a railing's top: `WalkGrid.FloorAtTop` |
 | "Jump Off" | Dump prompt table (`fldPanel.inputpanel_mes0[3]`, PANELMES), field script procedures `NNN_01eve_NN` with `fldCommand_ACT_WIN_DSP(3)` | Event volumes at a railing; listed as "Jump Off" (Actions) since 0.0.71 |
+
+### Jump Off links (0.0.82, 15 Oct 2026)
+
+Sources: session log 15 Oct 2026 13:09 (13:56:05 to 13:56:09, 14:06:42 to 14:06:46); the mod's own names below.
+
+| Name | Source | Meaning |
+| --- | --- | --- |
+| Kabukicho Prison "Jump Off" | Log | Confirming prompt 3 at an event volume (`01eve_03` of area 3, `01eve_04` of area 18) runs a scene (`syukan_cam_reset_flg` 0 to 1), `gFldEveRngIdx` drops 0.2 s before the area changes to the floor below (area 3 to 2, 18 to 19), the banner says the floor ("3F", "4F"), the player stands on a spot with no door |
+| `ExploredDoors.TrackJump`, `IsJumpOff`, `LandingName` | Mod | The jump volume stood in; on the next area change it is marked, its destination learned, its landing recorded (`AreaRoutes.LearnLanding`, file lines `land`, `pass`) |
+| `Poi.JumpOff`, `JumpTo` | Mod | A door-table jump or an event jump; "Jump Off to 3F" once its destination is known |

@@ -555,7 +555,7 @@ namespace NocturneAccess.Systems.Navigation
             if (_journey != null && _final == null && _target != null && gb.areaID == _journey.ExitArea && _target.Index == _journey.ExitIndex)
             {
                 _journey.TouchedMs = Clock.ElapsedMilliseconds;
-                Stop(why, "Arrived. Go through; the route goes on in the next area.");
+                Stop(why, _target.JumpOff ? "Arrived. Jump off; the route goes on below." : "Arrived. Go through; the route goes on in the next area.");
                 return;
             }
             CancelJourney("arrived");
@@ -822,7 +822,9 @@ namespace NocturneAccess.Systems.Navigation
             // stall on, block it so the re-plan goes round instead of repeating the same route (0.0.62, the highway, 8 Oct 21:27).
             // The run is the one whose segment the player stands on: pushed back by the game, the marker may already count as on the
             // next run (21:27:07: "next run 2" at -1470, then back at -1506 on run 1).
-            if (_replans >= 2 && !_firstPerson && _runs != null && _runs.Count > 0 && (why.StartsWith("still") || why.StartsWith("no progress")))
+            // First person too (0.0.82; Francesco, 15 Oct 2026): Kabukicho Prison's walks re-planned the same route into a railing
+            // six times; the still test there already leaves turns out (Turning), so a stall is the game refusing the move.
+            if (_replans >= 2 && _runs != null && _runs.Count > 0 && (why.StartsWith("still") || why.StartsWith("no progress")))
             {
                 int best = 0;
                 float bestD = float.MaxValue;
@@ -836,7 +838,7 @@ namespace NocturneAccess.Systems.Navigation
                         best = i;
                     }
                 }
-                WalkGrid.LearnBlocked(gb.fieldID, gb.areaID, gb.playerX, gb.playerZ, _runs[best].Dir, 2);
+                WalkGrid.LearnBlocked(gb.fieldID, gb.areaID, gb.playerX, gb.playerZ, _runs[best].Dir, 2, fourWays: _firstPerson);
             }
             if (!Plan(gb, $"re-plan {_replans}: {why}"))
                 Stop("no path on re-plan", "No path.");
