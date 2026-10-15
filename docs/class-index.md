@@ -554,3 +554,13 @@ Sources: session log 15 Oct 2026 13:09 (13:56:05 to 13:56:09, 14:06:42 to 14:06:
 | Kabukicho Prison "Jump Off" | Log | Confirming prompt 3 at an event volume (`01eve_03` of area 3, `01eve_04` of area 18) runs a scene (`syukan_cam_reset_flg` 0 to 1), `gFldEveRngIdx` drops 0.2 s before the area changes to the floor below (area 3 to 2, 18 to 19), the banner says the floor ("3F", "4F"), the player stands on a spot with no door |
 | `ExploredDoors.TrackJump`, `IsJumpOff`, `LandingName` | Mod | The jump volume stood in; on the next area change it is marked, its destination learned, its landing recorded (`AreaRoutes.LearnLanding`, file lines `land`, `pass`) |
 | `Poi.JumpOff`, `JumpTo` | Mod | A door-table jump or an event jump; "Jump Off to 3F" once its destination is known |
+
+### The mirage, sounds (0.0.83, 15 Oct 2026)
+
+Sources: session log 15 Oct 2026 15:18; Windows API; the mod's own names below.
+
+| Name | Source | Meaning |
+| --- | --- | --- |
+| Kabukicho Prison mirage | Log | Event `01eve_05` / `01eve_06` ("Mysterious Wall" pads) asks "Will you use the Umugi Stone?"; using it changes the area between 0..3 and 16..19 (19 to 3, 1 to 17) with the player put about 116 from where they stood. `PlaneShift` |
+| `winmm.dll` `PlaySound(IntPtr, IntPtr, uint)` with `SND_MEMORY` 0x4, `SND_ASYNC` 0x1, `SND_NODEFAULT` 0x2 | Windows API | Plays the mod's own WAV from pinned memory (`Speech.Earcons`) |
+| `PlaneShift`, `WallBump`, `Earcons.Thud`, config `WallBumpSound` | Mod | 0.0.83 |

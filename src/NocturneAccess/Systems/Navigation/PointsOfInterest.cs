@@ -36,7 +36,7 @@ namespace NocturneAccess.Systems.Navigation
         public bool World;              // on the world map (FieldState.WorldMap): doors are entrances to places, heights are terrain
         public bool ToWorld;            // a dungeon door that leads to the world map (DoorTable.ToField below 10): "Exit to overworld" (0.0.44), never "explored" (0.0.45)
 
-        public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt + JumpTo : Warp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : DoorWord)
+        public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : DoorWord)
             : Kind == PoiKind.Place ? Name
             : Kind == PoiKind.Event ? (Action ? ActionLabel : Story ? "Story event" : Name.Length > 0 ? "Event, " + Name : "Event")
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
@@ -47,19 +47,11 @@ namespace NocturneAccess.Systems.Navigation
         /// a switch"). A story event runs as soon as it is walked into. Neither: the old "Event" (the script could not tell).
         /// </summary>
         public bool Action, Story, Jump;
-
-        /// <summary>A "Jump Off": a door the game jumps down through (Jump) or an event volume waiting on the game's "Jump Off" prompt
-        /// (Kabukicho Prison, 0.0.82). It leads to another area: its destination is learned on use, and routes through other areas
-        /// take it (AreaRoutes, one way).</summary>
-        public bool JumpOff;
-
-        /// <summary>" to 3F" for a jump whose landing banner is known, else "".</summary>
-        private string JumpTo => JumpOff && Destination.Length > 0 ? " to " + Destination : "";
         public string Prompt = "", Detail = "";
         public string ScriptNote = "";   // the dry run's verdict, for the log
 
         /// <summary>"Examine: There's a switch", or the prompt alone.</summary>
-        private string ActionLabel => (Detail.Length > 0 ? $"{Prompt}: {Detail}" : Prompt) + JumpTo;
+        private string ActionLabel => Detail.Length > 0 ? $"{Prompt}: {Detail}" : Prompt;
 
         public string DoorKind = "";    // a generic door: "room", "passage", "exit" or "to exit", from the game's door table (DoorTable), or ""
 
@@ -362,14 +354,6 @@ namespace NocturneAccess.Systems.Navigation
                     }
                     escalator = EscalatorAt(gb, name, p.x, p.z, float.IsNaN(floorY) ? p.y + 100f : floorY, out escalatorDir);
                 }
-                // A jump off says the floor it lands on, once used (0.0.82).
-                bool jumpOff = jump || (kind == PoiKind.Event && script?.Outcome == ScriptOutcome.Action && script.Prompt == JumpPrompt);
-                if (jumpOff)
-                {
-                    string learned = ExploredDoors.DestinationOf(gb.fieldID, gb.areaID, name);
-                    if (!learned.Equals(here, StringComparison.OrdinalIgnoreCase))
-                        destination = learned;
-                }
                 list.Add(new Poi
                 {
                     Index = i,
@@ -401,7 +385,6 @@ namespace NocturneAccess.Systems.Navigation
                     Escalator = escalator,
                     EscalatorDir = escalatorDir,
                     Jump = jump,
-                    JumpOff = jumpOff,
                     Action = script?.Outcome == ScriptOutcome.Action || jump,
                     Story = script?.Outcome == ScriptOutcome.Story,
                     Prompt = jump ? FieldScript.PanelText(JumpPrompt) : script?.Outcome == ScriptOutcome.Action ? script.PromptText : "",

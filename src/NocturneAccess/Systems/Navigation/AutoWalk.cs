@@ -555,7 +555,7 @@ namespace NocturneAccess.Systems.Navigation
             if (_journey != null && _final == null && _target != null && gb.areaID == _journey.ExitArea && _target.Index == _journey.ExitIndex)
             {
                 _journey.TouchedMs = Clock.ElapsedMilliseconds;
-                Stop(why, _target.JumpOff ? "Arrived. Jump off; the route goes on below." : "Arrived. Go through; the route goes on in the next area.");
+                Stop(why, "Arrived. Go through; the route goes on in the next area.");
                 return;
             }
             CancelJourney("arrived");
