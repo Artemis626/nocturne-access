@@ -378,6 +378,20 @@ namespace NocturneAccess.Systems.Navigation
             return v;
         }
 
+        /// <summary>
+        /// The game's narration that event volume `volume` of `area` shows first when it runs by itself, with the flags as they
+        /// are now, or "" (0.0.84). For volumes that fire on arrival, before any prompt: Kabukicho Prison's cell area 12
+        /// (013_01eve_01) says "No one is here." and sends the player back while flag 1430 is off, and "This is the hole that the
+        /// Manikin jumped into." once the Digging Manikin has the spoon (020_01eve_02 sets 1430). Not checked against the
+        /// on/off table: the caller does (VolumeOn). A prompt before any message gives "".
+        /// </summary>
+        internal static string FirstNarration(int area, string volume)
+        {
+            if (!Ensure() || _message < 0 || !ProcByName.TryGetValue($"{area + 1:000}_{volume}", out Proc p))
+                return "";
+            return new DryRun().DetailAfter(p.Start, new List<int?>(), null, stopAtPrompt: true);
+        }
+
         /// <summary>One classification: the step budget, the branches already split, and its own copy of the flags it set.</summary>
         private sealed class DryRun
         {
@@ -522,12 +536,12 @@ namespace NocturneAccess.Systems.Navigation
             }
 
             /// <summary>From just after the prompt, as if confirmed (its result 1): the first message's narration, or "".</summary>
-            internal string DetailAfter(int pc, List<int?> stack0)
+            internal string DetailAfter(int pc, List<int?> stack0, int? reg0 = 1, bool stopAtPrompt = false)
             {
                 if (_message < 0)
                     return "";
                 var st = new List<int?>(stack0);
-                int? reg = 1;
+                int? reg = reg0;
                 for (int steps = 0; steps < DetailSteps && pc >= 0 && pc < _codeCount; steps++)
                 {
                     short o = OpAt(pc);
@@ -564,6 +578,8 @@ namespace NocturneAccess.Systems.Navigation
                                 int? dialog = st.Count > 0 ? st[st.Count - 1] : null;
                                 return dialog.HasValue ? Narration(dialog.Value) : "";
                             }
+                            if (stopAtPrompt && PromptCommands.Contains(u))
+                                return "";
                             int args = u < Commands.Count ? Commands[u].Params : 0;
                             if (u == _bitChk)
                             {

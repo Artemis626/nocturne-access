@@ -851,7 +851,13 @@ namespace NocturneAccess.Systems.Navigation
         /// </summary>
         private static void Approach(fldGlobalWork_t gb, float x, float z, float toTarget, float flat)
         {
-            if (++_approach > ApproachTicks || (_approach > 5 && _still >= 5 && !Turning(gb)) || (_firstPerson && !_target.IsDoorLike && flat < FacingMinDistance && !Turning(gb)))
+            bool close = _firstPerson && !_target.IsDoorLike && flat < FacingMinDistance && !Turning(gb);
+            // The game's hit is already the target and the player faces it: step on until its prompt shows (0.0.84; 15 Oct 2026
+            // 21:42:34, Kabukicho Prison area 3's switch 01eve_01: the walk stopped 68 from its centre, three Home presses ended
+            // at once, "Examine" came at 5 when Francesco pressed W). Walking past it turns the bearing round: then it stops.
+            if (close && InReach(_target, flat) && FacingSquare(gb, Square(toTarget)))
+                close = false;
+            if (++_approach > ApproachTicks || (_approach > 5 && _still >= 5 && !Turning(gb)) || close)
             {
                 Stop($"approach ended at {FieldData.F(x)} {FieldData.F(z)} without the game's hit (gFldEveRngIdx {fldEveHit.gFldEveRngIdx})",
                      $"Near the {_target.InSentence}.");

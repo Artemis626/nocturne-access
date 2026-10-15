@@ -124,6 +124,11 @@ namespace NocturneAccess.Systems.Navigation
         public string Destination = "";
         public bool DestinationIsField;
 
+        /// <summary>The game's narration of the event that greets the player behind the door, with the flags of now (0.0.84;
+        /// ExploredDoors.BehindLine): Kabukicho Prison's cells, "No one is here", then "This is the hole that the Manikin jumped
+        /// into" once the Digging Manikin has dug it. "" when none is known.</summary>
+        public string Behind = "";
+
         /// <summary>A door walked into (movetype 2) at the end of a run of steep, shallow steps into another area of this field:
         /// an escalator (Ikebukuro's East Hall, 14 Oct 2026; Francesco chose the word). EscalatorDir +1 up, -1 down, 0 not known.</summary>
         public bool Escalator;
@@ -145,7 +150,8 @@ namespace NocturneAccess.Systems.Navigation
             string lower = char.ToLowerInvariant(word[0]) + word.Substring(1);
             string head = Explored ? (inSentence ? "explored " : "Explored ") + lower : inSentence ? lower : word;
             string kind = ShownKind;
-            return head + (Destination.Length > 0 ? " to " + Destination : "") + (kind.Length > 0 ? ", " + kind : "");
+            return head + (Destination.Length > 0 ? " to " + Destination : "") + (kind.Length > 0 ? ", " + kind : "")
+                   + (Behind.Length > 0 ? ": " + Behind : "");
         }
 
         /// <summary>Page Up / Page Down: "Explored door, room", "Door, passage", "Explored door to B10", "Item box, empty".</summary>
@@ -161,7 +167,7 @@ namespace NocturneAccess.Systems.Navigation
             : (State.Length > 0 ? State + " " : "") + (Name.Length > 0 || Soul || Demon ? Label : Label.ToLowerInvariant());
 
         /// <summary>Something beyond the plain label is known (End says it first).</summary>
-        public bool HasDetail => State.Length > 0 || DoorKind.Length > 0 || Destination.Length > 0;
+        public bool HasDetail => State.Length > 0 || DoorKind.Length > 0 || Destination.Length > 0 || Behind.Length > 0;
 
         /// <summary>Doors only: the in-reach check uses fldEveHit.OldHitDoor, which resets on leaving the volume (gFldEveRngIdx does not).</summary>
         public bool IsDoorLike => Kind == PoiKind.Door || Kind == PoiKind.Place;
@@ -339,7 +345,7 @@ namespace NocturneAccess.Systems.Navigation
                 else if (world && doorLike && !float.IsNaN(floorY))
                     floorY = BoxBottom(box);
                 // Where a plain door leads, and whether it is an escalator (0.0.78).
-                string destination = "";
+                string destination = "", behind = "";
                 bool destinationIsField = false, escalator = false;
                 int escalatorDir = 0;
                 if (generic && !toWorld && !jump)
@@ -353,6 +359,7 @@ namespace NocturneAccess.Systems.Navigation
                             destination = learned;
                     }
                     escalator = EscalatorAt(gb, name, p.x, p.z, float.IsNaN(floorY) ? p.y + 100f : floorY, out escalatorDir);
+                    behind = ExploredDoors.BehindLine(gb.fieldID, gb.areaID, name);
                 }
                 list.Add(new Poi
                 {
@@ -382,6 +389,7 @@ namespace NocturneAccess.Systems.Navigation
                     DoorKind = generic && !toWorld && !jump ? DoorTable.KindOf(gb.fieldID, gb.areaID, name) : "",
                     Destination = destination,
                     DestinationIsField = destinationIsField,
+                    Behind = behind,
                     Escalator = escalator,
                     EscalatorDir = escalatorDir,
                     Jump = jump,

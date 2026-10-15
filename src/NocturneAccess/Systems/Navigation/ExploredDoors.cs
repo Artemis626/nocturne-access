@@ -191,6 +191,86 @@ namespace NocturneAccess.Systems.Navigation
             Append($"prompt {key}\t{text}", $"The prompt of {key}");
         }
 
+        // ---- What waits behind a door (0.0.84) ----
+        // Francesco, 15 Oct 2026, Kabukicho Prison: once the Digging Manikin has the spoon, a door on the real plane shows a hole;
+        // a sighted player sees it, a blind one hears the same door as before. The door is area 3's 01d_08 into the cell area 12,
+        // whose arrival event 01eve_01 fires as the player lands (21:39:28: 238 ms after the change, before any key) and says
+        // "No one is here." (sending the player back) until flag 1430 is set, then "This is the hole that the Manikin jumped
+        // into." and "Jump in?". So: the event volume the game puts the player in on arriving through a door is kept with the
+        // door ("behind 25/3/01d_08<TAB>12/01eve_01"), and the door's point says that event's first narration as the field
+        // script gives it with the flags of now (FieldScript.FirstNarration): the room's change is heard before going in.
+        private const long BehindAfterControlMs = 500;   // an arrival event is hit at once; later the player may have walked on
+        private static readonly Dictionary<string, (int Area, string Volume)> Behind = new Dictionary<string, (int, string)>();
+        private static string _behindKey;            // the door just gone through, until an event volume is hit in the new area
+        private static long _behindMs, _behindControlMs;
+        private static int _behindIdx0;
+        private static bool _behindSawNone;
+
+        /// <summary>The game's narration of the event that greets the player behind door resName of (field, area), with the flags
+        /// as they are now ("No one is here", "This is the hole that the Manikin jumped into"), or "".</summary>
+        internal static string BehindLine(int field, int area, string resName)
+        {
+            if (!Behind.TryGetValue(Key(field, area, resName), out var b) || !FieldScript.VolumeOn(field, b.Area, b.Volume))
+                return "";
+            return FieldScript.FirstNarration(b.Area, b.Volume);
+        }
+
+        private static void StartBehind(string doorKey, long now)
+        {
+            _behindKey = doorKey;
+            _behindMs = now;
+            _behindControlMs = -1;
+            _behindIdx0 = fldEveHit.gFldEveRngIdx;
+            _behindSawNone = false;
+        }
+
+        /// <summary>Every frame after going through a door within the field: the first event volume the game's hit index takes
+        /// in the new area, before the player can have walked on, is what waits behind the door.</summary>
+        private static void LearnBehind(fldGlobalWork_t gb, long now)
+        {
+            if (_behindKey == null)
+                return;
+            if (FieldState.IsExploring && _behindControlMs < 0)
+                _behindControlMs = now;
+            if (now - _behindMs > ArriveWindowMs || (_behindControlMs >= 0 && now - _behindControlMs > BehindAfterControlMs))
+            {
+                _behindKey = null;
+                return;
+            }
+            int i = fldEveHit.gFldEveRngIdx;
+            if (i < 0)
+            {
+                _behindSawNone = true;
+                return;
+            }
+            if (i == _behindIdx0 && !_behindSawNone)
+                return;   // the hit of the area left, not yet reset
+            Il2CppReferenceArray<fldResHead_t> ranges = fldEveHit.gEvnRng;
+            if (ranges == null || i >= Math.Min(fldEveHit.gEvnRngNum, ranges.Length))
+                return;
+            fldResHead_t h = ranges[i];
+            string volume = h?.resourceName ?? "";
+            if (h == null || h.resourceType != 10 || !EventName.IsMatch(volume))
+                return;   // the arrival door's own volume: wait for an event
+            string key = _behindKey;
+            _behindKey = null;
+            if (!key.StartsWith(gb.fieldID + "/", StringComparison.Ordinal))
+                return;   // another field: another script
+            if (Behind.TryGetValue(key, out var old) && old.Area == gb.areaID && old.Volume == volume)
+                return;
+            Behind[key] = (gb.areaID, volume);
+            Log.Info($"{Tag} Behind {key}: event {volume} of area {gb.areaID} greets the player (now \"{FieldScript.FirstNarration(gb.areaID, volume)}\").");
+            Append($"behind {key}\t{gb.areaID}/{volume}", $"What waits behind {key}");
+        }
+
+        private static void ReadBehind(string line)
+        {
+            int tab = line.IndexOf('\t'), slash = line.LastIndexOf('/');
+            if (tab <= 7 || slash <= tab || !int.TryParse(line.Substring(tab + 1, slash - tab - 1), out int area))
+                return;
+            Behind[line.Substring(7, tab - 7)] = (area, line.Substring(slash + 1).Trim());
+        }
+
         // ---- Jump Off ----
         // Kabukicho Prison's "Jump Off" volumes drop the player to the floor below, another area. 0.0.82 learned where each led;
         // removed in 0.0.83 (Francesco, 15 Oct 2026: the Umugi Stone's mirage changes which floor lies below, so a learned
@@ -266,10 +346,12 @@ namespace NocturneAccess.Systems.Navigation
                             ReadArrival(line);
                         else if (line.StartsWith("dest ", StringComparison.Ordinal) && line.IndexOf('\t') > 5)
                             Destinations[line.Substring(5, line.IndexOf('\t') - 5)] = line.Substring(line.IndexOf('\t') + 1).Trim();
+                        else if (line.StartsWith("behind ", StringComparison.Ordinal))
+                            ReadBehind(line);
                         else
                             AreaRoutes.ReadLine(line);
                 WarpMap.Invalidate();
-                Log.Info($"{Tag} File {file + 1} loaded (gslSelect {slMain.gslSelect}, gslSelTop {slMain.gslSelTop}, slChooseSaveIndex {slMain.slChooseSaveIndex}): {Doors.Count} explored doors, {Prompts.Count} event prompts, {Arrivals.Count} warp arrivals, {Destinations.Count} door destinations, {AreaRoutes.Summary}.");
+                Log.Info($"{Tag} File {file + 1} loaded (gslSelect {slMain.gslSelect}, gslSelTop {slMain.gslSelTop}, slChooseSaveIndex {slMain.slChooseSaveIndex}): {Doors.Count} explored doors, {Prompts.Count} event prompts, {Arrivals.Count} warp arrivals, {Destinations.Count} door destinations, {Behind.Count} rooms behind doors, {AreaRoutes.Summary}.");
             }
             catch (Exception ex)
             {
@@ -312,6 +394,7 @@ namespace NocturneAccess.Systems.Navigation
             Prompts.Clear();
             Arrivals.Clear();
             Destinations.Clear();
+            Behind.Clear();
             AreaRoutes.Clear();
             ResetTracking();
         }
@@ -325,6 +408,7 @@ namespace NocturneAccess.Systems.Navigation
                 .Concat(Prompts.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => $"prompt {p.Key}\t{p.Value}"))
                 .Concat(Arrivals.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => ArrivalLine(p.Key, p.Value)))
                 .Concat(Destinations.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => $"dest {p.Key}\t{p.Value}"))
+                .Concat(Behind.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => $"behind {p.Key}\t{p.Value.Area}/{p.Value.Volume}"))
                 .Concat(AreaRoutes.Lines()));
         }
 
@@ -364,6 +448,7 @@ namespace NocturneAccess.Systems.Navigation
                 _hit = -1;
                 _exploringSinceMs = -1;
                 _destKey = null;   // another change before the banner (a battle): nothing learned
+                _behindKey = null;
                 if (_leaving != null && now - _leftMs <= LeaveWindowMs && BattleField(field))
                 {
                     // An encounter is not a door (0.0.77): 14 Oct 2026, 13:32:00, walking away from 01d_08 in Ginza 1F, the battle
@@ -381,6 +466,7 @@ namespace NocturneAccess.Systems.Navigation
                     _destArea = area;
                     _destMs = now;
                     _destShows = Menus.AnnouncementReader.LocationShows;
+                    StartBehind(_leaving, now);
                 }
                 else
                 {
@@ -395,6 +481,7 @@ namespace NocturneAccess.Systems.Navigation
             }
 
             LearnDestination(now);
+            LearnBehind(gb, now);
             CheckCrossing(gb, now);
             LearnPrompt(gb, now);
 

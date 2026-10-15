@@ -12,16 +12,23 @@ namespace NocturneAccess.Systems.Navigation
     /// Kabukicho Prison's mirage (0.0.83; Francesco, 15 Oct 2026: the game is vague when the Umugi Stone shifts the walking
     /// plane). Using the stone at a "Mysterious Wall" swaps the building for its mirage and back: the game changes the area
     /// (15:20:25 area 19 to 3, "The mirage is disappearing."; 15:24:01 area 1 to 17, "The building has been shrouded in a
-    /// mirage."), and the player stays where they stood (-2086 2866 to -2100 2750). So: an area change of this field started
-    /// from an event volume (not a door, not a "Jump Off", which drops to the floor below 275 away), landing within ShiftReach
-    /// of where the player stood. Said once the game gives control back, after its own messages and the location banner, in
-    /// Francesco's words.
+    /// mirage."), and the player stays about where they stood.
+    ///
+    /// 0.0.84: a shift is an area change of this field, started from an event volume (not a door, not a "Jump Off"), between an
+    /// area of 0 to 3 and the same area plus 16 (MirageOffset). The field script agrees: the six Mysterious Wall procedures
+    /// (001_01eve_01, 002_01eve_06, 004_01eve_02, 017_01eve_05, 018_01eve_05, 020_01eve_05, areas 0, 1, 3, 16, 17, 19) are the
+    /// ones that call fldCommand_FLD_CALL_WAPEX (9 to 14) in those areas. 0.0.83 measured the distance from where the player
+    /// stood instead (200 at most): the wall of area 1 puts the player 233 away, so entering the mirage there was never said
+    /// (20:46, 20:55, 21:24, 21:45), while the Manikin's hole of area 12 drops 317 away and must not count.
+    /// Said once the game gives control back, after its own messages, in Francesco's words, held against interrupts for HoldMs
+    /// (21:29:44: a filter key 0.7 s later cut it).
     /// </summary>
     internal static class PlaneShift
     {
         private const int KabukichoPrison = 25;
-        private const float ShiftReach = 200f;
-        private const long FromEventMs = 3000, SettleMs = 800, PendingMs = 15000;
+        private const int MirageOffset = 16, MirageAreas = 4;   // areas 0..3 and their mirage 16..19
+        private const long FromEventMs = 3000, PendingMs = 15000;
+        private const int HoldMs = 4000;
         internal const string Words = "Walking plane shifted: floor and ceiling have swapped places.";
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
@@ -36,6 +43,10 @@ namespace NocturneAccess.Systems.Navigation
         private static bool _pending;
         private static long _changeMs;
 
+        /// <summary>Areas a and b are one floor of the prison and its mirage.</summary>
+        private static bool MiragePair(int a, int b)
+            => Math.Min(a, b) >= 0 && Math.Min(a, b) < MirageAreas && Math.Abs(a - b) == MirageOffset;
+
         internal static void Tick()
         {
             fldGlobalWork_t gb = fldGlobal.fldGb;
@@ -44,13 +55,15 @@ namespace NocturneAccess.Systems.Navigation
             long now = Clock.ElapsedMilliseconds;
             if (gb.fieldID != _field || gb.areaID != _area)
             {
-                bool shift = gb.fieldID == KabukichoPrison && _field == KabukichoPrison && _event != null && now - _eventMs <= FromEventMs;
-                if (shift)
+                bool fromEvent = gb.fieldID == KabukichoPrison && _field == KabukichoPrison && _event != null && now - _eventMs <= FromEventMs;
+                if (fromEvent && MiragePair(_area, gb.areaID))
                 {
                     _pending = true;
                     _changeMs = now;
-                    Log.Info($"[Nav:Plane] Area {_area} to {gb.areaID} from event {_event}: a shift if the player stays put.");
+                    Log.Info($"[Nav:Plane] Area {_area} to {gb.areaID} from event {_event}: the mirage shift; said once the player has control.");
                 }
+                else if (fromEvent)
+                    Log.Info($"[Nav:Plane] Area {_area} to {gb.areaID} from event {_event}: not a mirage pair, no shift.");
                 _field = gb.fieldID;
                 _area = gb.areaID;
                 _event = null;
@@ -61,19 +74,16 @@ namespace NocturneAccess.Systems.Navigation
             if (_pending)
             {
                 if (now - _changeMs > PendingMs)
+                {
                     _pending = false;
-                else if (FieldState.IsExploring && now - _changeMs >= SettleMs)
+                    Log.Info("[Nav:Plane] The player did not take control in time: nothing said.");
+                }
+                else if (FieldState.IsExploring)
                 {
                     _pending = false;
                     float dx = gb.playerX - _eventX, dz = gb.playerZ - _eventZ;
-                    float d = (float)Math.Sqrt(dx * dx + dz * dz);
-                    if (d <= ShiftReach)
-                    {
-                        Log.Info($"[Nav:Plane] Walking plane shifted in field {gb.fieldID}: now area {gb.areaID}, {FieldData.F(d)} from where the player stood.");
-                        SpeechManager.Say(Words, interrupt: false);
-                    }
-                    else
-                        Log.Info($"[Nav:Plane] Not a shift: the player landed {FieldData.F(d)} away.");
+                    Log.Info($"[Nav:Plane] Walking plane shifted in field {gb.fieldID}: now area {gb.areaID}, {FieldData.F((float)Math.Sqrt(dx * dx + dz * dz))} from where the player stood, {now - _changeMs} ms after the change.");
+                    SpeechManager.SayHeld(Words, HoldMs);
                 }
             }
 

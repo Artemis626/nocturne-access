@@ -14,6 +14,8 @@ namespace NocturneAccess.Speech
     ///   Hotkeys and cursor movement onto identically named items must pass force.
     /// - Queue (default): the line is spoken after anything already waiting.
     ///   Interrupt: queued lines are dropped and current speech is silenced first.
+    /// - Held (SayHeld, 0.0.84): one line no interrupt may cut, from being queued until HoldMs after it reaches the reader;
+    ///   an interrupting line meanwhile drops the other queued lines and waits behind it.
     /// - All screen reader calls, including choosing the backend, run on one background thread.
     ///   A slow or frozen screen reader can then never stall the game's frame loop.
     /// </summary>
@@ -32,6 +34,11 @@ namespace NocturneAccess.Speech
 
         private static string _lastText;
         private static long _lastTimeMs;
+
+        // The held line (SayHeld): kept from interrupts while queued (_heldUntilMs long.MaxValue) and for its hold once sent.
+        private static string _held;
+        private static int _holdMs;
+        private static long _heldUntilMs;
 
         internal static void Init()
         {
@@ -76,7 +83,16 @@ namespace NocturneAccess.Speech
                 _lastTimeMs = now;
                 Log.Speech(text);
 
-                if (interrupt)
+                if (interrupt && _held != null && now < _heldUntilMs)
+                {
+                    // The held line is still waiting or being spoken: it stays, and this line follows it.
+                    bool queued = Pending.Contains(_held);
+                    Pending.Clear();
+                    if (queued)
+                        Pending.Enqueue(_held);
+                    Log.Debug("[SPEECH-HELD] after the held line: " + text);
+                }
+                else if (interrupt)
                 {
                     Pending.Clear();
                     _cancelRequested = true;
@@ -85,6 +101,30 @@ namespace NocturneAccess.Speech
                 while (Pending.Count >= MaxPending)
                     Pending.Dequeue();
                 Pending.Enqueue(text);
+                Monitor.Pulse(Gate);
+            }
+        }
+
+        /// <summary>
+        /// Queues a line that no interrupt may cut until holdMs after the reader receives it (0.0.84: the plane shift words,
+        /// cut 0.7 s after they were said by a Page Up filter key, 15 Oct 2026 21:29:44). Never interrupts anything itself.
+        /// </summary>
+        internal static void SayHeld(string text, int holdMs)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return;
+            text = text.Trim();
+            lock (Gate)
+            {
+                _lastText = text;
+                _lastTimeMs = Clock.ElapsedMilliseconds;
+                Log.Speech(text);
+                while (Pending.Count >= MaxPending)
+                    Pending.Dequeue();
+                Pending.Enqueue(text);
+                _held = text;
+                _holdMs = holdMs;
+                _heldUntilMs = long.MaxValue;
                 Monitor.Pulse(Gate);
             }
         }
@@ -125,6 +165,8 @@ namespace NocturneAccess.Speech
                     cancel = _cancelRequested;
                     _cancelRequested = false;
                     text = Pending.Count > 0 ? Pending.Dequeue() : null;
+                    if (text != null && text == _held && _heldUntilMs == long.MaxValue)
+                        _heldUntilMs = Clock.ElapsedMilliseconds + _holdMs;
                 }
 
                 try
