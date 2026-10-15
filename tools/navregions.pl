@@ -129,15 +129,43 @@ if ($ENV{NAVSEAM} // 1) {
     }
     print "seam cells bridged: $seamed\n";
 }
+# NAVRAIL=1 (WalkGrid 0.0.81, default): a wall lower than a step still blocks when it reaches the game's test height (35 above
+# the floor, fldHitChkUnit: pos.y - 35) and no floor lies at its top (a railing, not a stair riser): Kabukicho Prison's 50-unit
+# railings by the "Jump Off" volumes. A floor node within RailReach of the wall at its top height (within RailTop) makes it a riser.
+my ($TestLift, $RailReach, $RailTop) = (35, 60, 10);
+my $railed = 0;
+sub top_floor {
+    my ($ax, $az, $bx, $bz, $top) = @_;
+    my ($i0, $i1, $j0, $j1) = cells(($ax < $bx ? $ax : $bx) - $RailReach, ($az < $bz ? $az : $bz) - $RailReach, ($ax > $bx ? $ax : $bx) + $RailReach, ($az > $bz ? $az : $bz) + $RailReach);
+    for my $j ($j0 .. $j1) { for my $i ($i0 .. $i1) {
+        my $c = $j * $W + $i; my $n = $cnt[$c] // 0; next unless $n;
+        next if sd($gx + $i * $C, $gz + $j * $C, $ax, $az, $bx, $bz) >= $RailReach;
+        for my $l (0 .. $n - 1) { return 1 if abs($hgt[$c * $layers + $l] - $top) <= $RailTop; }
+    } }
+    return 0;
+}
 for my $w (@walls) {
     my ($ax, $az, $bx, $bz, $lo, $hi) = @$w;
+    my $topFloor;
     my ($i0, $i1, $j0, $j1) = cells(($ax < $bx ? $ax : $bx) - $Clear, ($az < $bz ? $az : $bz) - $Clear, ($ax > $bx ? $ax : $bx) + $Clear, ($az > $bz ? $az : $bz) + $Clear);
     for my $j ($j0 .. $j1) { for my $i ($i0 .. $i1) {
         my $c = $j * $W + $i; my $n = $cnt[$c] // 0; next unless $n;
         my $d = sd($gx + $i * $C, $gz + $j * $C, $ax, $az, $bx, $bz); next if $d >= $Clear;
-        for my $l (0 .. $n - 1) { my $y = $hgt[$c * $layers + $l]; next if $lo >= $y - $Step || $hi <= $y - $Body; $st[$c * $layers + $l] = 2; }
+        for my $l (0 .. $n - 1) {
+            my $y = $hgt[$c * $layers + $l];
+            next if $hi <= $y - $Body;
+            if ($lo >= $y - $Step) {
+                # Lower than a step: a railing only if it reaches the test height, its bottom is at or under it, and no floor at its top.
+                next unless ($ENV{NAVRAIL} // 1) && $lo < $y - $TestLift && $hi > $y - $TestLift;
+                $topFloor //= top_floor($ax, $az, $bx, $bz, $lo);
+                next if $topFloor;
+                $railed++;
+            }
+            $st[$c * $layers + $l] = 2;
+        }
     } }
 }
+print "nodes blocked by railings: $railed\n";
 my @Dx = (0, 1, 1, 1, 0, -1, -1, -1); my @Dz = (1, 1, 0, -1, -1, -1, 0, 1);
 # NAVHEAD=180: a floor with another floor of its cell less than this above it (Y points down: a smaller y) is no place to
 # stand (WalkGrid 0.0.74, the Nihilo core's spiral ramp under its floor).

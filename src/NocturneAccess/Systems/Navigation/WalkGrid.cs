@@ -28,7 +28,8 @@ namespace NocturneAccess.Systems.Navigation
     ///   landing above it (the stairwell of the Medical Center, field 14 area 14, has its 2F door right above the 1F door).
     /// - A node (cell, layer) is walkable unless a vertical polygon that overlaps the body above that floor (StepHeight, 55 since 0.0.64, to
     ///   BodyHigh units up; game Y points down) lies closer than Clearance: walls, closed doors, furniture, NPC boxes.
-    ///   Stair steps lower than StepHeight do not block. The game keeps the player 45 units from a wall (fldHit.fldHitChkUnit).
+    ///   Stair steps lower than StepHeight do not block; a lower wall with no floor at its top still does when it reaches 35 above
+    ///   the floor, where the game tests walls (a railing, 0.0.81, FloorAtTop). The game keeps the player 45 units from a wall (fldHit.fldHitChkUnit).
     /// - Moves join neighbouring nodes whose heights differ by MaxStep or less (stairs, ramps), to every such layer of the
     ///   neighbour (0.0.60), 8 directions or 4 in first person (the game turns in 90-degree steps), no cutting past a
     ///   blocked corner. Cost: 1 per cell (1.414 diagonal),
@@ -301,8 +302,10 @@ namespace NocturneAccess.Systems.Navigation
             }
             int seams = BridgeSeams(floors);
 
+            int railed = 0;
             foreach ((float ax, float az, float bx, float bz, float lo, float hi) in walls)
             {
+                int topFloor = -1;   // -1 not looked at yet, 0 none (a railing), 1 a floor at the top (a stair riser)
                 ForCells(Math.Min(ax, bx) - NearRange, Math.Min(az, bz) - NearRange, Math.Max(ax, bx) + NearRange, Math.Max(az, bz) + NearRange,
                     (c, x, z) =>
                     {
@@ -317,8 +320,23 @@ namespace NocturneAccess.Systems.Navigation
                             int k = c * Layers + l;
                             float y = _height[k];
                             // Y points down: the body above a floor at y spans y - BodyHigh .. y - StepHeight.
-                            if (lo >= y - StepHeight || hi <= y - BodyHigh)
+                            if (hi <= y - BodyHigh)
                                 continue;
+                            if (lo >= y - StepHeight)
+                            {
+                                // Lower than a step (0.0.81): still a wall when it reaches the height the game tests walls at (35
+                                // above the player, fldHitChkUnit: pos.y - 35) and no floor lies at its top: a railing, not a stair
+                                // riser. Kabukicho Prison (field 25, 15 Oct 2026): 50-unit railings by the "Jump Off" volumes, which
+                                // the map stepped over, so walks ran into them ("Blocked." at x 1840, five times).
+                                if (!(lo < y - RailTestLift && hi > y - RailTestLift))
+                                    continue;
+                                if (topFloor < 0)
+                                    topFloor = FloorAtTop(ax, az, bx, bz, lo) ? 1 : 0;
+                                if (topFloor == 1)
+                                    continue;
+                                if (d < Clearance && _state[k] == 1)
+                                    railed++;
+                            }
                             if (d < _near[k])
                                 _near[k] = d;
                             if (d < Clearance)
@@ -346,7 +364,7 @@ namespace NocturneAccess.Systems.Navigation
             Log.Info($"[Nav:Walk] Grid for field {field} area {area}: {_w} x {_h} cells of {CellSize} from {FieldData.F(_x0)} {FieldData.F(_z0)}, " +
                      $"{floors.Count} floors, {(world ? worldWalls.Count + " world-map" : walls.Count.ToString())} walls, {(world ? crossings + " moves through walls blocked, " : "")}{walkable} walkable places, {multi} cells with more than one level" +
                      $"{(dropped > 0 ? $", {dropped} floor heights over the limit of {Layers} left out" : "")}" +
-                     $"{(seams > 0 ? $", {seams} seam cells bridged" : "")}, {clock.ElapsedMilliseconds} ms.");
+                     $"{(seams > 0 ? $", {seams} seam cells bridged" : "")}{(railed > 0 ? $", {railed} places blocked by railings" : "")}, {clock.ElapsedMilliseconds} ms.");
             ApplyAvoid(world ? new List<Zone>() : WarpMap.Zones(field, area));
         }
 
@@ -1266,6 +1284,31 @@ namespace NocturneAccess.Systems.Navigation
             int i = (int)Math.Round((x - _x0) / CellSize), j = (int)Math.Round((z - _z0) / CellSize);
             if (i >= 0 && j >= 0 && i < _w && j < _h)
                 rows[j][i] = mark;
+        }
+
+        // Railings (0.0.81): the game tests walls 35 above the player (fldHitChkUnit, like the world map's fldHitChkUnitVWM); a wall
+        // lower than a step is a stair riser when a floor lies at its top within RailReach (the Nihilo corridor's 50-unit risers,
+        // field 24 area 5's 40-unit ones), else a railing. Checked offline on every dump (tools/navregions.pl NAVRAIL): no point of
+        // interest lost outside Kabukicho Prison.
+        private const float RailTestLift = 35f, RailReach = 60f, RailTop = 10f;
+
+        /// <summary>Some floor node within RailReach of the wall's footprint lies at the wall's top height (within RailTop).</summary>
+        private static bool FloorAtTop(float ax, float az, float bx, float bz, float top)
+        {
+            bool found = false;
+            ForCells(Math.Min(ax, bx) - RailReach, Math.Min(az, bz) - RailReach, Math.Max(ax, bx) + RailReach, Math.Max(az, bz) + RailReach,
+                (c, x, z) =>
+                {
+                    if (found || _count[c] == 0 || CollisionCache.SegmentDistance(x, z, ax, az, bx, bz) >= RailReach)
+                        return;
+                    for (int l = 0; l < _count[c]; l++)
+                        if (Math.Abs(_height[c * Layers + l] - top) <= RailTop)
+                        {
+                            found = true;
+                            return;
+                        }
+                });
+            return found;
         }
 
         private static void ForCells(float x0, float z0, float x1, float z1, Action<int, float, float> action)

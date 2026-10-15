@@ -534,3 +534,13 @@ Sources: reference mod `research/refs/MatthiewNocturne/BetterNewGamePlus/BetterN
 | `fclEncyc.DrawSummonMoney(instance_tag, bool)`, `PrepSummon(readmainwork_tag)`, `GetDevilParam(fclencyceelem_t, int)` | Proxy; disassembly (call lists) | The summon screen's money, the summon's checks (`datCalc.datCheckStockFull`, `fclMisc.CheckLevelLimit`), the demon's parameters |
 | View row prefab `dlistsum_rowNN` (bundle `e800`) | Asset walk | Children: `Text_race`, `Text_raceTM`, `Text_name`, `Text_nameTM`, `lvnum` (`num_lv01`, `02`), `hatena` (`mark`), `moneynum` (`num_lv01` to `06`), `dlisttex_summakka00`, `01`. `CompendiumReader.RowDetail` reads `lvnum` and `moneynum` (`CounterCtr.value`) |
 | `dds3KernelDraw` fade fields (0.0.79) | | The fade watch that read them was removed in 0.0.80 (no black screen again); the facts above (0.0.79 section) stay |
+
+### Railings, the dungeon's wall test (0.0.81, 15 Oct 2026)
+
+Sources: read-only disassembly of `GameAssembly.dll` (`tools/native/dis.sh`, `consts.pl`, `fields.pl`); Shift+F6 dumps 15 Oct 2026 13:41:24 (field 25 area 17), 14:41:56 (area 18); session log 13:09.
+
+| Name | Source | Meaning |
+| --- | --- | --- |
+| `fldHit.fldHitChkUnit(Vector4 phys_pos)` wall height and radius | Disassembly (0x1820F4F7C, 0x1820F5369) | The wall test point is `pos[1] - 35` (constant 0x1828C792C, `r14d` = 1, the y component): 35 above the player, as on the world map. Per polygon, for `fieldID` above 10: radius 45 (0x1828C754C) when `collision_s.mode2D` (+0x10, short) is 1, else 60 (0x1828C74AC); a polygon with `normal.y` below -0.75 (0x182AF82AC, facing up) takes another branch (floors). `WalkGrid.RailTestLift` 35 |
+| Kabukicho Prison railings (field 25) | Dumps 13:41:24, 14:41:56 | Area 18: #120, #121 (normal 0 0 -1, x 600..1200, z 0, y -50..0) beside the "Jump Off" volume `01eve_03` (x 600..1200, z -100..0); floors #0 (y 0) on both sides, overlays #33 (`Attr 0x800`, y -10), #82 / #83 (y -13, 40 wide). Area 17: #127, #129 (slanted, y -50..0) by `01eve_06` / `01eve_07`; overlays `Attr 0x8000` at y -40 (#178, #179). No floor at a railing's top: `WalkGrid.FloorAtTop` |
+| "Jump Off" | Dump prompt table (`fldPanel.inputpanel_mes0[3]`, PANELMES), field script procedures `NNN_01eve_NN` with `fldCommand_ACT_WIN_DSP(3)` | Event volumes at a railing; listed as "Jump Off" (Actions) since 0.0.71 |

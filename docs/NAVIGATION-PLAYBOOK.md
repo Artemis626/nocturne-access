@@ -198,6 +198,7 @@ Nocturne's fixed-camera rooms force third person.
 - **Region boundaries:** tall `Attr` 0x800 planes are boundaries the marker walks through, not walls.
 - **Checks:** all traced positions reachable, and the regions behind cliffs not reachable.
 - **Test height:** measure walls at the height the game tests them, read from its hit test (Nocturne: 35 above the marker on the world map). At a guessed 15 the map passed under a highway wall that starts 20 up, and the walk stalled at the same corner in three sessions (0.0.79). Check: no real position closer to a wall than the radius allows at that height.
+- **Railings versus risers:** a wall lower than a step is a step only when a floor lies at its top. A railing of the same height (no floor on top) blocks, because the game tests walls at a fixed height above the player (Nocturne: 35). Kabukicho Prison's 50-unit railings looked like the Assembly of Nihilo's 50-unit risers to a height-only rule (0.0.81).
 - **Learned refusals:** if a stall makes the walk learn a refusal in every direction from one square, the marker is held there (wedged), not walled in. Forget that square's refusals, or the player is cut off from every point ("No path.", an empty list).
 
 ## 5. Points of interest
