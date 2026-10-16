@@ -311,16 +311,25 @@ namespace NocturneAccess.Systems.Navigation
                     // No procedure for it in the field's script: the game has nothing to run there (0.0.78; Francesco, 14 Oct 2026:
                     // Talk prompts in the Mantra Headquarters prison that did nothing). 01eve_04 of field 24 areas 13 and 14 was kept
                     // as "Event, Talk" from a prompt learned while a prisoner stood beside it; the only such volumes in 92 dumps.
-                    if (script.Outcome == ScriptOutcome.Missing && script.Reason == "no such procedure")
+                    // Unless the game's door table lists it: then it is a door with an event's name (0.0.87; Francesco, 16 Oct 2026:
+                    // the Ikebukuro Tunnel's stairs were missing). Field 26 area 0's 01eve_01 (movetype 2, walked into, to area 1,
+                    // the "Platform"), area 1's 01eve_01 / 02 / 03 (to areas 0, 18, 19). The prison phantoms are not in the table.
+                    if (script.Outcome == ScriptOutcome.Missing && script.Reason == "no such procedure"
+                        && DoorTable.MoveTypeOf(gb.fieldID, gb.areaID, name) >= 0)
+                    {
+                        kind = PoiKind.Door;
+                        script = null;
+                    }
+                    else if (script.Outcome == ScriptOutcome.Missing && script.Reason == "no such procedure")
                     {
                         Skipped.Add($"{name} {script}");
                         continue;
                     }
                     // A volume whose prompt the game has shown before stays listed (the old "Event, Examine") even when the dry
                     // run finds nothing to do: a safety net while the dry run is new.
-                    if (script.Outcome == ScriptOutcome.Inactive && ExploredDoors.PromptOf(gb.fieldID, gb.areaID, name).Length > 0)
+                    if (script != null && script.Outcome == ScriptOutcome.Inactive && ExploredDoors.PromptOf(gb.fieldID, gb.areaID, name).Length > 0)
                         script = new ScriptVerdict { Outcome = ScriptOutcome.Unknown, Procedure = script.Procedure, Reason = "idle by the dry run, but its prompt was seen: " + script.Reason };
-                    if (script.Outcome == ScriptOutcome.Inactive)
+                    if (script != null && script.Outcome == ScriptOutcome.Inactive)
                     {
                         Skipped.Add($"{name} {script}");
                         continue;
