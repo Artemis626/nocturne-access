@@ -463,6 +463,16 @@ namespace NocturneAccess.Systems.Navigation
                 AreaRoutes.Mark(gb, kept);
             if (!world)
                 MarkLaddersAndExits(gb, kept);
+            else
+            {
+                // The world map's entrances are landmarks too (0.0.85; Francesco, 16 Oct 2026: the Higashi-Ikebukuro Station was
+                // missing from the list). Field 4's west part (the Ikebukuro entrance, Zoshigaya Cemetery) is walled off from
+                // the station and Mantra's Headquarters by a 2.5 km run of the game's walls (#759, #760, #698, ... 400 to 600
+                // tall, hoji 0); the way round is through Ikebukuro (field 23) and Mantra's Headquarters (24). Listed beyond
+                // doors, as in dungeons (6 Oct rule); Home says no way is known, End the straight line.
+                foreach (Poi q in kept.Where(q => !q.Reachable && q.Kind == PoiKind.Door && !q.Warp && !q.Jump))
+                    q.Beyond = true;
+            }
             foreach (Poi q in kept)
                 q.Category = CategoryOf(q, gb);
             return kept.OrderBy(q => q.Distance).ToList();

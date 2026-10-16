@@ -102,7 +102,7 @@ my $r=$nm=~/d_/?150:250; my $rr=int($r/$C)+1; my $hit=''; my $bestd;
 sub winmap { return unless $ENV{WIN}; my($wx,$wz,$wr)=split /,/,$ENV{WIN}; my $ci=int(($wx-$gx)/$C+0.5); my $cj=int(($wz-$gz)/$C+0.5); my $r=int($wr/$C);
   print "map around $wx $wz (north up; R reachable, . walkable not reached, # blocked, : floor only other level within 80, ' ' none, X target)\n";
   for(my $j=$cj+$r;$j>=$cj-$r;$j--){ my $row=''; for my $i($ci-$r..$ci+$r){ if($i==$ci&&$j==$cj){$row.='X';next} my $k=$j*$W+$i; my $c=' ';
-    for my $l(0..($cnt[$k]//0)-1){ my $ch=$reach{"$k,$l"}?'R':$main::B{"$k,$l"}?'b':$st[$k][$l]==1?'.':'#'; $c=$ch if $c eq ' ' || $ch eq 'R' || ($ch eq '.' && $c eq '#'); }
+    for my $l(0..($cnt[$k]//0)-1){ my $ch=$reach{"$k,$l"}?'R':$main::CUTREG{"$k,$l"}?'b':$st[$k][$l]==1?'.':'#'; $c=$ch if $c eq ' ' || $ch eq 'R' || ($ch eq '.' && $c eq '#'); }
     $row.=$c; } print "$row\n"; } }
 # FRONTIER=1: the walls that block moves from reached cells to walkable cells not reached (what cuts the map), by wall.
 if($ENV{FRONTIER} && $EDGE){ my %by; my %ex;
@@ -120,9 +120,30 @@ if($ENV{CUT} && $EDGE){ my($cx,$cz)=split /,/,$ENV{CUT}; my $s2=node($cx,-1000,$
       next if $DX[$s]&&$DZ[$s]&&(!defined step($i+$DX[$s],$j,$y)||!defined step($i,$j+$DZ[$s],$y));
       if(blockedmove($k,$l,$nk)){ if($reach{$nk}){ my $w=$W[$main::lastwall]; $by{$w->{id}}++; $ex{$w->{id}}//=sprintf "at %.0f %.0f floor %.0f",$gx+$i*$C,$gz+$j*$C,$y; } next; }
       $b{$nk}=1; push @q,$nk; } }
+  %main::CUTREG = %b;
   printf "region from %s: %d nodes; walls between it and the traced region:\n",$ENV{CUT},scalar keys %b;
   for my $id(sort { $by{$b}<=>$by{$a} } keys %by){ my($w)=grep{$_->{id}==$id}@W; my @p=@{$w->{p}};
     printf "  wall #%s: %d moves, n %.2f %.2f %.2f attr 0x%x y %.0f..%.0f, %s | %s\n",$id,$by{$id},@{$w->{n}},$w->{attr},min(map{$_->[1]}@p),max(map{$_->[1]}@p),$ex{$id},join(' | ',map{sprintf "%.0f %.0f %.0f",@$_}@p); } }
+# BORDER=1 with CUT (16 Oct 2026): every pair of neighbouring cells, one reached from the trace and one in the CUT region,
+# with both heights and why the move between them is refused (height step, wall crossing, diagonal corner).
+if($ENV{BORDER} && $ENV{CUT}){ my %seenb; my $nb=0;
+  for my $kl(keys %reach){ my($k,$l)=split /,/,$kl; my($i,$j)=($k%$W,int($k/$W)); my $y=$hy[$k][$l];
+    for my $s(0..7){ my($i2,$j2)=($i+$DX[$s],$j+$DZ[$s]); next if $i2<0||$j2<0||$i2>=$W||$j2>=$H; my $k2=$j2*$W+$i2;
+      for my $l2(0..($cnt[$k2]//0)-1){ next unless $main::CUTREG{"$k2,$l2"}; my $y2=$hy[$k2][$l2];
+        my $why=abs($y2-$y)>$MS?sprintf("step %.0f",abs($y2-$y)):blockedmove($k,$l,"$k2,$l2")?"wall #".$W[$main::lastwall]{id}:"corner";
+        next if $seenb{"$kl>$k2,$l2"}++; $nb++;
+        printf "  border %.0f %.0f y %.0f -> %.0f %.0f y %.0f: %s\n",$gx+$i*$C,$gz+$j*$C,$y,$gx+$i2*$C,$gz+$j2*$C,$y2,$why if $nb<=($ENV{BORDER}>1?$ENV{BORDER}:60); } } }
+  print "border pairs: $nb\n";
+  # Where the two regions come closest (cells within 4 of each other), with what lies on the cells between.
+  my %bc; for my $kl(keys %main::CUTREG){ my($k)=split /,/,$kl; $bc{$k}=$kl }
+  my @close; for my $kl(keys %reach){ my($k,$l)=split /,/,$kl; my($i,$j)=($k%$W,int($k/$W));
+    for my $dj(-4..4){ for my $di(-4..4){ my($i2,$j2)=($i+$di,$j+$dj); next if $i2<0||$j2<0||$i2>=$W||$j2>=$H; my $k2=$j2*$W+$i2; next unless $bc{$k2};
+      push @close,[$di*$di+$dj*$dj,$k,$l,$k2]; } } }
+  @close=sort{$a->[0]<=>$b->[0]}@close; my %done;
+  for my $c(@close[0..min(29,$#close)]){ my($d,$k,$l,$k2)=@$c; my($i,$j)=($k%$W,int($k/$W)); my($i2,$j2)=($k2%$W,int($k2/$W)); my(undef,$l2)=split /,/,$bc{$k2};
+    my $n=max(abs($i2-$i),abs($j2-$j)); my @mid; for my $t(1..$n-1){ my $im=$i+int(($i2-$i)*$t/$n+($i2>$i?0.5:-0.5)*0); my $jm=$j+int(($j2-$j)*$t/$n); my $km=$jm*$W+$im;
+      push @mid, sprintf "[%s]", join(' ',map{sprintf "%.0f%s",$hy[$km][$_],$st[$km][$_]==1?'':'#'} 0..($cnt[$km]//0)-1) || 'none'; }
+    printf "  close %.0f %.0f y %.0f .. %.0f %.0f y %.0f: between %s\n",$gx+$i*$C,$gz+$j*$C,$hy[$k][$l],$gx+$i2*$C,$gz+$j2*$C,$hy[$k2][$l2],join(' ',@mid); } }
 winmap();
 # PROBE=x,z,dir: the nodes of cell (x, z) and its neighbour in direction dir (0 north, clockwise), and every wall the
 # move crosses, as blockedmove tests it.
@@ -144,5 +165,5 @@ if($ENV{FULL}){ my $f=$ENV{FULL}; my %mark; my $m=0;
   for(my $J=int(($H-1)/$f);$J>=0;$J--){ my $row=''; for my $I(0..int(($W-1)/$f)){ my $key=$J*100000+$I;
     if(exists $mark{$key}){ $row.=$mark{$key}; next } my $c=' '; my %rank=(' '=>0,'#'=>1,'.'=>2,'b'=>3,'R'=>4);
     for my $j($J*$f..$J*$f+$f-1){ for my $i($I*$f..$I*$f+$f-1){ next if $i>=$W||$j>=$H; my $k=$j*$W+$i;
-      for my $l(0..($cnt[$k]//0)-1){ my $ch=$reach{"$k,$l"}?'R':$main::B{"$k,$l"}?'b':$st[$k][$l]==1?'.':'#'; $c=$ch if $rank{$ch}>$rank{$c}; } } }
+      for my $l(0..($cnt[$k]//0)-1){ my $ch=$reach{"$k,$l"}?'R':$main::CUTREG{"$k,$l"}?'b':$st[$k][$l]==1?'.':'#'; $c=$ch if $rank{$ch}>$rank{$c}; } } }
     $c='+' if $tr{$key} && $c eq 'R'; $row.=$c; } print "$row\n"; } }
