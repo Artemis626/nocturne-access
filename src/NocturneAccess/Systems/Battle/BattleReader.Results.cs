@@ -105,8 +105,9 @@ namespace NocturneAccess.Systems.Battle
             if (d != null)
             {
                 string side = d.activeunit >= FirstEnemy ? "Enemy turn. " : "";
-                if (d.activeunit >= 0 && d.activeunit < PartySlots && !string.IsNullOrEmpty(PanelNames[d.activeunit]))
-                    side = $"{PanelNames[d.activeunit]}'s turn. ";
+                string acting = d.activeunit >= 0 && d.activeunit < PartySlots ? PartyName(d.activeunit) : "";
+                if (acting.Length > 0)
+                    side = $"{acting}'s turn. ";
                 parts.Add(side + TextUtil.Capitalize(PressTurns(d)));
             }
             foreach (Unit u in Units.Values.Where(u => u.Form < FirstEnemy).OrderBy(u => u.Form))

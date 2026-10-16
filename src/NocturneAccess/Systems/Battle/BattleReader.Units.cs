@@ -66,7 +66,7 @@ namespace NocturneAccess.Systems.Battle
 
             if (!Units.TryGetValue(form, out Unit u) || u.Id != w.id)
             {
-                u = new Unit { Form = form, Id = w.id, Hp = w.hp, MaxHp = w.maxhp, Mp = w.mp, MaxMp = w.maxmp, Name = form < PartySlots ? PanelNames[form] : NameOf(w.id) };
+                u = new Unit { Form = form, Id = w.id, Hp = w.hp, MaxHp = w.maxhp, Mp = w.mp, MaxMp = w.maxmp, Name = form < PartySlots ? PartyName(form) : NameOf(w.id) };
                 Number(u);
                 Units[form] = u;
                 return true;
@@ -102,6 +102,31 @@ namespace NocturneAccess.Systems.Battle
             return true;
         }
 
+        /// <summary>
+        /// A party slot's name from the game's unit data (0.0.88): the demon's name (datDevilName) of the unit at that formindex, the
+        /// party panel's text only for the protagonist (id 0, the player's chosen name) or when the data has none. The panel's
+        /// row can lag behind a summon (Francesco, 16 Oct 2026, the Kin-Ki fight: the turn was said for the wrong unit after
+        /// summoning; 21:19:19, Nue summoned into formindex 1, "Valkyrie's turn").
+        /// </summary>
+        internal static string PartyName(int form)
+        {
+            string panel = form >= 0 && form < PartySlots ? PanelNames[form] ?? "" : "";
+            try
+            {
+                datUnitWork_t w = nbMainProcess.nbGetUnitWorkFromFormindex(form);
+                string data = w != null && w.id != 0 ? NameOf(w.id) : "";
+                if (data.Length == 0)
+                    return panel;
+                if (panel.Length > 0 && panel != data)
+                    Log.Info($"{Tag} Party slot {form}: the panel says \"{panel}\", the unit data \"{data}\" (id {w.id}): the data is said.");
+                return data;
+            }
+            catch
+            {
+                return panel;
+            }
+        }
+
         private static string NameOf(ushort id)
         {
             try
@@ -119,7 +144,7 @@ namespace NocturneAccess.Systems.Battle
         {
             string name = u.Name.Length > 0 ? u.Name : (u.Form >= FirstEnemy ? "Enemy" : "Ally");
             // Numbered when the battle had several of this name; the number stays when one falls.
-            return NameCounts.TryGetValue(NameKey(u), out int count) && count > 1 ? $"{name} {u.Number}" : name;
+            return u.Form >= FirstEnemy && NameCounts.TryGetValue(NameKey(u), out int count) && count > 1 ? $"{name} {u.Number}" : name;
         }
 
         private static string NameKey(Unit u) => (u.Form >= FirstEnemy ? "e:" : "p:") + u.Name;

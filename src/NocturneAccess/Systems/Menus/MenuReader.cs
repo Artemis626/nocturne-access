@@ -187,7 +187,7 @@ namespace NocturneAccess.Systems.Menus
                 Item = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bmenu/[^/]+/bmenu_command/bmenu_command(?<slot>\d\d)/bmenu_text01TM$", RegexOptions.Compiled),
                 Highlight = "<material=\"TMC01\">",
                 Description = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bhelp_window/text_mask/TextTM$", RegexOptions.Compiled),
-                ItemDetail = BattleSkills.CostOfActing,          // "Lunge, 4 HP": the cost is drawn as images (2 Oct 2026)
+                ItemDetail = BattleSkills.CostOrCount,           // "Lunge, 4 HP": the cost is drawn as images (2 Oct 2026); items "have 2" (0.0.88)
                 OpeningPrefix = BattleReader.TurnAnnouncement,   // "Pixie's turn" (22:14 session: the acting unit was never said)
             },
             new MenuSpec

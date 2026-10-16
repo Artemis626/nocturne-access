@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Il2Cpp;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2Cppnewbattle_H;
@@ -96,6 +97,39 @@ namespace NocturneAccess.Systems.Battle
                 return "";
             return Cost(id, nbMainProcess.nbGetUnitWorkFromFormindex(d.activeunit), out string text) ? text : "";
         }
+
+        /// <summary>
+        /// The battle menu row's detail (0.0.88): a skill's cost ("4 HP"), else an item's owned count ("have 2"; Francesco, 16 Oct
+        /// 2026: the battle item list said only "3 of 4", the row in its four-row window, while the count is drawn as images).
+        /// The count is dds3GlobalWork.DDS3_GBWK.item[id], as the camp lists and shops say it; the id from the game's item names.
+        /// </summary>
+        internal static string CostOrCount(string itemText)
+        {
+            string cost = CostOfActing(itemText);
+            if (cost.Length > 0)
+                return cost;
+            try
+            {
+                Il2CppStructArray<byte> counts = dds3GlobalWork.DDS3_GBWK?.item;
+                if (counts == null)
+                    return "";
+                if (ItemIds.Count == 0)
+                    for (int id = 1; id < counts.Length; id++)
+                    {
+                        string name = TextUtil.Clean(datItemName.Get(id) ?? "").Trim();
+                        if (name.Length > 0 && !ItemIds.ContainsKey(name))
+                            ItemIds[name] = id;
+                    }
+                string row = TextUtil.Clean(itemText ?? "").Trim();
+                return ItemIds.TryGetValue(row, out int item) && counts[item] > 0 ? $"have {counts[item]}" : "";
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private static readonly Dictionary<string, int> ItemIds = new Dictionary<string, int>(StringComparer.Ordinal);
 
         /// <summary>The cost the menu draws for skill 'id' used by 'w'; false when the game draws none.</summary>
         internal static bool Cost(int id, datUnitWork_t w, out string text)

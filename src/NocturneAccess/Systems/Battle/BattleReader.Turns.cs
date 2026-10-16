@@ -31,8 +31,9 @@ namespace NocturneAccess.Systems.Battle
             if (key == _lastTurnKey)
                 return "";
             _lastTurnKey = key;
-            string name = !string.IsNullOrEmpty(PanelNames[form]) ? PanelNames[form]
-                : Units.TryGetValue(form, out Unit u) ? u.Name : "";
+            string name = PartyName(form);   // the unit data first: the panel can lag behind a summon (0.0.88)
+            if (name.Length == 0 && Units.TryGetValue(form, out Unit u))
+                name = u.Name;
             if (name.Length == 0)
                 return "";
             Log.Info($"{Tag} Turn: formindex {form} ({name}), press4_p {d.press4_p}, press4_ten {d.press4_ten}.");
