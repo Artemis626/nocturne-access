@@ -189,6 +189,7 @@ namespace NocturneAccess.Systems.Menus
                 Description = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bhelp_window/text_mask/TextTM$", RegexOptions.Compiled),
                 ItemDetail = BattleSkills.CostOrCount,           // "Lunge, 4 HP": the cost is drawn as images (2 Oct 2026); items "have 2" (0.0.88)
                 OpeningPrefix = BattleReader.TurnAnnouncement,   // "Pixie's turn" (22:14 session: the acting unit was never said)
+                NoPosition = true,   // the rows are a four-row window: "3 of 4" was the row, not the place in the list (Francesco, 16 Oct 2026, 0.0.89)
             },
             new MenuSpec
             {
@@ -198,6 +199,7 @@ namespace NocturneAccess.Systems.Menus
                 Name = "Summon list",
                 Item = new Regex(@"^Canvas_UI/bmenuset\(Clone\)/bmenu/[^/]+/bmenu_command/bmenu_command_s(?<slot>\d\d)/bmenu_text01TM$", RegexOptions.Compiled),
                 Highlight = "<material=\"TMC01\">",   // no help line is shown (dump 20:49:28)
+                NoPosition = true,   // a two-row window: "2 of 2" for every demon past the first (0.0.89)
                 CloseWhenUnhighlighted = true,
                 RowDetail = (component, name) => BattleSkills.StockDetail(name),
             },
