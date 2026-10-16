@@ -39,6 +39,8 @@ namespace NocturneAccess.Systems.Navigation
         private const float CorrectOn = 40f, CorrectOff = 10f;
         private const float FacingTolerance = 50f;
         private const int StillTicks = 8;
+        private const int DamageFloorAct = 52;   // fldPlayer.fldPlayerAct during the damage-floor reaction (traces 16 Oct 2026, poison swamp floor Attr 0x4000)
+        private static bool _onDamageFloor;
         private const int MaxReplans = 6;
         private const long TimeoutMs = 30000;
         private const long WorldTimeoutMs = 90000;   // Shinjuku is about 70 x 80 metres at 4.8 a second; Medical Center to Yoyogi Park took 26 s
@@ -188,6 +190,16 @@ namespace NocturneAccess.Systems.Navigation
                 _still = 0;   // a first-person turn stands still on purpose
             if (_world && (gb.NoInpPlCnt > 0 || fldPlayer.fldWmWarpMode != 0))
                 _still = 0;   // fldPlayerCalc_Wm2 ignores the pads then (read offline): waiting, not blocked
+            if (fldPlayer.fldPlayerAct == DamageFloorAct)
+            {
+                // A damage floor (0.0.88; Francesco, 16 Oct 2026, the Ikebukuro Tunnel's poison swamps): every step on it plays the
+                // game's damage reaction (fldPlayerAct 52) and the player stands for a moment, so the walk took it for a wall,
+                // learned false refusals and said "Blocked." (21:21:26, 21:35:45, 21:44:25). Waiting, not blocked.
+                _still = 0;
+                if (!_onDamageFloor)
+                    Log.Info($"[Nav:Walk] Damage floor at {FieldData.F(x)} {FieldData.F(z)} (fldPlayerAct {DamageFloorAct}): walking on through it.");
+                _onDamageFloor = true;   // logged once per plan
+            }
 
             float toTarget = Bearing(x, z, _target.X, _target.Z);
             float flat = Dist(_target.X, _target.Z, x, z);
@@ -705,7 +717,7 @@ namespace NocturneAccess.Systems.Navigation
         internal static List<PathRun> Route(fldGlobalWork_t gb, Poi target, bool firstPerson, out float gx, out float gz, out string aim)
         {
             float px = gb.playerX, py = gb.playerY, pz = gb.playerZ;
-            int allow = target.IsDoorLike ? WarpMap.TouchWarp(gb, target.Index)?.Zone.Id ?? -1 : -1;   // a warp aimed for may be entered (0.0.52)
+            int allow = target.IsDoorLike ? WarpMap.TouchWarp(gb, target.Index)?.Zone.Id ?? (WarpMap.IsAwayWarp(gb, target.Index) ? target.Index : -1) : -1;   // a warp aimed for may be entered (0.0.52; walk-on warps into other areas, 0.0.88)
             List<PathRun> runs;
             if (target.HasFront)
             {
@@ -788,6 +800,7 @@ namespace NocturneAccess.Systems.Navigation
             }
             _run = 0;
             _still = 0;
+            _onDamageFloor = false;
             _approach = 0;
             _facing = 0;
             _turns = 0;

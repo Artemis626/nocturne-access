@@ -33,10 +33,11 @@ namespace NocturneAccess.Systems.Navigation
 
         public bool Explored;           // a generic door (no place name) the player has gone through (ExploredDoors)
         public bool Empty;              // an item box the game has opened (fld_Npc.gfldTakaraWork MotPhase, PointsOfInterest.Opened)
+        public bool AwayWarp;           // a walk-on warp into another area (door table movetype 3, the Ikebukuro Tunnel, 0.0.88): "Warp", kept out of routes
         public bool World;              // on the world map (FieldState.WorldMap): doors are entrances to places, heights are terrain
         public bool ToWorld;            // a dungeon door that leads to the world map (DoorTable.ToField below 10): "Exit to overworld" (0.0.44), never "explored" (0.0.45)
 
-        public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : DoorWord)
+        public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp || AwayWarp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : DoorWord)
             : Kind == PoiKind.Place ? Name
             : Kind == PoiKind.Event ? (Action ? ActionLabel : Story ? "Story event" : Name.Length > 0 ? "Event, " + Name : "Event")
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
@@ -137,7 +138,7 @@ namespace NocturneAccess.Systems.Navigation
         private string DoorWord => Escalator ? (EscalatorDir > 0 ? "Escalator up" : EscalatorDir < 0 ? "Escalator down" : "Escalator") : "Door";
 
         /// <summary>A door with no place name of its own: "Door", "Escalator up" (not a warp, ladder, jump, exit or world entrance).</summary>
-        private bool PlainDoor => Kind == PoiKind.Door && !Jump && !Warp && !Ladder && !ToWorld && !World && Name.Length == 0;
+        private bool PlainDoor => Kind == PoiKind.Door && !Jump && !Warp && !AwayWarp && !Ladder && !ToWorld && !World && Name.Length == 0;
 
         /// <summary>The door table's kind as said: "exit" is left out when the field it leads into is named.</summary>
         private string ShownKind => DestinationIsField && DoorKind == "exit" ? "" : DoorKind;
@@ -338,6 +339,7 @@ namespace NocturneAccess.Systems.Navigation
                 // A door the game jumps down through (door table movetype 4: Assembly of Nihilo B12's 01d_03, 01d_05, 01d_06 land
                 // on B13; the game's prompt "Jump Off", 11 Oct 2026, 21:55:14): an action, not a room (Francesco, 12 Oct 2026).
                 bool jump = kind == PoiKind.Door && !world && DoorTable.MoveTypeOf(gb.fieldID, gb.areaID, name) == JumpMoveType;
+                bool awayWarp = kind == PoiKind.Door && !world && WarpMap.IsAwayWarp(gb, i);
                 bool generic = kind == PoiKind.Door && placeName.Length == 0 && !world;   // world map entrances lead to places, not rooms
                 int toField = kind == PoiKind.Door && !world ? DoorTable.ToField(gb.fieldID, gb.areaID, name) : -1;
                 bool toWorld = toField > 0 && FieldState.WorldMapField(toField);
@@ -357,7 +359,7 @@ namespace NocturneAccess.Systems.Navigation
                 string destination = "", behind = "";
                 bool destinationIsField = false, escalator = false;
                 int escalatorDir = 0;
-                if (generic && !toWorld && !jump)
+                if (generic && !toWorld && !jump && !awayWarp)
                 {
                     if (toField >= 0 && toField != gb.fieldID)
                         destinationIsField = (destination = WhereAmI.FieldName(toField)).Length > 0;
@@ -387,6 +389,7 @@ namespace NocturneAccess.Systems.Navigation
                     Distance = (float)Math.Sqrt((p.x - px) * (p.x - px) + (p.z - pz) * (p.z - pz)),
                     Explored = generic && !toWorld && ExploredDoors.IsExplored(gb.fieldID, gb.areaID, name),   // an exit to the overworld is used again and again: never "explored" (Francesco, 0.0.45)
                     Warp = kind == PoiKind.Door && !world && WarpMap.TouchWarp(gb, i) != null,
+                    AwayWarp = awayWarp,
                     Empty = kind == PoiKind.ItemBox && Opened(takara),
                     World = world,
                     ToWorld = toWorld,
@@ -395,7 +398,7 @@ namespace NocturneAccess.Systems.Navigation
                     BoxX1 = bx1,
                     BoxZ0 = bz0,
                     BoxZ1 = bz1,
-                    DoorKind = generic && !toWorld && !jump ? DoorTable.KindOf(gb.fieldID, gb.areaID, name) : "",
+                    DoorKind = generic && !toWorld && !jump && !awayWarp ? DoorTable.KindOf(gb.fieldID, gb.areaID, name) : "",
                     Destination = destination,
                     DestinationIsField = destinationIsField,
                     Behind = behind,
@@ -446,7 +449,11 @@ namespace NocturneAccess.Systems.Navigation
                     continue;
                 }
                 // A warp's own volume and margin are kept out of the grid: WarpMap.RouteTo below decides for it.
-                if (grid)
+                if (grid && q.AwayWarp)
+                    // Its volume and AvoidMargin round it are kept out of the grid (0.0.88): the ring just outside counts.
+                    q.Reachable = q.HasBox && WalkGrid.ReachableInRect(px, py, pz, q.BoxX0 - AwayWarpRing, q.BoxZ0 - AwayWarpRing,
+                                                                       q.BoxX1 + AwayWarpRing, q.BoxZ1 + AwayWarpRing, q.FloorY);
+                else if (grid)
                     q.Reachable = !q.Warp && WalkGrid.ReachableNear(px, py, pz, q.X, q.FloorY, q.Z, q.ReachRadius)
                                   || (q.IsDoorLike && q.HasBox && WalkGrid.ReachableInRect(px, py, pz, q.BoxX0 - Poi.VolumeMargin, q.BoxZ0 - Poi.VolumeMargin,
                                       q.BoxX1 + Poi.VolumeMargin, q.BoxZ1 + Poi.VolumeMargin, q.FloorY));
@@ -554,7 +561,7 @@ namespace NocturneAccess.Systems.Navigation
             }
             if (q.Jump && q.Prompt.Length > 0)
                 return PoiCategory.Actions;
-            if (q.Warp)
+            if (q.Warp || q.AwayWarp)
                 return PoiCategory.Warps;
             if (q.Ladder)
                 return PoiCategory.Ladders;
@@ -650,6 +657,7 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         private const float PlayerOnFloor = 10f;   // the player stands about 2 above the floor (y -2 on the floor at 0)
+        private const float AwayWarpRing = 90f;    // WalkGrid.AvoidMargin 45 plus a cell and a half: the walkable ring round a kept-out warp
 
         /// <summary>A story volume as big as a room (more than 1500 across): a trigger for walking into an area, not a thing to go to.</summary>
         private static bool RoomSized(putevebox_s box)

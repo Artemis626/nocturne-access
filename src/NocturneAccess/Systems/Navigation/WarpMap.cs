@@ -194,8 +194,64 @@ namespace NocturneAccess.Systems.Navigation
             _basicPoints = null;
         }
 
-        /// <summary>The volumes routes keep out of: the warps that fire when walked into.</summary>
-        internal static List<WalkGrid.Zone> Zones(int field, int area) => All(field, area).Where(w => w.Touch).Select(w => w.Zone).ToList();
+        /// <summary>The volumes routes keep out of: the warps that fire when walked into, here or into another area (AwayWarps).</summary>
+        internal static List<WalkGrid.Zone> Zones(int field, int area)
+            => All(field, area).Where(w => w.Touch).Select(w => w.Zone).Concat(AwayWarps(field, area).Values).ToList();
+
+        // Walk-on warps into another area (0.0.88; Francesco, 16 Oct 2026: the Ikebukuro Tunnel's marked warps; one kept him from the
+        // boss room, as the shortest route crossed it). Door table movetype 3 (WarpAwayMoveType): only in field 26, four of them
+        // (areas 3, 4, 5, 6 to 7, 6, 8, 8; area 5's 01eve_13 at -2700 -3600, 600 x 300, dropped him into area 8 at 21:21:50,
+        // 21:37:49 and 21:38:50 while walking to 01d_10). Event-named, no script procedure. Kept out of routes like a touch warp;
+        // listed as "Warp".
+        internal const int WarpAwayMoveType = 3;
+        private static int _awayField = int.MinValue, _awayArea = int.MinValue, _awayCount = -1;
+        private static IntPtr _awayRanges;
+        private static Dictionary<int, WalkGrid.Zone> _away = new Dictionary<int, WalkGrid.Zone>();
+
+        /// <summary>The current area's walk-on warps into another area, by gEvnRng index.</summary>
+        internal static Dictionary<int, WalkGrid.Zone> AwayWarps(int field, int area)
+        {
+            Il2CppReferenceArray<fldResHead_t> ranges = fldEveHit.gEvnRng;
+            IntPtr ptr = ranges == null ? IntPtr.Zero : ranges.Pointer;
+            int n = ranges == null ? 0 : Math.Min(fldEveHit.gEvnRngNum, ranges.Length);
+            if (field == _awayField && area == _awayArea && ptr == _awayRanges && n == _awayCount)
+                return _away;
+            _awayField = field;
+            _awayArea = area;
+            _awayRanges = ptr;
+            _awayCount = n;
+            _away = new Dictionary<int, WalkGrid.Zone>();
+            if (FieldState.WorldMapField(field))
+                return _away;
+            try
+            {
+                Il2CppReferenceArray<putevebox_s> boxes = fldEveHit.gEvnRngBox;
+                var names = new List<string>();
+                for (int i = 0; i < n; i++)
+                {
+                    fldResHead_t h = ranges[i];
+                    if (h == null || h.sisei == null || h.resourceType != 10)
+                        continue;
+                    string name = h.resourceName ?? "";
+                    if (DoorTable.MoveTypeOf(field, area, name) != WarpAwayMoveType)
+                        continue;
+                    WalkGrid.Zone zone = ZoneOf(boxes != null && i < boxes.Length ? boxes[i] : null, h.sisei.pos, i, out _);
+                    _away[i] = zone;
+                    names.Add($"{name} at {FieldData.F(zone.X)} {FieldData.F(zone.Z)}, {FieldData.F(zone.HalfWidth * 2)} x {FieldData.F(zone.HalfDepth * 2)}");
+                }
+                if (names.Count > 0)
+                    Log.Info($"{Tag} Field {field} area {area}: {names.Count} walk-on warps into other areas kept out of routes: {string.Join("; ", names)}.");
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"{Tag} Walk-on warps of {field}/{area} could not be read: {ex.Message}");
+            }
+            return _away;
+        }
+
+        /// <summary>gEvnRng[index] of the current area is a walk-on warp into another area.</summary>
+        internal static bool IsAwayWarp(fldGlobalWork_t gb, int index)
+            => gb != null && AwayWarps(gb.fieldID, gb.areaID).ContainsKey(index);
 
         /// <summary>The touch warp whose volume is gEvnRng[index] in the current area, or null.</summary>
         internal static Warp TouchWarp(fldGlobalWork_t gb, int index)
