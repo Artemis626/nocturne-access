@@ -30,6 +30,8 @@ namespace NocturneAccess.Systems.Menus
     internal static class MenuReader
     {
         private const string Tag = "[Menu]";
+        private const string SummonList = "Summon list", BattleMenu = "Battle menu";
+        private static bool _summonClosed;   // the battle Summon list closed and the battle menu has not spoken since (0.0.92)
         private const long SettleMs = 80;
         private const long WaitForVisibleMs = 60_000;
         private const long VisibilityPollMs = 250;
@@ -595,6 +597,17 @@ namespace NocturneAccess.Systems.Menus
             if (description.Length > 0)
                 parts.Add(description);
 
+            // After a summon the game redraws the Summon list's rows for an instant as the next unit's menu opens: "Mizuchi, level
+            // 34, ..." came 40 ms before "Valkyrie's turn", so the summoned demon sounded like the turn's owner (Francesco, 16 and 17
+            // Oct 2026; every summon in three sessions). Once the list has closed, it opens again only after the battle menu has
+            // spoken (backing out of the list goes through it), 0.0.92.
+            if (state.Spec.Name == SummonList && opening && _summonClosed)
+            {
+                Log.Info($"{Tag} {SummonList}: a redraw after closing, before the battle menu spoke: not said (\"{string.Join(". ", parts)}\").");
+                return;
+            }
+            if (state.Spec.Name == BattleMenu)
+                _summonClosed = false;
             string utterance = string.Join(". ", parts);
             RepeatBuffer.Record(utterance);
             if (opening)
@@ -668,6 +681,8 @@ namespace NocturneAccess.Systems.Menus
             state.LastTitleSpoken = "";
             state.HighlightSig = "";
             Log.Info($"{Tag} {state.Spec.Name} closed.");
+            if (state.Spec.Name == SummonList)
+                _summonClosed = true;
         }
     }
 }
