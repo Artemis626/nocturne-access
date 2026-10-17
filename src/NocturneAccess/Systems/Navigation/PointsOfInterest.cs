@@ -105,6 +105,15 @@ namespace NocturneAccess.Systems.Navigation
 
         private const int ClimbPrompt = 6, DescendPrompt = 7;
 
+        /// <summary>
+        /// A landmark, listed from anywhere in a dungeon area (Francesco, 17 Oct 2026, 0.0.90: fourteen unidentifiable doors reachable
+        /// from any point made the list confusing): a door or room the game names (Terminal, S-Terminal, Stone Cave, Mysterious
+        /// Wall; Name from its place pad) or an exit to the overworld. Its way is said ("via 2 doors"), or "beyond doors" when none
+        /// is known. Everything else (plain doors, ladders, item boxes, people, events) is listed only where the player can walk to
+        /// it. Replaces 0.0.59's set (named doors, exits, ladders, "exit" doors) and 0.0.55's listing of every point through warps.
+        /// </summary>
+        public bool Landmark => !Warp && !AwayWarp && !Ladder && !Jump && (Kind == PoiKind.Door && (Name.Length > 0 || ToWorld) || Kind == PoiKind.Place && Name.Length > 0);
+
         /// <summary>In the list: reachable, or a landmark listed beyond doors.</summary>
         public bool Listed => Reachable || Beyond;
 
@@ -459,6 +468,8 @@ namespace NocturneAccess.Systems.Navigation
                                       q.BoxX1 + Poi.VolumeMargin, q.BoxZ1 + Poi.VolumeMargin, q.FloorY));
                 kept.Add(q);
             }
+            if (!world)
+                MarkLadders(gb, kept);
             // Beyond warps (0.0.52): a point no walk reaches may be reached by taking warps (Francesco, 4 Oct 2026: parts of the Amala
             // Network were missing from the list until he stood in them). From 0.0.55 ladders and same-area doors too (the Ginza
             // underpass, 5 Oct 2026: its rooms in one area are joined by ladders, and everything past one was left out).
@@ -466,7 +477,7 @@ namespace NocturneAccess.Systems.Navigation
                 foreach (Poi q in kept.Where(q => !q.Reachable))
                 {
                     List<Warp> legs = WarpMap.RouteTo(gb, q);
-                    if (legs != null)
+                    if (legs != null && (legs.Count == 0 || q.Landmark))   // through door pairs or warps: landmarks only (0.0.90)
                     {
                         q.Reachable = true;
                         q.ViaWarps = legs.Count;   // 0: walked to (a warp next to the player's part of the area)
@@ -494,7 +505,8 @@ namespace NocturneAccess.Systems.Navigation
         ///   there is known yet (Ginza's stairs to the overworld and the underpass Terminal were missing): ", beyond doors";
         /// - a door into a room whose only way on is an exit says so: "Door, to exit".
         /// </summary>
-        private static void MarkLaddersAndExits(fldGlobalWork_t gb, List<Poi> kept)
+        /// <summary>Ladders: their own kind, up or down (0.0.59); marked before the landmark rule, which leaves ladders out (0.0.90).</summary>
+        private static void MarkLadders(fldGlobalWork_t gb, List<Poi> kept)
         {
             foreach (Poi q in kept.Where(q => q.Kind == PoiKind.Door))
             {
@@ -511,6 +523,10 @@ namespace NocturneAccess.Systems.Navigation
                 q.DoorKind = "";
                 q.Explored = false;
             }
+        }
+
+        private static void MarkLaddersAndExits(fldGlobalWork_t gb, List<Poi> kept)
+        {
             // The far side of a same-area door is the same door (0.0.62): Ginza area 1, 8 Oct 2026, 21:04:00, through 01d_04 into the
             // exit corridor, the Doors list held 01d_05 (2 metres, the door just come through) and 01d_04 "via 1 door" (its other
             // side, in the hall). Left out like a ladder's far end while its own side is walked to.
@@ -524,8 +540,7 @@ namespace NocturneAccess.Systems.Navigation
                     q.Redundant = true;
                 }
             }
-            foreach (Poi q in kept.Where(q => !q.Reachable && !q.Redundant && q.Kind == PoiKind.Door && !q.Warp
-                                              && (q.Name.Length > 0 || q.ToWorld || q.Ladder || q.DoorKind == "exit")))
+            foreach (Poi q in kept.Where(q => !q.Reachable && !q.Redundant && q.Landmark))
                 q.Beyond = true;
 
             // Same-area doors that land in a room holding an exit the player cannot otherwise walk to (Ginza area 2, 01d_08).
