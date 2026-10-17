@@ -112,7 +112,10 @@ namespace NocturneAccess.Systems.Navigation
         /// is known. Everything else (plain doors, ladders, item boxes, people, events) is listed only where the player can walk to
         /// it. Replaces 0.0.59's set (named doors, exits, ladders, "exit" doors) and 0.0.55's listing of every point through warps.
         /// </summary>
-        public bool Landmark => !Warp && !AwayWarp && !Ladder && !Jump && (Kind == PoiKind.Door && (Name.Length > 0 || ToWorld) || Kind == PoiKind.Place && Name.Length > 0);
+        public bool Landmark => !Warp && !AwayWarp && !Ladder && !Jump && (Kind == PoiKind.Door && (Name.Length > 0 || ToWorld || DoorKind == "exit" || DoorKind == "to exit") || Kind == PoiKind.Place && Name.Length > 0);
+
+        /// <summary>The way through door pairs or warps to a point not yet known as a landmark (decided after "to exit", 0.0.91).</summary>
+        internal List<Warp> HeldLegs;
 
         /// <summary>In the list: reachable, or a landmark listed beyond doors.</summary>
         public bool Listed => Reachable || Beyond;
@@ -477,7 +480,9 @@ namespace NocturneAccess.Systems.Navigation
                 foreach (Poi q in kept.Where(q => !q.Reachable))
                 {
                     List<Warp> legs = WarpMap.RouteTo(gb, q);
-                    if (legs != null && (legs.Count == 0 || q.Landmark))   // through door pairs or warps: landmarks only (0.0.90)
+                    if (legs != null && legs.Count > 0 && !q.Landmark)
+                        q.HeldLegs = legs;   // a "to exit" door is known only below
+                    else if (legs != null)   // through door pairs or warps: landmarks only (0.0.90)
                     {
                         q.Reachable = true;
                         q.ViaWarps = legs.Count;   // 0: walked to (a warp next to the player's part of the area)
@@ -492,6 +497,18 @@ namespace NocturneAccess.Systems.Navigation
             // every overworld zone with places out of reach; 0.0.85 tried it and was reverted in 0.0.86).
             if (!world)
                 MarkLaddersAndExits(gb, kept);
+            // Exits and doors to exits are landmarks too (Francesco, 17 Oct 2026, 0.0.91): "to exit" is known only now.
+            foreach (Poi q in kept.Where(q => !world && !q.Reachable && !q.Redundant && q.Landmark))
+            {
+                if (q.HeldLegs != null)
+                {
+                    q.Reachable = true;
+                    q.ViaWarps = q.HeldLegs.Count;
+                    q.ViaLegs = WarpMap.Phrase(q.HeldLegs);
+                }
+                else
+                    q.Beyond = true;
+            }
             foreach (Poi q in kept)
                 q.Category = CategoryOf(q, gb);
             return kept.OrderBy(q => q.Distance).ToList();
