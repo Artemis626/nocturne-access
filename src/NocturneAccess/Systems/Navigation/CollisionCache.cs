@@ -43,6 +43,18 @@ namespace NocturneAccess.Systems.Navigation
         /// vertical faces (NPC boxes). Overlays (0x800, 0x1000, 0x8000) still reach past walls and are not floors.
         /// </summary>
         public bool IsGroundAttr => Attr == 0 || Attr == 0x80;
+
+        /// <summary>
+        /// A trigger, never a wall (0.0.93): the dungeon hit test (`fldHit.fldHitChkUnit`) branches on each of these bits to
+        /// automap names, block openings or the sky, and none of those branches stops the player; only polygons with none of
+        /// them reach the blocking test. Asakusa area 8's stairs carry a slanted 0x8000 polygon (#139) across their whole
+        /// width: as a wall it cut the overworld exit off the walking map, while Francesco walked the stairs.
+        /// 0x400 is left out on purpose: the hit test skips it too, but its polygons carry a TomeIdx ("stopper") and Ginza's
+        /// four tall 0x400 boxes may block through code not yet read; they stay walls, as before.
+        /// </summary>
+        public bool IsTriggerAttr => (Attr & TriggerBits) != 0;
+
+        internal const uint TriggerBits = 0x40 | 0x100 | 0x200 | 0x800 | 0x1000 | 0x2000 | 0x4000 | 0x8000;
     }
 
     /// <summary>

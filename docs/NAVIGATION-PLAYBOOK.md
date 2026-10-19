@@ -134,6 +134,7 @@ Nocturne's fixed-camera rooms force third person.
   - Four layers since 0.0.60. Count and log any height left out by the limit.
 - **Walls:** vertical polygons. A wall blocks a floor only when it overlaps the body above it: from step height (30) to body height (180), with the game's Y pointing down. Stair steps lower than 30 therefore do not block.
   - A cell is blocked within the clearance (65) of such a wall.
+  - **Only polygons the game's hit test blocks with are walls** (Nocturne 0.0.93): the test branches on attribute bits (0x8000, 0x800, 0x1000 and others) to automap names or the sky and moves on; a wall-like polygon with such a bit is a trigger. A slanted 0x8000 polygon across Asakusa's stairs cut the exit off the walking map while the player walked there. Read every branch of the hit test before counting a wall-like polygon as a wall; keep a bit whose branch you cannot follow to the end as a wall.
   - Wall distance adds cost near walls, so routes keep to the middle.
 - **Moves:** 8 directions (4 in first person, where the game turns 90 degrees), no cutting past a blocked corner.
   - A move joins heights at most 45 apart.

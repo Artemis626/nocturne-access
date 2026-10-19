@@ -214,7 +214,7 @@ namespace NocturneAccess.Systems.Navigation
                     if (p.Points.Length >= 3 && (p.Attr == 0 || p.Attr == 0x80) && !HiddenNpcBox(p) && !CollisionCache.SwitchedOff(p))
                         worldWalls.Add(p);
                 }
-                else if (Math.Abs(p.Normal.y) < 0.2f && !HiddenNpcBox(p) && !CollisionCache.SwitchedOff(p))
+                else if (Math.Abs(p.Normal.y) < 0.2f && !p.IsTriggerAttr && !HiddenNpcBox(p) && !CollisionCache.SwitchedOff(p))
                 {
                     float lo = float.MaxValue, hi = float.MinValue;
                     foreach (Vector4 v in p.Points)

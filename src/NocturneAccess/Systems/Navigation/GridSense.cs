@@ -22,7 +22,8 @@ namespace NocturneAccess.Systems.Navigation
     /// - Walls: vertical collision polygons (|normal.y| &lt; 0.2) whose height span covers the player's chest
     ///   (game Y points down; floors at 0, walls 0 to -400). Each is reduced to its segment in X and Z.
     ///   NPC and item-box boxes (Attr 0x80, 100 x 100 around people and boxes) are not walls: in 0.0.16 they made the
-    ///   cue say "wall" in front of the Soul. They are to be reported apart later ("person", "box").
+    ///   cue say "wall" in front of the Soul. They are to be reported apart later ("person", "box"). Trigger polygons
+    ///   (CollisionPoly.IsTriggerAttr: 0x8000 and the like) never stop the player and are not walls either (0.0.93).
     /// - Doors: fldEveHit.gEvnRng entries of type 10 named "NNd_MM" (the "Open Door" volumes, 0.0.12).
     ///   Doors are closed walls in the collision, so a door within one cell wins over the wall behind it.
     /// A side is a Wall when the segment from the player to one cell away crosses a wall.
@@ -126,7 +127,7 @@ namespace NocturneAccess.Systems.Navigation
             float chest = playerY - ChestHeight;
             foreach (CollisionPoly p in CollisionCache.Polys)
             {
-                if (Math.Abs(p.Normal.y) >= 0.2f || p.Points.Length < 2 || (p.Attr & NpcBoxAttr) != 0 || CollisionCache.SwitchedOff(p))
+                if (Math.Abs(p.Normal.y) >= 0.2f || p.Points.Length < 2 || (p.Attr & NpcBoxAttr) != 0 || p.IsTriggerAttr || CollisionCache.SwitchedOff(p))
                     continue;
                 float minY = float.MaxValue, maxY = float.MinValue;
                 foreach (Vector4 v in p.Points)

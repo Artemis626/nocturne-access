@@ -146,6 +146,9 @@ namespace NocturneAccess.Systems.Menus
                 Highlight = "<material=\"TMC01\">",
                 TitlePath = "Canvas_UI/terminalUI/tmnltitle/Text_tmnltitleTM",
                 CloseWhenUnhighlighted = true,
+                // A seven-row window: with nine places (19 Oct 2026, Mifunashiro) the last three all said "6 of 7" (0.0.93,
+                // as the battle lists in 0.0.89).
+                NoPosition = true,
             },
             new MenuSpec
             {

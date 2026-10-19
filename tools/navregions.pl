@@ -60,6 +60,10 @@ for my $q (sort { $a->{id} <=> $b->{id} } values %poly) {
         push @floors, $q;
         for (@p) { $x0 = $_->[0] if $_->[0] < $x0; $x1 = $_->[0] if $_->[0] > $x1; $z0 = $_->[2] if $_->[2] < $z0; $z1 = $_->[2] if $_->[2] > $z1; }
     } elsif (abs($q->{ny}) < 0.2) {
+        # Walls with a trigger bit (0x40, 0x100, 0x200, 0x800, 0x1000, 0x2000, 0x4000, 0x8000) never block: fldHit.fldHitChkUnit
+        # branches on each to automap names, blocks or the sky (0.0.93, Asakusa area 8's stairs; CollisionPoly.IsTriggerAttr).
+        # 0x400 (TomeIdx "stopper" boxes in Ginza) stays a wall. NAVWALLATTR=0 restores the old rule.
+        next if ($ENV{NAVWALLATTR} // 1) && ($q->{attr} & 0xFB40);
         my ($lo, $hi) = (1e9, -1e9);
         for (@p) { $lo = $_->[1] if $_->[1] < $lo; $hi = $_->[1] if $_->[1] > $hi; }
         my ($a, $b, $best) = ($p[0], $p[0], -1);
