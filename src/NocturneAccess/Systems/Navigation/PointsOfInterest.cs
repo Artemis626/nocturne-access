@@ -28,6 +28,7 @@ namespace NocturneAccess.Systems.Navigation
         public bool Soul;               // a person whose model is "shinentai" (the game's speaker name for them is "Soul")
         public bool Demon;              // a person with no field object: a demon, whose model is not a field object (the game's speaker name is "Demon")
         public float FloorY;            // the floor height to walk to: the player's height inside the volume's height span (gEvnRngBox.vtx), else its bottom; without a box Y + 100 for doors, Y for others; world-map entrances: the ground under the volume (0.0.42)
+        public float[] OtherFloors = Array.Empty<float>();   // other floors under the volume within its height span, tried when FloorY is not reachable (0.0.94)
         public float NX, NZ;            // a door's facing (gEvnRngBox.boxnml, pointing out to the side the player stands on), or 0 0
         public bool HasFront => NX * NX + NZ * NZ > 0.25f;
 
@@ -356,7 +357,7 @@ namespace NocturneAccess.Systems.Navigation
                 int toField = kind == PoiKind.Door && !world ? DoorTable.ToField(gb.fieldID, gb.areaID, name) : -1;
                 bool toWorld = toField > 0 && FieldState.WorldMapField(toField);
 
-                VolumeSpan(box, gb.playerY, out float floorY, out float nx, out float nz);
+                VolumeSpan(box, gb.playerY, out float floorY, out float nx, out float nz, out float[] otherFloors);
                 bool doorLike = kind == PoiKind.Door || kind == PoiKind.Place;
                 bool hasBox = Footprint(box, out float bx0, out float bx1, out float bz0, out float bz1);
                 // The world map: the ground under the volume, never the player's height. Shibuya's volume 01d_03 is 400 tall, so
@@ -396,6 +397,7 @@ namespace NocturneAccess.Systems.Navigation
                     Y = p.y,
                     Z = p.z,
                     FloorY = float.IsNaN(floorY) ? (doorLike ? p.y + 100f : p.y) : floorY,
+                    OtherFloors = world ? Array.Empty<float>() : otherFloors,
                     NX = doorLike ? nx : 0f,
                     NZ = doorLike ? nz : 0f,
                     Distance = (float)Math.Sqrt((p.x - px) * (p.x - px) + (p.z - pz) * (p.z - pz)),
@@ -466,9 +468,28 @@ namespace NocturneAccess.Systems.Navigation
                     q.Reachable = q.HasBox && WalkGrid.ReachableInRect(px, py, pz, q.BoxX0 - AwayWarpRing, q.BoxZ0 - AwayWarpRing,
                                                                        q.BoxX1 + AwayWarpRing, q.BoxZ1 + AwayWarpRing, q.FloorY);
                 else if (grid)
-                    q.Reachable = !q.Warp && WalkGrid.ReachableNear(px, py, pz, q.X, q.FloorY, q.Z, q.ReachRadius)
-                                  || (q.IsDoorLike && q.HasBox && WalkGrid.ReachableInRect(px, py, pz, q.BoxX0 - Poi.VolumeMargin, q.BoxZ0 - Poi.VolumeMargin,
-                                      q.BoxX1 + Poi.VolumeMargin, q.BoxZ1 + Poi.VolumeMargin, q.FloorY));
+                {
+                    // A door-like volume: a reachable cell inside its footprint (plus margin) at its floor decides first. When none
+                    // is, another floor inside the volume's height span may be the one walked on to it, and becomes the target
+                    // (0.0.94): the Assembly of Nihilo lays one floor sheet at y 0 under whole areas, and doors at the top of ramps
+                    // were "beyond doors" (area 24, the Terminal door) or listed but "No path." (area 13, door 01d_03, 16:41:46:
+                    // the nearest cell at y 0 was 175 short, beside the ramp). Only then the radius test round the point.
+                    bool inRect(float y) => WalkGrid.ReachableInRect(px, py, pz, q.BoxX0 - Poi.VolumeMargin, q.BoxZ0 - Poi.VolumeMargin,
+                                                                    q.BoxX1 + Poi.VolumeMargin, q.BoxZ1 + Poi.VolumeMargin, y);
+                    bool boxed = q.IsDoorLike && q.HasBox;
+                    q.Reachable = boxed && inRect(q.FloorY);
+                    if (!q.Reachable && boxed && !q.Warp)
+                        foreach (float alt in q.OtherFloors)
+                            if (inRect(alt))
+                            {
+                                Log.Info($"[Nav:Poi] {q.ResName}: reachable on its floor at y {alt:0} (not at y {q.FloorY:0}).");
+                                q.FloorY = alt;
+                                q.Reachable = true;
+                                break;
+                            }
+                    if (!q.Reachable)
+                        q.Reachable = !q.Warp && WalkGrid.ReachableNear(px, py, pz, q.X, q.FloorY, q.Z, q.ReachRadius);
+                }
                 kept.Add(q);
             }
             if (!world)
@@ -651,9 +672,10 @@ namespace NocturneAccess.Systems.Navigation
         /// The annex gate's Pixie volume 01eve_01 has its centre at y 200, below the floor (doors: -100), and was left out as
         /// unreachable while the game fired its "Talk" from the floor at y 0 (21:31 session).
         /// </summary>
-        private static void VolumeSpan(putevebox_s box, float playerY, out float floorY, out float nx, out float nz)
+        private static void VolumeSpan(putevebox_s box, float playerY, out float floorY, out float nx, out float nz, out float[] otherFloors)
         {
             floorY = float.NaN;
+            otherFloors = Array.Empty<float>();
             FieldData.BoxFacing(box, out nx, out nz);
             if (box == null)
                 return;
@@ -686,6 +708,13 @@ namespace NocturneAccess.Systems.Navigation
                 floorY = own;
             else
                 floorY = hi;
+            // 0.0.94: every other floor under the volume within its span, tried when the chosen one is not reachable. The
+            // Assembly of Nihilo's Marunouchi Entrance (field 20 area 24, dump 19 Oct 17:03:49) lies on one floor sheet at y 0
+            // under the whole area (#0); its Terminal door 01d_03 stands at the top of a ramp (#2, about 30 up). From the
+            // ring at y 0 the sheet under the door was chosen, whose cells beside the ramp are walled in: "beyond doors".
+            float chosen = floorY;
+            otherFloors = CollisionCache.FloorsUnder(cx, cz, groundOnly: true, upOnly: true)
+                .Where(y => InSpan(y) && Math.Abs(y - chosen) > 20f).Distinct().ToArray();
         }
 
         private const float PlayerOnFloor = 10f;   // the player stands about 2 above the floor (y -2 on the floor at 0)

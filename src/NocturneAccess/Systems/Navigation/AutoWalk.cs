@@ -44,6 +44,11 @@ namespace NocturneAccess.Systems.Navigation
         private const int MaxReplans = 6;
         private const long TimeoutMs = 30000;
         private const long WorldTimeoutMs = 90000;   // Shinjuku is about 70 x 80 metres at 4.8 a second; Medical Center to Yoyogi Park took 26 s
+        // 0.0.94: the time allowed grows with the planned path, at half the walking speed (dungeons about 0.83 units a ms, 19 Oct
+        // 2026 logs; the world map 0.48). The Assembly of Nihilo's 318-metre corridor (field 20 area 15, 17:02:15) timed out
+        // after 30 s, 50 metres short of its elevator door.
+        private const float DungeonUnitsPerMs = 0.4f, WorldUnitsPerMs = 0.24f;
+        private static long _allowMs;
         private const int ProgressTicks = 45;         // world map: no progress along the run for this long (about 1.5 s) re-plans
         private const float ProgressStep = 30f;
         private const long TurnWaitMs = 1500;
@@ -151,7 +156,7 @@ namespace NocturneAccess.Systems.Navigation
                 Stop($"pad {key} pressed", "Auto-walk stopped.");
                 return;
             }
-            if (Clock.ElapsedMilliseconds - _startMs > (_world ? WorldTimeoutMs : TimeoutMs))
+            if (Clock.ElapsedMilliseconds - _startMs > Math.Max(_allowMs, _world ? WorldTimeoutMs : TimeoutMs))
             {
                 Stop("timed out", "Auto-walk timed out.");
                 return;
@@ -436,6 +441,7 @@ namespace NocturneAccess.Systems.Navigation
             _idle = 0;
             _moveCount = FieldState.MoveCount;
             _startMs = Clock.ElapsedMilliseconds;
+            _allowMs = 0;
             _final = null;
             _awaitWarp = false;
             _awaitConfirm = false;
@@ -699,6 +705,7 @@ namespace NocturneAccess.Systems.Navigation
             _replans = 0;
             _idle = 0;
             _startMs = Clock.ElapsedMilliseconds;
+            _allowMs = 0;
             WalkGrid.Ensure(gb.fieldID, gb.areaID, gb.playerX, gb.playerY, gb.playerZ);
             if (Plan(gb, $"after warp {_warpsTaken}") || StartWarpLeg(gb, goal, $"after warp {_warpsTaken}"))
                 return;
@@ -798,6 +805,11 @@ namespace NocturneAccess.Systems.Navigation
                 Log.Info($"[Nav:Walk] Plan ({why}): no reachable cell towards {_target.Label} {_target.ResName} at {FieldData.F(_target.X)} {FieldData.F(_target.Z)}.");
                 return false;
             }
+            float length = 0f;
+            foreach (PathRun r in _runs)
+                length += (float)Math.Sqrt((r.Bx - r.Ax) * (r.Bx - r.Ax) + (r.Bz - r.Az) * (r.Bz - r.Az));
+            long elapsed = Clock.ElapsedMilliseconds - _startMs;
+            _allowMs = Math.Max(_allowMs, elapsed + (_world ? WorldTimeoutMs : TimeoutMs) / 2 + (long)(length / (_world ? WorldUnitsPerMs : DungeonUnitsPerMs)));
             _run = 0;
             _still = 0;
             _onDamageFloor = false;

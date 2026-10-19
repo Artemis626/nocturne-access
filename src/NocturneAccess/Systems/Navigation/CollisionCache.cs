@@ -369,6 +369,20 @@ namespace NocturneAccess.Systems.Navigation
             return best;
         }
 
+        /// <summary>The plane heights at (x, z) of every floor-like polygon whose outline contains it (same filters as FloorUnder).</summary>
+        internal static List<float> FloorsUnder(float x, float z, bool groundOnly = false, bool upOnly = false)
+        {
+            var heights = new List<float>();
+            foreach (CollisionPoly p in Items)
+            {
+                if (!p.IsFloorLike || p.Points.Length < 3 || !ContainsXZ(p.Points, x, z) || (groundOnly && !p.IsGroundAttr) || (upOnly && p.Normal.y >= 0f))
+                    continue;
+                Vector4 a = p.Points[0];
+                heights.Add(a.y - (p.Normal.x * (x - a.x) + p.Normal.z * (z - a.z)) / p.Normal.y);
+            }
+            return heights;
+        }
+
         /// <summary>Even-odd point-in-polygon test on the X and Z coordinates.</summary>
         internal static bool ContainsXZ(Vector4[] pts, float x, float z)
         {
