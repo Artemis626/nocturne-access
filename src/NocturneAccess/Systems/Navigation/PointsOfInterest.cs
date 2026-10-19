@@ -38,7 +38,8 @@ namespace NocturneAccess.Systems.Navigation
         public bool World;              // on the world map (FieldState.WorldMap): doors are entrances to places, heights are terrain
         public bool ToWorld;            // a dungeon door that leads to the world map (DoorTable.ToField below 10): "Exit to overworld" (0.0.44), never "explored" (0.0.45)
 
-        public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp || AwayWarp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") : Name.Length > 0 ? Name + " door" : DoorWord)
+        public string Mark = "";         // world map: where an entrance lies when several share its name ("10 metres south of Mifunashiro", 0.0.95)
+        public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp || AwayWarp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") + (Mark.Length > 0 ? ", " + Mark : "") : Name.Length > 0 ? Name + " door" : DoorWord)
             : Kind == PoiKind.Place ? Name
             : Kind == PoiKind.Event ? (Action ? ActionLabel : Story ? "Story event" : Name.Length > 0 ? "Event, " + Name : "Event")
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
@@ -530,6 +531,8 @@ namespace NocturneAccess.Systems.Navigation
                 else
                     q.Beyond = true;
             }
+            if (world)
+                MarkSharedEntrances(gb, list);
             foreach (Poi q in kept)
                 q.Category = CategoryOf(q, gb);
             return kept.OrderBy(q => q.Distance).ToList();
@@ -716,6 +719,40 @@ namespace NocturneAccess.Systems.Navigation
             otherFloors = CollisionCache.FloorsUnder(cx, cz, groundOnly: true, upOnly: true)
                 .Where(y => InSpan(y) && Math.Abs(y - chosen) > 20f).Distinct().ToArray();
         }
+
+        /// <summary>
+        /// Asakusa's overworld (field 5) has fifteen entrances the game names alike ("Asakusa entrance"), in separate pieces of a
+        /// spiral round Mifunashiro (Francesco, 19 Oct 2026: the game's own design). Each gets its direction and distance from
+        /// the Mifunashiro entrance (Francesco chose this, 19 Oct): "Asakusa entrance, 10 metres south of Mifunashiro". Where
+        /// two would say the same (01d_03 and 01d_04, both 10 metres south), they take the 16-point direction
+        /// ("south-south-west"). The anchor is the entrance whose door leads to Mifunashiro's field; its name is the game's.
+        /// </summary>
+        private static void MarkSharedEntrances(fldGlobalWork_t gb, List<Poi> all)
+        {
+            Poi anchor = all.FirstOrDefault(q => q.Kind == PoiKind.Door && q.Name.Length > 0
+                                                 && DoorTable.ToField(gb.fieldID, gb.areaID, q.ResName) == MifunashiroField);
+            if (anchor == null)
+                return;
+            List<Poi> shared = all.Where(q => q.Kind == PoiKind.Door && q != anchor && q.Name.Length > 0)
+                .GroupBy(q => q.Name).Where(g => g.Count() > 2).SelectMany(g => g).ToList();
+            string Words(Poi q, bool fine)
+            {
+                float bearing = Angles.Bearing(anchor.X, anchor.Z, q.X, q.Z);
+                string dir = fine ? Fine16[(int)Math.Round(Angles.Mod360(bearing) / 22.5) % 16] : Angles.CompassWord(bearing);
+                double metres = Math.Round(Math.Sqrt((q.X - anchor.X) * (q.X - anchor.X) + (q.Z - anchor.Z) * (q.Z - anchor.Z)) / 100.0);
+                return $"{metres} {(metres == 1 ? "metre" : "metres")} {dir} of {anchor.Name}";
+            }
+            foreach (Poi q in shared)
+                q.Mark = Words(q, false);
+            foreach (var same in shared.GroupBy(q => q.Name + "|" + q.Mark).Where(g => g.Count() > 1))
+                foreach (Poi q in same)
+                    q.Mark = Words(q, true);
+        }
+
+        private const int MifunashiroField = 35;   // door table: Asakusa overworld 01d_19 leads to field 35 (dump 19 Oct 2026, 16:10:50)
+        private static readonly string[] Fine16 = { "north", "north-north-east", "north-east", "east-north-east", "east", "east-south-east",
+            "south-east", "south-south-east", "south", "south-south-west", "south-west", "west-south-west", "west", "west-north-west",
+            "north-west", "north-north-west" };
 
         private const float PlayerOnFloor = 10f;   // the player stands about 2 above the floor (y -2 on the floor at 0)
         private const float AwayWarpRing = 90f;    // WalkGrid.AvoidMargin 45 plus a cell and a half: the walkable ring round a kept-out warp
