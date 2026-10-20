@@ -994,7 +994,8 @@ namespace NocturneAccess.Systems.Navigation
                          (Skipped.Count > 0 ? "; left out by their scripts: " + string.Join("; ", Skipped) : ""));
             // The Obelisk's time puzzle (0.0.98, Francesco): while a sphere's effect is on, only the next tile, whatever the filter.
             TimePuzzle.Step? step = TimePuzzle.Next(gb);
-            Poi next = step.HasValue ? all.FirstOrDefault(q => q.ResName == step.Value.Volume) : null;
+            string[] options = step.HasValue ? step.Value.Volume.Split('|') : Array.Empty<string>();
+            Poi next = all.Where(q => options.Contains(q.ResName)).OrderBy(q => q.Distance).FirstOrDefault();   // "a|b": the nearer exit
             if (next != null)
             {
                 next.NextStep = true;
