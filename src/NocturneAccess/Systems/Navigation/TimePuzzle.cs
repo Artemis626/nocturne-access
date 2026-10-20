@@ -5,6 +5,7 @@ using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2Cppfield_H;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
+using UnityEngine;
 
 namespace NocturneAccess.Systems.Navigation
 {
@@ -18,11 +19,13 @@ namespace NocturneAccess.Systems.Navigation
     /// has blocks (01pos_NN), each advancing the moon by a fixed number of phases when stepped onto (the tile procedure's IX 249:
     /// 0 to 4; the guides' "symbols"); every "Time passed quickly" tile is a bridge to a block (from the start) or between two
     /// blocks (either way); "Will you go back?" tiles lie between the start and the first blocks (Yes: back to the start, the
-    /// puzzle off); the exit tiles end the puzzle and the path or chest they open depends on the moon reached (4/8 or 8/8). The
+    /// puzzle off); the exit tiles end the puzzle, and where the route ends decides what lies beyond (77F right: its two exits do
+    /// the same, the path or the chest is past them; the route's moon total is 8, 8/8, or 12, 4/8). The
     /// guides give the block values in order (Ludo: 32F "3 then 1", 52F 8/8 "1-3-4", 77F left 8/8 "3-1-3-1"); each is matched
     /// here to the script's bridges. Tables are keyed by script area (areaID + 1) and the sphere touched; a floor or sphere
     /// with no table keeps the normal list (each tile says its narration, 0.0.97). Progress: the tiles the game fires
-    /// (fldEveHit.gFldEveRngIdx) in order; it starts again whenever 1614 goes off.
+    /// (fldEveHit.gFldEveRngIdx at the moment the game takes movement over, 0.0.103) in order; it starts again whenever 1614
+    /// goes off.
     /// </summary>
     internal static class TimePuzzle
     {
@@ -44,13 +47,21 @@ namespace NocturneAccess.Systems.Navigation
         // 1-3-4): 07, 10, 11, exit. (The chest is 4/8, 3-4-2-1-2: 06, 11, 13, 12, 12.)
         // Script area 7, sphere 01eve_50 (77F, the left puzzle): blocks 52 (3), 53 (0), 54 (1), 55 (3); start bridges 51 (52),
         // 52 (53); bridges 57 (53-52), 58 (54-52), 59 (55-53), 60 (55-54); exits 55, 56. The path is 8/8 (Samurai Gamers: 4
-        // steps; Ludo: 3-1-3-1): 51, 58, 60, 60, exit. The right puzzle (sphere 01eve_30) waits: the guides do not say which of
-        // its two routes opens the path; script areas 11 and 14 (85F, 128F) also wait.
+        // steps; Ludo: 3-1-3-1): 51, 58, 60, 60, exit.
+        // Script area 7, sphere 01eve_30 (77F, the right puzzle, west of the arrival; 0.0.103): blocks 33 (0), 34 (2), 35 (1),
+        // 36 (3), 37 (4); start bridges 31 (33), 32 (34), 33 (35); bridges 39 (33-34), 40 (34-35), 41 (33-36), 42 (35-37); exits
+        // 37 (south of 36) and 38 (south of 37), which do the same (flag 1614 off, atari_hoji_03 off). What lies beyond them
+        // differs (dump 20 Oct 21:42:11, tools/navregions.pl): past exit 37 the rail of Ride 01eve_14, whose far end joins the
+        // part of the floor with the left puzzle's sphere 01eve_50 (the path); past exit 38 Rides 01eve_16 (to an item box) and
+        // 01eve_18. So the path is Ludo's 8/8 "1-2-2-3" (zeros not counted): 33, 40, 39, 39, 39, 41, exit 37.
+        // Script areas 11 and 14 (85F, 128F) wait.
         private static readonly Dictionary<(int Area, string Sphere), Step[]> Solutions = new Dictionary<(int, string), Step[]>
         {
             [(3, "01eve_01")] = new[] { new Step("01eve_03"), new Step("01eve_07"), new Step("01eve_06") },
             [(5, "01eve_05")] = new[] { new Step("01eve_07"), new Step("01eve_10"), new Step("01eve_11"), new Step("01eve_14|01eve_15") },
             [(7, "01eve_50")] = new[] { new Step("01eve_51"), new Step("01eve_58"), new Step("01eve_60"), new Step("01eve_60"), new Step("01eve_55|01eve_56") },
+            [(7, "01eve_30")] = new[] { new Step("01eve_33"), new Step("01eve_40"), new Step("01eve_39"), new Step("01eve_39"), new Step("01eve_39"),
+                                        new Step("01eve_41"), new Step("01eve_37") },
         };
 
         private static readonly HashSet<(int, string)> Spheres = new HashSet<(int, string)>
@@ -67,7 +78,11 @@ namespace NocturneAccess.Systems.Navigation
         private static int _field = -1, _area = -1, _done;
         private static bool _on, _donePending;
         private static long _doneMs;
-        private static string _lastHit = "", _sphere = "", _lastStep = "";
+        private static string _sphere = "", _lastStep = "";
+        private static int _moves, _idle;
+        private static bool _armed;
+        private const int IdleTicks = 3;          // as AutoWalk: the movement routine did not run, an event took over
+        private const float TileReach = 150f;     // a tile box is 200 wide: the player crosses it within 100 of its centre
 
         /// <summary>
         /// Whether volume name is a step the game has just fired (0.0.101; Francesco, 20 Oct 2026: "Walk interrupted by an event"
@@ -103,7 +118,6 @@ namespace NocturneAccess.Systems.Navigation
                 _area = gb.areaID;
                 _done = 0;
                 _on = false;
-                _lastHit = "";
                 _lastStep = "";
                 _sphere = "";
             }
@@ -147,19 +161,35 @@ namespace NocturneAccess.Systems.Navigation
                 if (on)
                     _lastStep = "";   // kept when it goes off: the walk to the exit tile ends in the same moment
                 _done = 0;
-                _lastHit = "";
                 Log.Info($"[Nav:Puzzle] Time puzzle {(on ? "on" : "off")} in field {gb.fieldID} area {gb.areaID}, sphere {(_sphere.Length > 0 ? _sphere : "unknown")}: " +
                          (steps != null ? $"{steps.Length} steps known." : "no solution table, the full list stays."));
             }
-            // Out of every volume: the same tile can count again (77F's path crosses bridge 01eve_60 twice).
-            if (name.Length == 0)
+            // A tile fires when the game takes movement over (0.0.103): its scene stops the movement routine (FieldState.MoveCount
+            // still for IdleTicks, AutoWalk's own test) with the player on it. gFldEveRngIdx names the tile but keeps the last one
+            // after the game moves the player off (52F, 16:09: 5 -> 8 -> 11 -> 9, never -1), so a bridge crossed twice in a row
+            // (77F right: 01eve_39 three times, 77F left: 01eve_60 twice) showed no change; 0.0.99 to 0.0.102 counted it once.
+            // The player within TileReach of the tile tells a firing from a menu opened later on a block (blocks lie 240 or more
+            // from their bridges).
+            int moves = FieldState.MoveCount;
+            if (moves != _moves)
             {
-                _lastHit = "";
+                _moves = moves;
+                _idle = 0;
+                _armed = true;
                 return;
             }
-            if (!_on || steps == null || name == _lastHit)
+            if (!_armed || ++_idle < IdleTicks)
                 return;
-            _lastHit = name;
+            _armed = false;
+            if (!_on || steps == null || name.Length == 0)
+                return;
+            Vector4 at = ranges[i].sisei?.pos ?? default;
+            float dx = gb.playerX - at.x, dz = gb.playerZ - at.z;
+            if (dx * dx + dz * dz > TileReach * TileReach)
+            {
+                Log.Info($"[Nav:Puzzle] The game took movement {FieldData.F((float)Math.Sqrt(dx * dx + dz * dz))} from {name}: not a tile firing.");
+                return;
+            }
             // The tile just fired: the step after it is next (a later step counts too, so a run that skips ahead follows on).
             for (int k = _done; k < steps.Length; k++)
             {
