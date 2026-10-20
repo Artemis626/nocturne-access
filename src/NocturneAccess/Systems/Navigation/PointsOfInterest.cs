@@ -170,12 +170,25 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         /// <summary>Page Up / Page Down: "Explored door, room", "Door, passage", "Explored door to B10", "Item box, empty".</summary>
-        public string Spoken => PlainDoor ? DoorPhrase(false)
+        public bool NextStep;            // the Obelisk time puzzle's next tile (TimePuzzle, 0.0.98): the only point listed
+        public string StepAnswer = "";   // the answer its question needs ("No"), or ""
+
+        /// <summary>"Next step: Time passed quickly", "Next step: Will you go back? Answer No." (Francesco chose "Next step", 20 Oct 2026).</summary>
+        private string StepPhrase(bool inSentence)
+        {
+            string what = Detail.Length > 0 ? Detail : "Story event";
+            string answer = StepAnswer.Length == 0 ? "" : (what.EndsWith("?") || what.EndsWith(".") ? " " : ". ") + "Answer " + StepAnswer;
+            return (inSentence ? "next step: " : "Next step: ") + what + answer;
+        }
+
+        public string Spoken => NextStep ? StepPhrase(false)
+            : PlainDoor ? DoorPhrase(false)
             : Label + (State.Length > 0 ? ", " + State : "") + (DoorKind.Length > 0 ? ", " + DoorKind : "");
 
         /// <summary>The label inside a sentence: game names and "Soul" keep their capitals, the mod's own words do not;
         /// "explored door", "empty item box"; a door with a kind as on Page Up: "explored door, room".</summary>
-        public string InSentence => Action ? Spoken   // the game's own words keep their capitals: "Walking to Examine: There's a switch"
+        public string InSentence => NextStep ? StepPhrase(true)
+            : Action ? Spoken   // the game's own words keep their capitals: "Walking to Examine: There's a switch"
             : Kind == PoiKind.Event ? (Story ? "story event" : Name.Length > 0 ? "event, " + Name : "event")
             : PlainDoor ? DoorPhrase(true)
             : DoorKind.Length > 0 || ToWorld ? Spoken.ToLowerInvariant()
@@ -979,6 +992,17 @@ namespace NocturneAccess.Systems.Navigation
                          string.Join("; ", all.Select(q => $"{q.Index} {q.Spoken} [{q.Category}] {q.ResName} at {FieldData.F(q.X)} {FieldData.F(q.Z)} d {FieldData.F(q.Distance)}" +
                                                             $"{(q.ScriptNote.Length > 0 ? ", script " + q.ScriptNote : "")}{(q.Listed ? q.Via : " (not reachable, left out)")}")) +
                          (Skipped.Count > 0 ? "; left out by their scripts: " + string.Join("; ", Skipped) : ""));
+            // The Obelisk's time puzzle (0.0.98, Francesco): while a sphere's effect is on, only the next tile, whatever the filter.
+            TimePuzzle.Step? step = TimePuzzle.Next(gb);
+            Poi next = step.HasValue ? all.FirstOrDefault(q => q.ResName == step.Value.Volume) : null;
+            if (next != null)
+            {
+                next.NextStep = true;
+                next.StepAnswer = step.Value.Answer;
+                if (log)
+                    Log.Info($"[Nav:Puzzle] Pages list: only the next step, {next.ResName}{(next.StepAnswer.Length > 0 ? ", answer " + next.StepAnswer : "")}.");
+                return new List<Poi> { next };
+            }
             IEnumerable<Poi> list = all.Where(q => q.Listed && (_filter == PoiCategory.All || q.Category == _filter));
             if (Config.PoiMapOrder?.Value ?? true)
                 list = list.OrderByDescending(q => (int)Math.Floor(q.Z / MapBand)).ThenBy(q => q.X).ThenBy(q => q.Index);
