@@ -287,6 +287,12 @@ namespace NocturneAccess.Systems.Navigation
             }
             Log.Info($"{Tag} Script machine: {Ops.Length} opcodes, {Commands.Count} commands; BIT_CHK {Hex(_bitChk)}, BIT_ON {Hex(_bitOn)}, BIT_OFF {Hex(_bitOff)}, " +
                      $"SYNC {Hex(_sync)}, message {Hex(_message)}, prompts {string.Join(" ", System.Linq.Enumerable.Select(PromptCommands, Hex))}.");
+            // 0.0.97: the whole table, once, for reading field scripts offline (tools/unity/flowscript.pl prints COMM numbers only):
+            // the Obelisk's time tiles move objects through commands not yet named in the docs.
+            var names = new System.Text.StringBuilder();
+            for (int k = 0; k < Commands.Count; k++)
+                names.Append(k == 0 ? "" : "; ").Append(Hex(k)).Append(' ').Append(Commands[k].Name).Append('/').Append(Commands[k].Params);
+            Log.Info($"{Tag} Command table: {names}");
         }
 
         private static string Hex(int k) => k < 0 ? "none" : "0x" + k.ToString("X");

@@ -41,7 +41,7 @@ namespace NocturneAccess.Systems.Navigation
         public string Mark = "";         // world map: where an entrance lies when several share its name ("10 metres south of Mifunashiro", 0.0.95)
         public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp || AwayWarp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") + (Mark.Length > 0 ? ", " + Mark : "") : Name.Length > 0 ? Name + " door" : DoorWord)
             : Kind == PoiKind.Place ? Name
-            : Kind == PoiKind.Event ? (Action ? ActionLabel : Story ? "Story event" : Name.Length > 0 ? "Event, " + Name : "Event")
+            : Kind == PoiKind.Event ? (Action ? ActionLabel : Story ? (Detail.Length > 0 ? "Story event: " + Detail : "Story event") : Name.Length > 0 ? "Event, " + Name : "Event")
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
 
         /// <summary>
@@ -423,7 +423,8 @@ namespace NocturneAccess.Systems.Navigation
                     Action = script?.Outcome == ScriptOutcome.Action || jump,
                     Story = script?.Outcome == ScriptOutcome.Story,
                     Prompt = jump ? FieldScript.PanelText(JumpPrompt) : script?.Outcome == ScriptOutcome.Action ? script.PromptText : "",
-                    Detail = script?.Outcome == ScriptOutcome.Action ? script.Detail : "",
+                    Detail = script?.Outcome == ScriptOutcome.Action ? script.Detail
+                             : script?.Outcome == ScriptOutcome.Story ? FieldScript.FirstNarration(gb.areaID, name) : "",   // 0.0.97: the tile's narration ("Time passed quickly")
                     ScriptNote = script?.ToString() ?? "",
                 });
             }
