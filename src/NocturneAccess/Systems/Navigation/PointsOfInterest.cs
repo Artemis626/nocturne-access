@@ -254,6 +254,16 @@ namespace NocturneAccess.Systems.Navigation
         // field script; fldWap.fldDoor_Find2 case 4) wait on prompt 3, "Jump Off" (ETC_EN PANELMES_L0003).
         private const int JumpMoveType = 4, JumpPrompt = 3, LadderMoveType = 5;
 
+        // Ways a sighted player picks by eye, marked after the game's own prompt (Francesco's words; the others stay unmarked
+        // for exploration). The Obelisk 61F to 70F (field 31 area 5): five cubes in a row at z 1250, 01eve_05 to 01eve_13 west to
+        // east; each rides its rail (path_hoji_03 to 07) to an end point on 70F (006_01eve_NN: 01pos_06, 08, 10, 12, 14). Only
+        // 01eve_07's, 01pos_08 at -250 3250, lies on the platform of the lift to 77F (01eve_26, 6 metres on; dump 20 Oct
+        // 21:04:46), the second cube from the left facing north (Francesco, 20 Oct 2026, after much trial and error).
+        private static readonly Dictionary<(int Field, int Area, string Volume), string> WayMarks = new Dictionary<(int, int, string), string>
+        {
+            [(31, 5, "01eve_07")] = "to elevator for next floor",
+        };
+
         /// <summary>Event volumes the last Build left out because their script has nothing to do now (for the log).</summary>
         internal static readonly List<string> Skipped = new List<string>();
         // Larger place polygons are whole rooms, not door pads. Ginza's door pads are 800 x 400 (field 19, 4 Oct 2026: the Terminal,
@@ -442,7 +452,8 @@ namespace NocturneAccess.Systems.Navigation
                     Jump = jump,
                     Action = script?.Outcome == ScriptOutcome.Action || jump,
                     Story = script?.Outcome == ScriptOutcome.Story,
-                    Prompt = jump ? FieldScript.PanelText(JumpPrompt) : script?.Outcome == ScriptOutcome.Action ? script.PromptText : "",
+                    Prompt = (jump ? FieldScript.PanelText(JumpPrompt) : script?.Outcome == ScriptOutcome.Action ? script.PromptText : "")
+                             + (WayMarks.TryGetValue((gb.fieldID, gb.areaID, name), out string way) ? " " + way : ""),   // "Ride to elevator for next floor"
                     Detail = script?.Outcome == ScriptOutcome.Action ? script.Detail
                              : script?.Outcome == ScriptOutcome.Story ? FieldScript.FirstNarration(gb.areaID, name) : "",   // 0.0.97: the tile's narration ("Time passed quickly")
                     ScriptNote = script?.ToString() ?? "",
