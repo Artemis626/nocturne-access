@@ -301,8 +301,11 @@ namespace NocturneAccess.Systems.Navigation
                     kind = PoiKind.Door;
                 else if (h.resourceType == 10 && EventName.IsMatch(name) && placeName.Length > 0)
                     kind = PoiKind.Place;   // the basement elevator; dropped below when a real door already has the name
-                else if (h.resourceType == 10 && EventName.IsMatch(name) && !RoomSized(box))
+                else if (h.resourceType == 10 && EventName.IsMatch(name) && !RoomSized(box) && !(world && box != null && box.sizez == 0f))
                     kind = PoiKind.Event;   // a story volume: Loki and his room's door in Nyx's Lounge (01eve_01 "Talk", 01eve_03 "Open Door"), 0.0.53
+                // The overworld's flat event planes are crossed, not gone to (field 3's 01eve_07 to 14 set the encounter table,
+                // fldCommand_FLD_SET_ENCOUNT): every one in the dumps was left out before 0.0.100 (as "room-sized", by the padded
+                // corners) and stays out.
                 else if (box != null && box.TakaraIdx >= 0)
                     kind = PoiKind.ItemBox;
                 else if (box != null && box.npcIdx >= 0 && box.npcIdx < npcCount && npcs[box.npcIdx] != null)
@@ -323,7 +326,11 @@ namespace NocturneAccess.Systems.Navigation
                         takara = npc.ItemBoxIdx;
                 }
                 if (kind == null)
+                {
+                    if (h.resourceType == 10 && EventName.IsMatch(name))
+                        Skipped.Add(RoomSized(box) ? $"{name} room-sized, an area trigger" : $"{name} a flat plane on the overworld");   // said since 0.0.100: the 52F tiles went silently
                     continue;
+                }
                 // What the volume's own script does now (FieldScript, 0.0.71; Francesco, 12 Oct 2026: "Event" was too vague,
                 // switches and jump-offs are actions): an action is spoken with the game's prompt and narration, a story event
                 // as such, and one with nothing to do now (played already, or off in the game's on/off table) is left out.
@@ -697,17 +704,18 @@ namespace NocturneAccess.Systems.Navigation
             if (box == null)
                 return;
             Il2CppStructArray<Vector4> vtx = box.vtx;
-            if (vtx == null || vtx.Length == 0)
+            int corners = FieldData.BoxCorners(box);
+            if (corners == 0)
                 return;
             float lo = float.MaxValue, hi = float.MinValue, spread = 0f, cx = 0f, cz = 0f;
-            for (int k = 0; k < vtx.Length; k++)
+            for (int k = 0; k < corners; k++)
             {
                 Vector4 v = vtx[k];
                 lo = Math.Min(lo, v.y);
                 hi = Math.Max(hi, v.y);
                 spread += Math.Abs(v.x) + Math.Abs(v.z);
-                cx += v.x / vtx.Length;
-                cz += v.z / vtx.Length;
+                cx += v.x / corners;
+                cz += v.z / corners;
             }
             if (spread < 1f)
                 return;   // no box (size 0 0 0)
@@ -781,9 +789,10 @@ namespace NocturneAccess.Systems.Navigation
             x0 = z0 = float.MaxValue;
             x1 = z1 = float.MinValue;
             Il2CppStructArray<Vector4> vtx = box?.vtx;
-            if (vtx == null || vtx.Length == 0)
+            int corners = FieldData.BoxCorners(box);
+            if (corners == 0)
                 return false;
-            for (int k = 0; k < vtx.Length; k++)
+            for (int k = 0; k < corners; k++)
             {
                 x0 = Math.Min(x0, vtx[k].x); x1 = Math.Max(x1, vtx[k].x);
                 z0 = Math.Min(z0, vtx[k].z); z1 = Math.Max(z1, vtx[k].z);
@@ -796,7 +805,7 @@ namespace NocturneAccess.Systems.Navigation
         {
             float hi = float.MinValue;
             Il2CppStructArray<Vector4> vtx = box.vtx;
-            for (int k = 0; k < vtx.Length; k++)
+            for (int k = 0; k < FieldData.BoxCorners(box); k++)
                 hi = Math.Max(hi, vtx[k].y);
             return hi;
         }
@@ -1004,6 +1013,8 @@ namespace NocturneAccess.Systems.Navigation
                     Log.Info($"[Nav:Puzzle] Pages list: only the next step, {next.ResName}{(next.StepAnswer.Length > 0 ? ", answer " + next.StepAnswer : "")}.");
                 return new List<Poi> { next };
             }
+            if (step.HasValue && log)
+                Log.Info($"[Nav:Puzzle] The next step, {step.Value.Volume}, is not among this area's points: the full list stays.");
             IEnumerable<Poi> list = all.Where(q => q.Listed && (_filter == PoiCategory.All || q.Category == _filter));
             if (Config.PoiMapOrder?.Value ?? true)
                 list = list.OrderByDescending(q => (int)Math.Floor(q.Z / MapBand)).ThenBy(q => q.X).ThenBy(q => q.Index);

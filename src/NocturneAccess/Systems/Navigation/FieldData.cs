@@ -41,6 +41,18 @@ namespace NocturneAccess.Systems.Navigation
         internal static readonly System.Text.RegularExpressions.Regex EventVolume = new System.Text.RegularExpressions.Regex(@"^\d+eve_\d+$");
 
         /// <summary>
+        /// How many of a volume box's corners (gEvnRngBox.vtx, 8 entries) are real: a flat box (sizez 0, a plane the player
+        /// crosses) has 4 and the game leaves the other 4 at 0 0 0 (0.0.100; every dump: 135 boxes with sizez 0, all padded;
+        /// 1980 others, none). Read as corners, the zeros stretched a box to the area's origin: the Obelisk 52F bridge tiles
+        /// (01eve_10 to 01eve_15, 1750 to 2500 south of it) became "room-sized" and were never listed.
+        /// </summary>
+        internal static int BoxCorners(putevebox_s box)
+        {
+            int n = box?.vtx?.Length ?? 0;
+            return box != null && box.sizez == 0f ? Math.Min(n, 4) : n;
+        }
+
+        /// <summary>
         /// A volume box's horizontal facing (gEvnRngBox.boxnml, unit length in X and Z; doors point out to the side the player
         /// stands on), or 0 0 when it has none (PointsOfInterest, WarpMap, ExploredDoors).
         /// </summary>

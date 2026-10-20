@@ -397,17 +397,18 @@ namespace NocturneAccess.Systems.Navigation
             var zone = new WalkGrid.Zone { Id = id, X = centre.x, Z = centre.z, NX = 0f, NZ = 1f, HalfDepth = 100f, HalfWidth = 100f };
             floorY = centre.y + 100f;
             Il2CppStructArray<Vector4> vtx = box?.vtx;
-            if (vtx == null || vtx.Length == 0)
+            int corners = FieldData.BoxCorners(box);   // a flat box: 4, the rest are zeros (0.0.100)
+            if (corners == 0)
                 return zone;
             float sx = 0f, sz = 0f, bottom = float.MinValue;
-            for (int k = 0; k < vtx.Length; k++)
+            for (int k = 0; k < corners; k++)
             {
                 sx += vtx[k].x;
                 sz += vtx[k].z;
                 bottom = Math.Max(bottom, vtx[k].y);
             }
-            zone.X = sx / vtx.Length;
-            zone.Z = sz / vtx.Length;
+            zone.X = sx / corners;
+            zone.Z = sz / corners;
             floorY = bottom;
             FieldData.BoxFacing(box, out float nx, out float nz);
             if (nx != 0f || nz != 0f)
@@ -416,7 +417,7 @@ namespace NocturneAccess.Systems.Navigation
                 zone.NZ = nz;
             }
             float hd = 0f, hw = 0f;
-            for (int k = 0; k < vtx.Length; k++)
+            for (int k = 0; k < corners; k++)
             {
                 float dx = vtx[k].x - zone.X, dz = vtx[k].z - zone.Z;
                 hd = Math.Max(hd, Math.Abs(dx * zone.NX + dz * zone.NZ));
