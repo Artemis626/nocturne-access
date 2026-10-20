@@ -1027,6 +1027,14 @@ namespace NocturneAccess.Systems.Navigation
             fldGlobalWork_t gb = fldGlobal.fldGb;
             string at = gb == null ? "" : $" at {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)}";
             Log.Info($"[Nav:Walk] Ended{at} after {Clock.ElapsedMilliseconds - _startMs} ms, {_replans} re-plans: {why}.");
+            // A time puzzle step the game has fired: its own scene follows, the stop line is left out (0.0.101, Francesco).
+            // A key the player pressed still says it.
+            if (speech != null && _target != null && _target.NextStep && !why.StartsWith("pad ", StringComparison.Ordinal)
+                && _target.Names.Any(TimePuzzle.StepTaken))
+            {
+                Log.Info($"[Nav:Walk] Puzzle step {_target.ResName} taken: \"{speech}\" not said.");
+                return;
+            }
             if (speech != null)
                 Say(speech);
         }

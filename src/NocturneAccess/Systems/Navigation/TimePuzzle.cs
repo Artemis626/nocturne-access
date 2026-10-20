@@ -4,6 +4,7 @@ using Il2Cpp;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2Cppfield_H;
 using NocturneAccess.Core;
+using NocturneAccess.Speech;
 
 namespace NocturneAccess.Systems.Navigation
 {
@@ -57,9 +58,22 @@ namespace NocturneAccess.Systems.Navigation
             (3, "01eve_01"), (5, "01eve_05"), (7, "01eve_30"), (7, "01eve_50"), (11, "01eve_30"), (14, "01eve_30"),
         };
 
+        // Francesco's words (20 Oct 2026, after 52F), said once the last step has ended the puzzle and the player has control.
+        internal const string DoneWords = "Puzzle successfully completed, reached other side.";
+        private const long DonePendingMs = 15000;
+        private const int DoneHoldMs = 3000;
+
+        private static readonly System.Diagnostics.Stopwatch Clock = System.Diagnostics.Stopwatch.StartNew();
         private static int _field = -1, _area = -1, _done;
-        private static bool _on;
-        private static string _lastHit = "", _sphere = "";
+        private static bool _on, _donePending;
+        private static long _doneMs;
+        private static string _lastHit = "", _sphere = "", _lastStep = "";
+
+        /// <summary>
+        /// Whether volume name is a step the game has just fired (0.0.101; Francesco, 20 Oct 2026: "Walk interrupted by an event"
+        /// after every tile distracted him): auto-walk then ends without its stop line, the tile's own scene follows.
+        /// </summary>
+        internal static bool StepTaken(string name) => name.Length > 0 && name == _lastStep;
 
         /// <summary>The next step, or null when no time puzzle with a known solution is running here.</summary>
         internal static Step? Next(fldGlobalWork_t gb)
@@ -78,12 +92,33 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             if (gb.fieldID != _field || gb.areaID != _area)
             {
+                // An exit tile that leads into another area ends the puzzle there too (none seen yet: 52F's exit stays in area 4).
+                if (_on && _field == Obelisk && Solutions.TryGetValue((_area + 1, _sphere), out Step[] was) && _done >= was.Length)
+                {
+                    _donePending = true;
+                    _doneMs = Clock.ElapsedMilliseconds;
+                    Log.Info("[Nav:Puzzle] Solved: every step taken, then a new area; said once the player has control.");
+                }
                 _field = gb.fieldID;
                 _area = gb.areaID;
                 _done = 0;
                 _on = false;
                 _lastHit = "";
+                _lastStep = "";
                 _sphere = "";
+            }
+            if (_donePending)
+            {
+                if (Clock.ElapsedMilliseconds - _doneMs > DonePendingMs)
+                {
+                    _donePending = false;
+                    Log.Info("[Nav:Puzzle] The player did not take control in time: the solved line not said.");
+                }
+                else if (FieldState.IsExploring)
+                {
+                    _donePending = false;
+                    SpeechManager.SayHeld(DoneWords, DoneHoldMs);
+                }
             }
             if (gb.fieldID != Obelisk)
                 return;
@@ -101,7 +136,16 @@ namespace NocturneAccess.Systems.Navigation
             Solutions.TryGetValue((area, _sphere), out Step[] steps);
             if (on != _on)
             {
+                // Off right after the last step: the exit tile ended it (a "Will you go back?" Yes ends it with steps left).
+                if (!on && steps != null && _done >= steps.Length)
+                {
+                    _donePending = true;
+                    _doneMs = Clock.ElapsedMilliseconds;
+                    Log.Info("[Nav:Puzzle] Solved: every step taken and the puzzle ended; said once the player has control.");
+                }
                 _on = on;
+                if (on)
+                    _lastStep = "";   // kept when it goes off: the walk to the exit tile ends in the same moment
                 _done = 0;
                 _lastHit = "";
                 Log.Info($"[Nav:Puzzle] Time puzzle {(on ? "on" : "off")} in field {gb.fieldID} area {gb.areaID}, sphere {(_sphere.Length > 0 ? _sphere : "unknown")}: " +
@@ -122,6 +166,7 @@ namespace NocturneAccess.Systems.Navigation
                 if (Array.IndexOf(steps[k].Volume.Split('|'), name) < 0)
                     continue;
                 _done = k + 1;
+                _lastStep = name;
                 Log.Info($"[Nav:Puzzle] Step {k + 1} of {steps.Length} done ({name}); {(_done < steps.Length ? $"next {steps[_done].Volume}" : "all done")}.");
                 return;
             }
