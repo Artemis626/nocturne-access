@@ -54,7 +54,12 @@ namespace NocturneAccess.Systems.Navigation
         // differs (dump 20 Oct 21:42:11, tools/navregions.pl): past exit 37 the rail of Ride 01eve_14, whose far end joins the
         // part of the floor with the left puzzle's sphere 01eve_50 (the path); past exit 38 Rides 01eve_16 (to an item box) and
         // 01eve_18. So the path is Ludo's 8/8 "1-2-2-3" (zeros not counted): 33, 40, 39, 39, 39, 41, exit 37.
-        // Script areas 11 and 14 (85F, 128F) wait.
+        // Script area 14, sphere 01eve_30 (85F, area 13; 0.0.104): blocks 33 (1), 34 (2), 35 (3) in a row west to east at z 1750;
+        // start bridges 31 (33), 32 (34), 33 (35) at z 1400; "Will you go back?" 34 to 36 at z 1500; bridges 39 (33-34), 40
+        // (34-35); exits 37 (west of block 33) and 38 (north of block 35), the same script. Samurai Gamers: "Getting the Mystical
+        // Chest" 4 steps, "Unlocking the Path to the Next Area" 7 steps; Ludo: 8/8 "2-3-2-1" (4: ends on 33, exit 37, west, the
+        // item box side), 4/8 "1-2-1-2-1-2-3" (7: ends on 35, exit 38, north, toward the lift 01eve_08 at 0 4750). So the path
+        // here is 4/8: 31, 39 five times, 40, exit 38. Script area 11 (no exit tile clears 1614) and the 128F Moirai wait.
         private static readonly Dictionary<(int Area, string Sphere), Step[]> Solutions = new Dictionary<(int, string), Step[]>
         {
             [(3, "01eve_01")] = new[] { new Step("01eve_03"), new Step("01eve_07"), new Step("01eve_06") },
@@ -62,6 +67,8 @@ namespace NocturneAccess.Systems.Navigation
             [(7, "01eve_50")] = new[] { new Step("01eve_51"), new Step("01eve_58"), new Step("01eve_60"), new Step("01eve_60"), new Step("01eve_55|01eve_56") },
             [(7, "01eve_30")] = new[] { new Step("01eve_33"), new Step("01eve_40"), new Step("01eve_39"), new Step("01eve_39"), new Step("01eve_39"),
                                         new Step("01eve_41"), new Step("01eve_37") },
+            [(14, "01eve_30")] = new[] { new Step("01eve_31"), new Step("01eve_39"), new Step("01eve_39"), new Step("01eve_39"), new Step("01eve_39"),
+                                         new Step("01eve_39"), new Step("01eve_40"), new Step("01eve_38") },
         };
 
         private static readonly HashSet<(int, string)> Spheres = new HashSet<(int, string)>
@@ -79,9 +86,13 @@ namespace NocturneAccess.Systems.Navigation
         private static bool _on, _donePending;
         private static long _doneMs;
         private static string _sphere = "", _lastStep = "";
-        private static int _moves, _idle;
+        private static int _moves;
+        private static long _movedMs;
         private static bool _armed;
-        private const int IdleTicks = 3;          // as AutoWalk: the movement routine did not run, an event took over
+        // The movement routine still this long: an event took over (0.0.104). This tick runs several times per game frame, so 3
+        // still ticks (0.0.103, AutoWalk's count, which runs once per field update) passed within one frame while walking: every
+        // tick near a tile counted, and one crossing of 01eve_39 counted twice (21:55:30.123 and .157).
+        private const long IdleMs = 150;
         private const float TileReach = 150f;     // a tile box is 200 wide: the player crosses it within 100 of its centre
 
         /// <summary>
@@ -165,7 +176,7 @@ namespace NocturneAccess.Systems.Navigation
                          (steps != null ? $"{steps.Length} steps known." : "no solution table, the full list stays."));
             }
             // A tile fires when the game takes movement over (0.0.103): its scene stops the movement routine (FieldState.MoveCount
-            // still for IdleTicks, AutoWalk's own test) with the player on it. gFldEveRngIdx names the tile but keeps the last one
+            // still for IdleMs) with the player on it. gFldEveRngIdx names the tile but keeps the last one
             // after the game moves the player off (52F, 16:09: 5 -> 8 -> 11 -> 9, never -1), so a bridge crossed twice in a row
             // (77F right: 01eve_39 three times, 77F left: 01eve_60 twice) showed no change; 0.0.99 to 0.0.102 counted it once.
             // The player within TileReach of the tile tells a firing from a menu opened later on a block (blocks lie 240 or more
@@ -174,11 +185,11 @@ namespace NocturneAccess.Systems.Navigation
             if (moves != _moves)
             {
                 _moves = moves;
-                _idle = 0;
+                _movedMs = Clock.ElapsedMilliseconds;
                 _armed = true;
                 return;
             }
-            if (!_armed || ++_idle < IdleTicks)
+            if (!_armed || Clock.ElapsedMilliseconds - _movedMs < IdleMs)
                 return;
             _armed = false;
             if (!_on || steps == null || name.Length == 0)

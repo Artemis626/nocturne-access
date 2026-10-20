@@ -1153,7 +1153,15 @@ namespace NocturneAccess.Systems.Navigation
         {
             if (gb == null || gb.fieldID != _field || gb.areaID != _area || _selected < 0)
                 return null;
-            return Build(gb).FirstOrDefault(q => q.Index == _selected && q.Listed);
+            Poi poi = Build(gb).FirstOrDefault(q => q.Index == _selected && q.Listed);
+            // The puzzle's next step keeps its mark here too (0.0.104): Home says "Walking to next step: ...", as Page Up does.
+            TimePuzzle.Step? step = TimePuzzle.Next(gb);
+            if (poi != null && step.HasValue && poi.Names.Any(n => step.Value.Volume.Split('|').Contains(n)))
+            {
+                poi.NextStep = true;
+                poi.StepAnswer = step.Value.Answer;
+            }
+            return poi;
         }
 
         /// <summary>"5 metres, south-east", plus ", upstairs" or ", downstairs" when the point is on another floor (not on

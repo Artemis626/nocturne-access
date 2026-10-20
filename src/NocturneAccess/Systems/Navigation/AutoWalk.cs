@@ -1028,8 +1028,9 @@ namespace NocturneAccess.Systems.Navigation
             string at = gb == null ? "" : $" at {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)}";
             Log.Info($"[Nav:Walk] Ended{at} after {Clock.ElapsedMilliseconds - _startMs} ms, {_replans} re-plans: {why}.");
             // A time puzzle step the game has fired: its own scene follows, the stop line is left out (0.0.101, Francesco).
-            // A key the player pressed still says it.
-            if (speech != null && _target != null && _target.NextStep && !why.StartsWith("pad ", StringComparison.Ordinal)
+            // A key the player pressed still says it. Not tested on Poi.NextStep: Home walks to the point re-read by
+            // PointsOfInterest.Current, which has no such mark (0.0.101 said the line on every step, 21:55 session).
+            if (speech != null && _target != null && !why.StartsWith("pad ", StringComparison.Ordinal)
                 && _target.Names.Any(TimePuzzle.StepTaken))
             {
                 Log.Info($"[Nav:Walk] Puzzle step {_target.ResName} taken: \"{speech}\" not said.");
