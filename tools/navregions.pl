@@ -3,8 +3,8 @@
 # polygon overlapping 55..180 above a floor, moves between heights within 55, 8 ways, no corner cutting), labels the
 # connected regions and prints them with their size and extent, the region of each point of interest and warp landing,
 # and a map per region level.
-# Usage: perl tools/navregions.pl <dump> [maxcells per side, default 400] [layers, default 6] [player x z]
-# Defaults follow the game's WalkGrid (0.0.74): steps and risers 55, 6 layers, Attr 0x80 floors (NAVATTR80), no faces looking
+# Usage: perl tools/navregions.pl <dump> [maxcells per side, default 400] [layers, default 8] [player x z]
+# Defaults follow the game's WalkGrid (0.0.74): steps and risers 55, 8 layers (0.0.96), Attr 0x80 floors (NAVATTR80), no faces looking
 # down (NAVUP), every layer within a step (NAVMULTI), merged floors keep the higher (NAVMERGEHI), no drop under a continuing
 # floor (NAVCONT), seams narrower than a cell bridged (NAVSEAM, 0.0.77). Set any of them to 0 to see the older rules (12 Oct 2026: the stale defaults hid a corridor bug for an hour).
 # NAVHEAD=180 marks floors with another floor less than that above them (a diagnostic, not a game rule).
@@ -12,7 +12,7 @@
 use strict; use warnings; use POSIX qw(floor ceil);
 $ENV{$_} //= 1 for qw(NAVATTR80 NAVUP NAVMULTI NAVMERGEHI NAVCONT);
 my ($file, $maxCells, $layers, $px, $pz) = @ARGV;
-$maxCells ||= 400; $layers ||= 6;   # WalkGrid.Layers (6 since 0.0.62)
+$maxCells ||= 400; $layers ||= 8;   # WalkGrid.Layers (8 since 0.0.96)
 my $C = 30; my ($Clear, $Step, $Body, $MaxStep, $Merge, $NearR) = ($ENV{NAVCLEAR} // 46, 55, 180, 55, 20, 300);   # WalkGrid since 0.0.78 (clearance 46, was 65); NAVCLEAR tries another
 # NAVSTEP="step maxstep": the body's lowest blocking height and the largest height change of a move (0.0.63: 55 55).
 ($Step, $MaxStep) = split ' ', $ENV{NAVSTEP} if $ENV{NAVSTEP};

@@ -43,7 +43,7 @@ namespace NocturneAccess.Systems.Navigation
     internal static class WalkGrid
     {
         internal const float CellSize = 30f;
-        private const int Layers = 6;   // 3 until 0.0.60, 4 until 0.0.62 (the Mantra pyramid and field 24 area 9 stack more); heights past the limit are counted in the grid's log line
+        private const int Layers = 8;   // 3 until 0.0.60, 4 until 0.0.62, 6 until 0.0.96 (the Obelisk, field 31 area 1, stacks 15F to 30F with lift pits: 222 heights left out, the ramp into the 26F lift pit among them); heights past the limit are counted in the grid's log line
         // 0.0.78: 46 (was 65), just over the game's own radius. fldHit.fldHitChkUnit (read offline, 14 Oct 2026) pushes the player
         // 45 from a wall in dungeons (30 on the world map, 25 in one field); the 60 measured on 1 Oct is where the player ends,
         // the test being made one 29-unit step ahead. With 65 a passage under 130 wide had no cell: Ikebukuro East Hall's
