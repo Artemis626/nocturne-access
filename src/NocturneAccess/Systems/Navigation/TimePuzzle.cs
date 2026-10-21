@@ -67,6 +67,9 @@ namespace NocturneAccess.Systems.Navigation
             [(7, "01eve_50")] = new[] { new Step("01eve_51"), new Step("01eve_58"), new Step("01eve_60"), new Step("01eve_60"), new Step("01eve_55|01eve_56") },
             [(7, "01eve_30")] = new[] { new Step("01eve_33"), new Step("01eve_40"), new Step("01eve_39"), new Step("01eve_39"), new Step("01eve_39"),
                                         new Step("01eve_41"), new Step("01eve_37") },
+            [(11, "01eve_30")] = new[] { new Step("01eve_32"), new Step("01eve_38"), new Step("01eve_41"),
+                                         new Step("01eve_41"), new Step("01eve_38"), new Step("01eve_38"), new Step("01eve_38"), new Step("01eve_40"),
+                                         new Step("01eve_40"), new Step("01eve_40"), new Step("01eve_42") },
             [(14, "01eve_30")] = new[] { new Step("01eve_31"), new Step("01eve_39"), new Step("01eve_39"), new Step("01eve_39"), new Step("01eve_39"),
                                          new Step("01eve_39"), new Step("01eve_40"), new Step("01eve_38") },
         };
@@ -79,32 +82,17 @@ namespace NocturneAccess.Systems.Navigation
         // (evtCommand_CALL_BATTLE): on block index 3 (36) at 4 or 12, battle 270, flag 1611, beside 01pos_45 (east); on index 4
         // (37) at 8, battle 269, flag 1610, 01pos_47 (south); on index 5 (38) at 4 or 12, battle 268, flag 1609, 01pos_46
         // (west); flag 1605 once all three are set; passing new moon (0) drops the player through the floor (CALL_FIELD3 to
-        // 01pos_39 to 44). Shortest routes that stop on no other sister's spot (a search over the bridges): east 31, 39 (4);
-        // south 32, 40, 43, 43 (8); west 32, 38, 41 (4). The next sister not yet fought is the route (Samurai Gamers: Clotho 3
-        // steps, Lachesis 5, Atropos 3, its steps images only). Each route ends in a battle, not at an exit: no solved line.
+        // 01pos_39 to 44). 0.0.106 gave each sister a route of her own from the start: Atropos (east) fled twice and the
+        // puzzle went on (21 Oct 2026, 16:20 and 16:25). Walkthroughs (Screen Rant, GameFAQs, Neoseeker): each sister flees,
+        // all three must be fought in one run without leaving the board, youngest to oldest, right to left facing south:
+        // Clotho (west), Lachesis (south), Atropos (east). After a battle the player stands on the sister's block, the puzzle
+        // still on. One run (a search over the bridges, the moon only rising, below 16, stopping on no sister's spot out of
+        // turn): 32, 38, 41 (4: Clotho); 41, 38, 38, 38, 40 (8: Lachesis); 40, 40, 42 (12: Atropos). Ends in battles: no solved
+        // line.
         private const int MoiraiArea = 11;
-        private static readonly (int Flag, Step[] Route)[] Moirai =
-        {
-            (1611, new[] { new Step("01eve_31"), new Step("01eve_39") }),
-            (1610, new[] { new Step("01eve_32"), new Step("01eve_40"), new Step("01eve_43"), new Step("01eve_43") }),
-            (1609, new[] { new Step("01eve_32"), new Step("01eve_38"), new Step("01eve_41") }),
-        };
 
-        /// <summary>The route for this floor and sphere now: the Moirai floor's depends on the sisters already fought.</summary>
         private static Step[] StepsFor(int area, string sphere)
         {
-            if (area == MoiraiArea && sphere == "01eve_30")
-            {
-                foreach ((int flag, Step[] route) in Moirai)
-                {
-                    bool fought;
-                    try { fought = EventBit.evtBitCheck(flag); }
-                    catch { return null; }
-                    if (!fought)
-                        return route;
-                }
-                return null;   // all three fought
-            }
             return Solutions.TryGetValue((area, sphere), out Step[] steps) ? steps : null;
         }
 
@@ -155,6 +143,10 @@ namespace NocturneAccess.Systems.Navigation
         {
             fldGlobalWork_t gb = fldGlobal.fldGb;
             if (gb == null)
+                return;
+            // A battle (fields 200 to 299: 31 to 231) is not leaving the floor: the Moirai fights return the player to the
+            // sister's block with the puzzle still on (21 Oct 2026, 16:20:22), and the run goes on (0.0.107).
+            if (gb.fieldID >= 200 && gb.fieldID < 300)
                 return;
             if (gb.fieldID != _field || gb.areaID != _area)
             {
