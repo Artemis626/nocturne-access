@@ -59,7 +59,7 @@ namespace NocturneAccess.Systems.Navigation
         // (34-35); exits 37 (west of block 33) and 38 (north of block 35), the same script. Samurai Gamers: "Getting the Mystical
         // Chest" 4 steps, "Unlocking the Path to the Next Area" 7 steps; Ludo: 8/8 "2-3-2-1" (4: ends on 33, exit 37, west, the
         // item box side), 4/8 "1-2-1-2-1-2-3" (7: ends on 35, exit 38, north, toward the lift 01eve_08 at 0 4750). So the path
-        // here is 4/8: 31, 39 five times, 40, exit 38. Script area 11 (no exit tile clears 1614) and the 128F Moirai wait.
+        // here is 4/8: 31, 39 five times, 40, exit 38.
         private static readonly Dictionary<(int Area, string Sphere), Step[]> Solutions = new Dictionary<(int, string), Step[]>
         {
             [(3, "01eve_01")] = new[] { new Step("01eve_03"), new Step("01eve_07"), new Step("01eve_06") },
@@ -70,6 +70,45 @@ namespace NocturneAccess.Systems.Navigation
             [(14, "01eve_30")] = new[] { new Step("01eve_31"), new Step("01eve_39"), new Step("01eve_39"), new Step("01eve_39"), new Step("01eve_39"),
                                          new Step("01eve_39"), new Step("01eve_40"), new Step("01eve_38") },
         };
+
+        // Script area 11, sphere 01eve_30 (area 10, above 103F; 0.0.106): the Moirai. Blocks in two rows (01pos_NN, index IX 1,
+        // value): north row east to west 33 (0, 3), 34 (1, 1), 35 (2, 0); south row 36 (3, 1), 37 (4, 2), 38 (5, 3); start
+        // bridges 31 (to 33), 32 (34), 33 (35); bridges 37 (33-34), 38 (34-35), 39 (33-36), 40 (34-37), 41 (35-38), 42 (36-37),
+        // 43 (37-38); "Will you go back?" 34 to 36; no exit tile. After every step the shared procedure check_moon_state5 moves
+        // the moon one phase at a time (evtCommand_GET_MOON16, 0 to 15) and, at the last phase, fights a sister
+        // (evtCommand_CALL_BATTLE): on block index 3 (36) at 4 or 12, battle 270, flag 1611, beside 01pos_45 (east); on index 4
+        // (37) at 8, battle 269, flag 1610, 01pos_47 (south); on index 5 (38) at 4 or 12, battle 268, flag 1609, 01pos_46
+        // (west); flag 1605 once all three are set; passing new moon (0) drops the player through the floor (CALL_FIELD3 to
+        // 01pos_39 to 44). Shortest routes that stop on no other sister's spot (a search over the bridges): east 31, 39 (4);
+        // south 32, 40, 43, 43 (8); west 32, 38, 41 (4). The next sister not yet fought is the route (Samurai Gamers: Clotho 3
+        // steps, Lachesis 5, Atropos 3, its steps images only). Each route ends in a battle, not at an exit: no solved line.
+        private const int MoiraiArea = 11;
+        private static readonly (int Flag, Step[] Route)[] Moirai =
+        {
+            (1611, new[] { new Step("01eve_31"), new Step("01eve_39") }),
+            (1610, new[] { new Step("01eve_32"), new Step("01eve_40"), new Step("01eve_43"), new Step("01eve_43") }),
+            (1609, new[] { new Step("01eve_32"), new Step("01eve_38"), new Step("01eve_41") }),
+        };
+
+        /// <summary>The route for this floor and sphere now: the Moirai floor's depends on the sisters already fought.</summary>
+        private static Step[] StepsFor(int area, string sphere)
+        {
+            if (area == MoiraiArea && sphere == "01eve_30")
+            {
+                foreach ((int flag, Step[] route) in Moirai)
+                {
+                    bool fought;
+                    try { fought = EventBit.evtBitCheck(flag); }
+                    catch { return null; }
+                    if (!fought)
+                        return route;
+                }
+                return null;   // all three fought
+            }
+            return Solutions.TryGetValue((area, sphere), out Step[] steps) ? steps : null;
+        }
+
+        private static bool EndsInBattle(int area, string sphere) => area == MoiraiArea && sphere == "01eve_30";
 
         private static readonly HashSet<(int, string)> Spheres = new HashSet<(int, string)>
         {
@@ -86,6 +125,7 @@ namespace NocturneAccess.Systems.Navigation
         private static bool _on, _donePending;
         private static long _doneMs;
         private static string _sphere = "", _lastStep = "";
+        private static Step[] _steps;              // the route of the puzzle running now, fixed when it starts (0.0.106)
         private static int _moves;
         private static long _movedMs;
         private static bool _armed;
@@ -106,9 +146,9 @@ namespace NocturneAccess.Systems.Navigation
         {
             if (gb == null || gb.fieldID != Obelisk || !_on || gb.fieldID != _field || gb.areaID != _area)
                 return null;
-            if (!Solutions.TryGetValue((gb.areaID + 1, _sphere), out Step[] steps) || _done >= steps.Length)
+            if (_steps == null || _done >= _steps.Length)
                 return null;
-            return steps[_done];
+            return _steps[_done];
         }
 
         internal static void Tick()
@@ -119,7 +159,7 @@ namespace NocturneAccess.Systems.Navigation
             if (gb.fieldID != _field || gb.areaID != _area)
             {
                 // An exit tile that leads into another area ends the puzzle there too (none seen yet: 52F's exit stays in area 4).
-                if (_on && _field == Obelisk && Solutions.TryGetValue((_area + 1, _sphere), out Step[] was) && _done >= was.Length)
+                if (_on && _field == Obelisk && _steps != null && _done >= _steps.Length && !EndsInBattle(_area + 1, _sphere))
                 {
                     _donePending = true;
                     _doneMs = Clock.ElapsedMilliseconds;
@@ -129,6 +169,7 @@ namespace NocturneAccess.Systems.Navigation
                 _area = gb.areaID;
                 _done = 0;
                 _on = false;
+                _steps = null;
                 _lastStep = "";
                 _sphere = "";
             }
@@ -158,17 +199,19 @@ namespace NocturneAccess.Systems.Navigation
             bool on;
             try { on = EventBit.evtBitCheck(PuzzleFlag); }
             catch { return; }
-            Solutions.TryGetValue((area, _sphere), out Step[] steps);
+            // The route is fixed when the puzzle starts (0.0.106): the Moirai floor's flags change at its last step.
+            Step[] steps = _on ? _steps : StepsFor(area, _sphere);
             if (on != _on)
             {
                 // Off right after the last step: the exit tile ended it (a "Will you go back?" Yes ends it with steps left).
-                if (!on && steps != null && _done >= steps.Length)
+                if (!on && steps != null && _done >= steps.Length && !EndsInBattle(area, _sphere))
                 {
                     _donePending = true;
                     _doneMs = Clock.ElapsedMilliseconds;
                     Log.Info("[Nav:Puzzle] Solved: every step taken and the puzzle ended; said once the player has control.");
                 }
                 _on = on;
+                _steps = on ? steps : null;
                 if (on)
                     _lastStep = "";   // kept when it goes off: the walk to the exit tile ends in the same moment
                 _done = 0;
