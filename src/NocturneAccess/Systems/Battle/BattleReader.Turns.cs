@@ -31,7 +31,7 @@ namespace NocturneAccess.Systems.Battle
             if (key == _lastTurnKey)
                 return "";
             _lastTurnKey = key;
-            string name = PartyName(form);   // the unit data first: the panel can lag behind a summon (0.0.88)
+            string name = ActingName(d, form);   // the acting party entry's own unit (0.0.108), else the slot's (0.0.88)
             if (name.Length == 0 && Units.TryGetValue(form, out Unit u))
                 name = u.Name;
             if (name.Length == 0)
@@ -40,6 +40,33 @@ namespace NocturneAccess.Systems.Battle
             string side = _playerTurnUnsaid ? "Player turn. " : "";
             _playerTurnUnsaid = false;
             return $"{side}{name}'s turn";
+        }
+
+        /// <summary>
+        /// The name of the unit choosing its action (0.0.108): activeunit indexes nbMainProcessData_t.party, whose entry has its
+        /// own formindex; until a summon both run 0 to 3 together. After one (21 Oct 2026, 20:19:33) activeunit 3 was read as
+        /// form 3 and said "Mizuchi's turn" (the demon just summoned) while Succubus acted (her skills followed: Dormina,
+        /// Analyze, Zionga). The entry's unit comes from nbGetUnitWorkPointer; both readings are logged when they differ.
+        /// </summary>
+        private static string ActingName(nbMainProcessData_t d, int form)
+        {
+            string bySlot = PartyName(form);
+            try
+            {
+                nbParty_t p = d.party != null && form < d.party.Length ? d.party[form] : null;
+                datUnitWork_t w = p != null ? nbMainProcess.nbGetUnitWorkPointer(d, p) : null;
+                string byEntry = w != null && w.id != 0 ? NameOf(w.id) : "";
+                if (byEntry.Length == 0)
+                    return bySlot;
+                if (byEntry != bySlot || p.formindex != form)
+                    Log.Info($"{Tag} Acting unit: activeunit {form} is party entry formindex {p.formindex} \"{byEntry}\" (id {w.id}); slot {form} holds \"{bySlot}\": the entry is said.");
+                return byEntry;
+            }
+            catch (Exception e)
+            {
+                Log.Info($"{Tag} Acting unit: party entry {form} not read ({e.Message}); slot name said.");
+                return bySlot;
+            }
         }
 
         /// <summary>
