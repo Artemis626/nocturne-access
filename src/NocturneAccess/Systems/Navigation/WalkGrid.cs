@@ -56,7 +56,15 @@ namespace NocturneAccess.Systems.Navigation
         // the corridor fell into 9 pieces, nothing reachable. Field 24 area 5's stairs have 40-unit risers, walls too (352
         // places reachable instead of 2 211). Checked offline on every saved dump (tools/navregions.pl NAVSTEP="55 55").
         private const float StepHeight = 55f, BodyHigh = 180f;
-        private const float MaxStep = 55f;
+        // 0.0.105: 75 in dungeons, where no wall stands between two floors (walls and risers are tested apart, StepHeight). The
+        // Obelisk's lift floors lie 70 below the floor round them with no riser (99F, field 31 area 8: lift 01eve_01 at y
+        // -1570, the hall -1500), and the game walked the player from one to the other (21 Oct 2026, 13:08:51 to :52, -1572
+        // to -1502); at 55 the lift was "not reachable" and, standing on it, the rest of the floor too. Checked offline on
+        // all 145 dumps (tools/navregions.pl NAVSTEP="55 75"): in dungeons only those lift floors join (Obelisk areas 1, 2, 8:
+        // y -70, -1570, -4570 against 0, -1500, -4500). The world map keeps 55 (field 3 changes, a world-map walk is another
+        // test).
+        private const float DungeonMaxStep = 75f, WorldMaxStep = 55f;
+        private static float MaxStep = WorldMaxStep;
         private const float MergeBand = 20f;
         private const float TargetBand = 200f;
         private const float StartBand = 80f;
@@ -184,6 +192,7 @@ namespace NocturneAccess.Systems.Navigation
             LastPath.Clear();
 
             bool world = FieldState.WorldMapField(field);
+            MaxStep = world ? WorldMaxStep : DungeonMaxStep;
             var floors = new List<CollisionPoly>();
             var walls = new List<(float ax, float az, float bx, float bz, float lo, float hi)>();
             var worldWalls = new List<CollisionPoly>();

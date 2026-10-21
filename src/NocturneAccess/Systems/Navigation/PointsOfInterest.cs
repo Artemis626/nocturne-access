@@ -209,6 +209,9 @@ namespace NocturneAccess.Systems.Navigation
         /// enters it, so a walkable cell inside it (VolumeMargin around) is in reach whatever the distance to the centre.</summary>
         public bool HasBox;
         public float BoxX0, BoxX1, BoxZ0, BoxZ1;
+        /// <summary>An action volume as big as a room (a lift platform: the Obelisk 99F's 01eve_09, 2000 across; 0.0.105): reached,
+        /// walked to and arrived at by its box, as a door is.</summary>
+        public bool Big;
         internal const float VolumeMargin = 30f;
 
         /// <summary>
@@ -219,7 +222,7 @@ namespace NocturneAccess.Systems.Navigation
         /// </summary>
         internal bool NearVolume(float x, float z)
         {
-            if (IsDoorLike && HasBox && x >= BoxX0 - VolumeMargin && x <= BoxX1 + VolumeMargin && z >= BoxZ0 - VolumeMargin && z <= BoxZ1 + VolumeMargin)
+            if ((IsDoorLike || Big) && HasBox && x >= BoxX0 - VolumeMargin && x <= BoxX1 + VolumeMargin && z >= BoxZ0 - VolumeMargin && z <= BoxZ1 + VolumeMargin)
                 return true;
             return (x - X) * (x - X) + (z - Z) * (z - Z) <= ReachRadius * ReachRadius;
         }
@@ -311,7 +314,7 @@ namespace NocturneAccess.Systems.Navigation
                     kind = PoiKind.Door;
                 else if (h.resourceType == 10 && EventName.IsMatch(name) && placeName.Length > 0)
                     kind = PoiKind.Place;   // the basement elevator; dropped below when a real door already has the name
-                else if (h.resourceType == 10 && EventName.IsMatch(name) && !RoomSized(box) && !(world && box != null && box.sizez == 0f))
+                else if (h.resourceType == 10 && EventName.IsMatch(name) && !(world && (RoomSized(box) || box != null && box.sizez == 0f)))
                     kind = PoiKind.Event;   // a story volume: Loki and his room's door in Nyx's Lounge (01eve_01 "Talk", 01eve_03 "Open Door"), 0.0.53
                 // The overworld's flat event planes are crossed, not gone to (field 3's 01eve_07 to 14 set the encounter table,
                 // fldCommand_FLD_SET_ENCOUNT): every one in the dumps was left out before 0.0.100 (as "room-sized", by the padded
@@ -338,9 +341,13 @@ namespace NocturneAccess.Systems.Navigation
                 if (kind == null)
                 {
                     if (h.resourceType == 10 && EventName.IsMatch(name))
-                        Skipped.Add(RoomSized(box) ? $"{name} room-sized, an area trigger" : $"{name} a flat plane on the overworld");   // said since 0.0.100: the 52F tiles went silently
+                        Skipped.Add(RoomSized(box) ? $"{name} room-sized, an area trigger on the overworld" : $"{name} a flat plane on the overworld");   // said since 0.0.100: the 52F tiles went silently
                     continue;
                 }
+                // A room-sized event volume is an area trigger unless its script is an action (0.0.105, below): the Obelisk 99F's
+                // lift 01eve_09 ("Ride", to the next floor) is a platform 2000 across and was left out as a trigger; in every dump
+                // it is the only room-sized volume whose script is an action (one other is a story trigger).
+                bool roomSized = kind == PoiKind.Event && RoomSized(box);
                 // What the volume's own script does now (FieldScript, 0.0.71; Francesco, 12 Oct 2026: "Event" was too vague,
                 // switches and jump-offs are actions): an action is spoken with the game's prompt and narration, a story event
                 // as such, and one with nothing to do now (played already, or off in the game's on/off table) is left out.
@@ -353,6 +360,11 @@ namespace NocturneAccess.Systems.Navigation
                         continue;
                     }
                     script = FieldScript.Classify(gb.areaID, name);
+                    if (roomSized && script.Outcome != ScriptOutcome.Action)
+                    {
+                        Skipped.Add($"{name} room-sized, an area trigger ({script})");
+                        continue;
+                    }
                     // No procedure for it in the field's script: the game has nothing to run there (0.0.78; Francesco, 14 Oct 2026:
                     // Talk prompts in the Mantra Headquarters prison that did nothing). 01eve_04 of field 24 areas 13 and 14 was kept
                     // as "Event, Talk" from a prompt learned while a prisoner stood beside it; the only such volumes in 92 dumps.
@@ -439,6 +451,7 @@ namespace NocturneAccess.Systems.Navigation
                     World = world,
                     ToWorld = toWorld,
                     HasBox = hasBox,
+                    Big = roomSized,
                     BoxX0 = bx0,
                     BoxX1 = bx1,
                     BoxZ0 = bz0,
@@ -509,7 +522,7 @@ namespace NocturneAccess.Systems.Navigation
                     // the nearest cell at y 0 was 175 short, beside the ramp). Only then the radius test round the point.
                     bool inRect(float y) => WalkGrid.ReachableInRect(px, py, pz, q.BoxX0 - Poi.VolumeMargin, q.BoxZ0 - Poi.VolumeMargin,
                                                                     q.BoxX1 + Poi.VolumeMargin, q.BoxZ1 + Poi.VolumeMargin, y);
-                    bool boxed = q.IsDoorLike && q.HasBox;
+                    bool boxed = (q.IsDoorLike || q.Big) && q.HasBox;
                     q.Reachable = boxed && inRect(q.FloorY);
                     if (!q.Reachable && boxed && !q.Warp)
                         foreach (float alt in q.OtherFloors)

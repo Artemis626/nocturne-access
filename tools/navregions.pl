@@ -15,6 +15,8 @@ my ($file, $maxCells, $layers, $px, $pz) = @ARGV;
 $maxCells ||= 400; $layers ||= 8;   # WalkGrid.Layers (8 since 0.0.96)
 my $C = 30; my ($Clear, $Step, $Body, $MaxStep, $Merge, $NearR) = ($ENV{NAVCLEAR} // 46, 55, 180, 55, 20, 300);   # WalkGrid since 0.0.78 (clearance 46, was 65); NAVCLEAR tries another
 # NAVSTEP="step maxstep": the body's lowest blocking height and the largest height change of a move (0.0.63: 55 55).
+# 0.0.105: WalkGrid moves up to 75 in dungeons (the Obelisk's lift floors 70 below the hall), 55 on the world map (field < 10).
+{ open my $fh, '<', $file or die "$file: $!"; while (<$fh>) { if (/^fieldID (\d+)/) { $MaxStep = $1 < 10 ? 55 : 75; last } } close $fh; }
 ($Step, $MaxStep) = split ' ', $ENV{NAVSTEP} if $ENV{NAVSTEP};
 
 my (%poly, @pois, @landings, $player, %hitOff, %npcOff);

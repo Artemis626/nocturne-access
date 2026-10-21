@@ -365,6 +365,12 @@ namespace NocturneAccess.Systems.Navigation
                 return fldEveHit.OldHitDoor == i || (fldEveHit.gFldEveRngIdx == i && flat <= 150f);
             if (target.Kind == PoiKind.Place)
                 return (fldEveHit.OldHitDoor == i || fldEveHit.gFldEveRngIdx == i) && flat <= 250f;
+            if (target.Big)
+            {
+                // A lift platform 2000 across (the Obelisk 99F, 0.0.105): its hit anywhere inside the box, far from the centre.
+                fldGlobalWork_t gb = fldGlobal.fldGb;
+                return gb != null && fldEveHit.gFldEveRngIdx == i && target.NearVolume(gb.playerX, gb.playerZ);
+            }
             return (fldEveHit.OldHitInf == i || fldEveHit.gFldEveRngIdx == i) && flat <= 350f;
         }
 
