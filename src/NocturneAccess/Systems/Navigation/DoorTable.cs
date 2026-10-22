@@ -181,6 +181,33 @@ namespace NocturneAccess.Systems.Navigation
             }
         }
 
+        /// <summary>
+        /// The named doors of an area of this field and the area each leads to now (plain doors, warptype 0, into this field), as
+        /// fldDoor_Find would choose them (0.0.109, AreaRoutes in the Labyrinth: an area not yet visited). Empty on failure.
+        /// </summary>
+        internal static List<(string Name, int ToArea)> DoorsOf(int field, int area)
+        {
+            var doors = new List<(string, int)>();
+            try
+            {
+                Refresh(field);
+                foreach (string name in Entries.Where(e => e.AreaPlus1 == area + 1 && e.Name.Length > 0).Select(e => e.Name).Distinct().ToList())
+                {
+                    Entry e = Find(area, name);
+                    if (e == null || e.WarpType != 0)
+                        continue;
+                    e.Dest(field, area, out int toField, out int toArea);
+                    if (toField == field && toArea != area)
+                        doors.Add((name, toArea));
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[Nav:Doors] Doors of {field}/{area} could not be read: {ex.Message}");
+            }
+            return doors;
+        }
+
         /// <summary>The entry the game would take for this door now (fldWap.fldDoor_Find).</summary>
         private static Entry Find(int area, string name)
         {

@@ -40,7 +40,7 @@ namespace NocturneAccess.Systems.Navigation
 
         public string Mark = "";         // world map: where an entrance lies when several share its name ("10 metres south of Mifunashiro", 0.0.95)
         public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp || AwayWarp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") + (Mark.Length > 0 ? ", " + Mark : "") : Name.Length > 0 ? Name + " door" : DoorWord)
-            : Kind == PoiKind.Place ? Name
+            : Kind == PoiKind.Place ? (Detail.Length > 0 ? $"{Name}: {Detail}" : Name)
             : Kind == PoiKind.Event ? (Action ? ActionLabel : Story ? (Detail.Length > 0 ? "Story event: " + Detail : "Story event") : Name.Length > 0 ? "Event, " + Name : "Event")
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
 
@@ -262,6 +262,10 @@ namespace NocturneAccess.Systems.Navigation
         // east; each rides its rail (path_hoji_03 to 07) to an end point on 70F (006_01eve_NN: 01pos_06, 08, 10, 12, 14). Only
         // 01eve_07's, 01pos_08 at -250 3250, lies on the platform of the lift to 77F (01eve_26, 6 metres on; dump 20 Oct
         // 21:04:46), the second cube from the left facing north (Francesco, 20 Oct 2026, after much trial and error).
+        /// <summary>The Labyrinth of Amala: field 40 (the entrance, "Labyrinth of Amala") and its Kalpas from 41 ("First Kalpa",
+        /// dumps 22 Oct 2026), taken as 41 to 45.</summary>
+        internal static bool Labyrinth(int field) => field >= 40 && field <= 45;
+
         private static readonly Dictionary<(int Field, int Area, string Volume), string> WayMarks = new Dictionary<(int, int, string), string>
         {
             [(31, 5, "01eve_07")] = "to elevator for next floor",
@@ -352,6 +356,15 @@ namespace NocturneAccess.Systems.Navigation
                 // switches and jump-offs are actions): an action is spoken with the game's prompt and narration, a story event
                 // as such, and one with nothing to do now (played already, or off in the game's on/off table) is left out.
                 ScriptVerdict script = null;
+                // The Labyrinth of Amala's holes (0.0.109) are places named by their pad ("Hole"); their script says whether the
+                // way is open: "The hole is blocked" (the dry run, 22 Oct 2026, 13:56:50) until the story flag of that Kalpa.
+                string placeDetail = "";
+                if (kind == PoiKind.Place && !world && Labyrinth(gb.fieldID) && EventName.IsMatch(name))
+                {
+                    ScriptVerdict v = FieldScript.Classify(gb.areaID, name);
+                    if (v.Outcome == ScriptOutcome.Action)
+                        placeDetail = v.Detail;
+                }
                 if (kind == PoiKind.Event && !world)
                 {
                     if (!FieldScript.VolumeOn(gb.fieldID, gb.areaID, name))
@@ -425,6 +438,15 @@ namespace NocturneAccess.Systems.Navigation
                         if (!learned.Equals(here, StringComparison.OrdinalIgnoreCase))
                             destination = learned;
                     }
+                    // The Labyrinth of Amala (0.0.109, Francesco chose it, 22 Oct 2026): its areas have no names and its doors all
+                    // said "Door"; the game's door table says which area each leads to before any visit: the area's name where the
+                    // game has one, else "area N" (the game's area number).
+                    if (destination.Length == 0 && Labyrinth(gb.fieldID) && DoorTable.Leads(gb.fieldID, gb.areaID, name, out int lf, out int la)
+                        && lf == gb.fieldID && la >= 0 && la != gb.areaID)
+                    {
+                        string areaName = WhereAmI.AreaName(lf, la);
+                        destination = areaName.Length > 0 ? areaName : $"area {la}";
+                    }
                     escalator = EscalatorAt(gb, name, p.x, p.z, float.IsNaN(floorY) ? p.y + 100f : floorY, out escalatorDir);
                     behind = ExploredDoors.BehindLine(gb.fieldID, gb.areaID, name);
                 }
@@ -468,7 +490,7 @@ namespace NocturneAccess.Systems.Navigation
                     Prompt = (jump ? FieldScript.PanelText(JumpPrompt) : script?.Outcome == ScriptOutcome.Action ? script.PromptText : "")
                              + (WayMarks.TryGetValue((gb.fieldID, gb.areaID, name), out string way) ? " " + way : ""),   // "Ride to elevator for next floor"
                     Detail = script?.Outcome == ScriptOutcome.Action ? script.Detail
-                             : script?.Outcome == ScriptOutcome.Story ? FieldScript.FirstNarration(gb.areaID, name) : "",   // 0.0.97: the tile's narration ("Time passed quickly")
+                             : script?.Outcome == ScriptOutcome.Story ? FieldScript.FirstNarration(gb.areaID, name) : placeDetail,   // 0.0.97: the tile's narration ("Time passed quickly")
                     ScriptNote = script?.ToString() ?? "",
                 });
             }
