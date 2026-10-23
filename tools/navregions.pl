@@ -269,7 +269,7 @@ if ($ENV{NAVCELL}) {
     my $n = grep { $_ } @reach;
     print "one-way flood from the player: $n places\n";
     for my $p (@pois) {
-        my ($x, $z) = ($p->[2], $p->[3]); my ($i0, $i1, $j0, $j1) = cells($x - 250, $z - 250, $x + 250, $z + 250); my %ys;
+        my ($x, $z) = ($p->[2], $p->[3]); my $r = $ENV{NAVPOIR} // 250; my ($i0, $i1, $j0, $j1) = cells($x - $r, $z - $r, $x + $r, $z + $r); my %ys;
         for my $j ($j0 .. $j1) { for my $i ($i0 .. $i1) { my $c = $j * $W + $i; for my $l (0 .. ($cnt[$c] // 0) - 1) { my $k = $c * $layers + $l; $ys{ sprintf '%.0f', $hgt[$k] } = 1 if $reach[$k]; } } }
         printf "  %-8s %-18s reached at y: %s\n", $p->[0], $p->[1], %ys ? join(' ', sort { $a <=> $b } keys %ys) : 'none';   # not "|| 'none'": a lone y 0 is false in perl
     }

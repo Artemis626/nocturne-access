@@ -560,6 +560,8 @@ namespace NocturneAccess.Systems.Navigation
                 }
                 kept.Add(q);
             }
+            if (grid && !world)
+                FarSidesOfPairs(gb, kept, px, py, pz);
             if (!world)
                 MarkLadders(gb, kept);
             // Beyond warps (0.0.52): a point no walk reaches may be reached by taking warps (Francesco, 4 Oct 2026: parts of the Amala
@@ -613,6 +615,32 @@ namespace NocturneAccess.Systems.Navigation
         ///   there is known yet (Ginza's stairs to the overworld and the underpass Terminal were missing): ", beyond doors";
         /// - a door into a room whose only way on is an exit says so: "Door, to exit".
         /// </summary>
+        /// <summary>
+        /// A same-area door pair stands on both sides of one thin wall: Second Kalpa area 7 (field 42, 23 Oct 2026, 15:36) has
+        /// 01d_13 at x 3800 and 01d_14 at 4000, 200 wide each, the wall at 3900, and its footprint test (box plus VolumeMargin)
+        /// passed for both from one side, so the doors of the next rooms were listed as walkable (Francesco: about 7 doors in a
+        /// room with 3). The game's own landing decides (0.0.114): going through the partner puts the player in front of this door,
+        /// in its room; when no walk from here reaches that landing, this door is the far side, and the warp routes below decide
+        /// for it as for any point in another room (plain doors left out, landmarks "via 1 door").
+        /// </summary>
+        private static void FarSidesOfPairs(fldGlobalWork_t gb, List<Poi> kept, float px, float py, float pz)
+        {
+            foreach (Poi q in kept.Where(q => q.Kind == PoiKind.Door && q.Reachable && !q.Warp))
+            {
+                Warp w = WarpMap.At(gb, q.Index);
+                Warp partner = w?.Partner;
+                if (w == null || w.Touch || w.Ladder || partner == null || !partner.HasDest)
+                    continue;
+                if (WalkGrid.ReachableNear(px, py, pz, partner.DestX, partner.DestY, partner.DestZ, PairLandingReach))
+                    continue;
+                q.Reachable = false;
+                Log.Info($"[Nav:Poi] {q.ResName}: the far side of a door pair (its room, by {partner.Name}'s landing at " +
+                         $"{FieldData.F(partner.DestX)} {FieldData.F(partner.DestZ)}, is not walkable from here).");
+            }
+        }
+
+        private const float PairLandingReach = 75f;   // the landing lies 150 in front of the door, past the 46 clearance
+
         /// <summary>Ladders: their own kind, up or down (0.0.59); marked before the landmark rule, which leaves ladders out (0.0.90).</summary>
         private static void MarkLadders(fldGlobalWork_t gb, List<Poi> kept)
         {
