@@ -60,7 +60,8 @@ namespace NocturneAccess.Systems.Menus
             public Func<TMP_Text, bool> Bystander;   // MultiHighlight: a highlighted row that is not the cursor (the skill's user)     // the slot under the game's own cursor, or -1: highlighted even when its material is not
         }
 
-        private delegate int GameCursorFunc(IList<(int Slot, string Text, TMP_Text Component)> rows, out string detail);
+        // The rows are asked for only once the game draws the pick: the check runs every frame, closed or not (0.0.113).
+        private delegate int GameCursorFunc(Func<IList<(int Slot, string Text, TMP_Text Component)>> rows, out string detail);
 
         private sealed class Slot
         {
@@ -92,6 +93,7 @@ namespace NocturneAccess.Systems.Menus
             public string LastText;
             public int GameSlot = -1;   // MenuSpec.GameCursor as last read
             public string GameDetail = "";   // why the game cursor gave no row, as last logged
+            public int Errors;          // failures logged for this menu (the first five)
         }
 
         // Paths and materials: probe logs of 30 Sep 2026, see docs/class-index.md.
@@ -445,7 +447,9 @@ namespace NocturneAccess.Systems.Menus
                 }
                 catch (Exception ex)
                 {
-                    Log.Error($"{Tag} {state.Spec.Name}: {ex.Message}");
+                    // The game cursor is followed every frame: a failure that repeats is written a few times, not every frame.
+                    if (++state.Errors <= 5)
+                        Log.Error($"{Tag} {state.Spec.Name}: {ex.Message}");
                     state.PendingSlot = -1;
                 }
             }
@@ -465,8 +469,8 @@ namespace NocturneAccess.Systems.Menus
             if (!state.Slots.Values.Any(s => s.Material && UiUtil.IsVisible(s.Component)
                                              && !(state.Spec.Bystander != null && state.Spec.Bystander(s.Component))))
             {
-                var rows = state.Slots.OrderBy(kv => kv.Key).Select(kv => (kv.Key, kv.Value.Text, kv.Value.Component)).ToList();
-                slot = state.Spec.GameCursor(rows, out detail);
+                slot = state.Spec.GameCursor(
+                    () => state.Slots.OrderBy(kv => kv.Key).Select(kv => (kv.Key, kv.Value.Text, kv.Value.Component)).ToList(), out detail);
                 // Asked and not found: say why once per reading (13:46:50, 14 Oct 2026: the Items target pick fell silent and the
                 // log held nothing about the cursor).
                 if (slot < 0 && detail.Length > 0 && detail != state.GameDetail)

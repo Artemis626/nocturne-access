@@ -61,7 +61,7 @@ namespace NocturneAccess.Systems.Navigation
             DoorRegions.Clear();
             Closures.Clear();
             _learnedKey = "";
-            _tickKey = "";
+            _tickKey = NoKey;
         }
 
         /// <summary>A line of the explored file: "pass f/a/door f/a/door" or "reach f/a/door name name...". Others are ignored.</summary>
@@ -119,7 +119,9 @@ namespace NocturneAccess.Systems.Navigation
 
         // ---- The current area ----
 
-        private static string _tickKey = "";
+        // The area and grid build last learned: compared as numbers, not a string made on every frame (0.0.113).
+        private static readonly (int, int, int) NoKey = (int.MinValue, int.MinValue, int.MinValue);
+        private static (int Field, int Area, int Builds) _tickKey = NoKey;
         private static long _exploringSince = -1;
 
         /// <summary>Every frame: in a new area (or a rebuilt grid) the door links are learned once the player has control.</summary>
@@ -131,7 +133,7 @@ namespace NocturneAccess.Systems.Navigation
                 _exploringSince = -1;
                 return;
             }
-            string key = $"{gb.fieldID}/{gb.areaID}/{WalkGrid.Builds}";
+            var key = (gb.fieldID, gb.areaID, WalkGrid.Builds);
             if (key == _tickKey)
                 return;
             long now = Clock.ElapsedMilliseconds;
@@ -142,7 +144,7 @@ namespace NocturneAccess.Systems.Navigation
             _tickKey = key;   // set first: a failing build is not retried every frame
             if (!FieldState.WorldMap(gb))
                 PointsOfInterest.Build(gb);   // its last step calls Mark, which learns
-            _tickKey = $"{gb.fieldID}/{gb.areaID}/{WalkGrid.Builds}";   // the build may have rebuilt the grid
+            _tickKey = (gb.fieldID, gb.areaID, WalkGrid.Builds);   // the build may have rebuilt the grid
         }
 
         /// <summary>

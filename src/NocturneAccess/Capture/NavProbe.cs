@@ -33,6 +33,10 @@ namespace NocturneAccess.Capture
         private static int _traceNml, _traceSyukan;
         private static int _basyo = int.MinValue;
         private static bool _syukanSeen;
+        private static int _watchField;
+        private static readonly Func<int, string> AreaOf = v => FieldData.Q(FieldData.AreaName(_watchField, v));
+        private static readonly Func<int, string> FloorOf = v => FieldData.Q(FieldData.FloorName(_watchField, v));
+        private static readonly Func<int, string> RangeOf = EventRangeName;
         private static readonly Dictionary<string, int> Watched = new Dictionary<string, int>();
         private static int _errors;
 
@@ -85,17 +89,18 @@ namespace NocturneAccess.Capture
             if (gb == null)
                 return;
 
-            int field = gb.fieldID;
-            Watch("fieldID", field);
-            Watch("areaID", gb.areaID, v => FieldData.Q(FieldData.AreaName(field, v)));
+            // The describers are static delegates reading _watchField: no closure is made on every frame (0.0.113).
+            _watchField = gb.fieldID;
+            Watch("fieldID", _watchField);
+            Watch("areaID", gb.areaID, AreaOf);
             Watch("blockID", gb.blockID);
             Watch("AmSBlock", gb.AmSBlock);
-            Watch("AmFloor", gb.AmFloor, v => FieldData.Q(FieldData.FloorName(field, v)));
+            Watch("AmFloor", gb.AmFloor, FloorOf);
             Watch("ElvIdx", gb.ElvIdx);
             Watch("cammode", gb.cammode);
             Watch("cammode2", gb.cammode2);
             Watch("syukan_cam_reset_flg", gb.syukan_cam_reset_flg);
-            Watch("gFldEveRngIdx", fldEveHit.gFldEveRngIdx, EventRangeName);
+            Watch("gFldEveRngIdx", fldEveHit.gFldEveRngIdx, RangeOf);
             Watch("OldHitDoor", fldEveHit.OldHitDoor);
             Watch("OldHitInf", fldEveHit.OldHitInf);
         }

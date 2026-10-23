@@ -86,6 +86,8 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>Per update: lets go of the buttons once the minigame is over.</summary>
         internal static void Tick()
         {
+            // OnUpdate never runs inside ActionKey: a gate left open by an exception in the game's code is closed here (0.0.113).
+            PadInput.InPipeKey = false;
             bool inPipe = Active;
             if (inPipe == _in)
                 return;

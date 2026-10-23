@@ -30,7 +30,7 @@ namespace NocturneAccess.Systems.Menus
         /// second name ("All 2: Art, Unicorn"). DrawMode 1 seen in game (Skill user, Stats picks); the target picks' SelPos[1]
         /// (0.0.77) is counted the same way, to verify in game.
         /// </summary>
-        internal static int PartyPickSlot(IList<(int Slot, string Text, TMP_Text Component)> rows, out string detail)
+        internal static int PartyPickSlot(System.Func<IList<(int Slot, string Text, TMP_Text Component)>> rows, out string detail)
         {
             detail = "";
             if (_failed)
@@ -72,7 +72,7 @@ namespace NocturneAccess.Systems.Menus
             }
         }
 
-        private static int Read(IList<(int Slot, string Text, TMP_Text Component)> rows, out string detail)
+        private static int Read(System.Func<IList<(int Slot, string Text, TMP_Text Component)>> rows, out string detail)
         {
             detail = "";
             cmpDataStock_t gb = cmpDrawStock.GBWK;
@@ -100,7 +100,7 @@ namespace NocturneAccess.Systems.Menus
             if (at < 0)
                 return -1;
             int n = 0;
-            foreach (var (slot, text, component) in rows)
+            foreach (var (slot, text, component) in rows())
             {
                 if (text.Length == 0 || !UiUtil.IsVisible(component))
                     continue;
