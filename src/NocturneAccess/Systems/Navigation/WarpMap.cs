@@ -347,6 +347,13 @@ namespace NocturneAccess.Systems.Navigation
                     int r = WalkGrid.RegionAt(w.Partner.DestX, w.Partner.DestY, w.Partner.DestZ);
                     if (r >= 0)
                         g.Entries[w].Add(r);
+                    // A door is not entered from the room it leads into (0.0.115): a pair stands either side of one thin wall
+                    // (Second Kalpa area 7, 23 Oct 2026, dump 16:13:06: 01d_07 at z 5200 and 01d_08 at 5000, the wall at 5100),
+                    // and the ring round each box reached both rooms, so the next room's door counted as walked to from this one
+                    // (RouteTo: no legs) and was listed. Unless both sides are one region.
+                    int d = g.Dests[w];
+                    if (!w.Touch && !w.Ladder && r >= 0 && d >= 0 && d != r && g.Entries[w].Remove(d))
+                        Log.Info($"{Tag} {w.Name}: not entered from region {d}, the room it leads into (its own room is region {r}).");
                 }
             _graph = g;
             return g;
