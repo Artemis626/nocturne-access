@@ -155,7 +155,7 @@ namespace NocturneAccess.Systems.Navigation
             {
                 List<Poi> doors = pois.Where(q => q.Kind == PoiKind.Door && !q.Warp).ToList();
                 Learn(gb, doors);
-                if (!Enabled || Passes.Count == 0 && !PointsOfInterest.Labyrinth(gb.fieldID))
+                if (!Enabled || Passes.Count == 0)
                     return;
                 List<Poi> starts = doors.Where(q => q.Reachable).ToList();
                 if (starts.Count == 0)
@@ -249,11 +249,7 @@ namespace NocturneAccess.Systems.Navigation
 
             void Through(string exitKey, string from, int depth)
             {
-                if (found != null)
-                    return;
-                Passes.TryGetValue(exitKey, out HashSet<string> learned);
-                HashSet<string> arrivals = learned == null || learned.Count == 0 ? TableArrivals(field, exitKey) : learned;
-                if (arrivals == null)
+                if (found != null || !Passes.TryGetValue(exitKey, out HashSet<string> arrivals))
                     return;
                 foreach (string t in arrivals)
                 {
@@ -278,13 +274,9 @@ namespace NocturneAccess.Systems.Navigation
                 int depth = prev[at].depth;
                 if (depth >= MaxExits || !Parse(at, out int f, out int a, out string name))
                     continue;
-                var exits = new HashSet<string>();
-                if (name != AnyDoor)
-                    exits.Add(name);
+                var exits = new HashSet<string> { name };
                 if (Reach.TryGetValue(at, out HashSet<string> linked))
                     exits.UnionWith(linked);
-                else if (PointsOfInterest.Labyrinth(f) && !Visited(f, a))
-                    exits.UnionWith(DoorTable.DoorsOf(f, a).Select(d => d.Name));   // not visited yet: its doors taken as joined
                 foreach (string e in exits)
                     Through(ExploredDoors.Key(f, a, e), at, depth + 1);
             }
@@ -298,31 +290,6 @@ namespace NocturneAccess.Systems.Navigation
             Parse(route.Exits[0], out _, out _, out string first);
             route.FirstIndex = starts.FirstOrDefault(s => s.Names.Contains(first))?.Index ?? -1;
             return route.FirstIndex < 0 ? null : route;
-        }
-
-        // ---- The Labyrinth of Amala (0.0.109) ----
-
-        private const string AnyDoor = "*";   // an area entered by a door whose arrival is not known: any of its doors
-
-        /// <summary>
-        /// Where a door not yet gone through leads, from the game's door table (the Labyrinth only; Francesco chose it, 22 Oct
-        /// 2026: 21 areas in the First Kalpa, joined by doors, ladders and holes): the doors of the area it leads to that lead
-        /// back (the usual pair), else that area entered anywhere (AnyDoor). Null elsewhere or when the table has nothing.
-        /// </summary>
-        private static HashSet<string> TableArrivals(int field, string exitKey)
-        {
-            if (!PointsOfInterest.Labyrinth(field) || !Parse(exitKey, out int f, out int a, out string n) || n == AnyDoor
-                || !DoorTable.Leads(f, a, n, out int tf, out int ta) || tf != f || ta < 0 || ta == a)
-                return null;
-            var back = DoorTable.DoorsOf(f, ta).Where(d => d.ToArea == a).Select(d => ExploredDoors.Key(f, ta, d.Name)).ToList();
-            return new HashSet<string>(back.Count > 0 ? back : new List<string> { ExploredDoors.Key(f, ta, AnyDoor) });
-        }
-
-        /// <summary>Whether the door links of an area were learned (the player has stood in it with its walk grid).</summary>
-        private static bool Visited(int field, int area)
-        {
-            string prefix = $"{field}/{area}/";
-            return Reach.Keys.Any(k => k.StartsWith(prefix, StringComparison.Ordinal));
         }
 
         // ---- The key ----
