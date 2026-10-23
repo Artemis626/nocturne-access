@@ -48,7 +48,8 @@ namespace NocturneAccess.Input
             Add("routes through other areas", Config.KeyAreaRoutes, KeyCode.F7, AreaRoutes.Toggle);
             Add("navigation dump", Config.KeyNavDump, KeyCode.F6, NavDump.Dump, shift: true);
             Add("battle dump", Config.KeyBattleDump, KeyCode.F2, BattleDump.Dump, shift: true);
-            Add("blobber mode", Config.KeyBlobber, KeyCode.F4, BlobberMode.Toggle);
+            // F4 is shared too: the falling minigame's autopilot while falling (Francesco, 23 Oct 2026), blobber mode elsewhere.
+            Add("blobber mode", Config.KeyBlobber, KeyCode.F4, () => { if (PipePilot.Active) PipePilot.Toggle(); else BlobberMode.Toggle(); });
             // F3 is shared: centring while exploring, the enemy list in battle (Francesco, 2 Oct 2026: F2 split in two).
             Add("centre on the square", Config.KeyCentre, KeyCode.F3, () => { if (!BattleReader.Active) BlobberMode.RequestCentre(); });
             Add("battle enemies", Config.KeyBattleEnemies, KeyCode.F3, () => { if (BattleReader.Active) BattleReader.SpeakEnemies(); });

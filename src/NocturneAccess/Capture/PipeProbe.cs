@@ -50,7 +50,7 @@ namespace NocturneAccess.Capture
                 sb.Append($"[Pipe] t {now} flow {pipeMain.pipeFlow} my {pipeSection.myIndex} lr {pipeSection.lrRad:0.###} ud {pipeSection.udRad:0.###} ");
                 sb.Append($"maka {pipeSection.myMaka} dmg {pipeSection.playerDAMAGE} st {pipeSection.myStatus} rbox {pipeSection.rBoxNum} keys ");
                 sb.Append(PadInput.Real(SDF_PADMAP.L, 0) ? "L" : "").Append(PadInput.Real(SDF_PADMAP.R, 0) ? "R" : "")
-                  .Append(PadInput.Real(SDF_PADMAP.U, 0) ? "U" : "").Append(PadInput.Real(SDF_PADMAP.D, 0) ? "D" : "").Append(" |");
+                  .Append(PadInput.Real(SDF_PADMAP.U, 0) ? "U" : "").Append(PadInput.Real(SDF_PADMAP.D, 0) ? "D" : "").Append($" me {pipeObject.ObjWork?[149]?.offset} pilot {PipePilot.Doing} |");
                 Il2CppReferenceArray<tagPipeObject> objs = pipeObject.ObjWork;
                 int n = objs == null ? 0 : objs.Length;
                 for (int i = 0; i < n; i++)
@@ -58,7 +58,7 @@ namespace NocturneAccess.Capture
                     tagPipeObject o = objs[i];
                     if (o == null || o.enabled == 0)
                         continue;
-                    sb.Append($" {i}:{o.id}/{o.action} {o.pos.x:0.#},{o.pos.y:0.#} v{o.vpos.x:0.##},{o.vpos.y:0.##} w{o.w:0.#} s{o.status:X}");
+                    sb.Append($" {i}:{o.id}/{o.action} d{o.offset} {o.pos.x:0.#},{o.pos.y:0.#} v{o.vpos.x:0.##},{o.vpos.y:0.##} w{o.w:0.#} s{o.status:X}");
                 }
                 Log.Info(sb.ToString());
                 _samples++;

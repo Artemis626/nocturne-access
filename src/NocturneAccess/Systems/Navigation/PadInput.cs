@@ -20,7 +20,8 @@ namespace NocturneAccess.Systems.Navigation
     /// keyboard map writes only for R2, never read here), so Real can ask it the same question the game will ask.
     ///
     /// Postfixes on DDS3_ORGMAP_PRESS and DDS3_PADCHECK_PRESS act only while fldPlayer.fldPlayerCalc runs
-    /// (FieldState.InPlayerCalc): menus, battles and events never see an injected press. A true answer is noted for
+    /// (FieldState.InPlayerCalc), or while the falling minigame reads its keys (InPipeKey, 0.0.112): menus, battles and
+    /// events never see an injected press. A true answer is noted for
     /// the trace; a held button answers true. [NocturneAccess_Navigation] PadInjection = false disables the hooks.
     /// </summary>
     internal static class PadInput
@@ -34,6 +35,9 @@ namespace NocturneAccess.Systems.Navigation
         private static bool _realFailed;
 
         internal static bool Installed { get; private set; }
+
+        /// <summary>True only while the falling minigame reads its keys (pipeSection.ActionKey, PipePilot's prefix and postfix, 0.0.112).</summary>
+        internal static bool InPipeKey;
 
         internal static void Install()
         {
@@ -109,7 +113,7 @@ namespace NocturneAccess.Systems.Navigation
 
         private static void AfterPress(SDF_PADMAP __0, ref bool __result)
         {
-            if (_readingReal || !FieldState.InPlayerCalc)
+            if (_readingReal || !FieldState.InPlayerCalc && !InPipeKey)
                 return;
             int b = (int)__0;
             if ((uint)b >= Buttons)
