@@ -114,7 +114,10 @@ namespace NocturneAccess.Systems.Navigation
         /// is known. Everything else (plain doors, ladders, item boxes, people, events) is listed only where the player can walk to
         /// it. Replaces 0.0.59's set (named doors, exits, ladders, "exit" doors) and 0.0.55's listing of every point through warps.
         /// </summary>
-        public bool Landmark => !Warp && !AwayWarp && !Ladder && !Jump && (Kind == PoiKind.Door && (Name.Length > 0 || ToWorld || DoorKind == "exit" || DoorKind == "to exit") || Kind == PoiKind.Place && Name.Length > 0);
+        /// <summary>The way on Shift+End chose here (WayOn, 0.0.118): listed across rooms like a landmark until the player leaves the area.</summary>
+        public bool Guide;
+
+        public bool Landmark => Guide || !Warp && !AwayWarp && !Ladder && !Jump && (Kind == PoiKind.Door && (Name.Length > 0 || ToWorld || DoorKind == "exit" || DoorKind == "to exit") || Kind == PoiKind.Place && Name.Length > 0);
 
         /// <summary>The way through door pairs or warps to a point not yet known as a landmark (decided after "to exit", 0.0.91).</summary>
         internal List<Warp> HeldLegs;
@@ -455,6 +458,7 @@ namespace NocturneAccess.Systems.Navigation
                     Index = i,
                     Kind = kind.Value,
                     ResName = name,
+                    Guide = !world && WayOn.IsMarked(gb.fieldID, gb.areaID, name),
                     Name = kind == PoiKind.Door || kind == PoiKind.Place ? placeName : kind == PoiKind.Event ? ExploredDoors.PromptOf(gb.fieldID, gb.areaID, name) : "",
                     Soul = soul,
                     Demon = demon,

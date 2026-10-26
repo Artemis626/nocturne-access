@@ -31,7 +31,10 @@ namespace NocturneAccess.Systems.Navigation
         private const float JogLength = 90f;         // world map: a shorter run between two runs of one direction is folded into them
 
         /// <summary>End (OnUpdate).</summary>
-        internal static void Speak()
+        internal static void Speak() => SpeakWith("");
+
+        /// <summary>End's line after a lead-in: Shift+End says "Way on. " first (WayOn, 0.0.118), so a mispress is heard at once.</summary>
+        internal static void SpeakWith(string lead)
         {
             fldGlobalWork_t gb = fldGlobal.fldGb;
             if (gb == null || !FieldState.IsExploring)
@@ -48,7 +51,7 @@ namespace NocturneAccess.Systems.Navigation
             string text = Directions(gb, target);
             // The target named first, always (0.0.117; Francesco, 26 Oct 2026: End confirms the selection, so Insert went):
             // "Door. Ahead, 12 metres." / "Explored door to area 12, passage. Ahead, ..." (before, only points with details).
-            text = $"{TextUtil.Capitalize(target.InSentence)}. {text}";
+            text = $"{lead}{TextUtil.Capitalize(target.InSentence)}. {text}";
             Log.Info($"[Nav:Guide] To {target.Label} {target.ResName} (gEvnRng {target.Index}) from {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)}: {text}");
             SpeechManager.Say(text, interrupt: true);
         }

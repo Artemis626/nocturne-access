@@ -61,6 +61,7 @@ namespace NocturneAccess.Input
             Add("previous point of interest filter", Config.KeyPoiFilterPrevious, KeyCode.PageDown, () => PointsOfInterest.CycleFilter(-1), shift: true);
             Add("walk to point of interest", Config.KeyPoiWalk, KeyCode.Home, AutoWalk.Request);
             Add("directions to point of interest", Config.KeyPoiGuide, KeyCode.End, RouteGuide.Speak);
+            Add("way on", Config.KeyWayOn, KeyCode.End, WayOn.Speak, shift: true);
             Add("where am I", Config.KeyWhereAmI, KeyCode.Delete, WhereAmI.Speak);
         }
 

@@ -1,0 +1,43 @@
+# The way on, per area: Shift+End (Francesco, 26 Oct 2026). Read by Systems/Navigation/WayOn.cs.
+#
+# Each line: field area volume volume ...  The volumes are the game's own names (door, Jump Off, ladder, event volume) in
+# order of preference: Shift+End takes the first one the player can walk to, else the first reached through doors of the
+# area, else the first one listed at all ("beyond doors"). Several are given where the game splits an area into parts.
+# Everything after # is a note. Lines are derived from walkthroughs, then matched to the game's door table (navigation
+# dumps), the area files' arrival points (f042_NNN.f2) and the field script (f042.bf): never a guide's own words.
+
+# ---- Second Kalpa (field 42): to the shaft into the Third Kalpa ----
+# Route (Samurai Gamers' Second Kalpa walkthrough, Part 3, last steps, matched to the game's data on 26 Oct 2026):
+# B1 area 9's hole 01d_16 lands in area 12's south-east room (01pos_13, 1200 -1850; the other hole, 01d_15, lands in the
+# south-west room, 01pos_12 -1200 -1750); there the Moon Key door 01d_02 (the Moon Key is the B4 item box, area 22)
+# opens to the south part and its Jump Off 01d_08, down to area 21's south part (01pos_04, 0 -6650); its ladder 01d_02
+# goes down to area 23, whose door 01d_01 leads to area 1: the peephole (01eve_01, "There is a peephole...") and the shaft
+# (01eve_02, "There is a shaft leading downward.") into the Third Kalpa.
+42 0  01d_01                                   # 1F, the Hall of Candles: to area 2
+42 2  01d_03 01d_02 01d_04                     # 1F: the ladder down to area 4, else to area 3
+42 3  01d_03 01d_01                            # 1F: the Jump Off to area 4
+42 4  01d_02                                   # B1: to area 9
+42 5  01d_02                                   # B1: to area 8
+42 6  01d_16 01d_14 01d_07                     # B1: to area 5, else to area 7
+42 7  01d_17                                   # B1: to area 4
+42 8  01d_13                                   # B1: to area 9
+42 9  01d_16                                   # B1: the hole into area 12's south-east room
+42 10 01d_01 01d_07 01d_04                     # B2: the ladder up to area 5; from other parts, area 12's north-east or south-west room
+42 11 01d_01                                   # B2: to area 10, the part with the ladder up
+42 12 01d_02 01d_08 01d_06 01d_04 01d_05 01d_07 01d_01   # B2: the Moon Key door, then the Jump Off; from the other rooms, to area 11
+42 13 01d_04                                   # B2: to area 14
+42 14 01d_02                                   # B2: the ladder up to area 6
+42 15 01d_01 01d_02                            # B3: to area 17 or area 20 (each half of the room has one)
+42 16 01d_01                                   # B3: to area 17
+42 17 01d_03                                   # B3: the ladder up to area 10
+42 18 01d_01                                   # B3: to area 15
+42 19 01d_05                                   # B3: to area 18
+42 20 01d_03                                   # B3: the ladder up to area 10
+42 21 01d_02 01d_01                            # B3: the ladder down to area 23 (south part), else to area 15 (north part)
+42 22 01d_01                                   # B4: the ladder up to area 19
+42 23 01d_01                                   # to area 1
+42 1  01eve_02 01eve_01                        # the shaft into the Third Kalpa (the peephole beside it is optional)
+42 24 01d_04                                   # to area 14
+42 25 01d_02                                   # to area 13
+42 26 01d_02                                   # to area 24
+42 27 01d_02 01d_03                            # Burial Chamber: to area 17, else to area 20
