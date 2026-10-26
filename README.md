@@ -57,6 +57,20 @@ See `docs/KEYS.md`.
 
 Game files and generated assemblies are never committed.
 
+## Acknowledgements
+
+Some parts of the game are solved by sight: the Obelisk's time puzzles, the order of the Moirai fights, and the route
+through the Labyrinth of Amala. For these the mod's guidance was worked out with the help of fan walkthroughs, then matched
+to the game's own data, so the mod speaks only the game's names and never the guides' text. Thanks to their authors:
+
+- [Samurai Gamers](https://samurai-gamers.com/shin-megami-tensei-iii-nocturne-hd-remaster/walkthroughs-8/): the Obelisk
+  puzzles and the Labyrinth of Amala, including the
+  [Second Kalpa walkthrough](https://samurai-gamers.com/shin-megami-tensei-iii-nocturne-hd-remaster/second-kalpa-walkthrough/)
+  behind the way on (Shift+End).
+- [Ludo.guide](https://www.ludo.guide/guide/shin-megami-tensei-iii-nocturne-hd-remaster): the Obelisk puzzle routes.
+- [Screen Rant](https://screenrant.com/), [GameFAQs](https://gamefaqs.gamespot.com/) and
+  [Neoseeker](https://www.neoseeker.com/): the Moirai sisters' fights.
+
 ## License
 
 GNU General Public License version 3. See `LICENSE` and `THIRD_PARTY_NOTICES.md`.
