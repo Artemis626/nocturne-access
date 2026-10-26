@@ -128,9 +128,13 @@ namespace NocturneAccess.Systems.Battle
         /// HP 10 of 10". Identical enemies give identical banners, so the banner alone cannot tell them apart.
         /// Group targets (ctype not 0) are left to the banner.
         /// </summary>
+        private static void AfterTarSel() => _tarSelAt = Clock.ElapsedMilliseconds;
+
         private static void PollTarget(long now)
         {
-            if (now - _targetCallAt > TargetWindowMs)
+            // The help banner, or the cursor's process on the party's turn when the game draws no banner (0.0.119: a dead ally).
+            long seen = Math.Max(_targetCallAt, _sideKnown && !_sideEnemy ? _tarSelAt : long.MinValue / 2);
+            if (now - seen > TargetWindowMs)
             {
                 _lastTargetForm = int.MinValue;
                 _targetFromData = false;
@@ -159,7 +163,7 @@ namespace NocturneAccess.Systems.Battle
 
             _targetFromData = true;
             string race = _targetName == u.Name && _targetRace.Length > 0 ? _targetRace + " " : "";
-            Log.Info($"{Tag} Target formindex {form} ({u.Name}).");
+            Log.Info($"{Tag} Target formindex {form} ({u.Name}){(now - _targetCallAt > TargetWindowMs ? ", no help banner: from the cursor's process" : "")}.");
             SpeechManager.Say($"{race}{DisplayName(u)}, HP {u.Hp} of {u.MaxHp}", interrupt: true, force: true);
         }
     }

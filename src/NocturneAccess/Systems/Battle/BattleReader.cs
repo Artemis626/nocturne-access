@@ -96,6 +96,7 @@ namespace NocturneAccess.Systems.Battle
         // Halved, as elsewhere: now - long.MinValue overflows to a negative number, which read as a target call "just now"
         // in the first battle of a session (10:10 on 2 Oct: "Art, HP 48 of 48" before "Battle. Preta.").
         private static long _targetCallAt = long.MinValue / 2;
+        private static long _tarSelAt = long.MinValue / 2;   // nbTarSelProcess1 last ran (0.0.119)
         private static string _targetRace = "";
         private static string _targetName = "";
         private static int _lastTargetForm = int.MinValue;
@@ -121,6 +122,10 @@ namespace NocturneAccess.Systems.Battle
             Type s = typeof(string), i = typeof(int);
             Patcher.Postfix("Battle", typeof(nbHelpProcess), "nbDispText", new[] { s, s, i, i, typeof(uint), typeof(bool) },
                 AccessTools.Method(typeof(BattleReader), nameof(AfterDispText)));
+            // The target cursor's own process (0.0.119): it runs every frame while a target is picked, also where the game draws
+            // no help banner (a dead ally under a Balm of Rising, 26 Oct 2026, 21:08:29 and 21:22:01: the pick was silent).
+            Patcher.Postfix("Battle", typeof(nbTarSelProcess), nameof(nbTarSelProcess.nbTarSelProcess1), new[] { typeof(Il2Cppkernel_H.dds3ProcessID_t) },
+                AccessTools.Method(typeof(BattleReader), nameof(AfterTarSel)));
         }
 
         private static TmpRouter.Handler Classify(string path)
@@ -202,6 +207,8 @@ namespace NocturneAccess.Systems.Battle
                     PollTarget(now);
                 else
                     _targetCallAt = long.MinValue / 2;
+                if (!_started)
+                    _tarSelAt = long.MinValue / 2;
                 SpeakPendingBanner(now);
 
                 if (!_started && now - _activeSince >= StartDelayMs)

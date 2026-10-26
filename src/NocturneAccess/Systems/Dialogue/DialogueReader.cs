@@ -61,6 +61,9 @@ namespace NocturneAccess.Systems.Dialogue
         internal static bool PageDue
             => _dirty || (_requestedAt >= 0 && Clock.ElapsedMilliseconds - _requestedAt < RequestDueMs);
 
+        /// <summary>Whether a page was spoken within the last ms milliseconds (0.0.119: AutoWalk leaves its event line out then).</summary>
+        internal static bool SpokeWithin(long ms) => Clock.ElapsedMilliseconds - _lastSpokenAt < ms;
+
         /// <summary>The last page with its speaker, for the repeat key.</summary>
         internal static string LastUtterance { get; private set; } = "";
 

@@ -31,7 +31,7 @@
 42 16 01d_01                                   # B3: to area 17
 42 17 01d_03                                   # B3: the ladder up to area 10
 42 18 01d_01                                   # B3: to area 15
-42 19 01d_05                                   # B3: to area 18
+42 19 01d_05 01d_06 01d_03                     # B3: to area 18, else to area 20 or area 21 (26 Oct, 16:25: 01d_05 was beyond doors)
 42 20 01d_03                                   # B3: the ladder up to area 10
 42 21 01d_02 01d_01                            # B3: the ladder down to area 23 (south part), else to area 15 (north part)
 42 22 01d_01                                   # B4: the ladder up to area 19

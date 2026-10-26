@@ -1050,6 +1050,14 @@ namespace NocturneAccess.Systems.Navigation
                 Log.Info($"[Nav:Walk] Puzzle step {_target.ResName} taken: \"{speech}\" not said.");
                 return;
             }
+            // The game's own event speaks for itself (0.0.119; Francesco, 26 Oct 2026: "Walk interrupted by an event." came 0.9 s
+            // after "> You can feel the presence of a terrifying demon..." and cut it, three times in the 20:32 session).
+            if (speech != null && _target != null && why.StartsWith("the game stopped taking movement", StringComparison.Ordinal)
+                && (Dialogue.DialogueReader.PageDue || Dialogue.DialogueReader.SpokeWithin(EventWaitMs + 1000)))
+            {
+                Log.Info($"[Nav:Walk] A dialogue page of the event is speaking: \"{speech}\" not said.");
+                return;
+            }
             if (speech != null)
                 Say(speech);
         }
