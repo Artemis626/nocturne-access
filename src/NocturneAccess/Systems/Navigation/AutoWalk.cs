@@ -41,6 +41,8 @@ namespace NocturneAccess.Systems.Navigation
         private const int StillTicks = 8;
         private const int DamageFloorAct = 52;   // fldPlayer.fldPlayerAct during the damage-floor reaction (traces 16 Oct 2026, poison swamp floor Attr 0x4000)
         private static bool _onDamageFloor;
+        private static long _damageMs = long.MinValue / 2;   // the last tick of a damage reaction
+        private const long DamagePauseMs = 1500;
         private const int MaxReplans = 6;
         private const long TimeoutMs = 30000;
         private const long WorldTimeoutMs = 90000;   // Shinjuku is about 70 x 80 metres at 4.8 a second; Medical Center to Yoyogi Park took 26 s
@@ -169,7 +171,13 @@ namespace NocturneAccess.Systems.Navigation
             // A story event or dialogue stops the game's movement routine while the field update goes on (0.0.23 test,
             // field 11: trigger 01eve_15 moved the player and opened a dialogue): end the walk instead of re-planning.
             int moves = FieldState.MoveCount;
-            _idle = moves == _moveCount ? _idle + 1 : 0;
+            // A strong damage floor pauses the movement routine too (0.0.116; Second Kalpa area 13, 26 Oct 2026, 13:59:49: one
+            // step into the poison, act 52 for a moment, then the routine still for about half a second with act 0 again; the walk
+            // took it for an event and said "Walk interrupted by an event."). Within DamagePauseMs of the reaction: not an event.
+            if (fldPlayer.fldPlayerAct == DamageFloorAct)
+                _damageMs = Clock.ElapsedMilliseconds;
+            bool damagePause = Clock.ElapsedMilliseconds - _damageMs < DamagePauseMs;
+            _idle = moves == _moveCount && !damagePause ? _idle + 1 : 0;
             _moveCount = moves;
             if (_idle >= IdleTicks)
             {
@@ -195,7 +203,7 @@ namespace NocturneAccess.Systems.Navigation
                 _still = 0;   // a first-person turn stands still on purpose
             if (_world && (gb.NoInpPlCnt > 0 || fldPlayer.fldWmWarpMode != 0))
                 _still = 0;   // fldPlayerCalc_Wm2 ignores the pads then (read offline): waiting, not blocked
-            if (fldPlayer.fldPlayerAct == DamageFloorAct)
+            if (damagePause)   // the reaction and the pause after it (0.0.116)
             {
                 // A damage floor (0.0.88; Francesco, 16 Oct 2026, the Ikebukuro Tunnel's poison swamps): every step on it plays the
                 // game's damage reaction (fldPlayerAct 52) and the player stands for a moment, so the walk took it for a wall,
