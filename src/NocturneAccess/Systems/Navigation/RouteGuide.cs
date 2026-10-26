@@ -46,8 +46,9 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
             string text = Directions(gb, target);
-            if (target.HasDetail)
-                text = $"{TextUtil.Capitalize(target.InSentence)}. {text}";   // "Explored door. Ahead, 12 metres." / "Door, passage. Ahead, ..."
+            // The target named first, always (0.0.117; Francesco, 26 Oct 2026: End confirms the selection, so Insert went):
+            // "Door. Ahead, 12 metres." / "Explored door to area 12, passage. Ahead, ..." (before, only points with details).
+            text = $"{TextUtil.Capitalize(target.InSentence)}. {text}";
             Log.Info($"[Nav:Guide] To {target.Label} {target.ResName} (gEvnRng {target.Index}) from {FieldData.F(gb.playerX)} {FieldData.F(gb.playerZ)}: {text}");
             SpeechManager.Say(text, interrupt: true);
         }

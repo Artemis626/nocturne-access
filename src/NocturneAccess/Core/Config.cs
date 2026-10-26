@@ -62,7 +62,6 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyPoiGuide { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiFilterNext { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiFilterPrevious { get; private set; }
-        internal static MelonPreferences_Entry<string> KeyPoiCurrent { get; private set; }
         internal static MelonPreferences_Entry<bool> PoiMapOrder { get; private set; }
         internal static MelonPreferences_Entry<bool> AreaRoutes { get; private set; }
         internal static MelonPreferences_Entry<bool> WallBumpSound { get; private set; }
@@ -173,12 +172,10 @@ namespace NocturneAccess.Core
                 "Shows only one kind of point in the Page Up / Page Down list: All, Doors, Rooms, Exits, Warps, Souls, Demons, Item boxes, Events (kinds with none in the area are skipped).");
             KeyPoiFilterPrevious = keys.CreateEntry("PoiFilterPrevious", "Shift+PageDown", "Previous point of interest filter key",
                 "The previous kind of point.");
-            KeyPoiCurrent = keys.CreateEntry("PoiCurrent", "Insert", "Selected point of interest key",
-                "Says the selected point of interest again, with its distance and direction from where you stand now, before Home or End.");
             KeyPoiWalk = keys.CreateEntry("PoiWalk", "Home", "Walk to point of interest key",
                 "Walks to the selected point of interest through the game's own movement (fixed-camera rooms and first person). Any movement key stops it. Enter (the game's confirm) then interacts as usual.");
             KeyPoiGuide = keys.CreateEntry("PoiGuide", "End", "Directions to point of interest key",
-                "Speaks directions from where you stand to the selected point of interest (first person: ahead, left, right; fixed-camera rooms: the key direction on screen). Press again for new directions as you go.");
+                "Names the selected point of interest, then speaks directions to it from where you stand (first person: ahead, left, right; fixed-camera rooms: the key direction on screen). Press again for new directions as you go.");
             KeyAreaRoutes = keys.CreateEntry("AreaRoutes", "F7", "Routes through other areas key",
                 "Turns on or off the routes through other areas in the Page Up list, Home and End.");
 

@@ -1180,30 +1180,7 @@ namespace NocturneAccess.Systems.Navigation
             SpeechManager.Say($"{CategoryNames[(int)next]}, {n}.", interrupt: true);
         }
 
-        /// <summary>Insert: the selected point again, from where the player stands now, with its number in the list.</summary>
-        internal static void SpeakCurrent()
-        {
-            fldGlobalWork_t gb = fldGlobal.fldGb;
-            if (gb == null || !FieldState.IsExploring)
-            {
-                SpeechManager.Say("No points of interest here.", interrupt: true);
-                return;
-            }
-            NewArea(gb);
-            List<Poi> list = Listed(gb, log: false);
-            int at = list.FindIndex(q => q.Index == _selected);
-            string filter = _filter == PoiCategory.All ? "" : $" {CategoryNames[(int)_filter]}.";
-            if (at < 0)
-            {
-                SpeechManager.Say($"Nothing selected.{filter}", interrupt: true);
-                return;
-            }
-            Poi poi = list[at];
-            Selected = poi;
-            SpeechManager.Say($"{poi.Spoken}, {Describe(gb.playerX, gb.playerY, gb.playerZ, poi)}{poi.Via}. {at + 1} of {list.Count}.{filter}", interrupt: true);
-        }
-
-        /// <summary>Selects a point (AutoWalk, the next door of a route through other areas), so Insert, End and Home use it.</summary>
+        /// <summary>Selects a point (AutoWalk, the next door of a route through other areas), so End and Home use it.</summary>
         internal static void Select(fldGlobalWork_t gb, Poi poi)
         {
             NewArea(gb);
