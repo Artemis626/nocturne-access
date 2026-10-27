@@ -20,7 +20,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.121";
+        internal const string ModVersion = "0.0.122";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
@@ -99,6 +99,7 @@ namespace NocturneAccess.Core
             ("time puzzle", TimePuzzle.Tick),
             ("pipe probe", PipeProbe.Tick),
             ("pipe autopilot", PipePilot.Tick),
+            ("way-on tone", WayOn.Tick),
             ("area routes", AreaRoutes.Tick),
             ("blobber exploring", BlobberMode.CheckExploring),
             ("blobber", BlobberMode.Tick),

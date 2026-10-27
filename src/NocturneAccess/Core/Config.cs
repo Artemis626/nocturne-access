@@ -66,6 +66,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<bool> PoiMapOrder { get; private set; }
         internal static MelonPreferences_Entry<bool> AreaRoutes { get; private set; }
         internal static MelonPreferences_Entry<bool> WallBumpSound { get; private set; }
+        internal static MelonPreferences_Entry<bool> WayOnSound { get; private set; }
         internal static MelonPreferences_Entry<string> KeyAreaRoutes { get; private set; }
 
         // Debug
@@ -135,6 +136,8 @@ namespace NocturneAccess.Core
                 "Page Up / Page Down also list points of the area reached only by going through other areas, by doors you have gone through (\"via 1 other area\"); Home walks there door by door, End gives the way to the first door. F7 toggles it in game.");
             WallBumpSound = navigation.CreateEntry("WallBumpSound", true, "Wall bump sound",
                 "A short thud when you walk into a wall and stop (the game has no sound of its own for it).");
+            WayOnSound = navigation.CreateEntry("WayOnSound", true, "Way on tone",
+                "A soft two-note tone, once, on reaching an area where Shift+End has a way on (after loading a save, and the first time you enter each such area).");
 
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);

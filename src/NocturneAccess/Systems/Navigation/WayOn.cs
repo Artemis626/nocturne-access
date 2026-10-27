@@ -31,6 +31,42 @@ namespace NocturneAccess.Systems.Navigation
         internal static bool IsMarked(int field, int area, string name)
             => field == _markField && area == _markArea && Marked.Contains(name);
 
+        // ---- The tone (0.0.122; Francesco, 27 Oct 2026) ----
+        // Once per area with a way on: when the player first has control there after a save is loaded (the title screen and a
+        // load forget what was heard: ExploredDoors.ClearAll), and on first entering each such area.
+        private static readonly HashSet<(int, int)> Heard = new HashSet<(int, int)>();
+        private static int _toneField = int.MinValue, _toneArea = int.MinValue;
+        private static bool _tonePending;
+
+        /// <summary>A save loaded or the title screen: every area's tone is played again on reaching it.</summary>
+        internal static void ForgetHeard()
+        {
+            Heard.Clear();
+            _toneField = _toneArea = int.MinValue;
+        }
+
+        internal static void Tick()
+        {
+            fldGlobalWork_t gb = fldGlobal.fldGb;
+            if (gb == null)
+                return;
+            if (gb.fieldID != _toneField || gb.areaID != _toneArea)
+            {
+                _toneField = gb.fieldID;
+                _toneArea = gb.areaID;
+                _tonePending = true;
+            }
+            if (!_tonePending || !FieldState.IsExploring)
+                return;
+            _tonePending = false;
+            Load();
+            if (!_table.ContainsKey((gb.fieldID, gb.areaID)) || !Heard.Add((gb.fieldID, gb.areaID)))
+                return;
+            Log.Info($"{Tag} Field {gb.fieldID} area {gb.areaID} has a way on: tone{((Config.WayOnSound?.Value ?? true) ? "" : " (off in the config)")}.");
+            if (Config.WayOnSound?.Value ?? true)
+                Earcons.WayOn();
+        }
+
         /// <summary>Shift+End.</summary>
         internal static void Speak()
         {

@@ -390,6 +390,7 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>Everything kept per save file, emptied before a file is read or a new game starts.</summary>
         private static void ClearAll()
         {
+            WayOn.ForgetHeard();   // the way-on tone plays again on reaching each area (0.0.122)
             Doors.Clear();
             Prompts.Clear();
             Arrivals.Clear();

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using NocturneAccess.Core;
@@ -17,25 +18,55 @@ namespace NocturneAccess.Speech
         [DllImport("winmm.dll", SetLastError = true)]
         private static extern bool PlaySound(IntPtr pszSound, IntPtr hmod, uint fdwSound);
 
-        private static GCHandle _thud;   // pinned: an asynchronous sound plays from this memory after PlaySound returns
+        private static GCHandle _thud, _wayOn;   // pinned: an asynchronous sound plays from this memory after PlaySound returns
         private static bool _failed;
 
         /// <summary>A low, short thud: a falling 120 to 55 Hz tone with a soft noise attack, 120 ms.</summary>
-        internal static void Thud()
+        internal static void Thud() => Play(ref _thud, MakeThud, "thud");
+
+        /// <summary>
+        /// The way-on cue (0.0.122; Francesco, 27 Oct 2026: a tone of its own when an area has a Shift+End way on, unlike the thud
+        /// and not high): two soft, rounded notes rising a fourth, D4 then G4 (294, 392 Hz), with a little of the octave for warmth,
+        /// 450 ms in all.
+        /// </summary>
+        internal static void WayOn() => Play(ref _wayOn, MakeWayOn, "way-on tone");
+
+        private static void Play(ref GCHandle handle, Func<byte[]> make, string what)
         {
             if (_failed)
                 return;
             try
             {
-                if (!_thud.IsAllocated)
-                    _thud = GCHandle.Alloc(MakeThud(), GCHandleType.Pinned);
-                PlaySound(_thud.AddrOfPinnedObject(), IntPtr.Zero, SND_MEMORY | SND_ASYNC | SND_NODEFAULT);
+                if (!handle.IsAllocated)
+                    handle = GCHandle.Alloc(make(), GCHandleType.Pinned);
+                PlaySound(handle.AddrOfPinnedObject(), IntPtr.Zero, SND_MEMORY | SND_ASYNC | SND_NODEFAULT);
             }
             catch (Exception ex)
             {
                 _failed = true;
-                Log.Warn($"[Sound] The thud could not be played, sounds off: {ex.Message}");
+                Log.Warn($"[Sound] The {what} could not be played, sounds off: {ex.Message}");
             }
+        }
+
+        private static byte[] MakeWayOn()
+        {
+            const int rate = 22050;
+            var notes = new[] { (Hz: 293.66, Ms: 180), (Hz: 392.0, Ms: 270) };
+            var all = new List<short>();
+            foreach (var (hz, ms) in notes)
+            {
+                int n = rate * ms / 1000;
+                for (int i = 0; i < n; i++)
+                {
+                    double t = (double)i / rate;
+                    double attack = Math.Min(1.0, t / 0.012);                 // no click
+                    double decay = Math.Exp(-t * 6.0);                         // a soft, bell-like fall
+                    double release = Math.Min(1.0, (n - i) / (rate * 0.02));   // and no click at the end
+                    double wave = Math.Sin(2 * Math.PI * hz * t) + 0.25 * Math.Sin(2 * Math.PI * 2 * hz * t);
+                    all.Add((short)(0.45 / 1.25 * attack * decay * release * wave * short.MaxValue));
+                }
+            }
+            return Wav(all.ToArray(), rate);
         }
 
         private static byte[] MakeThud()
@@ -56,6 +87,13 @@ namespace NocturneAccess.Speech
                 double hit = Math.Exp(-t * 120) * noise * 1.5;
                 samples[i] = (short)(Math.Max(-1, Math.Min(1, 0.7 * attack * (body + hit))) * short.MaxValue);
             }
+            return Wav(samples, rate);
+        }
+
+        /// <summary>16-bit mono PCM samples as a WAV file in memory.</summary>
+        private static byte[] Wav(short[] samples, int rate)
+        {
+            int n = samples.Length;
             using var ms = new MemoryStream();
             using var w = new BinaryWriter(ms);
             w.Write(new[] { (byte)'R', (byte)'I', (byte)'F', (byte)'F' });
