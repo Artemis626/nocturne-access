@@ -670,7 +670,7 @@ namespace NocturneAccess.Systems.Navigation
         /// </summary>
         private static void ListResetWarps(fldGlobalWork_t gb, List<Poi> kept)
         {
-            if (kept.Any(q => q.Listed))
+            if (kept.Any(q => q.Reachable))   // 0.0.121: reachable, not listed (a landmark "beyond doors" is listed)
                 return;
             int start = WalkGrid.RegionAt(gb.playerX, gb.playerY, gb.playerZ);
             if (start < 0)

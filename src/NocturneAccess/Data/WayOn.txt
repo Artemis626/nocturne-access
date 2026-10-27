@@ -6,6 +6,15 @@
 # Everything after # is a note. Lines are derived from walkthroughs, then matched to the game's door table (navigation
 # dumps), the area files' arrival points (f042_NNN.f2) and the field script (f042.bf): never a guide's own words.
 
+# ---- Amala Network 2 (field 28), area 5: the soul room ----
+# Five souls (01eve_01 to 05) each raise a barrier when walked into (atari_hoji_0N, f028.bf script area 6); the side warps
+# 01d_03 / 01d_04 reset the room to the start. Checked offline (dump 27 Oct 13:39:44, tools/navregions.pl NAVBLOCK with the
+# barriers switched on): soul 05 by the start is unavoidable and harmless (its barrier closes behind); then the east soul 03 (or
+# the west 02) keeps the north door 01d_02 reachable; the centre soul 01 seals it. Routes alone tie the centre with the sides
+# (2 souls each) and took the centre (Francesco, 27 Oct 2026, 15:02): the way on names the east soul first, then the door.
+# Played souls leave the list, so after soul 03 the first candidate found is the door.
+28 5  01eve_03 01d_02 01d_04 01d_03            # B1: the east soul (Home crosses the start soul on the way), then the north door; sealed: a reset warp
+
 # ---- Second Kalpa (field 42): to the shaft into the Third Kalpa ----
 # Route (Samurai Gamers' Second Kalpa walkthrough, Part 3, last steps, matched to the game's data on 26 Oct 2026):
 # B1 area 9's hole 01d_16 lands in area 12's south-east room (01pos_13, 1200 -1850; the other hole, 01d_15, lands in the
