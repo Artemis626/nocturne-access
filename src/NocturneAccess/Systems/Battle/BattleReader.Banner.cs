@@ -141,13 +141,26 @@ namespace NocturneAccess.Systems.Battle
                 return;
             }
 
-            nbTarSelProcessData_t t = nbTarSelProcess.GetTarSelProcessData();
-            if (t == null || t.ctype != 0)
+            // The game's target data is gone while a battle closes (0.0.123: since 0.0.119 the cursor's window outlived it, and the
+            // call threw a NullReferenceException that skipped the rest of the battle update, five times a session).
+            nbTarSelProcessData_t t;
+            int form;
+            try
+            {
+                t = nbTarSelProcess.GetTarSelProcessData();
+                if (t == null || t.ctype != 0)
+                {
+                    _targetFromData = false;
+                    return;
+                }
+                form = t.nowform;
+            }
+            catch (Exception)
             {
                 _targetFromData = false;
+                _tarSelAt = long.MinValue / 2;
                 return;
             }
-            int form = t.nowform;
             if (form == _lastTargetForm)
                 return;
             _lastTargetForm = form;
