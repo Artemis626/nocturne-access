@@ -606,6 +606,23 @@ namespace NocturneAccess.Systems.Navigation
             }
             if (world)
                 MarkSharedEntrances(gb, list);
+            if (grid && !world)
+            {
+                ListResetWarps(gb, kept);
+                // The story events still listed (not played yet) are gone round by routes where another way exists (0.0.120).
+                WalkGrid.SetSoftZones(kept.Where(q => q.Kind == PoiKind.Event && q.Story && q.HasBox).Select(q => new WalkGrid.Zone
+                {
+                    Id = q.Index,
+                    X = (q.BoxX0 + q.BoxX1) / 2f,
+                    Z = (q.BoxZ0 + q.BoxZ1) / 2f,
+                    NX = 0f,
+                    NZ = 1f,
+                    HalfDepth = (q.BoxZ1 - q.BoxZ0) / 2f,
+                    HalfWidth = (q.BoxX1 - q.BoxX0) / 2f,
+                }).ToList());
+            }
+            else
+                WalkGrid.SetSoftZones(new List<WalkGrid.Zone>());
             foreach (Poi q in kept)
                 q.Category = CategoryOf(q, gb);
             return kept.OrderBy(q => q.Distance).ToList();
@@ -643,7 +660,29 @@ namespace NocturneAccess.Systems.Navigation
             }
         }
 
-        private const float PairLandingReach = 75f;   // the landing lies 150 in front of the door, past the 46 clearance
+        private const float PairLandingReach = 75f;
+
+        /// <summary>
+        /// Nothing listed: the warps that fire when walked into and that the player can walk up to are listed (0.0.120). The
+        /// Amala Network 2's soul room (27 Oct 2026, 13:39:22 "All, 0") was sealed by its souls' barriers, and its only way out,
+        /// the side warps back to the start, were never listed: a touch warp is marked walked to only by the warp routes, which
+        /// run only where some warp's arrival is known, and these two have none ("01pos_01 not found").
+        /// </summary>
+        private static void ListResetWarps(fldGlobalWork_t gb, List<Poi> kept)
+        {
+            if (kept.Any(q => q.Listed))
+                return;
+            int start = WalkGrid.RegionAt(gb.playerX, gb.playerY, gb.playerZ);
+            if (start < 0)
+                return;
+            foreach (Poi q in kept.Where(q => q.Warp))
+            {
+                if (!WarpMap.TargetRegions(gb, q).Contains(start))
+                    continue;
+                q.Reachable = true;
+                Log.Info($"[Nav:Poi] {q.ResName}: nothing else can be reached, the warp walked up to is listed.");
+            }
+        }   // the landing lies 150 in front of the door, past the 46 clearance
 
         /// <summary>Ladders: their own kind, up or down (0.0.59); marked before the landmark rule, which leaves ladders out (0.0.90).</summary>
         private static void MarkLadders(fldGlobalWork_t gb, List<Poi> kept)

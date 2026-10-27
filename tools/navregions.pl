@@ -172,6 +172,20 @@ for my $w (@walls) {
     } }
 }
 print "nodes blocked by railings: $railed\n";
+# NAVBLOCK="x0 z0 x1 z1;x0 z0 x1 z1": rectangles whose nodes are blocked, as WalkGrid keeps warp volumes (and, 0.0.120, story
+# event volumes when another way exists) out of routes; give the volume plus AvoidMargin (45).
+if ($ENV{NAVBLOCK}) {
+    my $blocked = 0;
+    for my $r (split /;/, $ENV{NAVBLOCK}) {
+        my ($x0, $z0, $x1, $z1) = split ' ', $r;
+        for my $c (0 .. $W * $H - 1) {
+            my ($cx, $cz) = ($gx + ($c % $W) * $C, $gz + int($c / $W) * $C);
+            next unless $cx >= $x0 && $cx <= $x1 && $cz >= $z0 && $cz <= $z1;
+            for my $l (0 .. ($cnt[$c] // 0) - 1) { my $k = $c * $layers + $l; if ($st[$k] == 1) { $st[$k] = 2; $blocked++ } }
+        }
+    }
+    print "nodes blocked by NAVBLOCK: $blocked\n";
+}
 my @Dx = (0, 1, 1, 1, 0, -1, -1, -1); my @Dz = (1, 1, 0, -1, -1, -1, 0, 1);
 # NAVHEAD=180: a floor with another floor of its cell less than this above it (Y points down: a smaller y) is no place to
 # stand (WalkGrid 0.0.74, the Nihilo core's spiral ramp under its floor).

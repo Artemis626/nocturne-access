@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using Il2Cpp;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
@@ -489,6 +490,55 @@ namespace NocturneAccess.Systems.Navigation
 
         private static bool Avoided(int k) => _avoid.Length == _state.Length && _avoid[k] != 0 && _avoid[k] != _allow;
 
+        // ---- Story events kept out of routes when another way exists (0.0.120) ----
+        // The Amala Network 2's soul room (field 28 area 5; Francesco, 27 Oct 2026): five souls stand across its corridors, each
+        // raising a barrier when walked into (fldCommand_FLD_ATARI_ON), and Home planned straight through them until the room
+        // was sealed. Routes now pay SoftCost for entering the volume of a story event not yet played (those still listed): they cross as few
+        // as they can, none where there is a way round (offline, dump 13:39:44: soul 05 and then the west or east soul reach the
+        // north door with their barriers up; the centre soul seals it). Only Plan applies it. Reachability (floods, regions)
+        // is unchanged: a point behind a soul is still listed, and walked to through the soul when there is no other way.
+        private static short[] _soft = Array.Empty<short>();
+        private static List<Zone> _softZones = new List<Zone>();
+        private static string _softKey = "";
+        private static int _softBuild = -1;
+        private const float SoftCost = 2000f;   // more than any detour in a 400-cell grid: the fewest story events first, then the shortest
+
+        /// <summary>The story volumes routes go round (PointsOfInterest.Build, the listed story events of this area).</summary>
+        internal static void SetSoftZones(List<Zone> zones)
+        {
+            string key = string.Join(";", zones.Select(z => $"{z.Id}:{z.X:0}:{z.Z:0}"));
+            if (key == _softKey)
+                return;
+            _softKey = key;
+            _softZones = zones;
+            _softBuild = -1;
+        }
+
+        private static void ApplySoft()
+        {
+            if (_softBuild == _builds && _soft.Length == _state.Length)
+                return;
+            _softBuild = _builds;
+            _soft = new short[_state.Length];
+            int marked = 0;
+            foreach (Zone zone in _softZones)
+            {
+                float reach = Math.Max(zone.HalfDepth, zone.HalfWidth) + AvoidMargin + CellSize;
+                ForCells(zone.X - reach, zone.Z - reach, zone.X + reach, zone.Z + reach, (c, x, z) =>
+                {
+                    if (!zone.Contains(x, z, AvoidMargin))
+                        return;
+                    for (int l = 0; l < _count[c]; l++)
+                    {
+                        _soft[c * Layers + l] = (short)(zone.Id + 1);
+                        marked++;
+                    }
+                });
+            }
+            if (_softZones.Count > 0)
+                Log.Info($"[Nav:Walk] {_softZones.Count} story event volumes avoided by routes where another way exists ({marked} places).");
+        }
+
         /// <summary>The connected region of the node nearest (x, y, z) (as a route would start there), or -1.</summary>
         internal static int RegionAt(float x, float y, float z)
         {
@@ -923,7 +973,15 @@ namespace NocturneAccess.Systems.Navigation
             _allow = (short)(allowZone + 1);
             try
             {
-                return PlanAllowing(px, py, pz, tx, ty, tz, minDist, fourWay, out goalX, out goalZ);
+                ApplySoft();
+                List<PathRun> runs = PlanAllowing(px, py, pz, tx, ty, tz, minDist, fourWay, out goalX, out goalZ);
+                if (runs != null && _softZones.Count > 0)
+                {
+                    int crossed = LastPath.Where(k => _soft[k] != 0 && _soft[k] != _allow).Select(k => _soft[k]).Distinct().Count();
+                    if (crossed > 0)
+                        Log.Info($"[Nav:Walk] The route crosses {crossed} story event{(crossed == 1 ? "" : "s")}: no way round {(crossed == 1 ? "it" : "them")}.");
+                }
+                return runs;
             }
             finally
             {
@@ -959,6 +1017,7 @@ namespace NocturneAccess.Systems.Navigation
             open.Clear();
             dist[start] = 0;
             open.Enqueue(start, 0);
+            bool softOn = _soft.Length == n && _softZones.Count > 0;
             while (open.TryDequeue(out int cur, out float d))
             {
                 if (d > dist[cur])
@@ -979,6 +1038,8 @@ namespace NocturneAccess.Systems.Navigation
                         int nk = StepBuf[t];
                         float near = 1f - _near[nk] / NearRange;
                         float nd = d + (diagonal ? 1.4142f : 1f) * (1f + NearCost * near * near) + (dir[cur] >= 0 && dir[cur] != s ? TurnPenalty : 0f);
+                        if (softOn && _soft[nk] != 0 && _soft[nk] != _allow && _soft[nk] != _soft[cur])
+                            nd += SoftCost;   // entering a story event not yet played: crossed only where there is no way round
                         if (nd < dist[nk])
                         {
                             dist[nk] = nd;

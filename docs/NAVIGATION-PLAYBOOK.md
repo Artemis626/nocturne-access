@@ -293,3 +293,7 @@ All under `src/NocturneAccess/Systems/Navigation`:
 | `FirstPersonView` | First-person flag answered in memory |
 
 Diagnostics: `Capture/NavDump.cs`, `Capture/NavProbe.cs`, `tools/*.pl`.
+
+## Story events that change the map (27 Oct 2026, Amala Network 2)
+
+A story volume can be a puzzle piece: SMT III's soul room raises a barrier behind every soul walked into, and two warps reset it. Read the volume's script for collision commands (`FLD_ATARI_ON` / `OFF`) before treating story events as passable. Route through them as a cost, not a wall: a hard block found no route at all (one soul is unavoidable), a cost of more than any detour gives the fewest events crossed, which was the puzzle's solution. Check such a rule offline with the blocks and barriers set as the game would set them, from each place the player stands after each event.

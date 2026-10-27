@@ -20,7 +20,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.119";
+        internal const string ModVersion = "0.0.120";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
