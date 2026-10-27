@@ -62,6 +62,8 @@ namespace NocturneAccess.Systems.Battle
             _actionHpCost = 0;
             if (_actionActor < 0)
                 return;
+            if (_actionActor < FirstEnemy)
+                Menus.MenuReader.PartyActed();
             datUnitWork_t w = nbMainProcess.nbGetUnitWorkFromFormindex(_actionActor);
             if (w != null && w.nowcommand == 1)
                 _actionHpCost = BattleSkills.HpCost(w.nowindex, w);
@@ -130,10 +132,17 @@ namespace NocturneAccess.Systems.Battle
         /// </summary>
         private static void AfterTarSel() => _tarSelAt = Clock.ElapsedMilliseconds;
 
+        // The cursor's process also runs for an instant as the party's side begins, with no pick on screen: "Art, HP 415 of 429"
+        // before every first turn line (27 Oct 2026, 16:00 session: five times, 9 ms after the side changed). Calls that close to
+        // the side change are not a pick (0.0.125).
+        private const long SideStartTarSelMs = 1000;
+        private static long _sideAt = long.MinValue / 2;
+
         private static void PollTarget(long now)
         {
             // The help banner, or the cursor's process on the party's turn when the game draws no banner (0.0.119: a dead ally).
-            long seen = Math.Max(_targetCallAt, _sideKnown && !_sideEnemy ? _tarSelAt : long.MinValue / 2);
+            bool pick = _sideKnown && !_sideEnemy && Math.Abs(_tarSelAt - _sideAt) >= SideStartTarSelMs;
+            long seen = Math.Max(_targetCallAt, pick ? _tarSelAt : long.MinValue / 2);
             if (now - seen > TargetWindowMs)
             {
                 _lastTargetForm = int.MinValue;

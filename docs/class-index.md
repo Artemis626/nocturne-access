@@ -581,3 +581,12 @@ Sources: session log 15 Oct 2026 15:18; Windows API; the mod's own names below.
 | Field area files `fNNN_AAA.f2` (bundle `fNNN`, `tools/unity/extract.pl`): the arrival points `01pos_NN` by name, the position as three floats 16 bytes after the name's start | Read offline 26 Oct 2026 (f042: `f042_013.f2` 01pos_13 1200 0 -1850, matching area 12's door table rows) | `AAA` is the area plus 1 (`f042_013` is area 12). Used to decide where a hole lands (`Data/WayOn.txt`) |
 | `WayOn` (Shift+End, `Data/WayOn.txt` embedded as `WayOn.txt`), `Poi.Guide`, `RouteGuide.SpeakWith`, config `WayOn` | Mod | 0.0.118 |
 | `nbTarSelProcess.nbTarSelProcess1(dds3ProcessID_t id)` (RVA 0x23C5FF0) | Proxy; disassembly (read-only), 26 Oct 2026 | The target cursor's process: runs every frame while a target is picked and calls `DispTargetHelp`, which draws the help banner (`nbDispDevilName`, then `nbHelpProcess.nbDispText`) only for some targets; a dead ally under a Balm of Rising gets none. Postfix (no arguments) since 0.0.119: `BattleReader.AfterTarSel`, the target window on the party's turn |
+
+## Battle command cursor (0.0.125, 27 Oct 2026; GameAssembly.dll read offline)
+
+| Name | Source | Notes |
+|---|---|---|
+| `nbCommSelProcess.GetCommSelProcessData()` | decompile `Il2Cpp/nbCommSelProcess.cs` | the battle command selection's data (`nbCommSelProcessData_t`, `Il2Cppnewbattle_H`) |
+| `nbCommSelProcessData_t.drawtype` (0x2C), `drawcursor` (0x30), `drawlisty` (0x34), `commlist` (0x58), `commdisable` (0x68) | `tools/native/fields.pl`; `nbCommSelProcess.DispCommandList2` | `DispCommandList2` draws rows `drawlisty` .. of `commlist[drawtype]`; the row at `drawcursor` gets material 1 (TMC01) unless `commdisable[drawtype][row]` is non-zero, then 2 (TMC02), like any unusable row; other rows 0 (TMC00). Slot on screen `bmenu_command{drawcursor - drawlisty + 1:D2}` (to verify in game: `[Menu] Battle menu game cursor` log lines). `BattleCursor` |
+| `nbTarSelProcessData_t.stat` (0x20) | `tools/native/fields.pl` | meaning unknown (not used) |
+| `MISCACTION_EN` `MISCACTION_L0000`..`L0005` | `research/gamedata/common` | the game's battle words "Attack", "Retreat", "Pass", "Summon", "Dismiss", "Talk"; `L0008` "New enemy appeared!" (not used yet) |

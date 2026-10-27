@@ -54,6 +54,30 @@ namespace NocturneAccess.Systems.Battle
 
             foreach (int gone in Units.Keys.Where(k => !seen.Contains(k)).ToList())
                 Units.Remove(gone);
+
+            // Enemies that joined, once no more have come for a moment (Gathering brings one every 200 ms): the whole side, as at
+            // the start (Francesco, 27 Oct 2026: after "Specter appeared!" six Specters stood and nothing said so; 0.0.125).
+            if (_joinedAt >= 0 && Clock.ElapsedMilliseconds - _joinedAt >= JoinSettleMs)
+            {
+                _joinedAt = -1;
+                string list = EnemyList();
+                Log.Info($"{Tag} Enemies joined: {list}.");
+                if (list.Length > 0)
+                    SpeechManager.Say(list + ".", interrupt: false, force: true);
+            }
+        }
+
+        private const long JoinSettleMs = 1000;
+        private static long _joinedAt = -1;
+
+        /// <summary>"6 enemies: Specter 1, Specter 2, ..." with the numbers the damage lines use; one enemy: its name alone.</summary>
+        private static string EnemyList()
+        {
+            List<Unit> enemies = Units.Values.Where(u => u.Form >= FirstEnemy).OrderBy(u => u.Form).ToList();
+            string names = string.Join(", ", enemies.Where(u => u.Name.Length > 0).Select(DisplayName));
+            if (names.Length == 0)
+                return "";
+            return enemies.Count == 1 ? names : $"{enemies.Count} enemies: {names}";
         }
 
         /// <summary>Reads one formindex; false when the slot is empty or fallen (null).</summary>
@@ -69,14 +93,25 @@ namespace NocturneAccess.Systems.Battle
                 u = new Unit { Form = form, Id = w.id, Hp = w.hp, MaxHp = w.maxhp, Mp = w.mp, MaxMp = w.maxmp, Name = form < PartySlots ? PartyName(form) : NameOf(w.id) };
                 Number(u);
                 Units[form] = u;
+                if (speakChanges && form >= FirstEnemy)
+                    _joinedAt = Clock.ElapsedMilliseconds;   // an enemy that came after the start (the Specter's Gathering)
                 return true;
             }
 
-            int oldHp = u.Hp;
+            int oldHp = u.Hp, oldMp = u.Mp;
             u.Hp = w.hp;
             u.MaxHp = w.maxhp;
             u.Mp = w.mp;
             u.MaxMp = w.maxmp;
+            // The party's MP taken by an enemy (Mana Drain) or given back (Chakra Drop): Francesco, 21 and 27 Oct 2026 (0.0.125).
+            // A drop while the party acts is its own skill's cost, which the menu already said.
+            if (speakChanges && form < PartySlots && u.Mp != oldMp && (u.Mp > oldMp || (_sideKnown && _sideEnemy)))
+            {
+                string mp = u.Mp < oldMp ? $"{DisplayName(u)}: {oldMp - u.Mp} MP drained" : $"{DisplayName(u)}: {u.Mp - oldMp} MP restored";
+                string full = $"{mp}, MP {u.Mp} of {u.MaxMp}.";
+                SpeechManager.Say((Config.SpeakHpLeft?.Value ?? true) ? full : mp + ".", interrupt: false, force: true);
+                BattleLog.Add(full);
+            }
             if (speakChanges && u.Hp != oldHp)
             {
                 // The amount, as the game's damage numbers show it ("7" over Pixie, 09:22 recording); an HP drop equal to

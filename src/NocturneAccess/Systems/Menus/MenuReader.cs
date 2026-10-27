@@ -31,7 +31,7 @@ namespace NocturneAccess.Systems.Menus
     {
         private const string Tag = "[Menu]";
         private const string SummonList = "Summon list", BattleMenu = "Battle menu";
-        private static bool _summonClosed;   // the battle Summon list closed and the battle menu has not spoken since (0.0.92)
+        private static bool _summonClosed;   // a party unit acted and the battle menu has not spoken since (0.0.92; PartyActed, 0.0.125)
         private const long SettleMs = 80;
         private const long WaitForVisibleMs = 60_000;
         private const long VisibilityPollMs = 250;
@@ -197,6 +197,9 @@ namespace NocturneAccess.Systems.Menus
                 ItemDetail = BattleSkills.CostOrCount,           // "Lunge, 4 HP": the cost is drawn as images (2 Oct 2026); items "have 2" (0.0.88)
                 OpeningPrefix = BattleReader.TurnAnnouncement,   // "Pixie's turn" (22:14 session: the acting unit was never said)
                 NoPosition = true,   // the rows are a four-row window: "3 of 4" was the row, not the place in the list (Francesco, 16 Oct 2026, 0.0.89)
+                // An unusable skill under the cursor is drawn TMC02, not TMC01: the game's cursor, "Unavailable" before it (0.0.125).
+                GameCursor = BattleCursor.MenuSlot,
+                Prefix = BattleCursor.UnusablePrefix,
             },
             new MenuSpec
             {
@@ -688,8 +691,13 @@ namespace NocturneAccess.Systems.Menus
             state.LastTitleSpoken = "";
             state.HighlightSig = "";
             Log.Info($"{Tag} {state.Spec.Name} closed.");
-            if (state.Spec.Name == SummonList)
-                _summonClosed = true;
         }
+
+        /// <summary>
+        /// A party unit's action began (BattleReader): a Summon list drawn before the battle menu speaks again is the redraw after a
+        /// summon (0.0.92). Armed here, not when the list closes (0.0.125): switching between the Item and Summon pages closes the
+        /// list too, and the Summon page was left unsaid (Francesco, 27 Oct 2026, 16:09:54 and 16:09:56).
+        /// </summary>
+        internal static void PartyActed() => _summonClosed = true;
     }
 }

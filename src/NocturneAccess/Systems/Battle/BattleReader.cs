@@ -277,9 +277,10 @@ namespace NocturneAccess.Systems.Battle
 
         private static void AnnounceStart()
         {
-            List<Unit> enemies = Units.Values.Where(u => u.Form >= FirstEnemy).OrderBy(u => u.Form).ToList();
-            string names = string.Join(", ", enemies.Select(u => u.Name).Where(n => n.Length > 0));
-            Log.Info($"{Tag} Start: {enemies.Count} enemies: {names}.");
+            // "Battle. 3 enemies: Phantom 1, Phantom 2, Phantom 3." with the numbers the damage lines use (0.0.125).
+            string names = EnemyList();
+            Log.Info($"{Tag} Start: {names}.");
+            _joinedAt = -1;
             // No enemies: the battle screen coming back after a demon joined (or left) in a talk (3 Oct 16:45:13, 2 Oct 20:20:38),
             // the results follow; a bare "Battle." there was noise.
             if (names.Length > 0)

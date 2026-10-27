@@ -83,6 +83,7 @@ namespace NocturneAccess.Systems.Battle
                 return;
             _sideKnown = true;
             _sideEnemy = enemy;
+            _sideAt = Clock.ElapsedMilliseconds;
             BattleLog.NewSide(enemy ? "Enemy turn" : "Player turn");
             Log.Info($"{Tag} Side: {(enemy ? "enemies" : "party")} (turn {d.turn}, activeunit {d.activeunit}).");
             if (enemy)
