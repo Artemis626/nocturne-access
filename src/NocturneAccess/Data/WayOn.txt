@@ -14,6 +14,7 @@
 # (2 souls each) and took the centre (Francesco, 27 Oct 2026, 15:02): the way on names the east soul first, then the door.
 # Played souls leave the list, so after soul 03 the first candidate found is the door.
 28 5  01eve_03 01d_02 01d_04 01d_03            # B1: the east soul (Home crosses the start soul on the way), then the north door; sealed: a reset warp
+28 8  01d_02 01d_04 01d_03                     # 1F: every soul seals the room; the north door is reached touching none (east column to the middle crossing, west column north); sealed: a reset warp
 
 # ---- Second Kalpa (field 42): to the shaft into the Third Kalpa ----
 # Route (Samurai Gamers' Second Kalpa walkthrough, Part 3, last steps, matched to the game's data on 26 Oct 2026):
