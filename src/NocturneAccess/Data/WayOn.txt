@@ -135,7 +135,7 @@
 16 11 01d_06 01d_10 01d_09 01d_07 01d_08       # High Pixie square: the west door to area 13's west part; else a south door into the ring
 16 12 01d_03 01d_02 01d_01                     # Terminal room: back into the square, south-west door first
 16 2  01d_02                                   # platform: the ladder down to area 12
-16 13 01d_07 01d_01                            # outer ring: the west part's south door to area 14; the south part's east door back into the square
+16 13 01d_07 01d_04 01d_03 01d_01              # outer ring: the west part's south door to area 14; the south part (entered by a south door of the square): the east-facing door 01d_04 back into the square, where the formation changes (Samurai Gamers steps 20, 21; dumps 21:41:02 and 21:41:50: only 01d_04, 05, 06 reachable there); the parts by the east High Pixie and the east end: their doors back
 16 14 01d_10 01d_02                            # the communication tower; from the north-west part, the door south to the west side (area 15)
 16 15 01d_04 01d_05 01d_06                     # west side: the north doors into the column maze (area 16)
 16 3  01d_01                                   # platform: the ladder down to area 15
