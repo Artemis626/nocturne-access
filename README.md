@@ -71,6 +71,20 @@ to the game's own data, so the mod speaks only the game's names and never the gu
 - [Screen Rant](https://screenrant.com/), [GameFAQs](https://gamefaqs.gamespot.com/) and
   [Neoseeker](https://www.neoseeker.com/): the Moirai sisters' fights.
 
+### Where the way on (Shift+End) has data, and its sources
+
+Each route below was read from the guides, then matched to the game's door table, area files and field script
+(`src/NocturneAccess/Data/WayOn.txt` holds the details per area). Other places have no way on yet: Shift+End says
+"None known for this area."
+
+| Place | Field | Sources |
+|---|---|---|
+| Labyrinth of Amala, Second Kalpa | 42 | [Samurai Gamers, Second Kalpa walkthrough](https://samurai-gamers.com/shin-megami-tensei-iii-nocturne-hd-remaster/second-kalpa-walkthrough/) |
+| Amala Network (second visit), the soul rooms of areas 5 and 8 | 28 | [LP Archive, FrankZP part 23](https://lparchive.org/Shin-Megami-Tensei-Nocturne-(by-FrankZP)/Update%2023/), [Neoseeker](https://www.neoseeker.com/shin-megami-tensei-iii-nocturne-hd-remaster/) (search summary); area 8 from the field script alone |
+| Ikebukuro Tunnel, to the Asakusa exit | 26 | [Samurai Gamers, Kabukicho Prison and Ikebukuro Tunnel](https://samurai-gamers.com/shin-megami-tensei-iii-nocturne-hd-remaster/kabukicho-prison-and-ikebukuro-tunnel-walkthrough/), [LP Archive, FrankZP part 17](https://lparchive.org/Shin-Megami-Tensei-Nocturne-(by-FrankZP)/Update%2017/) |
+| Asakusa Tunnel, Yushima to Gaienmae | 29 | [Game8, Yoyogi Park 2](https://game8.co/games/Shin-Megami-Tensei-III-Nocturne/archives/333251), [Neoseeker, Asakusa Tunnel](https://www.neoseeker.com/shin-megami-tensei-iii-nocturne-hd-remaster/Asakusa_Tunnel), [Samurai Gamers, part 8](https://samurai-gamers.com/?p=212902), [LP Archive, FrankZP part 25](https://lparchive.org/Shin-Megami-Tensei-Nocturne-(by-FrankZP)/Update%2025/) |
+| Yoyogi Park, the construction site to the communication tower | 16 | [Samurai Gamers, Yoyogi Park Revisited](https://samurai-gamers.com/?p=212994), [LP Archive, FrankZP part 26](https://lparchive.org/Shin-Megami-Tensei-Nocturne-(by-FrankZP)/Update%2026/), [Game8, Yoyogi Park 2](https://game8.co/games/Shin-Megami-Tensei-III-Nocturne/archives/333251) |
+
 ## License
 
 GNU General Public License version 3. See `LICENSE` and `THIRD_PARTY_NOTICES.md`.

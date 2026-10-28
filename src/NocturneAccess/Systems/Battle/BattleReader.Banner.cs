@@ -60,6 +60,8 @@ namespace NocturneAccess.Systems.Battle
             nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
             _actionActor = d?.activeunit ?? -1;
             _actionHpCost = 0;
+            _lastTargetForm = int.MinValue;   // the pick is over: the next unit's target is said even when it is the same (0.0.128)
+            _targetFromData = false;
             if (_actionActor < 0)
                 return;
             if (_actionActor < FirstEnemy)
@@ -137,12 +139,23 @@ namespace NocturneAccess.Systems.Battle
         // the side change are not a pick (0.0.125).
         private const long SideStartTarSelMs = 1000;
         private static long _sideAt = long.MinValue / 2;
+        private static bool _lastTargetByBanner;   // the last target said came with the game's help banner
 
         private static void PollTarget(long now)
         {
             // The help banner, or the cursor's process on the party's turn when the game draws no banner (0.0.119: a dead ally).
             bool pick = _sideKnown && !_sideEnemy && Math.Abs(_tarSelAt - _sideAt) >= SideStartTarSelMs;
             long seen = Math.Max(_targetCallAt, pick ? _tarSelAt : long.MinValue / 2);
+            // The cursor's process runs on through the party's side, so its window alone never closes between two units' picks: a
+            // target said with its banner is forgotten once the banner goes, or the next unit's pick of the same enemy was silent,
+            // its banner held back as "already said" (Francesco, 28 Oct 2026, 21:04:49: Setanta after Okuninushi, both on Troll 1;
+            // 0.0.128).
+            if (_lastTargetByBanner && now - _targetCallAt > TargetWindowMs)
+            {
+                _lastTargetForm = int.MinValue;
+                _targetFromData = false;
+                _lastTargetByBanner = false;
+            }
             if (now - seen > TargetWindowMs)
             {
                 _lastTargetForm = int.MinValue;
@@ -191,9 +204,11 @@ namespace NocturneAccess.Systems.Battle
             if (now - _targetCallAt > TargetWindowMs && (u.Hp > 0 || form >= FirstEnemy))
             {
                 _targetFromData = false;
+                _lastTargetForm = int.MinValue;   // not said, so not remembered: the next pick of this unit is new (0.0.128)
                 return;
             }
             _targetFromData = true;
+            _lastTargetByBanner = now - _targetCallAt <= TargetWindowMs;
             string race = _targetName == u.Name && _targetRace.Length > 0 ? _targetRace + " " : "";
             Log.Info($"{Tag} Target formindex {form} ({u.Name}){(now - _targetCallAt > TargetWindowMs ? ", no help banner: from the cursor's process" : "")}.");
             SpeechManager.Say($"{race}{DisplayName(u)}, HP {u.Hp} of {u.MaxHp}", interrupt: true, force: true);

@@ -989,6 +989,23 @@ namespace NocturneAccess.Systems.Navigation
             }
         }
 
+        /// <summary>
+        /// How many story events the route to (tx, ty, tz) must cross (0.0.128), or -1 without a route. The way on prefers a point
+        /// reached crossing none: Yoyogi Park's pixies stand under catwalks across the construction site's corridors and warp the
+        /// player back to the entrance; a door behind one is "walkable" for the flood, so area 6's northern door was chosen over the
+        /// south door that leads round through the loop room (offline, dump 28 Oct 21:04:23 with both pixies blocked).
+        /// </summary>
+        internal static int StoryCrossings(float px, float py, float pz, float tx, float ty, float tz)
+        {
+            List<PathRun> runs = Plan(px, py, pz, tx, ty, tz, 0f, false, out _, out _);
+            if (runs == null)
+                return -1;
+            if (_softZones.Count == 0 || LastPath.Count == 0)
+                return 0;
+            short own = _soft[LastPath[LastPath.Count - 1]];   // a story event that is itself the target is not crossed
+            return LastPath.Where(k => _soft[k] != 0 && _soft[k] != own).Select(k => _soft[k]).Distinct().Count();
+        }
+
         private static List<PathRun> PlanAllowing(float px, float py, float pz, float tx, float ty, float tz, float minDist, bool fourWay,
             out float goalX, out float goalZ)
         {

@@ -108,3 +108,36 @@
 29 11 01eve_01                                 # to the platform (area 6)
 29 6  01eve_01                                 # the platform: west to Gaienmae Station
 29 7  01eve_02                                 # Gaienmae Station: the exit to the overworld, by Yoyogi Park
+
+# ---- Yoyogi Park (field 16): from the East Plaza through the construction site to the communication tower ----
+# Route: Samurai Gamers' "Yoyogi Park Revisited" walkthrough (construction site steps 1 to 36), with the LP archive (FrankZP
+# part 26) and Game8, matched on 28 Oct 2026 to the door table (F016.WAP), the area files (f016_NNN.f2) and the field script
+# (f016.bf: the pixies are story volumes 0NN_01eve_NN, "Buzz off!", switched by flag 74; the High Pixies of areas 11 and 13 by
+# the formation flags 1131 to 1138; the tower is area 14's 01d_10, which runs event field 658 until flag 74). Sections: area 5
+# (platform: area 0), area 6 with the loop room 7, area 9 (side room 10, platform area 1), area 8, the High Pixie square 11
+# (Terminal room 12, platform area 2) with its outer ring 13, area 14 (the tower room, split by barricades), the west side 15
+# (platform area 3, destroyed), the column mazes 16 and 23. The way on takes the candidate reached crossing no pixie first
+# (WayOn, 0.0.128), so a section's detour door follows its onward door: area 6 (offline, dump 21:04:23, both pixies blocked:
+# only the south door 01d_05 is reachable from the entrance; the loop room returns north of the catwalk, by 01d_09). Same-area
+# door pairs are listed in their forward direction (the door whose landing lies onward), after the exits.
+16 20 01d_03                                   # East Plaza: the construction site door (opened by the key Yuko gives, beyond 01d_01)
+16 21 01d_01                                   # back to the East Plaza
+16 22 01d_01                                   # back to the East Plaza
+16 4  01d_01                                   # the steps down to the construction site
+16 5  01d_03                                   # section 1: the west door (offline, dump 21:02:28: reached with all four pixies avoided)
+16 0  01d_20                                   # platform: the ladder down to section 1
+16 6  01d_09 01d_05                            # the northern door to section 2; from the entrance, the south door to the loop room
+16 7  01d_07                                   # loop room: the west door, north of the catwalk in area 6
+16 9  01d_19 01d_14 01d_11                     # section 2: north through the door pairs, then the north-west door to area 8
+16 10 01d_01 01d_03 01d_15                     # side room: back to area 9 (the north door first, beside the way to area 8)
+16 1  01d_19                                   # platform: the ladder down to area 10
+16 8  01d_03                                   # the west door to the High Pixie square (area 11)
+16 11 01d_06 01d_10 01d_09 01d_07 01d_08       # High Pixie square: the west door to area 13's west part; else a south door into the ring
+16 12 01d_03 01d_02 01d_01                     # Terminal room: back into the square, south-west door first
+16 2  01d_02                                   # platform: the ladder down to area 12
+16 13 01d_07 01d_01                            # outer ring: the west part's south door to area 14; the south part's east door back into the square
+16 14 01d_10 01d_02                            # the communication tower; from the north-west part, the door south to the west side (area 15)
+16 15 01d_04 01d_05 01d_06                     # west side: the north doors into the column maze (area 16)
+16 3  01d_01                                   # platform: the ladder down to area 15
+16 16 01d_06 01d_03 01d_18 01d_01 01d_07 01d_20   # column maze: a north door to area 23; else a door pair north
+16 23 01d_14 01d_11 01d_13 01d_15 01d_20       # column maze: a north door to the tower row of area 14; else a door pair north

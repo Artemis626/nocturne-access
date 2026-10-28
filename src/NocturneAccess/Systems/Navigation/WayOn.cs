@@ -91,13 +91,27 @@ namespace NocturneAccess.Systems.Navigation
             Marked.UnionWith(names);
             List<Poi> pois = PointsOfInterest.Build(gb);
             List<Poi> candidates = names.Select(n => pois.FirstOrDefault(q => q.Names.Contains(n))).Where(q => q != null).ToList();
-            Poi pick = candidates.FirstOrDefault(q => q.Reachable && q.ViaWarps == 0 && q.Route == null)   // walked to
-                       ?? candidates.FirstOrDefault(q => q.Reachable)                                    // through doors here
-                       ?? candidates.FirstOrDefault(q => q.Listed);                                      // beyond doors
+            // A point walked to crossing no story event first; then through doors here; then walked to through the fewest story
+            // events (in the listed order among equals); then beyond doors (0.0.128: Yoyogi Park's pixies warp the player back, and
+            // the flood counts a door behind one as walkable). The story event that is itself the target is not counted (the Amala
+            // Network 2's soul room names a soul).
+            var crossings = new Dictionary<Poi, int>();
+            foreach (Poi q in candidates.Where(q => q.Reachable && q.ViaWarps == 0 && q.Route == null))
+                crossings[q] = WalkGrid.StoryCrossings(gb.playerX, gb.playerY, gb.playerZ, q.X, q.FloorY, q.Z);
+            int fewest = crossings.Values.Where(c => c > 0).DefaultIfEmpty(-1).Min();
+            Poi pick = candidates.FirstOrDefault(q => crossings.TryGetValue(q, out int c) && c == 0)        // walked to
+                       ?? candidates.FirstOrDefault(q => q.Reachable && !crossings.ContainsKey(q))         // through doors here
+                       ?? candidates.FirstOrDefault(q => crossings.TryGetValue(q, out int c) && c == fewest) // walked to through story events
+                       ?? candidates.FirstOrDefault(q => crossings.ContainsKey(q))                         // walked to, no route planned
+                       ?? candidates.FirstOrDefault(q => q.Listed);                                        // beyond doors
             Log.Info($"{Tag} Field {gb.fieldID} area {gb.areaID}: " + string.Join(", ", names.Select(n =>
             {
                 Poi q = candidates.FirstOrDefault(c => c.Names.Contains(n));
-                return q == null ? $"{n} not here" : $"{n} {(q.Reachable ? (q.ViaWarps == 0 && q.Route == null ? "walked to" : "via " + (q.Route != null ? "other areas" : q.ViaLegs)) : q.Listed ? "beyond doors" : "not reachable")}";
+                string state = q == null ? "not here"
+                    : crossings.TryGetValue(q, out int c) ? (c == 0 ? "walked to" : c < 0 ? "walked to, no route" : $"walked to through {c} story event{(c == 1 ? "" : "s")}")
+                    : q.Reachable ? "via " + (q.Route != null ? "other areas" : q.ViaLegs)
+                    : q.Listed ? "beyond doors" : "not reachable";
+                return $"{n} {state}";
             })) + $"; chosen {pick?.ResName ?? "none"}.");
             Marked.Clear();
             if (pick == null)
