@@ -25,6 +25,11 @@ namespace NocturneAccess.Systems.Battle
         internal static int MenuSlot(Func<IList<(int Slot, string Text, TMP_Text Component)>> rows, out string detail)
         {
             detail = "";
+            // Asked every frame while no row is lit, battle or not: the game's data only while a battle menu row is shown (the call
+            // throws outside battle: 14:10:06, 28 Oct 2026; 0.0.126).
+            IList<(int Slot, string Text, TMP_Text Component)> shown = rows();
+            if (!shown.Any(r => r.Component != null && !string.IsNullOrEmpty(r.Text) && UiUtil.IsVisible(r.Component)))
+                return -1;
             nbCommSelProcessData_t s = Data();
             if (s == null)
             {
@@ -32,7 +37,7 @@ namespace NocturneAccess.Systems.Battle
                 return -1;
             }
             int slot = s.drawcursor - s.drawlisty + 1;
-            var row = rows().FirstOrDefault(r => r.Slot == slot);
+            var row = shown.FirstOrDefault(r => r.Slot == slot);
             if (row.Component == null || string.IsNullOrEmpty(row.Text) || !UiUtil.IsVisible(row.Component))
             {
                 detail = $"cursor {s.drawcursor}, top {s.drawlisty}, list {s.drawtype}: row {slot} not shown";

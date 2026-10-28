@@ -107,7 +107,7 @@ namespace NocturneAccess.Systems.Navigation
         private static int _field = int.MinValue;
         private static bool _loggedEmpty;
 
-        /// <summary>"room", "passage", "exit", "to exit" (a room whose only other way out leaves the field, 0.0.59) or "" for door volume resName in (field, area).</summary>
+        /// <summary>"room", "passage", "exit", "to exit" (a room whose only other way out is one door off the field, 0.0.59, 0.0.126) or "" for door volume resName in (field, area).</summary>
         internal static string KindOf(int field, int area, string resName)
         {
             if (!(Config.DoorKinds?.Value ?? true))
@@ -123,7 +123,8 @@ namespace NocturneAccess.Systems.Navigation
                     return "exit";
                 if (toArea == area)
                     return "";
-                bool any = false, exit = false;
+                bool any = false;
+                int exits = 0;
                 foreach (string name in Entries.Where(x => x.AreaPlus1 == toArea + 1 && x.Name.Length > 0).Select(x => x.Name).Distinct())
                 {
                     Entry back = Find(toArea, name);
@@ -136,13 +137,15 @@ namespace NocturneAccess.Systems.Navigation
                     // A room whose only other way out leaves the field (stairs to the overworld): "to exit" (Francesco, 6 Oct 2026).
                     if (back.WarpType == 0 && f != field)
                     {
-                        exit = true;
+                        exits++;
                         continue;
                     }
                     if (back.WarpType == 1 || (a != area && a != toArea))
                         return "passage";
                 }
-                return exit ? "to exit" : any ? "room" : "";
+                // Only a stairwell with one way out: Asakusa's streets (field 27 areas 7 and 18) open onto the overworld at two
+                // ends and are rooms (Francesco, 28 Oct 2026: "rooms marked as doors to exit"; 0.0.126).
+                return exits == 1 ? "to exit" : any || exits > 1 ? "room" : "";
             }
             catch (Exception ex)
             {

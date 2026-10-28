@@ -183,6 +183,14 @@ namespace NocturneAccess.Systems.Battle
                 return;
             }
 
+            // Without a help banner only a dead ally is a pick (the game draws no banner for it, 0.0.119). The cursor's process also
+            // runs as each party turn opens and through auto battle, on living units: "Art, HP 435 of 435" and, after a summon,
+            // "Succubus, HP 306 of 306" cut the turn line and the enemy list (Francesco, 28 Oct 2026: 18 times in one session; 0.0.126).
+            if (now - _targetCallAt > TargetWindowMs && u.Hp > 0)
+            {
+                _targetFromData = false;
+                return;
+            }
             _targetFromData = true;
             string race = _targetName == u.Name && _targetRace.Length > 0 ? _targetRace + " " : "";
             Log.Info($"{Tag} Target formindex {form} ({u.Name}){(now - _targetCallAt > TargetWindowMs ? ", no help banner: from the cursor's process" : "")}.");
