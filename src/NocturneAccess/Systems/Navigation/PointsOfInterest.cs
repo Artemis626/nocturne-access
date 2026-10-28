@@ -672,14 +672,25 @@ namespace NocturneAccess.Systems.Navigation
                 var placed = paths.SelectMany(p => p).ToList();
                 pass = placed.Count > 0;
                 why = placed.Count == 0 ? "places no one" : "";
-                foreach ((int areaPlus1, string point) in placed.Distinct())
+                var distinct = placed.Distinct().ToList();
+                bool allHere = distinct.All(t => t.AreaPlus1 == 0 || t.AreaPlus1 == gb.areaID + 1);
+                bool unknownSpot = false;
+                foreach ((int areaPlus1, string point) in distinct)
                 {
                     bool here = areaPlus1 == 0 || areaPlus1 == gb.areaID + 1;
-                    float d = here && WarpMap.PointXZ(point, out float x, out float z) ? (float)Math.Sqrt((x - cx) * (x - cx) + (z - cz) * (z - cz)) : float.MaxValue;
-                    why += $"{(why.Length > 0 ? ", " : "")}{point}{(here ? (d == float.MaxValue ? " (not found)" : $" {d:0} away") : $" in area {areaPlus1 - 1}")}";
-                    if (d > PassReach)
+                    float x = 0, z = 0;
+                    bool found = here && WarpMap.PointXZ(point, out x, out z);
+                    float d = found ? (float)Math.Sqrt((x - cx) * (x - cx) + (z - cz) * (z - cz)) : float.MaxValue;
+                    why += $"{(why.Length > 0 ? ", " : "")}{point}{(here ? (found ? $" {d:0} away" : " (not found)") : $" in area {areaPlus1 - 1}")}";
+                    if (!here || (found && d > PassReach))
                         pass = false;
+                    unknownSpot |= here && !found;
                 }
+                // Yoyogi Park's area file keeps no point table at run time (dump 22:10:44: none; every point "not found", 22:07:52):
+                // there a passage is told by its two landings, one on each side (01pos_51 / 01pos_52, chosen by the side walked in
+                // from), and a send-off by its one (the entrance 01pos_11, or the loop room's 01pos_04 in area 6; f016.bf offline).
+                if (pass && unknownSpot && !(allHere && distinct.Count >= 2))
+                    pass = false;
             }
             if (!PassCache.TryGetValue(key, out var old) || old.Pass != pass)
                 Log.Info($"[Nav:Poi] Story event {q.ResName} in field {gb.fieldID} area {gb.areaID}: {(pass ? "lets the player through, not avoided" : "avoided")} ({why}).");
