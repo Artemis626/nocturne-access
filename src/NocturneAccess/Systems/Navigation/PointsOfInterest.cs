@@ -610,7 +610,8 @@ namespace NocturneAccess.Systems.Navigation
             {
                 ListResetWarps(gb, kept);
                 // The story events still listed (not played yet) are gone round by routes where another way exists (0.0.120).
-                WalkGrid.SetSoftZones(kept.Where(q => q.Kind == PoiKind.Event && q.Story && q.HasBox).Select(q => new WalkGrid.Zone
+                // 0.0.130: not those whose every path only puts the player just past them (Yoyogi Park's unguarded catwalks).
+                WalkGrid.SetSoftZones(kept.Where(q => q.Kind == PoiKind.Event && q.Story && q.HasBox && !PassThrough(gb, q)).Select(q => new WalkGrid.Zone
                 {
                     Id = q.Index,
                     X = (q.BoxX0 + q.BoxX1) / 2f,
@@ -644,6 +645,48 @@ namespace NocturneAccess.Systems.Navigation
         /// in its room; when no walk from here reaches that landing, this door is the far side, and the warp routes below decide
         /// for it as for any point in another room (plain doors left out, landmarks "via 1 door").
         /// </summary>
+        // ---- Story events that only let the player through (0.0.130) ----
+        // Yoyogi Park's High Pixie square (field 16 area 11; Francesco, 28 Oct 2026, 21:51 session): every catwalk is a story
+        // volume, but which ones send the player off follows the formation flag 1123. A guarded catwalk puts the player at the
+        // square's entrance (01pos_11) or in another area (CALL_FIELD2 to the Terminal room, area 12, or the ring, area 13); an
+        // unguarded one turns the formation and puts the player just past itself (01pos_41 to 01pos_52, about 200 away). Counting
+        // both as obstacles, the way on always found the south door cheaper than the west door and looped through the ring
+        // (21:53:38, 21:55:11, 21:56:32). A story event whose every placement is in this area within PassReach of its volume, with at
+        // least one placement, is no obstacle; one that places no one (the Amala Network 2's barrier souls) stays one.
+        private const float PassReach = 600f;
+        private static readonly Dictionary<string, (long At, bool Pass)> PassCache = new Dictionary<string, (long, bool)>();
+        private static readonly System.Diagnostics.Stopwatch PassClock = System.Diagnostics.Stopwatch.StartNew();
+
+        private static bool PassThrough(fldGlobalWork_t gb, Poi q)
+        {
+            string key = $"{gb.fieldID}/{gb.areaID}/{q.ResName}";
+            long now = PassClock.ElapsedMilliseconds;
+            if (PassCache.TryGetValue(key, out var hit) && now - hit.At < 500)
+                return hit.Pass;
+            List<List<(int AreaPlus1, string Point)>> paths = FieldScript.Placements(gb.areaID, q.ResName);
+            bool pass = false;
+            string why = "no script";
+            if (paths != null)
+            {
+                float cx = (q.BoxX0 + q.BoxX1) / 2f, cz = (q.BoxZ0 + q.BoxZ1) / 2f;
+                var placed = paths.SelectMany(p => p).ToList();
+                pass = placed.Count > 0;
+                why = placed.Count == 0 ? "places no one" : "";
+                foreach ((int areaPlus1, string point) in placed.Distinct())
+                {
+                    bool here = areaPlus1 == 0 || areaPlus1 == gb.areaID + 1;
+                    float d = here && WarpMap.PointXZ(point, out float x, out float z) ? (float)Math.Sqrt((x - cx) * (x - cx) + (z - cz) * (z - cz)) : float.MaxValue;
+                    why += $"{(why.Length > 0 ? ", " : "")}{point}{(here ? (d == float.MaxValue ? " (not found)" : $" {d:0} away") : $" in area {areaPlus1 - 1}")}";
+                    if (d > PassReach)
+                        pass = false;
+                }
+            }
+            if (!PassCache.TryGetValue(key, out var old) || old.Pass != pass)
+                Log.Info($"[Nav:Poi] Story event {q.ResName} in field {gb.fieldID} area {gb.areaID}: {(pass ? "lets the player through, not avoided" : "avoided")} ({why}).");
+            PassCache[key] = (now, pass);
+            return pass;
+        }
+
         private static void FarSidesOfPairs(fldGlobalWork_t gb, List<Poi> kept, float px, float py, float pz)
         {
             foreach (Poi q in kept.Where(q => q.Kind == PoiKind.Door && q.Reachable && !q.Warp))

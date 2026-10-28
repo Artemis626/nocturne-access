@@ -438,6 +438,24 @@ namespace NocturneAccess.Systems.Navigation
             return zone;
         }
 
+        /// <summary>The X and Z of the loaded area's point named name ("01pos_11"), for the scripts' placements (0.0.130).</summary>
+        internal static bool PointXZ(string name, out float x, out float z)
+        {
+            x = z = 0;
+            try
+            {
+                if (!FindPoint(name, out Vector4 pos, out _))
+                    return false;
+                x = pos.x;
+                z = pos.z;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         /// <summary>The position of the area file's resource named name (an arrival point, "01pos_02").</summary>
         private static bool FindPoint(string name, out Vector4 pos, out string from)
         {

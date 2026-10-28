@@ -93,6 +93,8 @@ namespace NocturneAccess.Systems.Navigation
         internal static string[] OpNames = Array.Empty<string>();
         internal static readonly List<(string Name, int Params)> Commands = new List<(string, int)>();
         private static int _bitChk = -1, _bitOn = -1, _bitOff = -1, _sync = -1, _message = -1;
+        private static int _searchId = -1, _modelPlayer = -1, _modelPos = -1, _callField2 = -1;   // 0.0.130: where an event puts the player
+        private static int _strAt = -1;   // the strings table (kind 4): PUSHSTR's argument is an offset into it
         private static readonly HashSet<int> PromptCommands = new HashSet<int>();
         private static bool _tablesRead;
 
@@ -153,6 +155,7 @@ namespace NocturneAccess.Systems.Navigation
             LabelAddress.Clear();
             DialogFirstKey.Clear();
             _codeAt = _codeCount = 0;
+            _strAt = -1;
             byte[] d = _data;
             if (d.Length < 32 || Encoding.ASCII.GetString(d, 8, 4) != "FLW0")
             {
@@ -172,6 +175,7 @@ namespace NocturneAccess.Systems.Navigation
                     case 1: labelAt = address; labelCount = count; labelSize = size; break;
                     case 2: _codeAt = address; _codeCount = count; break;
                     case 3: msgAt = address; msgSize = count * size; break;
+                    case 4: _strAt = address; break;
                 }
             }
             for (int i = 0; i < procCount && procSize >= 28 && procAt + (i + 1) * procSize <= d.Length; i++)
@@ -278,6 +282,10 @@ namespace NocturneAccess.Systems.Navigation
             _bitOff = Commands.FindIndex(c => c.Name == "scrCommand_BIT_OFF");
             _sync = Commands.FindIndex(c => c.Name == "scrCommand_SYNC");
             _message = Commands.FindIndex(c => c.Name == "itfMesMngMessage");
+            _searchId = Commands.FindIndex(c => c.Name == "evtCommand_SEARCH_ID");
+            _modelPlayer = Commands.FindIndex(c => c.Name == "evtCommand_MODEL_PLAYER");
+            _modelPos = Commands.FindIndex(c => c.Name == "evtCommand_MODEL_POS");
+            _callField2 = Commands.FindIndex(c => c.Name == "evtCommand_CALL_FIELD2");
             // The prompt commands: fldCommand_ACT_WIN_DSP, _DSP2, _DSP3 (and any other ACT_WIN command the table holds).
             PromptCommands.Clear();
             for (int k = 0; k < Commands.Count; k++)
@@ -396,6 +404,160 @@ namespace NocturneAccess.Systems.Navigation
             if (!Ensure() || _message < 0 || !ProcByName.TryGetValue($"{area + 1:000}_{volume}", out Proc p))
                 return "";
             return new DryRun().DetailAfter(p.Start, new List<int?>(), null, stopAtPrompt: true);
+        }
+
+        /// <summary>
+        /// Where event volume `volume` of `area` puts the player on each of its paths with the flags of now (0.0.130): per path the
+        /// points, each as (area + 1 or 0 for this area, point name); a path that places no one gives an empty list. Two ways are
+        /// read: evtCommand_CALL_FIELD2(point, area + 1) and evtCommand_MODEL_PLAYER then evtCommand_MODEL_POS(player, point found
+        /// by evtCommand_SEARCH_ID). Yoyogi Park (f016.bf): a guarded catwalk sends the player to the square's entrance (01pos_11) or
+        /// to another area (CALL_FIELD2 to area + 1 13, the Terminal room); an unguarded one turns the High Pixies' formation and
+        /// puts the player just past itself (01pos_51 or 01pos_52, 200 from the south catwalk), which the formation flag 1123
+        /// decides per volume. Null when the script cannot be read.
+        /// </summary>
+        internal static List<List<(int AreaPlus1, string Point)>> Placements(int area, string volume)
+        {
+            if (!Ensure() || _strAt < 0 || _modelPos < 0 || _callField2 < 0 || !ProcByName.TryGetValue($"{area + 1:000}_{volume}", out Proc p))
+                return null;
+            var paths = new List<List<(int, string)>>();
+            int budget = 20000;
+            Place(p.Start, new List<object>(), null, new Dictionary<int, bool>(), new List<(int, string)>(), new List<int>(), 0, paths, ref budget);
+            return paths;
+        }
+
+        private static string StringAt(int off)
+        {
+            int at = _strAt + off;
+            if (off < 0 || at >= _data.Length)
+                return "";
+            int n = 0;
+            while (at + n < _data.Length && _data[at + n] != 0 && n < 64)
+                n++;
+            return Encoding.ASCII.GetString(_data, at, n);
+        }
+
+        private static void Place(int pc, List<object> st0, object reg, Dictionary<int, bool> set0, List<(int, string)> got0, List<int> calls0,
+            int depth, List<List<(int, string)>> paths, ref int budget)
+        {
+            var st = new List<object>(st0);
+            var set = new Dictionary<int, bool>(set0);
+            var got = new List<(int, string)>(got0);
+            var calls = new List<int>(calls0);
+            var gotos = new Dictionary<int, int>();
+            object Pop() { if (st.Count == 0) return null; object v = st[st.Count - 1]; st.RemoveAt(st.Count - 1); return v; }
+            while (budget-- > 0 && pc >= 0 && pc < _codeCount)
+            {
+                short o = OpAt(pc);
+                int u = (ushort)ArgAt(pc);
+                switch (OpOf(o))
+                {
+                    case Op.PushIS: st.Add((int)ArgAt(pc)); pc++; break;
+                    case Op.PushI: st.Add(pc + 1 < _codeCount ? WordAt(pc + 1) : (object)null); pc += 2; break;
+                    case Op.PushF: st.Add(null); pc += 2; break;
+                    case Op.PushReg: st.Add(reg); pc++; break;
+                    case Op.PushSTR: st.Add("s:" + StringAt(u)); pc++; break;
+                    case Op.PushIX: case Op.PushFX: case Op.PushLIX: case Op.PushLFX: st.Add(null); pc++; break;
+                    case Op.PopIX: case Op.PopFX: case Op.PopLIX: case Op.PopLFX: Pop(); pc++; break;
+                    case Op.EQ: case Op.NEQ:
+                    {
+                        object b = Pop(), a = Pop();
+                        st.Add(a is int ia && b is int ib ? ((ia == ib) == (OpOf(o) == Op.EQ) ? 1 : 0) : (object)null);
+                        pc++;
+                        break;
+                    }
+                    case Op.IF:
+                    {
+                        object v = Pop();
+                        int target = Label(u);
+                        if (target < 0)
+                            return;
+                        if (v is int iv)
+                        {
+                            pc = iv != 0 ? pc + 1 : target;
+                            break;
+                        }
+                        if (depth > MaxBranchDepth)
+                            return;
+                        Place(pc + 1, st, reg, set, got, calls, depth + 1, paths, ref budget);
+                        Place(target, st, reg, set, got, calls, depth + 1, paths, ref budget);
+                        return;
+                    }
+                    case Op.Goto:
+                    {
+                        int target = Label(u);
+                        gotos.TryGetValue(target, out int times);
+                        if (target < 0 || times > 50)
+                            return;
+                        gotos[target] = times + 1;
+                        pc = target;
+                        break;
+                    }
+                    case Op.Jump:
+                        if (u >= ProcsByIndex.Count)
+                            return;
+                        pc = ProcsByIndex[u].Start;
+                        break;
+                    case Op.Call:
+                        if (u >= ProcsByIndex.Count)
+                            return;
+                        calls.Add(pc + 1);
+                        pc = ProcsByIndex[u].Start;
+                        break;
+                    case Op.End:
+                        if (calls.Count == 0)
+                        {
+                            paths.Add(got);
+                            return;
+                        }
+                        pc = calls[calls.Count - 1];
+                        calls.RemoveAt(calls.Count - 1);
+                        break;
+                    case Op.Comm:
+                    {
+                        if (u == _bitChk)
+                        {
+                            object f = Pop();
+                            reg = f is int fi ? (set.TryGetValue(fi, out bool sv) ? sv : EventBit.evtBitCheck(fi)) ? 1 : 0 : (object)null;
+                        }
+                        else if (u == _bitOn || u == _bitOff)
+                        {
+                            if (Pop() is int fi)
+                                set[fi] = u == _bitOn;
+                        }
+                        else if (u == _searchId)
+                            reg = Pop() is string s && s.StartsWith("s:", StringComparison.Ordinal) ? "id:" + s.Substring(2) : null;
+                        else if (u == _modelPlayer)
+                            reg = "player";
+                        else if (u == _modelPos)
+                        {
+                            object b = Pop(), a = Pop();
+                            string id = a is string sa && sa.StartsWith("id:", StringComparison.Ordinal) ? sa
+                                      : b is string sb && sb.StartsWith("id:", StringComparison.Ordinal) ? sb : null;
+                            if (("player".Equals(a) || "player".Equals(b)) && id != null)
+                                got.Add((0, id.Substring(3)));
+                            reg = null;
+                        }
+                        else if (u == _callField2)
+                        {
+                            object ar = Pop(), pt = Pop();
+                            got.Add((ar is int ai ? ai : -1, pt is string ps && ps.StartsWith("s:", StringComparison.Ordinal) ? ps.Substring(2) : ""));
+                            reg = null;
+                        }
+                        else
+                        {
+                            int args = u < Commands.Count ? Commands[u].Params : 0;
+                            for (int i = 0; i < args; i++)
+                                Pop();
+                            reg = null;
+                        }
+                        pc++;
+                        break;
+                    }
+                    default:
+                        pc++;
+                        break;
+                }
+            }
         }
 
         /// <summary>One classification: the step budget, the branches already split, and its own copy of the flags it set.</summary>
