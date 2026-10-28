@@ -186,7 +186,9 @@ namespace NocturneAccess.Systems.Battle
             // Without a help banner only a dead ally is a pick (the game draws no banner for it, 0.0.119). The cursor's process also
             // runs as each party turn opens and through auto battle, on living units: "Art, HP 435 of 435" and, after a summon,
             // "Succubus, HP 306 of 306" cut the turn line and the enemy list (Francesco, 28 Oct 2026: 18 times in one session; 0.0.126).
-            if (now - _targetCallAt > TargetWindowMs && u.Hp > 0)
+            // A dead enemy is no pick either: the process runs on it as the last enemy falls ("Naga 2, HP 0 of 264" before the
+            // results, 28 Oct 2026, 16:28:45 and 16:00:43; 0.0.127).
+            if (now - _targetCallAt > TargetWindowMs && (u.Hp > 0 || form >= FirstEnemy))
             {
                 _targetFromData = false;
                 return;

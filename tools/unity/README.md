@@ -14,6 +14,7 @@ never the executable. Outputs go to `research/gamedata/` (git-ignored: derived f
 - `bmd.pl <file.bf> [N]`: the message block's dialogs (name, kind, lines, localization keys).
 - `events.pl <file.bf> <localization lines> [regex]`: per event procedure the flags it tests first, its prompt and first message.
 - `simulate.pl <file.bf> [regex]` (`FLAGS="1268 1269"`): the dry run the mod's `FieldScript` does in game (action, story, idle).
+- `wap.pl <FNNN.WAP> [area]`: the field's door warp table (the data of `fldWap.gFldWarpBuff.door_buff`) in the Shift+F6 dump's row format (28 Oct 2026; layout in `docs/class-index.md`).
 
 Where things are: field `NNN` bundle `fNNN` (script `fNNN.bf`, per-area `fNNN_AAA.f1/.f2/.TB/.LB`); its English lines
 `eNNN_en` (`ENNN_EN`, Souls in `ENNNINF_EN`); prompt words `common_en` `ETC_EN` (`PANELMES_L0001`..`L0011`); field and

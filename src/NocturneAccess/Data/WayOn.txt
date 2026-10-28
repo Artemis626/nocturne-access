@@ -4,7 +4,8 @@
 # order of preference: Shift+End takes the first one the player can walk to, else the first reached through doors of the
 # area, else the first one listed at all ("beyond doors"). Several are given where the game splits an area into parts.
 # Everything after # is a note. Lines are derived from walkthroughs, then matched to the game's door table (navigation
-# dumps), the area files' arrival points (f042_NNN.f2) and the field script (f042.bf): never a guide's own words.
+# dumps, or the field's FNNN.WAP read offline with tools/unity/wap.pl), the area files' arrival points (fNNN_AAA.f2) and the field
+# script (fNNN.bf): never a guide's own words.
 
 # ---- Amala Network 2 (field 28), area 5: the soul room ----
 # Five souls (01eve_01 to 05) each raise a barrier when walked into (atari_hoji_0N, f028.bf script area 6); the side warps
@@ -51,3 +52,59 @@
 42 25 01d_02                                   # to area 13
 42 26 01d_02                                   # to area 24
 42 27 01d_02 01d_03                            # Burial Chamber: to area 17, else to area 20
+
+# ---- Ikebukuro Tunnel (field 26): from the Ikebukuro entrance to the Asakusa exit ----
+# Route (Samurai Gamers' Kabukicho Prison and Ikebukuro Tunnel walkthrough; LP archive, FrankZP part 17), matched on 28 Oct 2026
+# to the game's door table (F026.WAP, read offline with tools/unity/wap.pl; equal to every dump row) and to the door links walked
+# in October (Explored files, "pass" and "reach" lines): B2 tracks (areas 1, 19; area 18 and 17 the collapsed north tunnel), the
+# Terminal room and its ladder (area 2), B3 (area 3) through the west doors to area 22 and its ladder down to B4 (area 5), the
+# ladder up to area 4 (B3), its ladder in the damaging floor up to B2 (area 10), the west tracks (areas 20, 11) and the station
+# at the end of the line (area 12), whose stairs leave for Asakusa. The Four Oni's rooms (areas 6, 8, 9, 13 to 16, 23) are side
+# ways: there the way on leads back. Each area on the chain is one part (its door pairs joined), so one candidate is enough.
+26 0  01eve_01                                 # the station: to the platform
+26 1  01eve_03                                 # B2 tracks: the west tracks (the north tunnel, area 18, is collapsed)
+26 18 01eve_01                                 # the north tunnel: back to the platform
+26 17 01eve_03                                 # the north tunnel's end: back
+26 19 01eve_05 01eve_07                        # B2 tracks: to the Terminal room (area 2)
+26 2  01d_04                                   # the Terminal room: the ladder down to B3
+26 3  01d_11                                   # B3: the west door to area 22 (the hidden pitfall 01eve_10 drops to area 7)
+26 7  01d_08 01d_07                            # B4 under the pitfall: the ladder up into the main part of B3
+26 22 01d_13                                   # B3: the ladder down to B4
+26 5  01d_05                                   # B4: the ladder up to area 4 (B3)
+26 8  01d_13                                   # B5: the ladder up to B4
+26 23 01d_11                                   # B4: back to area 5
+26 14 01d_01                                   # the Stone Cave: back to area 23
+26 4  01d_10                                   # B3: the ladder in the damaging floor up to B2 (area 10)
+26 6  01d_04                                   # B4: the ladder up to area 4
+26 13 01d_01                                   # back to area 6
+26 10 01eve_03                                 # B2: to the west tracks (area 20)
+26 16 01d_01 01d_02                            # back to area 10
+26 20 01eve_01                                 # the west tracks: to area 11
+26 11 01eve_01                                 # to the station at the end of the line (area 12)
+26 12 01eve_02                                 # the station: the stairs up to the overworld, by Asakusa
+26 21 01eve_01                                 # back to area 11
+26 9  01eve_03                                 # back to area 21
+26 15 01d_01                                   # back to area 9
+
+# ---- Asakusa Tunnel (field 29): from Yushima Station (Asakusa) to Gaienmae Station (Yoyogi Park) ----
+# Route (Game8's Yoyogi Park walkthrough; Neoseeker: of B2's three holes take the middle one, the others are diversions; LP
+# archive, FrankZP part 25: the western ladder leads to a short dead end, past the middle one a ladder goes up to B2), matched on
+# 28 Oct 2026 to the door table (F029.WAP) and the area files' arrival points (f029_NNN.f2, area + 1): the platform (area 1), the
+# B2 corridor (area 10) and its middle hole 01eve_07 into area 3's middle column (01pos_09), whose door pair leads to the ladder
+# 01d_08 down to B3 (area 8, 01pos_07); its door 01d_03 north into area 5 (01pos_05); through area 5's door pair 01d_11 / 01d_12
+# west to 01d_09, into area 8's far west room (01pos_15) and its ladder 01d_16 up to area 4 (B2); through its door pair to
+# 01eve_03, area 11, area 6 (the platform) and Gaienmae Station (area 7). Areas 3, 5 and 8 are split into column rooms that do not
+# join: each lists only one point per part, so a door back is never preferred to the way on in the right part (the way on takes
+# a point walked to before one through a door pair). In a wrong column the way on is the way back.
+29 0  01eve_01                                 # Yushima Station: the escalator down to the platform
+29 1  01eve_03                                 # the platform: to the B2 corridor (01eve_02 leads to the side tunnels, areas 9 and 2)
+29 9  01eve_01                                 # side tunnel: back to the platform
+29 2  01eve_03                                 # side tunnel: back to area 9
+29 10 01eve_07                                 # B2 corridor: the middle hole
+29 3  01d_08 01eve_13 01eve_03                 # B2: the middle column's ladder down; in the west or east column, back to the corridor
+29 8  01d_16 01d_03 01d_08 01d_13 01d_15       # B3: the far west room's ladder up; the middle room's door north; the cube room's door; west and east rooms: back up
+29 5  01d_09 01d_06 01d_02                     # B3: west through the door pair to 01d_09; the west and east rooms: back
+29 4  01eve_03                                 # B2: through the door pair to area 11
+29 11 01eve_01                                 # to the platform (area 6)
+29 6  01eve_01                                 # the platform: west to Gaienmae Station
+29 7  01eve_02                                 # Gaienmae Station: the exit to the overworld, by Yoyogi Park

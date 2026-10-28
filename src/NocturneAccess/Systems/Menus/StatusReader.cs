@@ -348,20 +348,46 @@ namespace NocturneAccess.Systems.Menus
 
         private static readonly string[] InheritRows = { "menuskill_top", "menuskill_base02", "menuskill_base03", "menuskill_base04", "menuskill_base05" };
 
-        /// <summary>The list row drawn TMC01 and its window row (0 to 4), or "" and -1.</summary>
+        /// <summary>
+        /// The list row drawn TMC01 and its window row (0 to 4), or "" and -1. A skill already chosen is drawn TMC02 under the
+        /// cursor as well, with no highlight, and the list fell silent on it (Francesco, 28 Oct 2026, 15:45 UI dump: Mediarama,
+        /// inherited, TMC02 in menuskill_base04 with mSkillSelectCur 3): with no row lit the game's cursor row is taken, and a
+        /// row drawn TMC02 is said "Unavailable" first (Francesco's word for the battle menu, 27 Oct 2026; 0.0.127).
+        /// </summary>
         private static string InheritRow(Transform root, out int windowRow)
         {
             windowRow = -1;
             for (int i = 0; i < InheritRows.Length; i++)
             {
-                TMP_Text row = Component(root, $"skill_select/menu_skill/menu_skill_window/{InheritRows[i]}/TextTM");
+                TMP_Text row = InheritRowText(root, i);
                 if (row == null || !UiUtil.IsVisible(row) || !(row.text ?? "").Contains("<material=\"TMC01\">"))
                     continue;
                 windowRow = i;
                 return TextUtil.Clean(row.text);
             }
-            return "";
+            int cur;
+            try
+            {
+                cur = fclCombineInit.CMB_GBWK?.mSkillSelectCur ?? -1;
+            }
+            catch
+            {
+                cur = -1;
+            }
+            if (cur < 0 || cur >= InheritRows.Length)
+                return "";
+            TMP_Text under = InheritRowText(root, cur);
+            string name = under != null && UiUtil.IsVisible(under) ? TextUtil.Clean(under.text) : "";
+            if (name.Length == 0)
+                return "";
+            windowRow = cur;
+            return (under.text ?? "").Contains("<material=\"TMC02\">") ? $"{UnusableWord}. {name}" : name;
         }
+
+        private const string UnusableWord = "Unavailable";   // Francesco's word (27 Oct 2026)
+
+        private static TMP_Text InheritRowText(Transform root, int i)
+            => Component(root, $"skill_select/menu_skill/menu_skill_window/{InheritRows[i]}/TextTM");
 
         /// <summary>The description lines joined: "Medium Fire damage to one foe."</summary>
         private static string InheritHelp(Transform root)
