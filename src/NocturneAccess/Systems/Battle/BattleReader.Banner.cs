@@ -17,6 +17,8 @@ namespace NocturneAccess.Systems.Battle
 
         private static void AfterDispText(string __0, string __1, int __2)
         {
+            if (__1 != null && Clock.ElapsedMilliseconds - _actionAt < ActionTailMs)
+                return;   // the target's help drawn on past the confirm: not a new banner (0.0.133)
             _bannerRequested = true;
             _bannerIsTarget = __1 != null;
             // An action name: ("Feral Claw", null, 0, ...) or ("Attack", null, 0, ...); results are (null, null, 1, ...).
@@ -60,8 +62,11 @@ namespace NocturneAccess.Systems.Battle
             nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
             _actionActor = d?.activeunit ?? -1;
             _actionHpCost = 0;
-            _lastTargetForm = int.MinValue;   // the pick is over: the next unit's target is said even when it is the same (0.0.128)
-            _targetFromData = false;
+            // The pick is over. 0.0.128 forgot the target here, but the game draws the target's help a few frames past the confirm,
+            // so the target was said again over the action (Francesco, 29 Oct 2026: "Corpus Sakahagi, HP 1486 of 1600" at 21:26:30.722,
+            // again at .873 with "Attack", then the damage). Help drawn just after an action is now ignored (AfterDispText), so the
+            // banner counts as gone and the next unit's pick of the same enemy is still said (0.0.133).
+            _actionAt = Clock.ElapsedMilliseconds;
             if (_actionActor < 0)
                 return;
             if (_actionActor < FirstEnemy)
@@ -140,6 +145,8 @@ namespace NocturneAccess.Systems.Battle
         private const long SideStartTarSelMs = 1000;
         private static long _sideAt = long.MinValue / 2;
         private static bool _lastTargetByBanner;   // the last target said came with the game's help banner
+        private static long _actionAt = long.MinValue / 2;   // the last action banner (0.0.133)
+        private const long ActionTailMs = 500;              // help drawn this soon after an action belongs to the pick just made
 
         private static void PollTarget(long now)
         {
@@ -211,7 +218,7 @@ namespace NocturneAccess.Systems.Battle
             _lastTargetByBanner = now - _targetCallAt <= TargetWindowMs;
             string race = _targetName == u.Name && _targetRace.Length > 0 ? _targetRace + " " : "";
             Log.Info($"{Tag} Target formindex {form} ({u.Name}){(now - _targetCallAt > TargetWindowMs ? ", no help banner: from the cursor's process" : "")}.");
-            SpeechManager.Say($"{race}{DisplayName(u)}, HP {u.Hp} of {u.MaxHp}", interrupt: true, force: true);
+            SpeechManager.Say($"{race}{DisplayName(u)}, HP {u.Hp} of {u.MaxHp}{StatusOf(u)}", interrupt: true, force: true);
         }
     }
 }

@@ -60,7 +60,7 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             _tonePending = false;
             Load();
-            if (!_table.ContainsKey((gb.fieldID, gb.areaID)) || !Heard.Add((gb.fieldID, gb.areaID)))
+            if (!Known(gb.fieldID, gb.areaID, out _) || !Heard.Add((gb.fieldID, gb.areaID)))
                 return;
             Log.Info($"{Tag} Field {gb.fieldID} area {gb.areaID} has a way on: tone{((Config.WayOnSound?.Value ?? true) ? "" : " (off in the config)")}.");
             if (Config.WayOnSound?.Value ?? true)
@@ -96,7 +96,7 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
             Load();
-            if (!_table.TryGetValue((gb.fieldID, gb.areaID), out List<string> names))
+            if (!Known(gb.fieldID, gb.areaID, out List<string> names))
             {
                 Log.Info($"{Tag} No way on known for field {gb.fieldID} area {gb.areaID}.");
                 SpeechManager.Say($"{Words} None known for this area.", interrupt: true);
@@ -151,6 +151,22 @@ namespace NocturneAccess.Systems.Navigation
             RouteGuide.SpeakWith(Words + " ");
         }
 
+        private static readonly Dictionary<int, int> Until = new Dictionary<int, int>();
+
+        /// <summary>The way-on candidates of (field, area), unless there are none or the field's "until" flag is set.</summary>
+        private static bool Known(int field, int area, out List<string> names)
+        {
+            names = null;
+            if (!_table.TryGetValue((field, area), out names))
+                return false;
+            if (Until.TryGetValue(field, out int flag) && EventBit.evtBitCheck(flag))
+            {
+                names = null;
+                return false;
+            }
+            return true;
+        }
+
         private static void Load()
         {
             if (_table != null)
@@ -170,6 +186,13 @@ namespace NocturneAccess.Systems.Navigation
                 {
                     int hash = line.IndexOf('#');
                     string[] parts = (hash >= 0 ? line.Substring(0, hash) : line).Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                    // "16 until 74": the field's way on holds only while story flag 74 is off (0.0.133: Yoyogi Park's pixies leave
+                    // with Sakahagi's defeat, and Francesco wants no way on there afterwards).
+                    if (parts.Length == 3 && parts[1] == "until" && int.TryParse(parts[0], out int uf) && int.TryParse(parts[2], out int flag))
+                    {
+                        Until[uf] = flag;
+                        continue;
+                    }
                     if (parts.Length < 3 || !int.TryParse(parts[0], out int field) || !int.TryParse(parts[1], out int area))
                         continue;
                     _table[(field, area)] = parts.Skip(2).ToList();

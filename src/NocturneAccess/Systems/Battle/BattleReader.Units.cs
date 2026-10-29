@@ -17,6 +17,7 @@ namespace NocturneAccess.Systems.Battle
             public int Form;
             public ushort Id;
             public int Hp, MaxHp, Mp, MaxMp;
+            public int Bad;      // datUnitWork_s.badstatus (0.0.133)
             public string Name = "";
             public int Number;   // among units of the same name and side, fixed for the battle
         }
@@ -70,6 +71,13 @@ namespace NocturneAccess.Systems.Battle
         private const long JoinSettleMs = 1000;
         private static long _joinedAt = -1;
 
+        /// <summary>", Poison, Panic" for a unit's statuses in the game's words, or "" (0.0.133: target lines, F2, F3).</summary>
+        private static string StatusOf(Unit u)
+        {
+            List<string> words = Menus.PartyStatus.WordsFor(u.Bad);
+            return words.Count == 0 ? "" : ", " + string.Join(", ", words);
+        }
+
         /// <summary>"6 enemies: Specter 1, Specter 2, ..." with the numbers the damage lines use; one enemy: its name alone.</summary>
         private static string EnemyList()
         {
@@ -90,7 +98,7 @@ namespace NocturneAccess.Systems.Battle
 
             if (!Units.TryGetValue(form, out Unit u) || u.Id != w.id)
             {
-                u = new Unit { Form = form, Id = w.id, Hp = w.hp, MaxHp = w.maxhp, Mp = w.mp, MaxMp = w.maxmp, Name = form < PartySlots ? PartyName(form) : NameOf(w.id) };
+                u = new Unit { Form = form, Id = w.id, Hp = w.hp, MaxHp = w.maxhp, Mp = w.mp, MaxMp = w.maxmp, Bad = w.badstatus, Name = form < PartySlots ? PartyName(form) : NameOf(w.id) };
                 Number(u);
                 Units[form] = u;
                 if (speakChanges && form >= FirstEnemy)
@@ -98,7 +106,24 @@ namespace NocturneAccess.Systems.Battle
                 return true;
             }
 
-            int oldHp = u.Hp, oldMp = u.Mp;
+            int oldHp = u.Hp, oldMp = u.Mp, oldBad = u.Bad;
+            u.Bad = w.badstatus;
+            // Statuses (0.0.133): the battle draws them only as icons, and after "Girimekhala: Panic Voice" nothing said who was
+            // struck (Francesco, 29 Oct 2026: "status effects are almost uncommunicated during battle"). A status that appears is
+            // said in the game's own words ("Okuninushi: Panic."); one that ends is logged only (its wording is Francesco's to choose).
+            if (u.Bad != oldBad)
+            {
+                List<string> added = Menus.PartyStatus.WordsFor(u.Bad & ~oldBad);
+                List<string> gone = Menus.PartyStatus.WordsFor(oldBad & ~u.Bad);
+                Log.Info($"{Tag} Status of {DisplayName(u)} (form {form}): 0x{oldBad:X} -> 0x{u.Bad:X}; new [{string.Join(", ", added)}], ended [{string.Join(", ", gone)}].");
+                if (added.Count > 0)
+                {
+                    string line = $"{DisplayName(u)}: {string.Join(", ", added)}.";
+                    if (speakChanges && w.hp > 0)
+                        SpeechManager.Say(line, interrupt: false, force: true);
+                    BattleLog.Add(line);
+                }
+            }
             u.Hp = w.hp;
             u.MaxHp = w.maxhp;
             u.Mp = w.mp;

@@ -110,6 +110,9 @@
 29 7  01eve_02                                 # Gaienmae Station: the exit to the overworld, by Yoyogi Park
 
 # ---- Yoyogi Park (field 16): from the East Plaza through the construction site to the communication tower ----
+# Only until story flag 74: set when Sakahagi is beaten; every pixie volume tests it first and stands down (Francesco, 29 Oct 2026:
+# no way on in the park after the boss; flag seen set in dump 21:30:03, the waking pixies' events of area 14 run on it).
+16 until 74
 # Route: Samurai Gamers' "Yoyogi Park Revisited" walkthrough (construction site steps 1 to 36), with the LP archive (FrankZP
 # part 26) and Game8, matched on 28 Oct 2026 to the door table (F016.WAP), the area files (f016_NNN.f2) and the field script
 # (f016.bf: the pixies are story volumes 0NN_01eve_NN, "Buzz off!", switched by flag 74; the High Pixies of areas 11 and 13 by

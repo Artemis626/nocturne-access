@@ -111,7 +111,7 @@ namespace NocturneAccess.Systems.Battle
                 parts.Add(side + TextUtil.Capitalize(PressTurns(d)));
             }
             foreach (Unit u in Units.Values.Where(u => u.Form < FirstEnemy).OrderBy(u => u.Form))
-                parts.Add($"{DisplayName(u)}: HP {u.Hp} of {u.MaxHp}, MP {u.Mp} of {u.MaxMp}.");
+                parts.Add($"{DisplayName(u)}: HP {u.Hp} of {u.MaxHp}, MP {u.Mp} of {u.MaxMp}{StatusOf(u)}.");
             LogData(force: true);
             SpeechManager.Say(string.Join(" ", parts), interrupt: true, force: true);
         }
@@ -127,7 +127,7 @@ namespace NocturneAccess.Systems.Battle
             foreach (Unit u in enemies)
             {
                 string affinities = BattleAnalyze.AffinitiesOf(u.Name);
-                parts.Add($"{DisplayName(u)}: HP {u.Hp} of {u.MaxHp}." + (affinities.Length > 0 ? " " + affinities : ""));
+                parts.Add($"{DisplayName(u)}: HP {u.Hp} of {u.MaxHp}{StatusOf(u)}." + (affinities.Length > 0 ? " " + affinities : ""));
             }
             SpeechManager.Say(string.Join(" ", parts), interrupt: true, force: true);
         }

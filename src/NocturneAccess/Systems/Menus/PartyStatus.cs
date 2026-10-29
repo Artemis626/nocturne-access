@@ -138,6 +138,21 @@ namespace NocturneAccess.Systems.Menus
             return said;
         }
 
+        /// <summary>
+        /// The game's words for the statuses in badstatus, Dead left out (0.0.133, battle). Bits 0 and 1 (shock, freeze) have no
+        /// game word and are left out. Bit order confirmed in game: 0x20 Mute (26 Oct 2026, 20:58: Art muted, Dis-Mute chosen),
+        /// 0x800 Dead (Setanta at 0 HP).
+        /// </summary>
+        internal static List<string> WordsFor(int bad)
+        {
+            var list = new List<string>();
+            Dictionary<int, string> table = Words();
+            for (int bit = 0; bit < DeadBit; bit++)
+                if ((bad & (1 << bit)) != 0 && table.TryGetValue(bit, out string w) && w.Length > 0)
+                    list.Add(w);
+            return list;
+        }
+
         private static Dictionary<int, string> Words()
         {
             if (_words != null)
