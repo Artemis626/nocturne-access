@@ -110,7 +110,7 @@ namespace NocturneAccess.Systems.Battle
             u.Bad = w.badstatus;
             // Statuses (0.0.133): the battle draws them only as icons, and after "Girimekhala: Panic Voice" nothing said who was
             // struck (Francesco, 29 Oct 2026: "status effects are almost uncommunicated during battle"). A status that appears is
-            // said in the game's own words ("Okuninushi: Panic."); one that ends is logged only (its wording is Francesco's to choose).
+            // said in the game's own words ("Okuninushi: Panic."); one that ends says "Panic ended" (Francesco's words, 29 Oct 2026).
             if (u.Bad != oldBad)
             {
                 List<string> added = Menus.PartyStatus.WordsFor(u.Bad & ~oldBad);
@@ -120,6 +120,15 @@ namespace NocturneAccess.Systems.Battle
                 {
                     string line = $"{DisplayName(u)}: {string.Join(", ", added)}.";
                     if (speakChanges && w.hp > 0)
+                        SpeechManager.Say(line, interrupt: false, force: true);
+                    BattleLog.Add(line);
+                }
+                // An ending, in Francesco's words (29 Oct 2026): "Okuninushi: Panic ended." Not for a unit that fell (its statuses
+                // clear with its death, already said as "0 HP").
+                if (gone.Count > 0 && w.hp > 0)
+                {
+                    string line = $"{DisplayName(u)}: {string.Join(", ", gone)} ended.";
+                    if (speakChanges)
                         SpeechManager.Say(line, interrupt: false, force: true);
                     BattleLog.Add(line);
                 }
