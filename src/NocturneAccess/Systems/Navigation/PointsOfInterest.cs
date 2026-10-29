@@ -121,6 +121,7 @@ namespace NocturneAccess.Systems.Navigation
 
         /// <summary>The way through door pairs or warps to a point not yet known as a landmark (decided after "to exit", 0.0.91).</summary>
         internal List<Warp> HeldLegs;
+        internal List<Warp> Legs;   // the warps, ladders and door pairs taken on the way, when reached through them (0.0.132, WayOn)
 
         /// <summary>In the list: reachable, or a landmark listed beyond doors.</summary>
         public bool Listed => Reachable || Beyond;
@@ -582,6 +583,7 @@ namespace NocturneAccess.Systems.Navigation
                         q.Reachable = true;
                         q.ViaWarps = legs.Count;   // 0: walked to (a warp next to the player's part of the area)
                         q.ViaLegs = WarpMap.Phrase(legs);
+                        q.Legs = legs;
                     }
                 }
             // Beyond other areas (0.0.56, F7): a part of this area joined to the player's only through other areas, by doors the
@@ -600,6 +602,7 @@ namespace NocturneAccess.Systems.Navigation
                     q.Reachable = true;
                     q.ViaWarps = q.HeldLegs.Count;
                     q.ViaLegs = WarpMap.Phrase(q.HeldLegs);
+                    q.Legs = q.HeldLegs;
                 }
                 else
                     q.Beyond = true;

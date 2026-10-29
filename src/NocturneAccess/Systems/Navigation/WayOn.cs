@@ -67,6 +67,25 @@ namespace NocturneAccess.Systems.Navigation
                 Earcons.WayOn();
         }
 
+        /// <summary>The story events crossed on every walk of a route through door pairs, warps or ladders; a walk with no route counts one.</summary>
+        private static int LegCrossings(fldGlobalWork_t gb, Poi q)
+        {
+            float sx = gb.playerX, sy = gb.playerY, sz = gb.playerZ;
+            int total = 0;
+            foreach (Warp leg in q.Legs)
+            {
+                int c = WalkGrid.StoryCrossings(sx, sy, sz, leg.Zone.X, leg.FloorY, leg.Zone.Z);
+                total += c < 0 ? 1 : c;
+                if (!leg.HasDest)
+                    return total;
+                sx = leg.DestX;
+                sy = leg.DestY;
+                sz = leg.DestZ;
+            }
+            int last = WalkGrid.StoryCrossings(sx, sy, sz, q.X, q.FloorY, q.Z);
+            return total + (last < 0 ? 1 : last);
+        }
+
         /// <summary>Shift+End.</summary>
         internal static void Speak()
         {
@@ -95,20 +114,28 @@ namespace NocturneAccess.Systems.Navigation
             // events (in the listed order among equals); then beyond doors (0.0.128: Yoyogi Park's pixies warp the player back, and
             // the flood counts a door behind one as walkable). The story event that is itself the target is not counted (the Amala
             // Network 2's soul room names a soul).
+            // 0.0.132: a route through door pairs counts the story events on each of its walks too (Yoyogi Park's column maze, area 16,
+            // 29 Oct 2026, 15:15: the north door "via 1 door" was chosen, and the walk to the pair ran into a pixie that sends the
+            // player back to area 15, four times running).
             var crossings = new Dictionary<Poi, int>();
+            var viaCrossings = new Dictionary<Poi, int>();
             foreach (Poi q in candidates.Where(q => q.Reachable && q.ViaWarps == 0 && q.Route == null))
                 crossings[q] = WalkGrid.StoryCrossings(gb.playerX, gb.playerY, gb.playerZ, q.X, q.FloorY, q.Z);
-            int fewest = crossings.Values.Where(c => c > 0).DefaultIfEmpty(-1).Min();
+            foreach (Poi q in candidates.Where(q => q.Reachable && q.ViaWarps > 0 && q.Route == null && q.Legs != null))
+                viaCrossings[q] = LegCrossings(gb, q);
+            int fewest = crossings.Values.Concat(viaCrossings.Values).Where(c => c > 0).DefaultIfEmpty(-1).Min();
             Poi pick = candidates.FirstOrDefault(q => crossings.TryGetValue(q, out int c) && c == 0)        // walked to
-                       ?? candidates.FirstOrDefault(q => q.Reachable && !crossings.ContainsKey(q))         // through doors here
-                       ?? candidates.FirstOrDefault(q => crossings.TryGetValue(q, out int c) && c == fewest) // walked to through story events
-                       ?? candidates.FirstOrDefault(q => crossings.ContainsKey(q))                         // walked to, no route planned
+                       ?? candidates.FirstOrDefault(q => q.Reachable && !crossings.ContainsKey(q)
+                                                         && (!viaCrossings.TryGetValue(q, out int v) || v == 0)) // through doors here
+                       ?? candidates.FirstOrDefault(q => (crossings.TryGetValue(q, out int c) || viaCrossings.TryGetValue(q, out c)) && c == fewest) // through story events
+                       ?? candidates.FirstOrDefault(q => q.Reachable)                                      // no route planned
                        ?? candidates.FirstOrDefault(q => q.Listed);                                        // beyond doors
             Log.Info($"{Tag} Field {gb.fieldID} area {gb.areaID}: " + string.Join(", ", names.Select(n =>
             {
                 Poi q = candidates.FirstOrDefault(c => c.Names.Contains(n));
                 string state = q == null ? "not here"
                     : crossings.TryGetValue(q, out int c) ? (c == 0 ? "walked to" : c < 0 ? "walked to, no route" : $"walked to through {c} story event{(c == 1 ? "" : "s")}")
+                    : viaCrossings.TryGetValue(q, out int v) ? $"via {q.ViaLegs}{(v > 0 ? $" through {v} story event{(v == 1 ? "" : "s")}" : v < 0 ? ", a walk not planned" : "")}"
                     : q.Reachable ? "via " + (q.Route != null ? "other areas" : q.ViaLegs)
                     : q.Listed ? "beyond doors" : "not reachable";
                 return $"{n} {state}";
