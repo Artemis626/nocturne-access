@@ -109,6 +109,9 @@ namespace NocturneAccess.Systems.Dialogue
         {
             LineComponents[index] = component;
             string text = TextUtil.IsPlaceholder(raw) ? "" : TextUtil.Clean(raw);
+            // The game opens narration with a ">" mark ("> There is a large cylinder."): not said (0.0.137, Francesco, 30 Oct 2026).
+            if (text.StartsWith(">", StringComparison.Ordinal))
+                text = text.TrimStart('>', ' ');
             if (text == Lines[index])
                 return;
 

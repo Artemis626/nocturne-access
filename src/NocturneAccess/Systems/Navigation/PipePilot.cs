@@ -72,6 +72,24 @@ namespace NocturneAccess.Systems.Navigation
                 AccessTools.Method(typeof(PipePilot), nameof(BeforeKey)));
             Patcher.Postfix("Falling minigame", typeof(pipeSection), nameof(pipeSection.ActionKey), args,
                 AccessTools.Method(typeof(PipePilot), nameof(AfterKey)));
+            // No damage (0.0.137; Francesco, 30 Oct 2026: hits took the whole party down to 1 HP). The game counts hits in
+            // pipeSection.playerDAMAGE (MyHitAction: +0x10000 a big hit, +1 a small one) and takes the HP once, at the end:
+            // pipeResult.pipeResultDraw calls datCalc.datPartyDamagePipe(big, sml), its only caller (read offline). Both counts
+            // are set to 0 before it runs; the game's function still runs.
+            Patcher.Prefix("Falling minigame", typeof(datCalc), nameof(datCalc.datPartyDamagePipe), new[] { typeof(int), typeof(int) },
+                AccessTools.Method(typeof(PipePilot), nameof(BeforePartyDamage)));
+        }
+
+        private static void BeforePartyDamage(ref int __0, ref int __1)
+        {
+            if (!(Config.PipeNoDamage?.Value ?? true))
+            {
+                Log.Info($"[Pipe] Party damage at the end: {__0} big hits, {__1} small (left as the game's: off in the config).");
+                return;
+            }
+            Log.Info($"[Pipe] Party damage at the end: {__0} big hits, {__1} small, cancelled (PipeNoDamage).");
+            __0 = 0;
+            __1 = 0;
         }
 
         /// <summary>F4 while falling (Hotkeys): the pilot off or on.</summary>

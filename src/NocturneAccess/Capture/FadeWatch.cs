@@ -36,8 +36,6 @@ namespace NocturneAccess.Capture
         // Player.log during the Link's scene: "field filter override table not found, eve:646 idx:91 alp:-90". Log only.
         private static dds3DefaultMain _main;
         private static int _filterActive = -1;     // the camera's activeInHierarchy last logged, -1 unknown
-        private static long _filterSince;
-        private static bool _filterWarned;
         private static float _lastAlf = float.NaN;
         private static long _lastAlfLogAt = long.MinValue / 2;
         private static int _alfSkipped;
@@ -112,14 +110,9 @@ namespace NocturneAccess.Capture
                 if (_filterActive >= 0 || active == 1)
                     Log.Info($"[Screen] Field filter camera {(active == 1 ? "active" : "inactive")}{(!float.IsNaN(_lastAlf) ? $", last strength {_lastAlf:0.###}" : "")} ({Where()}).");
                 _filterActive = active;
-                _filterSince = now;
-                _filterWarned = false;
             }
-            else if (active == 1 && !_filterWarned && now - _filterSince > CoveredWarnMs && FieldState.IsExploring)
-            {
-                _filterWarned = true;
-                Log.Warn($"[Screen] The field filter camera has been active for {(now - _filterSince) / 1000} s while exploring, last strength {_lastAlf:0.###} ({Where()}).");
-            }
+            // 0.0.137: no warning when it stays on: the filter is the fields' own colour layer, on through ordinary walking (30 Oct
+            // 2026, 15:56 session: on in every area of the Medical Center and the Labyrinth, strengths -100 to -200).
         }
 
         internal static void Tick()
