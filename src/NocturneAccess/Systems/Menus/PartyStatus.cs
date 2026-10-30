@@ -6,6 +6,7 @@ using Il2Cppcamp_H;
 using Il2Cppnewdata_H;
 using Il2CppTMPro;
 using NocturneAccess.Core;
+using NocturneAccess.Speech;
 
 namespace NocturneAccess.Systems.Menus
 {
@@ -126,6 +127,13 @@ namespace NocturneAccess.Systems.Menus
                     words.Add(w);
             string said = string.Join(", ", words);
 
+            // The row last read is watched for a while (Tick): a cure used on it is said (0.0.135).
+            if (_watch == null || _watch.Pointer != unit.Pointer)
+                _watchBad = bad;
+            _watch = unit;
+            _watchName = name;
+            _watchAt = Clock.ElapsedMilliseconds;
+
             // Every value once per row and change, to check the bit order in game.
             string key = $"{parent.name}:{name}";
             string seen = $"0x{bad:X} hp {unit.hp} flag 0x{unit.flag:X}";
@@ -136,6 +144,45 @@ namespace NocturneAccess.Systems.Menus
                     Log.Info($"{Tag} Party panel status: {name} (row {row}, unit {index}, id {unit.id}) badstatus {seen} -> \"{said}\".");
             }
             return said;
+        }
+
+        // ---- A cure used from the menus (0.0.135) ----
+        // Outside battle the game says nothing when an item or skill cures a status: the icon goes and a sound plays (Francesco,
+        // 30 Oct 2026, 13:42: Dis-Stun on Art, "Art, Stun", then silence). The unit of the row last read in the party pick is watched
+        // for WatchMs; a status it loses is said in Francesco's battle words: "Art: Stun ended."
+        private static datUnitWork_t _watch;
+        private static string _watchName = "";
+        private static int _watchBad;
+        private static long _watchAt;
+        private const long WatchMs = 15000;
+        private static readonly System.Diagnostics.Stopwatch Clock = System.Diagnostics.Stopwatch.StartNew();
+
+        internal static void Tick()
+        {
+            if (_watch == null)
+                return;
+            if (Clock.ElapsedMilliseconds - _watchAt > WatchMs || Battle.BattleReader.Active)
+            {
+                _watch = null;
+                return;
+            }
+            int bad;
+            try
+            {
+                bad = _watch.badstatus;
+            }
+            catch
+            {
+                _watch = null;
+                return;
+            }
+            if (bad == _watchBad)
+                return;
+            List<string> gone = WordsFor(_watchBad & ~bad);
+            Log.Info($"{Tag} Watched unit {_watchName}: badstatus 0x{_watchBad:X} -> 0x{bad:X}, ended [{string.Join(", ", gone)}].");
+            _watchBad = bad;
+            if (gone.Count > 0)
+                SpeechManager.Say($"{_watchName}: {string.Join(", ", gone)} ended.", interrupt: false);
         }
 
         /// <summary>

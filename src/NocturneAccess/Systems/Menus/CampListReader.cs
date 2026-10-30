@@ -193,7 +193,7 @@ namespace NocturneAccess.Systems.Menus
             SpeechManager.Say(text, interrupt: interrupt, force: true);
         }
 
-        /// <summary>The entry count; detail "have 3" (not for key items) and the description, when the id matches the row.</summary>
+        /// <summary>The entry count; detail "have 3" (key items only above one, 0.0.135) and the description, when the id matches the row.</summary>
         private static int ItemFacts(int index, string name, string title, ref string detail, ref string description)
         {
             cmpGlobalWork_t g = cmpInit.CMP_GBWK;
@@ -207,7 +207,9 @@ namespace NocturneAccess.Systems.Menus
                 return g.ItemCnt;
 
             Il2CppStructArray<byte> counts = dds3GlobalWork.DDS3_GBWK?.item;
-            if (title != KeyItemsTitle && counts != null && id < counts.Length)
+            // Key items draw no count; most are single, but Deathstones stack (Francesco, 30 Oct 2026, 14:09 UI dump: "Deathstone"
+            // alone): a key item says its count only above one (0.0.135).
+            if (counts != null && id < counts.Length && (title != KeyItemsTitle || counts[id] > 1))
                 detail = $"have {counts[id]}";
             description = Safe(() => datItemHelp_msg.Get(id));
             return g.ItemCnt;
