@@ -152,7 +152,7 @@ namespace NocturneAccess.Systems.Navigation
             }
             Marked.UnionWith(pick.Names);
             PointsOfInterest.Select(gb, pick);
-            // A stat route says its stat (mod words, to confirm with Francesco): "Way on, Strength."
+            // A stat route says its stat (mod words Francesco kept, 2 Nov 2026): "Way on, Strength."
             string word = pick.Names.Select(n => RouteWord.TryGetValue(n, out string w) ? w : null).FirstOrDefault(w => w != null);
             RouteGuide.SpeakWith(word != null ? $"Way on, {word}. " : Words + " ");
         }
