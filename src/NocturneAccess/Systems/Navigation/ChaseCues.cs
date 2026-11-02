@@ -19,8 +19,13 @@ namespace NocturneAccess.Systems.Navigation
     ///   he does; it repeats faster as he closes in (once a second far out, about seven a second at the catch radius).
     /// - "Raidou moving." when he sets off after standing still (area 4's wait by the door ends, then he hunts).
     /// - The key (Insert by default): "Raidou, 12 metres, behind left, coming." from his position and the player's facing.
-    /// - ChaseNoCatch (config, off by default): a postfix on fldRunEncountChk turns a catch into nothing; he keeps patrolling and
-    ///   hunting, the stages and story flags are the game's; the boss fight is a separate door and stays.
+    /// - ChaseOff (config, on by default since 0.0.144; Francesco, 2 Nov 2026, after testing the cues: he is too fast to react to
+    ///   by ear, an accessibility change stated in the README). Read offline: the AI, his collision, model and sounds run in
+    ///   fldTest.fldRunView only while story flags 2803 and 2804 are both on; 2804 is the script's FLD_DANTE_AI_START / STOP flag,
+    ///   and fldRunView is the only reader of it. The mod answers evtBitCheck(2804) with false (as FirstPersonView answers 2800:
+    ///   nothing is written, nothing saved), so he stands still; and a postfix on fldRunEncountChk (2803 and within 250, the
+    ///   catch) turns a catch into nothing, should the player pass by him. Flag 2803 itself stays the game's (the doors read it,
+    ///   fldWap.fldDoor_Step). The stages, doors and story flags are the game's; the boss fight is a separate door and stays.
     /// </summary>
     internal static class ChaseCues
     {
@@ -38,18 +43,37 @@ namespace NocturneAccess.Systems.Navigation
         private static float _lastLen = -1, _trend;   // _trend: distance change per second, smoothed (negative: coming nearer)
         private static bool _warnedMove;
 
+        private const int AiFlag = 2804;            // FLD_DANTE_AI_START / STOP; read only by fldTest.fldRunView
+
+        private static bool Off => Config.ChaseOff?.Value ?? true;
+        private static bool _heldLogged;
+
         internal static void Install()
         {
             Patcher.Postfix("Chase", typeof(fldTest), nameof(fldTest.fldRunEncountChk), Type.EmptyTypes,
                 AccessTools.Method(typeof(ChaseCues), nameof(AfterEncountChk)));
+            Patcher.Postfix("Chase", typeof(EventBit), nameof(EventBit.evtBitCheck), new[] { typeof(int) },
+                AccessTools.Method(typeof(ChaseCues), nameof(AfterBitCheck)));
+            Log.Info($"[Chase] The Third Kalpa chase is {(Off ? "off (ChaseOff): the pursuer stands still and never catches" : "the game's (ChaseOff false)")}.");
         }
 
         private static void AfterEncountChk(ref int __result)
         {
-            if (__result == 0 || !(Config.ChaseNoCatch?.Value ?? false))
+            if (__result == 0 || !Off)
                 return;
             __result = 0;
-            Log.Info("[Chase] Raidou reached the player: no battle (ChaseNoCatch).");
+            Log.Info("[Chase] Raidou reached the player: no battle (ChaseOff).");
+        }
+
+        private static void AfterBitCheck(int __0, ref bool __result)
+        {
+            if (__0 != AiFlag || !__result || !Off)
+                return;
+            __result = false;
+            if (_heldLogged)
+                return;
+            _heldLogged = true;
+            Log.Info($"[Chase] The game asked for flag {AiFlag} (the pursuer's AI): answered off (ChaseOff); he stands still.");
         }
 
         private static bool InChase(fldGlobalWork_t gb, out fldTest.FLDRUN_DANTE_t d)
@@ -71,7 +95,8 @@ namespace NocturneAccess.Systems.Navigation
         internal static void Tick()
         {
             fldGlobalWork_t gb = fldGlobal.fldGb;
-            bool on = InChase(gb, out fldTest.FLDRUN_DANTE_t d) && FieldState.IsExploring;
+            fldTest.FLDRUN_DANTE_t d = null;
+            bool on = !Off && InChase(gb, out d) && FieldState.IsExploring;
             if (on != _on)
             {
                 _on = on;
@@ -144,6 +169,11 @@ namespace NocturneAccess.Systems.Navigation
             if (!InChase(gb, out fldTest.FLDRUN_DANTE_t d))
             {
                 SpeechManager.Say("No chase here.", interrupt: true);
+                return;
+            }
+            if (Off)
+            {
+                SpeechManager.Say("Chase off: Raidou stands still.", interrupt: true);
                 return;
             }
             float len = Distance(gb, d);

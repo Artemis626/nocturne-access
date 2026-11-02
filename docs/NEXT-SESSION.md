@@ -4,6 +4,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
+**2 Nov 2026, latest: 0.0.144 (pushed, untested): the Third Kalpa chase off by default (`ChaseOff`: Raidou's AI flag 2804 answered off, catches blocked; Francesco's choice after the cues failed); README "Content changed or skipped for accessibility". Watch for stage progress without his AI (areas 3 to 11). `docs/HANDOFF.md` last entry.**
+
 **2 Nov 2026, late night, latest: 0.0.143 (pushed, untested): Raidou cues (pulse within 30 m when he comes nearer, "Raidou moving.", Insert for where he is) and the off switch `ChaseNoCatch` (off by default; Francesco tries the cues first). `docs/HANDOFF.md` last entry.**
 
 **2 Nov 2026, night, latest: 0.0.142 (pushed, untested): the Raidou chase probe (`[Chase]` lines, log only), the Labyrinth entrance shafts say their Kalpa, the pipe minigame start line (`docs/HANDOFF.md` last entry). Next: read Francesco's chase run, then build the Raidou cues (distance, direction, coming or going; caught under 250) and the chase way on.**
