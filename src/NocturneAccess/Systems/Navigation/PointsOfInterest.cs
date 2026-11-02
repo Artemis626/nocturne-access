@@ -275,6 +275,18 @@ namespace NocturneAccess.Systems.Navigation
             [(31, 5, "01eve_07")] = "to elevator for next floor",
         };
 
+        // The Labyrinth entrance's shafts (field 40 area 0; Francesco, 2 Nov 2026: five "Hole" points told apart only by sight). Each
+        // one's procedure (001_01eve_02 to 06, f040.bf) ends in FLD_CALL_WAPEX 66 to 70, the door rows whose u10 is the Kalpa's field
+        // (41 to 45; the 20:59:50 dump's door table): the point says the game's name of that field ("to First Kalpa").
+        private static readonly Dictionary<(int Field, int Area, string Volume), int> KalpaShafts = new Dictionary<(int, int, string), int>
+        {
+            [(40, 0, "01eve_02")] = 41,
+            [(40, 0, "01eve_03")] = 42,
+            [(40, 0, "01eve_04")] = 43,
+            [(40, 0, "01eve_05")] = 44,
+            [(40, 0, "01eve_06")] = 45,
+        };
+
         /// <summary>Event volumes the last Build left out because their script has nothing to do now (for the log).</summary>
         internal static readonly List<string> Skipped = new List<string>();
         // Larger place polygons are whole rooms, not door pads. Ginza's door pads are 800 x 400 (field 19, 4 Oct 2026: the Terminal,
@@ -368,6 +380,12 @@ namespace NocturneAccess.Systems.Navigation
                     ScriptVerdict v = FieldScript.Classify(gb.areaID, name);
                     if (v.Outcome == ScriptOutcome.Action)
                         placeDetail = v.Detail;
+                    if (KalpaShafts.TryGetValue((gb.fieldID, gb.areaID, name), out int kalpa))
+                    {
+                        string to = WhereAmI.FieldName(kalpa);
+                        if (to.Length > 0)
+                            placeDetail += (placeDetail.Length > 0 ? ", " : "") + "to " + to;
+                    }
                 }
                 if (kind == PoiKind.Event && !world)
                 {

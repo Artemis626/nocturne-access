@@ -13,7 +13,7 @@ namespace NocturneAccess.Systems.Navigation
 {
     /// <summary>
     /// The Labyrinth of Amala's falling minigame steered for the player (0.0.112, step 3; Francesco, 23 Oct 2026: on by
-    /// default, F4 switches it off and on while falling, no line at the start). Field 999 ("pipe" in the game's code) runs
+    /// default, F4 switches it off and on while falling; a start line since 0.0.142). Field 999 ("pipe" in the game's code) runs
     /// about 30 s after "Jump in?"; coins (ids 5, 6, 9) add macca, ids 1 and 2 take a share of it.
     ///
     /// Read offline (GameAssembly.dll, read only): the player's keys are four DDS3_PADCHECK_PRESS checks in
@@ -114,8 +114,14 @@ namespace NocturneAccess.Systems.Navigation
             FirstSeen.Clear();
             _target = -2;
             _manualUntil = 0;
-            if (inPipe)
-                Log.Info($"[Pipe] Autopilot {(_on ? "on" : "off")} for this fall.");
+            if (!inPipe)
+                return;
+            Log.Info($"[Pipe] Autopilot {(_on ? "on" : "off")} for this fall.");
+            // The start line (0.0.142; Francesco, 2 Nov 2026, his words, the key named as the pilot really works: a held
+            // direction key takes over at once, ManualMs; it replaces 0.0.112's silent start).
+            bool noDamage = Config.PipeNoDamage?.Value ?? true;
+            SpeechManager.Say("Pipe minigame: " + (_on ? "autoplay engaged" : "autoplay off") + (noDamage ? ", damage off" : ", damage on")
+                              + (_on ? ". Press a direction key to take control." : ". F4 for autoplay."));
         }
 
         private static void Release()
