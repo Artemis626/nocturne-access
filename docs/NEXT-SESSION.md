@@ -4,6 +4,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
+**START HERE (2 Nov 2026, before a compact): Francesco tests the Amala Temple way on next. What to check in his log: each Shift+End line in the White Temple (areas 20 to 24), "Warped." after follow-up doors (`[Nav:Explored] ... the follow-up warp of`), beams listed as "Warp"; Black Temple: the beam up, the torch, area 6 Jump Off `01eve_01` reachable from the ledge (if not: its box size from his Shift+F6), the hole `01d_11` once flag 1700 is set; Red Temple: the wings, the device `01eve_51`, flag 1703 sending the way on back out. His test steps (given 2 Nov): Shift+End then Home in every room; Shift+F6 where the way on is odd or "beyond doors". Then: the Third Kalpa way on (below) when he goes back there.**
+
 **2 Nov 2026, evening: 0.0.140 (pushed, untested): Black and Red Temple way-on data (field 34 areas 3 to 9, 11 to 17), flag conditions in the data (`name+F`, `name-F`), action volumes (Jump Off, Examine) reached by their box. All three temples now have Shift+End data; none tested (`docs/HANDOFF.md` last entry).**
 
 **2 Nov 2026, later: 0.0.138 verified (temple doors reachable). 0.0.139 (pushed, untested): the White Temple (field 34 areas 20 to 24): doors with a follow-up warp read from the door table, beams of light (movetype 10) as walk-in warps, and Shift+End way-on data to Albion. Black and Red Temples analysed, no way on yet (Francesco to decide; `docs/HANDOFF.md` last entry).**
