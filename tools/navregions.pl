@@ -236,8 +236,8 @@ sub regions_at { my ($x, $z, $rad) = @_; my %s; my ($i0, $i1, $j0, $j1) = cells(
     for my $j ($j0 .. $j1) { for my $i ($i0 .. $i1) { my $c = $j * $W + $i; next if (($gx + $i * $C - $x) ** 2 + ($gz + $j * $C - $z) ** 2) > $rad * $rad;
         for my $l (0 .. ($cnt[$c] // 0) - 1) { my $k = $c * $layers + $l; $s{ sprintf "R%d(y %.0f)", $comp[$k], $hgt[$k] } = 1 if defined $comp[$k]; } } }
     return join(' ', sort keys %s) || 'none'; }
-print "points of interest (regions within 250):\n";
-printf "  %-8s %-18s %7s %7s  %s\n", $_->[0], $_->[1], $_->[2], $_->[3], regions_at($_->[2], $_->[3], 250) for @pois;
+print "points of interest (regions within NAVREGR, default 250):\n";
+printf "  %-8s %-18s %7s %7s  %s\n", $_->[0], $_->[1], $_->[2], $_->[3], regions_at($_->[2], $_->[3], $ENV{NAVREGR} // 250) for @pois;
 print "warp landings (regions within 60):\n";
 printf "  %-24s %7s %6s %7s  %s\n", $_->[0], $_->[1], $_->[2], $_->[3], regions_at($_->[1], $_->[3], 60) for @landings;
 printf "player %s %s %s: %s\n", @$player, regions_at($player->[0], $player->[2], 60);

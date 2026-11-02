@@ -4,6 +4,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
+**2 Nov 2026, later: 0.0.138 verified (temple doors reachable). 0.0.139 (pushed, untested): the White Temple (field 34 areas 20 to 24): doors with a follow-up warp read from the door table, beams of light (movetype 10) as walk-in warps, and Shift+End way-on data to Albion. Black and Red Temples analysed, no way on yet (Francesco to decide; `docs/HANDOFF.md` last entry).**
+
 **2 Nov 2026: 0.0.138 (Amala Temple, field 34): the plaza (area 1) no longer cut to a 400-cell window (dungeon areas whole up to 700 x 700 cells), and floor gaps narrower than a cell between floors a step apart are bridged (the White Temple stairs). To test: Page Up in the plaza lists the Black, Red and White Temple doors without "beyond doors"; Home walks to each (`docs/HANDOFF.md` last entry). The Third Kalpa way on (below) waits: Francesco went on to the Amala Temple instead (sessions 31 Oct, 1 Nov and 2 Nov visited no field 43).**
 
 **31 Oct 2026: START HERE: build the Third Kalpa way on (field 43, main route only; Francesco chose it for the new chat). 0.0.137 verified. Analysis and route: `docs/HANDOFF.md` last entry.**

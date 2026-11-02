@@ -19,3 +19,10 @@ never the executable. Outputs go to `research/gamedata/` (git-ignored: derived f
 Where things are: field `NNN` bundle `fNNN` (script `fNNN.bf`, per-area `fNNN_AAA.f1/.f2/.TB/.LB`); its English lines
 `eNNN_en` (`ENNN_EN`, Souls in `ENNNINF_EN`); prompt words `common_en` `ETC_EN` (`PANELMES_L0001`..`L0011`); field and
 area names `common_en` `FLDTERM_EN`, `AREA_EN`, `BASYO_EN`.
+- `f2pos.pl <fNNN_AAA.f2>` (2 Nov 2026): an area file's named points (doors `01d_NN`, arrival points `01pos_NN`, events), x y z.
+- `f2dump.pl <fNNN_AAA.f2> <field> <area> <x> <z> [y]`: writes a navigation-dump-like file from the area file's collision
+  (blocks: nverts, nfaces, 0, vertex ptr, face ptr, next; vertices x y z w; faces 36 bytes: attr, ?, ?, 4 vertex indices, ?, ?)
+  and its named points, so `tools/navregions.pl` floods an area never dumped in game (checked: field 34 area 20 gives the same
+  19 regions as dump 15:38:40). Moving collision and some trigger blocks are not in it.
+- `wapdest.pl <wap.txt> <dir of fNNN files> <areas...>` (`FIELD=NNN`, default 34): each door's real destination with its
+  point's position, following the after_flag 1 follow-up warp (`DoorTable`, 0.0.139).

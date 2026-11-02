@@ -707,13 +707,13 @@ namespace NocturneAccess.Systems.Navigation
             {
                 Warp w = WarpMap.At(gb, q.Index);
                 Warp partner = w?.Partner;
-                if (w == null || w.Touch || w.Ladder || partner == null || !partner.HasDest)
+                if (w == null || w.Touch || w.Ladder || partner == null || !partner.HasBeside)
                     continue;
-                if (WalkGrid.ReachableNear(px, py, pz, partner.DestX, partner.DestY, partner.DestZ, PairLandingReach))
+                if (WalkGrid.ReachableNear(px, py, pz, partner.BesideX, partner.BesideY, partner.BesideZ, PairLandingReach))
                     continue;
                 q.Reachable = false;
                 Log.Info($"[Nav:Poi] {q.ResName}: the far side of a door pair (its room, by {partner.Name}'s landing at " +
-                         $"{FieldData.F(partner.DestX)} {FieldData.F(partner.DestZ)}, is not walkable from here).");
+                         $"{FieldData.F(partner.BesideX)} {FieldData.F(partner.BesideZ)}, is not walkable from here).");
             }
         }
 

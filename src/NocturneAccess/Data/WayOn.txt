@@ -144,3 +144,27 @@
 16 3  01d_01                                   # platform: the ladder down to area 15
 16 16 01eve_12 01d_06 01d_03 01d_18 01eve_05 01eve_04 01eve_01 01d_01 01d_07 01d_20   # column maze (a teleport maze): the pixies 01eve_12 and 01eve_04 send the player on into area 23 (middle and east columns: CALL_FIELD2 to 01pos_74, 01pos_63; f016.bf), 01eve_01 and 01eve_05 into this area's west and middle north rooms (01pos_73, 01pos_72); 01eve_03, 06, 08 send back to area 15 and 01eve_11 to area 23's north-east chest room, a dead end (both left out); then the north doors, the door pairs north
 16 23 01d_11 01d_14 01d_15 01d_13 01d_19       # column maze: the middle or west north door to the tower row of area 14; else the middle or west door pair north; from the north-east chest room (a dead end: its column has no north door), the pair back south (the east pair forward, 01d_20, is left out: it only leads there)
+
+# ---- Amala Temple, White Temple (field 34): from its entrance to Albion's room ----
+# Route (Samurai Gamers' Amala Temple walkthrough, White Temple), matched on 2 Nov
+# 2026 to the game's door table (F034.WAP, tools/unity/wap.pl), the area files' points and walls (f034_021.f2 to f034_025.f2 =
+# areas 20 to 24, flooded offline: the area 20 copy matches dump 15:38:40 room for room) and the field script (f034.bf).
+# The White Temple's rooms are squares joined by door pairs, but 23 doors carry a follow-up warp (after_flag 1, the next row a
+# nameless movetype 10 entry): the player lands at the partner door, then is moved on, often into another area (DoorTable,
+# 0.0.139; seen 15:29 to 15:38: 01d_24, 01d_06, 01d_18, area 21's 01d_03 and 01d_04). Named movetype 10 volumes are beams of
+# light that warp when walked into (runwarp_label). The chain, with each door's real destination:
+# area 20 hall: 01d_24 -> 01pos_51 (south-west room); 01d_10 -> the west room; 01d_06 -> area 21's west room (Soul, box);
+# its 01d_03 -> area 20's 01pos_52 (south-east room); 01d_20 -> the east room; 01d_21 -> area 21's centre (01pos_10), whose
+# beam 01d_11 -> area 22's north column (01pos_21); its beam 01d_22 -> the room at 01pos_51; 01d_06 -> the room west;
+# 01d_02 -> area 23's south-east room (01pos_52); 01d_12 -> its north-east room; 01d_08 -> its south-west room (01pos_51);
+# 01d_05 -> area 22's south-east room (01pos_52); 01d_12 -> its north-east room; 01d_08 -> the south column (01pos_27); the
+# beam 01d_26 -> area 24, Albion (01eve_01, flag 1707), then the beam out (01eve_03, "Will you leave the area?").
+# Shift+End takes the first candidate walked to, so each room's own onward door is listed in route order; the doors and beams
+# that lead back to the route's start of an area come last (a room off the route then leads back into it). The arrival
+# points cannot be read in game (field 34: "0 points"), so a follow-up landing is known only once gone through: hence a
+# candidate for every room rather than one target reached through doors.
+34 20 01d_21 01d_20 01d_06 01d_10 01d_24       # 1F hall and rooms: east room 01d_21; south-east room 01d_20; west room 01d_06; south-west room 01d_10; the hall 01d_24
+34 21 01d_11 01d_03 01d_01 01d_04              # centre: the beam to area 22; west room (Soul): 01d_03 back to area 20's south-east room; south room: out to the hall; north rooms: 01d_04 to the south room
+34 22 01d_26 01d_08 01d_12 01d_02 01d_22 01d_28 01d_29   # south column: the beam to Albion; north-east room 01d_08; south-east room 01d_12; west rooms 01d_02 (to area 23); north column: the beam 01d_22; side arms: their beams back north
+34 23 01d_05 01d_08 01d_12 01d_01              # south-west room 01d_05 (to area 22's south-east room); north-east room 01d_08; south-east room 01d_12; north-west room: 01d_01 back to area 22's north column
+34 24 01eve_01 01eve_03                        # Albion's room: the boss; after it, the beam out

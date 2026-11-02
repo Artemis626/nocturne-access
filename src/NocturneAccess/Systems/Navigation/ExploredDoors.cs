@@ -68,11 +68,29 @@ namespace NocturneAccess.Systems.Navigation
         internal static bool LearnedArrival(int field, int area, string pointName, out UnityEngine.Vector4 pos)
             => Arrivals.TryGetValue(Key(field, area, pointName), out pos);
 
+        // A door with a follow-up warp (0.0.139, the White Temple): its own landing comes first, then the game moves the player
+        // on to this point (2 Nov 2026, 15:29:02 at 01pos_23, 15:29:04 at 01pos_51): learned at that second move.
+        private const long FollowWindowMs = 4000;
+        private static string _followPoint, _followDoor;
+        private static long _followMs;
+
         private static void LearnArrival(fldGlobalWork_t gb, string leftKey)
         {
             string resName = leftKey.Substring(leftKey.LastIndexOf('/') + 1);
-            if (!DoorTable.SameAreaWarp(gb.fieldID, gb.areaID, resName, out _, out string point))
+            if (!DoorTable.SameAreaWarp(gb.fieldID, gb.areaID, resName, out _, out string point, out string first))
                 return;
+            if (first.Length > 0)
+            {
+                _followPoint = point;
+                _followDoor = leftKey;
+                _followMs = Clock.ElapsedMilliseconds;
+                point = first;
+            }
+            LearnPoint(gb, leftKey, point);
+        }
+
+        private static void LearnPoint(fldGlobalWork_t gb, string leftKey, string point)
+        {
             string key = Key(gb.fieldID, gb.areaID, point);
             var pos = new UnityEngine.Vector4(gb.playerX, gb.playerY, gb.playerZ, 1f);
             bool known = Arrivals.ContainsKey(key);
@@ -584,6 +602,16 @@ namespace NocturneAccess.Systems.Navigation
             // ("Warped." on entering the Collector Manikin's room, 21:37:09). Jumps count again once the player has control.
             if (FieldState.IsExploring && now - _areaMs >= SettleMs)
                 _settled = true;
+            if (jumpedNow && _followPoint != null && now - _followMs <= FollowWindowMs)
+            {
+                // The follow-up warp after a door's own landing (0.0.139): the door's prompt said nothing of it.
+                _jumpMs = now;
+                SpeechManager.Say("Warped.", interrupt: false);
+                Log.Info($"{Tag} Moved by the game to {FieldData.F(px)} {FieldData.F(py)} {FieldData.F(pz)} in the same area (the follow-up warp of {_followDoor}).");
+                LearnPoint(gb, _followDoor, _followPoint);
+                _followPoint = null;
+                return;
+            }
             if (jumpedNow)
             {
                 _jumpMs = now;
@@ -597,7 +625,7 @@ namespace NocturneAccess.Systems.Navigation
                 // (field 22 area 10, 01d_01 to area 13) lift the player 270 up the ladder before the area changes ("Descend
                 // Ladder", then "Warped.", 22:02:58).
                 int moveType = res == null ? -1 : DoorTable.MoveTypeOf(gb.fieldID, gb.areaID, res);
-                bool chosen = moveType >= 0 && moveType != 2;
+                bool chosen = moveType >= 0 && !WarpMap.IsTouchMoveType(moveType);
                 if (took != null && !chosen)
                     SpeechManager.Say("Warped.", interrupt: false);
                 Log.Info($"{Tag} Moved by the game to {FieldData.F(px)} {FieldData.F(py)} {FieldData.F(pz)} in the same area" +

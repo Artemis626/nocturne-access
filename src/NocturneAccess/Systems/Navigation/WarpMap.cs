@@ -24,7 +24,11 @@ namespace NocturneAccess.Systems.Navigation
         public float DestX, DestY, DestZ;
         public string DestFrom = "";      // how the arrival point was found, for the log
         public Warp Partner;              // a ladder's other end, a same-area door's other side (WarpMap.PairUp), or null
-        public bool Touch => MoveType == 2;
+        public string FirstName = "";     // 0.0.139: a door with a follow-up warp lands here first ("01pos_23"), then on DestName
+        public bool FollowUp => FirstName.Length > 0;
+        public bool HasBeside;            // the landing beside its partner door: Dest, or for a follow-up door its first landing
+        public float BesideX, BesideY, BesideZ;
+        public bool Touch => WarpMap.IsTouchMoveType(MoveType);
         public bool Ladder => MoveType == 5;
         /// <summary>The mod's word for it: "warp" (fires when walked into), "ladder" (movetype 5), else "door" (confirmed).</summary>
         public string Word => Touch ? "warp" : Ladder ? "ladder" : "door";
@@ -78,9 +82,16 @@ namespace NocturneAccess.Systems.Navigation
                     string name = h?.resourceName ?? "";
                     if (h == null || h.sisei == null || h.resourceType != 10 || !DoorName.IsMatch(name))
                         continue;
-                    if (!DoorTable.SameAreaWarp(field, area, name, out int moveType, out string pos))
+                    if (!DoorTable.SameAreaWarp(field, area, name, out int moveType, out string pos, out string first))
                         continue;
-                    var w = new Warp { Index = i, Name = name, MoveType = moveType, DestName = pos };
+                    var w = new Warp { Index = i, Name = name, MoveType = moveType, DestName = pos, FirstName = first };
+                    if (w.FollowUp && FindPoint(first, out Vector4 fp, out _))
+                    {
+                        w.HasBeside = true;
+                        w.BesideX = fp.x;
+                        w.BesideY = fp.y;
+                        w.BesideZ = fp.z;
+                    }
                     putevebox_s box = boxes != null && i < boxes.Length ? boxes[i] : null;
                     w.Zone = ZoneOf(box, h.sisei.pos, i, out w.FloorY);
                     if (FindPoint(pos, out Vector4 p, out string from))
@@ -135,22 +146,45 @@ namespace NocturneAccess.Systems.Navigation
                                         && (o.Zone.NX * w.Zone.NX + o.Zone.NZ * w.Zone.NZ < -0.5f || LandsBeside(o, w)));
                 w.Partner = candidates.OrderBy(o => Math.Abs(o.Zone.X - w.Zone.X) + Math.Abs(o.Zone.Z - w.Zone.Z)).FirstOrDefault();
             }
-            foreach (Warp w in _warps.Where(w => !w.HasDest && w.Partner != null))
+            foreach (Warp w in _warps.Where(w => w.Partner != null && (w.FollowUp ? !w.HasBeside : !w.HasDest)))
             {
                 Warp p = w.Partner;
-                w.HasDest = true;
-                w.DestX = p.Zone.X + p.Zone.NX * LadderLanding;
-                w.DestZ = p.Zone.Z + p.Zone.NZ * LadderLanding;
+                float x = p.Zone.X + p.Zone.NX * LadderLanding, z = p.Zone.Z + p.Zone.NZ * LadderLanding;
                 // The floor there, nearest the partner's volume bottom (0.0.65): the cube hall's door volumes reach 150 under the
                 // floor (box bottom y 100, floor -50), and a landing at 100 fell on no walkable node.
-                w.DestY = CollisionCache.FloorUnder(w.DestX, p.FloorY, w.DestZ, out float floorY, groundOnly: true, upOnly: true) != null ? floorY : p.FloorY;
+                float y = CollisionCache.FloorUnder(x, p.FloorY, z, out float floorY, groundOnly: true, upOnly: true) != null ? floorY : p.FloorY;
+                if (w.FollowUp)
+                {
+                    // Its first landing only: where the follow-up warp then puts the player is learned there (ExploredDoors).
+                    w.HasBeside = true;
+                    w.BesideX = x;
+                    w.BesideY = y;
+                    w.BesideZ = z;
+                    continue;
+                }
+                w.HasDest = true;
+                w.DestX = x;
+                w.DestY = y;
+                w.DestZ = z;
                 w.DestFrom = $"in front of {p.Name}";
+            }
+            foreach (Warp w in _warps.Where(w => !w.FollowUp && w.HasDest))
+            {
+                w.HasBeside = true;
+                w.BesideX = w.DestX;
+                w.BesideY = w.DestY;
+                w.BesideZ = w.DestZ;
             }
         }
 
-        /// <summary>o's known landing lies within EntryReach of w's volume centre: o leads to w's side of the wall.</summary>
+        /// <summary>o's landing beside its partner lies within EntryReach of w's volume centre: o leads to w's side of the wall.</summary>
         private static bool LandsBeside(Warp o, Warp w)
-            => o.HasDest && (o.DestX - w.Zone.X) * (o.DestX - w.Zone.X) + (o.DestZ - w.Zone.Z) * (o.DestZ - w.Zone.Z) <= EntryReach * EntryReach;
+        {
+            // Called while pairing, before Beside is filled in for plain warps: their Dest is that landing.
+            bool has = o.FollowUp ? o.HasBeside : o.HasDest;
+            float x = o.FollowUp ? o.BesideX : o.DestX, z = o.FollowUp ? o.BesideZ : o.DestZ;
+            return has && (x - w.Zone.X) * (x - w.Zone.X) + (z - w.Zone.Z) * (z - w.Zone.Z) <= EntryReach * EntryReach;
+        }
 
         private const float EntryReach = 300f;
 
@@ -161,10 +195,10 @@ namespace NocturneAccess.Systems.Navigation
         internal static bool EntryPoint(fldGlobalWork_t gb, int index, out float x, out float y, out float z)
         {
             Warp p = At(gb, index)?.Partner;
-            x = p?.DestX ?? 0f;
-            y = p?.DestY ?? 0f;
-            z = p?.DestZ ?? 0f;
-            return p != null && p.HasDest;
+            x = p?.BesideX ?? 0f;
+            y = p?.BesideY ?? 0f;
+            z = p?.BesideZ ?? 0f;
+            return p != null && p.HasBeside;
         }
 
         /// <summary>For a ladder end with a known landing: +1 it goes up, -1 down (Y points down), 0 not known.</summary>
@@ -204,6 +238,15 @@ namespace NocturneAccess.Systems.Navigation
         // 21:37:49 and 21:38:50 while walking to 01d_10). Event-named, no script procedure. Kept out of routes like a touch warp;
         // listed as "Warp".
         internal const int WarpAwayMoveType = 3;
+
+        // 0.0.139: movetype 10 (the Amala Temple's beams of light, field 34) fires when walked into too. fldWap.fldDoor_Find2 sends
+        // movetype 10 to the field script's runwarp_label (scriptlabel index 8; jump table at RVA 0x2121B14, case at 0x2121A0C),
+        // which warps at once with no prompt (f034.bf, PROC 8: COMM 0x203, 0x60, 0x204, wait 15, 0x202); the confirmed kinds
+        // ask first (doorwarp_label, tobiwarp_label: COMM 0x5E with their prompt).
+        internal const int BeamMoveType = 10;
+
+        /// <summary>A door table movetype the game fires on walking in: 2 (the Amala Network's hidden warps) and 10 (beams).</summary>
+        internal static bool IsTouchMoveType(int moveType) => moveType == 2 || moveType == BeamMoveType;
         private static int _awayField = int.MinValue, _awayArea = int.MinValue, _awayCount = -1;
         private static IntPtr _awayRanges;
         private static Dictionary<int, WalkGrid.Zone> _away = new Dictionary<int, WalkGrid.Zone>();
@@ -233,7 +276,11 @@ namespace NocturneAccess.Systems.Navigation
                     if (h == null || h.sisei == null || h.resourceType != 10)
                         continue;
                     string name = h.resourceName ?? "";
-                    if (DoorTable.MoveTypeOf(field, area, name) != WarpAwayMoveType)
+                    int moveType = DoorTable.MoveTypeOf(field, area, name);
+                    if (moveType != WarpAwayMoveType && moveType != BeamMoveType)
+                        continue;
+                    // A beam into another area only (its same-area beams are touch warps of All).
+                    if (moveType == BeamMoveType && DoorTable.Leads(field, area, name, out int bf, out int ba) && bf == field && ba == area)
                         continue;
                     WalkGrid.Zone zone = ZoneOf(boxes != null && i < boxes.Length ? boxes[i] : null, h.sisei.pos, i, out _);
                     _away[i] = zone;

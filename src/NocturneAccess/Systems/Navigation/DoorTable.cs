@@ -26,6 +26,7 @@ namespace NocturneAccess.Systems.Navigation
         {
             public int AreaPlus1, Flag, WarpType, ToField, ToAreaPlus1, MoveType, Union03;
             public string Name = "", WarpPos = "";
+            public string FirstPos = "";   // a door with a follow-up warp (0.0.139): where its own row puts the player first
 
             /// <summary>Where it leads from (field, area): union08 0 means this field, union09 0 this area (else area + 1).</summary>
             public void Dest(int field, int area, out int toField, out int toArea)
@@ -42,9 +43,13 @@ namespace NocturneAccess.Systems.Navigation
         /// times); movetype 1 are doors with a model ("md_01d_02") and the "Open Door" prompt.
         /// </summary>
         internal static bool SameAreaWarp(int field, int area, string resName, out int moveType, out string warpPos)
+            => SameAreaWarp(field, area, resName, out moveType, out warpPos, out _);
+
+        /// <summary>As above; firstPos is the door's own landing when a follow-up warp then moves the player on (else "").</summary>
+        internal static bool SameAreaWarp(int field, int area, string resName, out int moveType, out string warpPos, out string firstPos)
         {
             moveType = 0;
-            warpPos = "";
+            warpPos = firstPos = "";
             try
             {
                 Refresh(field);
@@ -56,6 +61,7 @@ namespace NocturneAccess.Systems.Navigation
                     return false;
                 moveType = e.MoveType;
                 warpPos = e.WarpPos;
+                firstPos = e.FirstPos;
                 return true;
             }
             catch (Exception ex)
@@ -215,6 +221,7 @@ namespace NocturneAccess.Systems.Navigation
                 _loggedEmpty = true;
                 return;
             }
+            int followUps = 0;
             for (int i = 0; i < table.Length; i++)
             {
                 doormovetbl_s d = table[i];
@@ -223,7 +230,7 @@ namespace NocturneAccess.Systems.Navigation
                 string name = Chars(d.union02);
                 if (d.movetype == 0 && name.Length == 0)
                     continue;
-                Entries.Add(new Entry
+                var e = new Entry
                 {
                     AreaPlus1 = d.union01,
                     Name = name,
@@ -234,10 +241,25 @@ namespace NocturneAccess.Systems.Navigation
                     MoveType = d.movetype,
                     Union03 = d.union03,
                     WarpPos = Chars(d.warp_pos),
-                });
+                };
+                // 0.0.139: a door whose after_flag is 1 and whose next row is a nameless movetype 10 entry puts the player on its
+                // own landing, then that row warps them on: the Amala Temple's White Temple (field 34 areas 20 to 23; 23 doors, 8
+                // more in field 37). Seen 2 Nov 2026, 15:29 to 15:38: area 20's 01d_06 landed on 01pos_05, then the player was in
+                // area 21 (the next row: area+1 22, 01pos_02); 01d_24 landed on 01pos_23 (600 5100), then at 01pos_51 (1800 300).
+                doormovetbl_s next = i + 1 < table.Length ? table[i + 1] : null;
+                if (d.after_flag == 1 && next != null && next.movetype == 10 && Chars(next.union02).Length == 0 && Chars(next.warp_pos).Length > 0)
+                {
+                    e.FirstPos = e.WarpPos;
+                    e.WarpType = next.warptype;
+                    e.ToField = next.union08;
+                    e.ToAreaPlus1 = next.union09;
+                    e.WarpPos = Chars(next.warp_pos);
+                    followUps++;
+                }
+                Entries.Add(e);
             }
             _loggedEmpty = false;
-            Log.Info($"[Nav:Doors] Door table of field {field}: {Entries.Count} entries.");
+            Log.Info($"[Nav:Doors] Door table of field {field}: {Entries.Count} entries" + (followUps > 0 ? $", {followUps} doors with a follow-up warp." : "."));
         }
 
         /// <summary>A game char array up to its first NUL (also the navigation dump).</summary>
