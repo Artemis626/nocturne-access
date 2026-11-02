@@ -35,7 +35,27 @@ namespace NocturneAccess.Systems.Navigation
         private const float NearAlways = 1200f;     // within this: the pulse whatever he does
         private const long SlowestMs = 1000, FastestMs = 140;
         private const long StillMs = 2000;          // standing this long, then moving: "Raidou moving."
-        private const string Name = "Raidou";       // the game's speaker and battle name for him in this edition
+        // Raidou in the Chronicle edition (free DLC), Dante in Maniax (0.0.145; Francesco, 2 Nov 2026: the mod must hold in every
+        // edition). The game's own test, read offline in AssetBundleCtrl.CheckRaidouDLC: the Chronicle content installed
+        // (dds3KernelMain.dds3CheckDLC9) and story flag 3718 on. The Maniax field data (f043m) has the same doors, area files and
+        // chase commands; only the partner's pictures differ in its script.
+        internal static bool RaidouEdition
+        {
+            get
+            {
+                try
+                {
+                    return dds3KernelMain.dds3CheckDLC9() && EventBit.evtBitCheck(RaidouFlag);
+                }
+                catch
+                {
+                    return true;
+                }
+            }
+        }
+
+        internal const int RaidouFlag = 3718;
+        private static string Name => RaidouEdition ? "Raidou" : "Dante";
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static bool _on;
@@ -62,7 +82,7 @@ namespace NocturneAccess.Systems.Navigation
             if (__result == 0 || !Off)
                 return;
             __result = 0;
-            Log.Info("[Chase] Raidou reached the player: no battle (ChaseOff).");
+            Log.Info($"[Chase] {Name} reached the player: no battle (ChaseOff).");
         }
 
         private static void AfterBitCheck(int __0, ref bool __result)
@@ -173,7 +193,7 @@ namespace NocturneAccess.Systems.Navigation
             }
             if (Off)
             {
-                SpeechManager.Say("Chase off: Raidou stands still.", interrupt: true);
+                SpeechManager.Say($"Chase off: {Name} stands still.", interrupt: true);
                 return;
             }
             float len = Distance(gb, d);

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text;
 using Il2Cpp;
 using NocturneAccess.Core;
+using NocturneAccess.Systems.Navigation;
 
 namespace NocturneAccess.Capture
 {
@@ -81,12 +82,19 @@ namespace NocturneAccess.Capture
             }
         }
 
+        private static string SafeDlc9()
+        {
+            try { return dds3KernelMain.dds3CheckDLC9() ? "installed" : "not installed"; }
+            catch (Exception ex) { return "unknown (" + ex.Message + ")"; }
+        }
+
         /// <summary>Once per chase: the map grid and the doors the AI knows.</summary>
         private static void Begin(Il2Cppfield_H.fldGlobalWork_t gb)
         {
             try
             {
                 var sb = new StringBuilder($"[Chase] Flag {ChaseFlag} on in field {gb.fieldID} area {gb.areaID}: sampling every {SampleMs} ms. ");
+                sb.Append($"Edition: Chronicle content {SafeDlc9()}, flags 3712 {EventBit.evtBitCheck(3712)} 3715 {EventBit.evtBitCheck(3715)} 3718 {EventBit.evtBitCheck(3718)}: {(ChaseCues.RaidouEdition ? "Raidou" : "Dante")}. ");
                 sb.Append($"Map O {fldTest.fldRun_MAP_OX},{fldTest.fldRun_MAP_OZ} B {fldTest.fldRun_MAP_BX},{fldTest.fldRun_MAP_BZ}; doors:");
                 var doors = fldTest.fldRunDoorTbl;
                 for (int i = 0; doors != null && i < doors.Length; i++)

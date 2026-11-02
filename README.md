@@ -21,11 +21,15 @@ The game has been played from the start through Shinjuku, Shibuya, the Amala Net
 
 Every new area of Nocturne has brought something the mod had never met: hidden warps in the Amala Network, ladders in the Underpass, a pyramid built differently from everything before it, corridors of steps. Each one blocked progress until it was found and fixed, often within the same day. The only way to make sure a blind player can finish the game is to play it to the end, find those spots and fix them. Every fix also carries over to the areas still ahead.
 
+### Game modes
+
+The mod is meant to work the same in every mode the game offers: **New Game** (the 2003 game, without the extra content), **Chronicle** (the free Chronicle Pack DLC, with Raidou, the Labyrinth of Amala and more) and **Maniax** (paid DLC, with Dante instead of Raidou). It is played and tested in Chronicle mode. The game's data was compared offline: Maniax uses the same maps, doors and puzzles as Chronicle (only story scenes differ), so the Labyrinth's way on and the changes below apply to both, and where the mod names Raidou it says Dante in Maniax. New Game has no Labyrinth, so none of that comes up there.
+
 ### Content changed or skipped for accessibility
 
 A few short parts of the game depend on reacting to what is on screen faster than speech or sound can tell you. Rather than hold back the whole mod for them, the mod changes them, and says so here. Each change can be switched off to play the game's original version: in `UserData/NocturneAccess.cfg` (with the game closed), or with a key in game where noted.
 
-- **The Labyrinth of Amala, Third Kalpa: Raidou's chase (Dante's in the other edition). Temporary.** A stealth section in real time: the pursuer runs faster than a player can react by ear, even with the mod's warning sounds. With `ChaseOff = true` (the default) he stands still and never catches you; the rest of the section, its doors and the story go on as normal. **The boss fight against him at the end is never skipped.** An accessible way to play the chase is still wanted; until then it stays off. With `ChaseOff = false` you get the game's chase, with a low pulse that quickens as he closes in (`ChaseSound`) and Insert to ask where he is.
+- **The Labyrinth of Amala, Third Kalpa: Raidou's chase (Dante's in Maniax mode). Temporary.** A stealth section in real time: the pursuer runs faster than a player can react by ear, even with the mod's warning sounds. With `ChaseOff = true` (the default) he stands still and never catches you; the rest of the section, its doors and the story go on as normal. **The boss fight against him at the end is never skipped.** An accessible way to play the chase is still wanted; until then it stays off. With `ChaseOff = false` you get the game's chase, with a low pulse that quickens as he closes in (`ChaseSound`) and Insert to ask where he is.
 - **The Labyrinth of Amala's falling minigame.** The mod steers the fall for you (F4 hands it back to you during the fall, or a direction key takes over at once), and the party takes no damage from objects hit (`PipeNoDamage = true`, the default; macca lost to hits is unchanged).
 
 Keys: `docs/KEYS.md`. Project state and roadmap: `docs/HANDOFF.md`.
