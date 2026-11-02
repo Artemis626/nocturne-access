@@ -24,5 +24,9 @@ area names `common_en` `FLDTERM_EN`, `AREA_EN`, `BASYO_EN`.
   (blocks: nverts, nfaces, 0, vertex ptr, face ptr, next; vertices x y z w; faces 36 bytes: attr, ?, ?, 4 vertex indices, ?, ?)
   and its named points, so `tools/navregions.pl` floods an area never dumped in game (checked: field 34 area 20 gives the same
   19 regions as dump 15:38:40). Moving collision and some trigger blocks are not in it.
+- `waybfs.pl <wap.txt> <dir of fNNN files> <field> <start area> <start point> <goal area> <goal volume> [extra]`: the shortest chain of
+  volumes through a field without visiting it: floods each area file from its arrival points (navregions.pl), follows the door table;
+  extra lines `area volume -> area point label` add script warps (stat doors); `SKIP="a:vol ..."` leaves volumes out, `TRACE=1` prints
+  each flood. Area files with no floors (only automap planes, e.g. Third Kalpa areas 0, 1, 5, 20, 21) flood nothing (0.0.141).
 - `wapdest.pl <wap.txt> <dir of fNNN files> <areas...>` (`FIELD=NNN`, default 34): each door's real destination with its
   point's position, following the after_flag 1 follow-up warp (`DoorTable`, 0.0.139).

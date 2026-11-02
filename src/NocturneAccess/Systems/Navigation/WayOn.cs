@@ -110,6 +110,10 @@ namespace NocturneAccess.Systems.Navigation
             Marked.UnionWith(names);
             List<Poi> pois = PointsOfInterest.Build(gb);
             List<Poi> candidates = names.Select(n => pois.FirstOrDefault(q => q.Names.Contains(n))).Where(q => q != null).ToList();
+            // Equal highest stats: the nearer stat route first (Francesco: the nearest, or any).
+            if (Tied.Count > 1)
+                candidates = candidates.Where(q => Tied.Overlaps(q.Names)).OrderBy(q => q.Distance)
+                                       .Concat(candidates.Where(q => !Tied.Overlaps(q.Names))).ToList();
             // A point walked to crossing no story event first; then through doors here; then walked to through the fewest story
             // events (in the listed order among equals); then beyond doors (0.0.128: Yoyogi Park's pixies warp the player back, and
             // the flood counts a door behind one as walkable). The story event that is itself the target is not counted (the Amala
@@ -148,7 +152,9 @@ namespace NocturneAccess.Systems.Navigation
             }
             Marked.UnionWith(pick.Names);
             PointsOfInterest.Select(gb, pick);
-            RouteGuide.SpeakWith(Words + " ");
+            // A stat route says its stat (mod words, to confirm with Francesco): "Way on, Strength."
+            string word = pick.Names.Select(n => RouteWord.TryGetValue(n, out string w) ? w : null).FirstOrDefault(w => w != null);
+            RouteGuide.SpeakWith(word != null ? $"Way on, {word}. " : Words + " ");
         }
 
         private static readonly Dictionary<int, int> Until = new Dictionary<int, int>();
@@ -167,7 +173,56 @@ namespace NocturneAccess.Systems.Navigation
             // 0.0.140: "01d_11+1700" holds only once story flag 1700 is set, "01d_04-1700" only while it is off (the Black Temple:
             // a Jump Off on 2F breaks the 1F floor, flag 1700, and opens the hole down to B1F).
             names = names.Select(Gated).Where(n => n != null).ToList();
+            names = ByStat(names);
             return names.Count > 0;
+        }
+
+        // ---- Stat routes (0.0.141; Francesco, 2 Nov 2026) ----
+        // The Third Kalpa's three wings lead to the same ladder down, each behind doors that test one stat ("Voice of the Door":
+        // prm_PLAYER_GET_PARAM, passed when the stat is at least the number). "01eve_01@S15" is a Strength route needing 15
+        // (S Strength, M Magic, L Luck: the game's param ids 0, 2, 5). The route of the player's highest stat is kept; first among
+        // the routes the player can pass, else among all. Equal highest stats keep both, the nearer chosen (Speak).
+        private static readonly (char Tag, int Id, string Word)[] Stats = { ('S', 0, "Strength"), ('M', 2, "Magic"), ('L', 5, "Luck") };
+        private static readonly HashSet<string> Tied = new HashSet<string>(StringComparer.Ordinal);
+        private static readonly Dictionary<string, string> RouteWord = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        private static List<string> ByStat(List<string> names)
+        {
+            Tied.Clear();
+            RouteWord.Clear();
+            var routes = new List<(string Name, int Id, string Word, int Need, int Have)>();
+            foreach (string n in names)
+            {
+                int at = n.IndexOf('@');
+                if (at < 0 || at + 2 > n.Length || !int.TryParse(n.Substring(at + 2), out int need))
+                    continue;
+                var s = Stats.FirstOrDefault(x => x.Tag == n[at + 1]);
+                if (s.Word == null)
+                    continue;
+                routes.Add((n, s.Id, s.Word, need, datCalc.datGetPlayerParam(s.Id)));
+            }
+            if (routes.Count == 0)
+                return names;
+            var pool = routes.Where(r => r.Have >= r.Need).ToList();
+            if (pool.Count == 0)
+                pool = routes;
+            int best = pool.Max(r => r.Have);
+            var kept = pool.Where(r => r.Have == best).ToList();
+            Log.Info($"{Tag} Stats: " + string.Join(", ", Stats.Select(s => $"{s.Word} {datCalc.datGetPlayerParam(s.Id)}"))
+                     + "; routes " + string.Join(", ", routes.Select(r => $"{r.Name} ({r.Word} {r.Need}{(r.Have >= r.Need ? "" : ", not passed")})"))
+                     + $"; kept " + string.Join(" and ", kept.Select(r => r.Word).Distinct()) + ".");
+            var keep = new List<string>();
+            foreach (var r in kept)
+            {
+                string v = r.Name.Substring(0, r.Name.IndexOf('@'));
+                keep.Add(v);
+                RouteWord[v] = r.Word;
+            }
+            // Two routes of one stat keep the listed order (the West wing's Strength 25 door before the Strength 20 one).
+            if (kept.Select(r => r.Word).Distinct().Count() > 1)
+                Tied.UnionWith(keep);
+            // Untagged names stay after the stat route, as fallbacks.
+            return keep.Concat(names.Where(n => n.IndexOf('@') < 0)).Distinct().ToList();
         }
 
         /// <summary>The volume name of a candidate whose flag condition holds now, else null.</summary>

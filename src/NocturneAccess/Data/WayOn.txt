@@ -207,3 +207,34 @@
 34 15 01eve_51-1703 01d_04-1703 01d_13-1703 01d_03+1703   # upper floor: the device to Skadi from the south room; else east to area 16; from the device's landing, the door south; a shadow stepped on: west to the Terminal
 34 16 01d_20-1703 01d_17-1703 01d_18-1703 01d_16-1703 01d_22-1703 01d_23+1703   # the middle west door into the device's room; the doors south to it; a shadow stepped on: the Terminal
 34 17 01eve_01 01eve_03                        # Skadi's room: the boss; after it, the beam out
+
+# ---- Third Kalpa (field 43): from the entrance to the ladder down to the chase (B1F, area 27) ----
+# 2 Nov 2026 (0.0.141, Francesco's design): the way on goes by the player's highest stat among Strength, Magic and Luck, through
+# that stat's wing; equal highest stats: the nearer stat door. Read from the game's data offline (tools/unity/waybfs.pl floods
+# every area file from its arrival points and follows the door table; the stat doors from the field script f043.bf, their
+# "Voice of the Door" procedures: prm_PLAYER_GET_PARAM, passed at or above the number). The hub (area 15) and its ring (area 14)
+# are a maze of cells: the ring's ladder cell (01d_12) is entered only from B1F, so every way down passes a stat door:
+#   Strength: ring 01eve_01 (15) to area 22; then 22's 01eve_01 (25) to area 23 and its ladder 01d_10 to area 25, or 22's door
+#     01d_01 to area 24, its 01eve_01 (20) to area 23, 23's 01d_06 back to 22's south part and its ladder 01d_08 to area 25;
+#     25's 01d_02 or 01d_03 to area 27. The route needs 20.
+#   Luck: ring 01eve_02 (10) to area 16; 16's 01d_04, the beam 01d_12 to area 18; 18's ladder 01d_14 to area 30; 30's 01d_04
+#     to area 29; 29's 01d_01 to area 27. The route needs 10 (16's and 17's Luck 14, 16, 18 doors are side rooms).
+#   Magic: ring 01eve_03 (15) to area 19; 19's 01eve_01 (20), 01d_06, the ladder 01d_15 to area 26; 26's 01d_03 to area 27.
+#     The route needs 20 (19's Magic 25 door is a side room).
+# "@S20": a Strength route needing 20 (S, M, L); untagged names after them are fallbacks (back to the hub from a ring cell).
+# Areas 0, 1, 5, 20, 21 have no floors in their area files (their collision is elsewhere): not checked offline, not on the routes.
+# The chase beyond 27's ladder 01d_08 (areas 2 to 12, the boss door in area 11) is not built: the pursuer needs research first.
+43 0  01d_01                                   # the landing after the fall: into the hub
+43 15 01d_06@S20 01d_07@L10 01d_08@M20 01d_02  # hub: from its ring, the stat route's door into area 14; from the entrance part, the door into the ring
+43 14 01eve_01@S20 01eve_02@L10 01eve_03@M20 01d_06 01d_08 01d_10 01d_03 01d_01 01d_02 01d_04 01d_05   # ring: the stat door; from a cell without it, back into the hub
+43 22 01eve_01@S25 01d_01@S20 01d_08           # Strength: the Strength 25 door, else to area 24 for the Strength 20 one; from the south part, the ladder down
+43 24 01eve_01 01d_02                          # Strength: the Strength 20 door, through the room door
+43 23 01d_10 01d_04 01d_06                     # Strength: the ladder down (after the 25 door); after the 20 door, back into area 22's south part
+43 25 01d_02 01d_03                            # Strength, B1F: east into area 27
+43 16 01d_12 01d_04                            # Luck: the beam to area 18, through the room door
+43 18 01d_14                                   # Luck: the ladder down to area 30
+43 30 01d_04 01d_02 01d_03                     # Luck, B1F: south into area 29
+43 29 01d_01                                   # Luck, B1F: into area 27
+43 19 01d_15 01d_06 01eve_01                   # Magic: the Magic 20 door, then the room door and the ladder down
+43 26 01d_03 01d_02                            # Magic, B1F: west into area 27
+43 27 01d_08 01d_06                            # B1F: the ladder down (Raidou or Dante, then the chase), through the room door

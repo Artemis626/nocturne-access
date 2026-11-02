@@ -84,6 +84,9 @@ my $gx = floor($x0 / $C) * $C + $C / 2; my $gz = floor($z0 / $C) * $C + $C / 2;
 my $W = ceil(($x1 - $gx) / $C) + 1; $W = $cap if $W > $cap;
 my $H = ceil(($z1 - $gz) / $C) + 1; $H = $cap if $H > $cap;
 printf "%d floors, %d walls; grid %d x %d from %s %s (x to %s), %d layers\n", scalar @floors, scalar @walls, $W, $H, $gx, $gz, $gx + ($W - 1) * $C, $layers;
+# No floor at all (an area file whose floors all carry trigger attributes, e.g. the Third Kalpa's area 0): the bounds stay at their
+# 1e9 starting values and the grid loops below would run for hours (2 Nov 2026, tools/unity/waybfs.pl stuck 30 minutes).
+if (!@floors || $W <= 0 || $H <= 0) { print "no walkable grid: nothing to flood\n"; exit 0; }
 
 sub inside { my ($pts, $x, $z) = @_; my $in = 0; my @p = @$pts; for (my ($i, $j) = (0, $#p); $i < @p; $j = $i++) { my ($zi, $zj) = ($p[$i][2], $p[$j][2]); if (($zi > $z) != ($zj > $z)) { my $xc = ($p[$j][0] - $p[$i][0]) * ($z - $zi) / ($zj - $zi) + $p[$i][0]; $in = !$in if $x < $xc; } } return $in; }
 sub planey { my ($q, $x, $z) = @_; my $a = $q->{p}[0]; return $a->[1] - ($q->{nx} * ($x - $a->[0]) + $q->{nz} * ($z - $a->[2])) / $q->{ny}; }
