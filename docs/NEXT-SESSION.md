@@ -4,6 +4,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
+**2 Nov 2026, late night, latest: 0.0.143 (pushed, untested): Raidou cues (pulse within 30 m when he comes nearer, "Raidou moving.", Insert for where he is) and the off switch `ChaseNoCatch` (off by default; Francesco tries the cues first). `docs/HANDOFF.md` last entry.**
+
 **2 Nov 2026, night, latest: 0.0.142 (pushed, untested): the Raidou chase probe (`[Chase]` lines, log only), the Labyrinth entrance shafts say their Kalpa, the pipe minigame start line (`docs/HANDOFF.md` last entry). Next: read Francesco's chase run, then build the Raidou cues (distance, direction, coming or going; caught under 250) and the chase way on.**
 
 **2 Nov 2026, evening, latest: 0.0.141 (pushed, untested): the Third Kalpa way on (field 43) by the player's highest stat, Francesco's design (`docs/HANDOFF.md` last entry). The Black Temple way on verified (16:49 session, Alciel beaten). To check in his next Kalpa log: the `[Nav:WayOn] Stats:` line (his three stats, each route's need, the route kept), "Way on, Strength." (or Magic, Luck) then the stat door; Home into it; the wing's ladder; B1F area 27's ladder `01d_08`. Test steps: in area 0 and the hub, Shift+End then Home, repeat in every area to B1F's ladder; Shift+F6 where the way on is odd. Not built: the chase (areas 2 to 12).**

@@ -61,6 +61,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyPoiWalk { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiGuide { get; private set; }
         internal static MelonPreferences_Entry<string> KeyWayOn { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyChaseInfo { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiFilterNext { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiFilterPrevious { get; private set; }
         internal static MelonPreferences_Entry<bool> PoiMapOrder { get; private set; }
@@ -68,6 +69,8 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<bool> WallBumpSound { get; private set; }
         internal static MelonPreferences_Entry<bool> WayOnSound { get; private set; }
         internal static MelonPreferences_Entry<bool> PipeNoDamage { get; private set; }
+        internal static MelonPreferences_Entry<bool> ChaseSound { get; private set; }
+        internal static MelonPreferences_Entry<bool> ChaseNoCatch { get; private set; }
         internal static MelonPreferences_Entry<string> KeyAreaRoutes { get; private set; }
 
         // Debug
@@ -141,6 +144,10 @@ namespace NocturneAccess.Core
                 "A soft two-note tone, once, on reaching an area where Shift+End has a way on (after loading a save, and the first time you enter each such area).");
             PipeNoDamage = navigation.CreateEntry("PipeNoDamage", true, "No damage in the falling minigame",
                 "The Labyrinth of Amala falling minigame takes no HP from the party for the objects hit (the game takes it at the end, down to 1 HP each). Macca lost to hits is unchanged.");
+            ChaseSound = navigation.CreateEntry("ChaseSound", true, "Chase pulse",
+                "In the Labyrinth's Third Kalpa chase: a soft low pulse while Raidou (or Dante) comes nearer within 30 metres, or is within 12 metres; faster as he closes in. He catches you within 2.5 metres.");
+            ChaseNoCatch = navigation.CreateEntry("ChaseNoCatch", false, "Chase without catches",
+                "In the Labyrinth's Third Kalpa chase: Raidou (or Dante) still patrols and hunts, but reaching you starts no battle. Off by default. The boss fight at the end is not affected.");
 
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);
@@ -185,6 +192,8 @@ namespace NocturneAccess.Core
                 "Names the selected point of interest, then speaks directions to it from where you stand (first person: ahead, left, right; fixed-camera rooms: the key direction on screen). Press again for new directions as you go.");
             KeyWayOn = keys.CreateEntry("WayOn", "Shift+End", "Way on key",
                 "Says \"Way on.\", selects the area's way onward (from walkthroughs, where the mod has one) and speaks its directions as End does; Home then walks there.");
+            KeyChaseInfo = keys.CreateEntry("ChaseInfo", "Insert", "Chase pursuer key",
+                "In the Labyrinth's Third Kalpa chase: where Raidou (or Dante) is: distance, direction from your facing, and whether he is coming, moving away or standing.");
             KeyAreaRoutes = keys.CreateEntry("AreaRoutes", "F7", "Routes through other areas key",
                 "Turns on or off the routes through other areas in the Page Up list, Home and End.");
 

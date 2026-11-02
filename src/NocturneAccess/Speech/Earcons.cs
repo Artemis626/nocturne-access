@@ -31,6 +31,31 @@ namespace NocturneAccess.Speech
         /// </summary>
         internal static void WayOn() => Play(ref _wayOn, MakeWayOn, "way-on tone");
 
+        /// <summary>
+        /// The chase pulse (0.0.143; the Third Kalpa's Raidou, repeated faster as he closes in): one soft, low knock, G2 to D3
+        /// (98 and 147 Hz, a little D4 on top), 90 ms, quick decay; lower than the way-on tone and unlike the thud's falling pitch.
+        /// </summary>
+        internal static void ChasePulse() => Play(ref _pulse, MakePulse, "chase pulse");
+
+        private static GCHandle _pulse;
+
+        private static byte[] MakePulse()
+        {
+            const int rate = 22050;
+            int n = rate * 90 / 1000;
+            var samples = new short[n];
+            for (int i = 0; i < n; i++)
+            {
+                double t = (double)i / rate;
+                double attack = Math.Min(1.0, t / 0.004);
+                double decay = Math.Exp(-t * 35);
+                double release = Math.Min(1.0, (n - i) / (rate * 0.01));
+                double wave = 0.5 * Math.Sin(2 * Math.PI * 98 * t) + 0.35 * Math.Sin(2 * Math.PI * 146.83 * t) + 0.15 * Math.Sin(2 * Math.PI * 293.66 * t);   // D4 on top: audible on small speakers
+                samples[i] = (short)(0.6 * attack * decay * release * wave * short.MaxValue);
+            }
+            return Wav(samples, rate);
+        }
+
         private static void Play(ref GCHandle handle, Func<byte[]> make, string what)
         {
             if (_failed)
