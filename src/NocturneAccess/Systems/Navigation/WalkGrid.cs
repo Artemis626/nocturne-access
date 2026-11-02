@@ -71,6 +71,7 @@ namespace NocturneAccess.Systems.Navigation
         private const float StartBand = 80f;
         private const int MaxCells = 400;          // per side of the window, used only when the whole area holds more than MaxCells squared
         private const int MaxSide = 2000;          // per side of a whole area (a long, narrow tunnel), 60 000 units
+        private const int DungeonWholeCells = 700; // a dungeon area up to this squared is never cut to a window (0.0.138)
         private const float TurnPenalty = 2f;
         private const float NearRange = 300f;
         private const float NearCost = 2f;
@@ -251,9 +252,12 @@ namespace NocturneAccess.Systems.Navigation
             // 0.0.60: the window is used only for areas larger than MaxCells squared in all (the world map). The Ginza
             // underpass tunnels are 12 630 units long and 3 000 wide: a 400-cell side (11 970) cut one end off, and its
             // ladders and doors were "not reachable" until the player walked there and the window slid (6 Oct 21:58, area 14).
-            int side = MaxCells;
+            // 0.0.138: a dungeon area is whole up to DungeonWholeCells squared: the Amala Temple's plaza (field 34 area 1) is
+            // 22 000 wide, and the 400-cell window round the player left out the Black and Red Temple doors at x -8000 and 8000
+            // ("beyond doors", 2 Nov 2026, 13:34 to 13:38).
+            int side = MaxCells, whole = world ? MaxCells : DungeonWholeCells;
             double wholeX = (maxX - minX) / CellSize + 2, wholeZ = (maxZ - minZ) / CellSize + 2;
-            if (wholeX * wholeZ <= (double)MaxCells * MaxCells && wholeX <= MaxSide && wholeZ <= MaxSide)
+            if (wholeX * wholeZ <= (double)whole * whole && wholeX <= MaxSide && wholeZ <= MaxSide)
                 side = MaxSide;
             else
             {
@@ -385,10 +389,14 @@ namespace NocturneAccess.Systems.Navigation
         /// in that seam, so the pocket, the door and the exit beyond it were "not reachable" from the hall, which Francesco walked
         /// by hand (14 Oct 2026, 13:40; 4 and 6 Oct too). Checked on all 84 dumps (tools/navregions.pl, NAVSEAM): only Ginza 1F
         /// changes reachability; elsewhere 1 to 4 cells are bridged, joining no region. Returns the cells bridged.
+        /// 0.0.138: the sides are probed a cell less 1 from the centre and may differ by a step (StepHeight): the Amala Temple
+        /// plaza (field 34 area 1) ends at z 16500 at y -30 and the White Temple's first stair starts at 16526 at y -75; the
+        /// centres at 16515 fell in that gap, the half-cell probe sat on the plaza's very edge and the two floors are 45 apart,
+        /// so the door 21 metres ahead was "beyond doors" (2 Nov 2026, 13:41).
         /// </summary>
         private static int BridgeSeams(List<CollisionPoly> floors)
         {
-            const float half = CellSize / 2;
+            const float probe = CellSize - 1;
             var sides = new Dictionary<int, List<float>[]>();
             foreach (CollisionPoly f in floors)
             {
@@ -398,14 +406,14 @@ namespace NocturneAccess.Systems.Navigation
                     fx0 = Math.Min(fx0, v.x); fx1 = Math.Max(fx1, v.x);
                     fz0 = Math.Min(fz0, v.z); fz1 = Math.Max(fz1, v.z);
                 }
-                ForCells(fx0 - half, fz0 - half, fx1 + half, fz1 + half, (c, x, z) =>
+                ForCells(fx0 - probe, fz0 - probe, fx1 + probe, fz1 + probe, (c, x, z) =>
                 {
                     if (_count[c] != 0)
                         return;
                     for (int s = 0; s < 4; s++)
                     {
-                        float sx = s == 2 ? x - half : s == 3 ? x + half : x;
-                        float sz = s == 0 ? z - half : s == 1 ? z + half : z;
+                        float sx = s == 2 ? x - probe : s == 3 ? x + probe : x;
+                        float sz = s == 0 ? z - probe : s == 1 ? z + probe : z;
                         if (!CollisionCache.ContainsXZ(f.Points, sx, sz))
                             continue;
                         if (!sides.TryGetValue(c, out List<float>[] lists))
@@ -425,7 +433,7 @@ namespace NocturneAccess.Systems.Navigation
                         continue;
                     foreach (float ya in a)
                         foreach (float yb in b)
-                            if (Math.Abs(ya - yb) <= MergeBand)
+                            if (Math.Abs(ya - yb) <= StepHeight)
                                 best = Math.Min(best, Math.Min(ya, yb));   // Y points down: the higher floor
                 }
                 if (best == float.MaxValue)

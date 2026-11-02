@@ -4,6 +4,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
+**2 Nov 2026: 0.0.138 (Amala Temple, field 34): the plaza (area 1) no longer cut to a 400-cell window (dungeon areas whole up to 700 x 700 cells), and floor gaps narrower than a cell between floors a step apart are bridged (the White Temple stairs). To test: Page Up in the plaza lists the Black, Red and White Temple doors without "beyond doors"; Home walks to each (`docs/HANDOFF.md` last entry). The Third Kalpa way on (below) waits: Francesco went on to the Amala Temple instead (sessions 31 Oct, 1 Nov and 2 Nov visited no field 43).**
+
 **31 Oct 2026: START HERE: build the Third Kalpa way on (field 43, main route only; Francesco chose it for the new chat). 0.0.137 verified. Analysis and route: `docs/HANDOFF.md` last entry.**
 
 **30 Oct 2026, night: 20:34 session analysed (nothing built): "area 14" is literal (one area round the Third Kalpa hub); stat doors read from the script (Strength 15/20/25, Magic 15/20/25, Luck 10/14/16/18; base stat without the Magatama), all optional; proposals to Francesco: main-route way on, stat labels, the chase research; Francesco: none for now, he will think about it (`docs/HANDOFF.md` last entry).**

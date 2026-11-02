@@ -3,7 +3,7 @@
 # polygon overlapping 55..180 above a floor, moves between heights within 55, 8 ways, no corner cutting), labels the
 # connected regions and prints them with their size and extent, the region of each point of interest and warp landing,
 # and a map per region level.
-# Usage: perl tools/navregions.pl <dump> [maxcells per side, default 400] [layers, default 8] [player x z]
+# Usage: perl tools/navregions.pl <dump> [maxcells, default 700 in dungeons, 400 on the world map] [layers, default 8] [player x z]
 # Defaults follow the game's WalkGrid (0.0.74): steps and risers 55, 8 layers (0.0.96), Attr 0x80 floors (NAVATTR80), no faces looking
 # down (NAVUP), every layer within a step (NAVMULTI), merged floors keep the higher (NAVMERGEHI), no drop under a continuing
 # floor (NAVCONT), seams narrower than a cell bridged (NAVSEAM, 0.0.77). Set any of them to 0 to see the older rules (12 Oct 2026: the stale defaults hid a corridor bug for an hour).
@@ -12,11 +12,13 @@
 use strict; use warnings; use POSIX qw(floor ceil);
 $ENV{$_} //= 1 for qw(NAVATTR80 NAVUP NAVMULTI NAVMERGEHI NAVCONT);
 my ($file, $maxCells, $layers, $px, $pz) = @ARGV;
-$maxCells ||= 400; $layers ||= 8;   # WalkGrid.Layers (8 since 0.0.96)
+$layers ||= 8;   # WalkGrid.Layers (8 since 0.0.96)
 my $C = 30; my ($Clear, $Step, $Body, $MaxStep, $Merge, $NearR) = ($ENV{NAVCLEAR} // 46, 55, 180, 55, 20, 300);   # WalkGrid since 0.0.78 (clearance 46, was 65); NAVCLEAR tries another
 # NAVSTEP="step maxstep": the body's lowest blocking height and the largest height change of a move (0.0.63: 55 55).
 # 0.0.105: WalkGrid moves up to 75 in dungeons (the Obelisk's lift floors 70 below the hall), 55 on the world map (field < 10).
-{ open my $fh, '<', $file or die "$file: $!"; while (<$fh>) { if (/^fieldID (\d+)/) { $MaxStep = $1 < 10 ? 55 : 75; last } } close $fh; }
+{ open my $fh, '<', $file or die "$file: $!"; while (<$fh>) { if (/^fieldID (\d+)/) { $MaxStep = $1 < 10 ? 55 : 75; $maxCells ||= $1 < 10 ? 400 : 700; last } } close $fh; }
+# 0.0.138: WalkGrid keeps a dungeon area whole up to 700 x 700 cells (DungeonWholeCells; the world map 400).
+$maxCells ||= 400;
 ($Step, $MaxStep) = split ' ', $ENV{NAVSTEP} if $ENV{NAVSTEP};
 
 my (%poly, @pois, @landings, $player, %hitOff, %npcOff);
@@ -74,12 +76,13 @@ for my $q (sort { $a->{id} <=> $b->{id} } values %poly) {
     }
 }
 sub window { my ($lo, $hi, $p, $span) = @_; return ($lo, $hi) if $hi - $lo <= $span; my $s = $p - $span / 2; $s = $lo if $s < $lo; $s = $hi - $span if $s > $hi - $span; return ($s, $s + $span); }
-my $span = ($maxCells - 1) * $C;
-($x0, $x1) = window($x0, $x1, $px, $span);
-($z0, $z1) = window($z0, $z1, $pz, $span);
+# As WalkGrid (0.0.60): the whole area when it holds at most maxCells squared cells and no side passes 2000; else a window round the player.
+my $span = ($maxCells - 1) * $C; my ($wx, $wz) = (($x1 - $x0) / $C + 2, ($z1 - $z0) / $C + 2); my $wholeArea = $wx * $wz <= $maxCells * $maxCells && $wx <= 2000 && $wz <= 2000;
+unless ($wholeArea) { ($x0, $x1) = window($x0, $x1, $px, $span); ($z0, $z1) = window($z0, $z1, $pz, $span); }
+my $cap = $wholeArea ? 2000 : $maxCells;
 my $gx = floor($x0 / $C) * $C + $C / 2; my $gz = floor($z0 / $C) * $C + $C / 2;
-my $W = ceil(($x1 - $gx) / $C) + 1; $W = $maxCells if $W > $maxCells;
-my $H = ceil(($z1 - $gz) / $C) + 1; $H = $maxCells if $H > $maxCells;
+my $W = ceil(($x1 - $gx) / $C) + 1; $W = $cap if $W > $cap;
+my $H = ceil(($z1 - $gz) / $C) + 1; $H = $cap if $H > $cap;
 printf "%d floors, %d walls; grid %d x %d from %s %s (x to %s), %d layers\n", scalar @floors, scalar @walls, $W, $H, $gx, $gz, $gx + ($W - 1) * $C, $layers;
 
 sub inside { my ($pts, $x, $z) = @_; my $in = 0; my @p = @$pts; for (my ($i, $j) = (0, $#p); $i < @p; $j = $i++) { my ($zi, $zj) = ($p[$i][2], $p[$j][2]); if (($zi > $z) != ($zj > $z)) { my $xc = ($p[$j][0] - $p[$i][0]) * ($z - $zi) / ($zj - $zi) + $p[$i][0]; $in = !$in if $x < $xc; } } return $in; }
@@ -114,11 +117,12 @@ if ($ENV{NAVSEAM} // 1) {
     for my $f (@floors) {
         my ($fx0, $fz0, $fx1, $fz1) = (1e9, 1e9, -1e9, -1e9);
         for (@{ $f->{p} }) { $fx0 = $_->[0] if $_->[0] < $fx0; $fx1 = $_->[0] if $_->[0] > $fx1; $fz0 = $_->[2] if $_->[2] < $fz0; $fz1 = $_->[2] if $_->[2] > $fz1; }
-        my ($i0, $i1, $j0, $j1) = cells($fx0 - $h, $fz0 - $h, $fx1 + $h, $fz1 + $h);
+        my $pr = $ENV{NAVSEAMPROBE} // $C - 1; my ($i0, $i1, $j0, $j1) = cells($fx0 - $pr, $fz0 - $pr, $fx1 + $pr, $fz1 + $pr);
         for my $j ($j0 .. $j1) { for my $i ($i0 .. $i1) {
             my $c = $j * $W + $i; next if $cnt[$c];
             my ($x, $z) = ($gx + $i * $C, $gz + $j * $C);
-            my @probe = ([$x, $z - $h], [$x, $z + $h], [$x - $h, $z], [$x + $h, $z]);
+            my $p = $ENV{NAVSEAMPROBE} // $C - 1;   # how far from the centre each side is probed (WalkGrid 0.0.138: a cell less 1; 0.0.77: half a cell, NAVSEAMPROBE=15)
+            my @probe = ([$x, $z - $p], [$x, $z + $p], [$x - $p, $z], [$x + $p, $z]);
             for my $s (0 .. 3) { my ($sx, $sz) = @{ $probe[$s] }; push @{ $side{$c}[$s] }, planey($f, $sx, $sz) if inside($f->{p}, $sx, $sz); }
         } }
     }
@@ -126,7 +130,7 @@ if ($ENV{NAVSEAM} // 1) {
         my $best;
         for my $axis (0, 1) {
             for my $ya (@{ $side{$c}[2 * $axis] // [] }) { for my $yb (@{ $side{$c}[2 * $axis + 1] // [] }) {
-                next if abs($ya - $yb) > $Merge;
+                next if abs($ya - $yb) > ($ENV{NAVSEAMBAND} // $Step);
                 my $y = $ya < $yb ? $ya : $yb; $best = $y if !defined $best || $y < $best;
             } }
         }
