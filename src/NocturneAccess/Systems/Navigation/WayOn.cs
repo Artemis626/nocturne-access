@@ -164,7 +164,20 @@ namespace NocturneAccess.Systems.Navigation
                 names = null;
                 return false;
             }
-            return true;
+            // 0.0.140: "01d_11+1700" holds only once story flag 1700 is set, "01d_04-1700" only while it is off (the Black Temple:
+            // a Jump Off on 2F breaks the 1F floor, flag 1700, and opens the hole down to B1F).
+            names = names.Select(Gated).Where(n => n != null).ToList();
+            return names.Count > 0;
+        }
+
+        /// <summary>The volume name of a candidate whose flag condition holds now, else null.</summary>
+        private static string Gated(string token)
+        {
+            int at = token.IndexOfAny(new[] { '+', '-' });
+            if (at < 0 || !int.TryParse(token.Substring(at + 1), out int flag))
+                return token;
+            bool set = EventBit.evtBitCheck(flag);
+            return (token[at] == '+') == set ? token.Substring(0, at) : null;
         }
 
         private static void Load()

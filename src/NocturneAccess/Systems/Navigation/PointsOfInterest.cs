@@ -222,11 +222,11 @@ namespace NocturneAccess.Systems.Navigation
         /// Whether a walk ending at (x, z) reaches the target: within ReachRadius of its centre, or for a door inside its volume
         /// footprint. The Underground Mall stairs (field 17 area 1, 01d_01, 3 Oct 2026) have a 600-wide volume centred on the
         /// stairs' central divider: the nearest walkable cells (65 clear of the divider) lay 105 from the centre and the way
-        /// out was "not reachable" (0.0.49).
+        /// out was "not reachable" (0.0.49). 0.0.140: action volumes too (Jump Off, Examine), fired on confirm anywhere inside them.
         /// </summary>
         internal bool NearVolume(float x, float z)
         {
-            if ((IsDoorLike || Big) && HasBox && x >= BoxX0 - VolumeMargin && x <= BoxX1 + VolumeMargin && z >= BoxZ0 - VolumeMargin && z <= BoxZ1 + VolumeMargin)
+            if ((IsDoorLike || Big || Action) && HasBox && x >= BoxX0 - VolumeMargin && x <= BoxX1 + VolumeMargin && z >= BoxZ0 - VolumeMargin && z <= BoxZ1 + VolumeMargin)
                 return true;
             return (x - X) * (x - X) + (z - Z) * (z - Z) <= ReachRadius * ReachRadius;
         }
@@ -549,7 +549,9 @@ namespace NocturneAccess.Systems.Navigation
                     // the nearest cell at y 0 was 175 short, beside the ramp). Only then the radius test round the point.
                     bool inRect(float y) => WalkGrid.ReachableInRect(px, py, pz, q.BoxX0 - Poi.VolumeMargin, q.BoxZ0 - Poi.VolumeMargin,
                                                                     q.BoxX1 + Poi.VolumeMargin, q.BoxZ1 + Poi.VolumeMargin, y);
-                    bool boxed = (q.IsDoorLike || q.Big) && q.HasBox;
+                    // 0.0.140: an action volume too (Jump Off, Examine): the Black Temple 2F Jump Off 01eve_01 (field 34 area 6) is centred
+                    // 1000 2400 beyond a tall wall at x 1200; only its box reaches the ledge (cells from x 1275), 275 from its centre.
+                    bool boxed = (q.IsDoorLike || q.Big || q.Action) && q.HasBox;
                     q.Reachable = boxed && inRect(q.FloorY);
                     if (!q.Reachable && boxed && !q.Warp)
                         foreach (float alt in q.OtherFloors)

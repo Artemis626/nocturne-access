@@ -168,3 +168,42 @@
 34 22 01d_26 01d_08 01d_12 01d_02 01d_22 01d_28 01d_29   # south column: the beam to Albion; north-east room 01d_08; south-east room 01d_12; west rooms 01d_02 (to area 23); north column: the beam 01d_22; side arms: their beams back north
 34 23 01d_05 01d_08 01d_12 01d_01              # south-west room 01d_05 (to area 22's south-east room); north-east room 01d_08; south-east room 01d_12; north-west room: 01d_01 back to area 22's north column
 34 24 01eve_01 01eve_03                        # Albion's room: the boss; after it, the beam out
+
+# ---- Amala Temple, Black Temple (field 34 areas 3 to 9): from its entrance to Alciel ----
+# Route (Samurai Gamers' Amala Temple walkthrough, Black Temple), matched on 2 Nov 2026 to F034.WAP, the area files (walls
+# flooded offline with tools/unity/f2dump.pl; no dump of these areas yet) and f034.bf. A candidate "name+F" holds only once
+# story flag F is set, "name-F" only while it is off (0.0.140). Area 3 entrance; area 5 the central floor (its beam 01d_04 up to
+# area 6; the crack 01eve_01 west, Examine "There's a crack in the floor"); area 6 the floor above (beam 01d_02 up to area 7,
+# the black torch 01eve_01, Examine, flag 1698; the Jump Off 01eve_01 on the west ledge, reached by the door 01d_14: it sets
+# 1699 and drops the player onto area 5's crack, and area 5's start script then breaks that floor, flag 1700: atari_hoji_01
+# off, 006_start); area 5's hole 01d_11 (movetype 4) then drops into area 8 (B1F) beside Alciel's door 01d_03 (area 9). The
+# torch is in the walkthrough's order; the script reads its flag nowhere else (kept, a short detour). Optional parts (Light
+# Ball, Megido Rock, the chests, area 6's second Jump Off 01eve_02 into area 5's east room and its hole to B1F's east part,
+# which leads back by the beam 01d_02) are left out: area 4 and B1F's east part lead back to the route.
+34 3  01d_02                                   # entrance: north into the central floor
+34 4  01d_09 01d_08 01d_01 01d_04              # side rooms: the north-east or north-west door into the central floor; else back to the entrance
+34 5  01d_11+1700 01d_18+1700 01d_04-1700      # central floor: before the jump, the beam up; once its floor is broken, the hole down to B1F (from the main part, the door 01d_18 into its room)
+34 6  01d_02-1698 01eve_01-1700 01d_14-1700 01d_01   # the floor above: the beam up to the torch; then the west ledge's door 01d_14 and its Jump Off; once the floor below is broken, the beam back down
+34 7  01eve_01-1698 01d_01                     # the torch room: put the black torch out (Examine); then the beam back down
+34 8  01d_03 01d_02                            # B1F: Alciel's door; from the east part, the beam back up to the central floor
+34 9  01eve_01 01eve_03                        # Alciel's altar: the boss; after it, the beam out
+
+# ---- Amala Temple, Red Temple (field 34 areas 11 to 17): from its entrance to Skadi ----
+# Route (Samurai Gamers' Amala Temple walkthrough, Red Temple), matched on 2 Nov 2026 to F034.WAP, the area files (walls
+# flooded offline; no dump yet) and f034.bf. The warp devices are event volumes (Examine): area 12's 01eve_51 to area 15
+# (01pos_11), area 15's 01eve_50 back, area 15's 01eve_51 to Skadi's room (area 17). The shadows are story volumes (area 12
+# 01eve_02 to 15, area 15 01eve_01 to 04, area 16 01eve_01 to 06): stepping on one sets flag 1703, and every device then says
+# "The warp device is not functioning." until the entrance hall's start script clears it (012_start, area 11): routes already
+# cross as few unplayed story events as they can, and with 1703 set the way on leads back out (from areas 15 and 16, whose
+# devices are dead, through area 16's Terminal door 01d_23). Area 12's north strip (five doors to the south, 01d_06 to 10) is
+# reached from the west and east wings (areas 13, 14, their 01d_01); the last approach is area 16's three west doors
+# (01d_19 to 21, the middle one 01d_20 into area 15's south room by the device, as the walkthrough says), entered from area 15
+# by its east door 01d_04 and area 16's doors south. Area 16's other events (01eve_07, 08: the "shadow world", collision of
+# areas 15 and 16 switched) are not used: the walks follow the collision the game has at the time.
+34 11 01d_02                                   # entrance hall (it clears flag 1703): north into the hall
+34 12 01eve_51-1703 01d_02-1703 01d_01+1703    # hall: the warp device up; else the west wing; a shadow stepped on: back out to the entrance
+34 13 01d_01-1703 01d_05                       # west wing: its north door into the hall's north strip; a shadow stepped on: back to the entrance
+34 14 01d_01-1703 01d_05                       # east wing: the same, on the east
+34 15 01eve_51-1703 01d_04-1703 01d_13-1703 01d_03+1703   # upper floor: the device to Skadi from the south room; else east to area 16; from the device's landing, the door south; a shadow stepped on: west to the Terminal
+34 16 01d_20-1703 01d_17-1703 01d_18-1703 01d_16-1703 01d_22-1703 01d_23+1703   # the middle west door into the device's room; the doors south to it; a shadow stepped on: the Terminal
+34 17 01eve_01 01eve_03                        # Skadi's room: the boss; after it, the beam out
