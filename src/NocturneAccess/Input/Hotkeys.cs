@@ -63,7 +63,6 @@ namespace NocturneAccess.Input
             Add("directions to point of interest", Config.KeyPoiGuide, KeyCode.End, RouteGuide.Speak);
             Add("way on", Config.KeyWayOn, KeyCode.End, WayOn.Speak, shift: true);
             Add("where am I", Config.KeyWhereAmI, KeyCode.Delete, WhereAmI.Speak);
-            Add("chase pursuer", Config.KeyChaseInfo, KeyCode.Insert, ChaseCues.Speak);
         }
 
         internal static void Update()

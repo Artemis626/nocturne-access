@@ -61,7 +61,6 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyPoiWalk { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiGuide { get; private set; }
         internal static MelonPreferences_Entry<string> KeyWayOn { get; private set; }
-        internal static MelonPreferences_Entry<string> KeyChaseInfo { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiFilterNext { get; private set; }
         internal static MelonPreferences_Entry<string> KeyPoiFilterPrevious { get; private set; }
         internal static MelonPreferences_Entry<bool> PoiMapOrder { get; private set; }
@@ -192,8 +191,6 @@ namespace NocturneAccess.Core
                 "Names the selected point of interest, then speaks directions to it from where you stand (first person: ahead, left, right; fixed-camera rooms: the key direction on screen). Press again for new directions as you go.");
             KeyWayOn = keys.CreateEntry("WayOn", "Shift+End", "Way on key",
                 "Says \"Way on.\", selects the area's way onward (from walkthroughs, where the mod has one) and speaks its directions as End does; Home then walks there.");
-            KeyChaseInfo = keys.CreateEntry("ChaseInfo", "Insert", "Chase pursuer key",
-                "In the Labyrinth's Third Kalpa chase: where Raidou (or Dante) is: distance, direction from your facing, and whether he is coming, moving away or standing.");
             KeyAreaRoutes = keys.CreateEntry("AreaRoutes", "F7", "Routes through other areas key",
                 "Turns on or off the routes through other areas in the Page Up list, Home and End.");
 

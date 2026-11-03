@@ -18,7 +18,7 @@ namespace NocturneAccess.Systems.Navigation
     /// - A pulse (Earcons.ChasePulse, low and soft) while he is within PulseFrom and coming nearer, or within NearAlways whatever
     ///   he does; it repeats faster as he closes in (once a second far out, about seven a second at the catch radius).
     /// - "Raidou moving." when he sets off after standing still (area 4's wait by the door ends, then he hunts).
-    /// - The key (Insert by default): "Raidou, 12 metres, behind left, coming." from his position and the player's facing.
+    /// - (0.0.143 to 0.0.147: Insert said where he was; removed in 0.0.148, Francesco: with him stopped the key is free.)
     /// - ChaseOff (config, on by default since 0.0.144; Francesco, 2 Nov 2026, after testing the cues: he is too fast to react to
     ///   by ear, an accessibility change stated in the README). Read offline: the AI, his collision, model and sounds run in
     ///   fldTest.fldRunView only while story flags 2803 and 2804 are both on; 2804 is the script's FLD_DANTE_AI_START / STOP flag,
@@ -198,32 +198,5 @@ namespace NocturneAccess.Systems.Navigation
             return (float)Math.Sqrt(dx * dx + dz * dz);
         }
 
-        /// <summary>The key: where he is from the player, relative to the player's facing.</summary>
-        internal static void Speak()
-        {
-            fldGlobalWork_t gb = fldGlobal.fldGb;
-            if (!InChase(gb, out fldTest.FLDRUN_DANTE_t d))
-            {
-                SpeechManager.Say("No chase here.", interrupt: true);
-                return;
-            }
-            if (Off)
-            {
-                SpeechManager.Say($"Chase off: {Name} stands still.", interrupt: true);
-                return;
-            }
-            float len = Distance(gb, d);
-            float bearing = Bearing(gb.playerX, gb.playerZ, d.x, d.z);
-            float facing = 180f - gb.PlayerKakudo;   // compass bearing = 180 - PlayerKakudo (RouteGuide)
-            string where = RelativeWord(Mod360(bearing - facing));
-            string doing = d.speed <= 0.5f ? "standing" : _trend < -100f ? "coming" : _trend > 100f ? "moving away" : "moving";
-            string text = $"{Name}, {Math.Max(1, (int)Math.Round(len / 100f))} metres, {where}, {doing}.";
-            Log.Info($"[Chase] Key: {text} (him {d.x:0} {d.z:0} status {d.status} speed {d.speed:0.#}; player {gb.playerX:0} {gb.playerZ:0} facing {facing:0}; trend {_trend:0}/s)");
-            SpeechManager.Say(text, interrupt: true);
-        }
-
-        private static readonly string[] RelativeWords = { "ahead", "ahead right", "right", "behind right", "behind", "behind left", "left", "ahead left" };
-
-        private static string RelativeWord(float rel) => RelativeWords[(int)Math.Round(Mod360(rel) / 45.0) % 8];
     }
 }
