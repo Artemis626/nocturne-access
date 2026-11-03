@@ -269,6 +269,7 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>The Labyrinth of Amala: field 40 (the entrance, "Labyrinth of Amala") and its Kalpas from 41 ("First Kalpa",
         /// dumps 22 Oct 2026), taken as 41 to 45.</summary>
         internal static bool Labyrinth(int field) => field >= 40 && field <= 45;
+        private const int LabyrinthSwitchPad = 5;   // BASYO41_L0005 to BASYO45_L0005 "Switch"; field 40 has pads 1 to 3 only
 
         private static readonly Dictionary<(int Field, int Area, string Volume), string> WayMarks = new Dictionary<(int, int, string), string>
         {
@@ -326,7 +327,13 @@ namespace NocturneAccess.Systems.Navigation
                 putevebox_s box = boxes != null && i < boxes.Length ? boxes[i] : null;
                 PoiKind? kind = null;
                 Vector4 p = h.sisei.pos;
-                string placeName = h.resourceType == 10 ? PlaceName(gb.fieldID, pads, p.x, p.y, p.z, EventName.IsMatch(name) ? EventOnPad : PadReach) : "";
+                int basyo = -1;
+                string placeName = h.resourceType == 10 ? PlaceName(gb.fieldID, pads, p.x, p.y, p.z, EventName.IsMatch(name) ? EventOnPad : PadReach, out basyo) : "";
+                // The Labyrinth's switches (0.0.149; Francesco, 3 Nov 2026: the Third Kalpa's area 6 listed them as rooms) stand on
+                // the game's "Switch" pad (place name 5 in every Kalpa, BASYO41_L0005 to BASYO45_L0005): they are actions, as the
+                // switches of area 5 with no pad are, so the pad's name is not taken.
+                if (Labyrinth(gb.fieldID) && EventName.IsMatch(name) && basyo == LabyrinthSwitchPad)
+                    placeName = "";
                 bool soul = false;
                 bool demon = false;
                 int takara = box != null && box.TakaraIdx >= 0 ? box.TakaraIdx : -1;
@@ -462,11 +469,14 @@ namespace NocturneAccess.Systems.Navigation
                     }
                     // The Labyrinth of Amala (0.0.109, Francesco chose it, 22 Oct 2026): its areas have no names and its doors all
                     // said "Door"; the game's door table says which area each leads to before any visit: the area's name where the
-                    // game has one, else "area N" (the game's area number).
+                    // game has one, else "area N" (the game's area number). 0.0.149: the area's name is the banner learned through
+                    // any door into it; the game's own area-name table is a list of floors there, not indexed by area
+                    // (FldNameData.GetAreaName(43, 7) gives AREA43_L0007 "Burial Chamber" for a corridor whose banner is "B3":
+                    // Francesco, 3 Nov 2026).
                     if (destination.Length == 0 && Labyrinth(gb.fieldID) && DoorTable.Leads(gb.fieldID, gb.areaID, name, out int lf, out int la)
                         && lf == gb.fieldID && la >= 0 && la != gb.areaID)
                     {
-                        string areaName = WhereAmI.AreaName(lf, la);
+                        string areaName = ExploredDoors.BannerOfArea(lf, la);
                         destination = areaName.Length > 0 ? areaName : $"area {la}";
                     }
                     escalator = EscalatorAt(gb, name, p.x, p.z, float.IsNaN(floorY) ? p.y + 100f : floorY, out escalatorDir);
@@ -1133,8 +1143,9 @@ namespace NocturneAccess.Systems.Navigation
 
         /// <summary>The game's name of the nearest place pad within reach of (x, z) (PadReach for doors, EventOnPad for events) on the door's floor (a door volume
         /// centre is about 100 above its floor; the stairwell has doors above each other), or "".</summary>
-        private static string PlaceName(int field, List<CollisionPoly> pads, float x, float y, float z, float reach)
+        private static string PlaceName(int field, List<CollisionPoly> pads, float x, float y, float z, float reach, out int basyo)
         {
+            basyo = -1;
             CollisionPoly best = null;
             float bestD = reach;
             foreach (CollisionPoly c in pads)
@@ -1156,6 +1167,7 @@ namespace NocturneAccess.Systems.Navigation
             }
             if (best == null)
                 return "";
+            basyo = best.Basyo;
             try
             {
                 FldNameData names = fldGlobal.fldNameData;

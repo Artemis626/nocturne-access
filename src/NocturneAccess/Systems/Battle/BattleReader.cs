@@ -204,7 +204,10 @@ namespace NocturneAccess.Systems.Battle
             {
                 // Nothing can be targeted before the start is announced: a target seen while the battle is set up is dropped.
                 if (_started)
+                {
                     PollTarget(now);
+                    PollStockPick();
+                }
                 else
                     _targetCallAt = long.MinValue / 2;
                 if (!_started)

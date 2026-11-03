@@ -4,6 +4,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
+**3 Nov 2026: 0.0.149 (pushed, untested): the 13:53 session's fixes. Test: reach the Third Kalpa chase after a load: "Chase disabled ..." after the arrival page, not cut; area 6's switches under Actions ("Examine: There is a switch ..."), not Rooms; Labyrinth doors say "Door to area N" or a learned floor ("to B3"), never "Burial Chamber" for a corridor; in battle, a Balm of Rising or Revival Bead on a dead stock demon names each one as the cursor moves; an Attack All or all-foes skill: read the "All-target data" log lines (log only). Raidou running on the spot is not solid (walks pass through him). `docs/HANDOFF.md` last entry.**
+
 **3 Nov 2026: 0.0.148 (pushed): Insert freed (the chase key removed); the chase probe off (0.0.147).**
 
 **3 Nov 2026: 0.0.146 (pushed, untested): "Chase disabled: set ChaseOff to false ..." once per load on reaching the chase; README recommends Chronicle. Also check 0.0.144/0.0.145 there (Raidou still, no battle; Insert names Raidou). 0.0.147: the chase probe off.**

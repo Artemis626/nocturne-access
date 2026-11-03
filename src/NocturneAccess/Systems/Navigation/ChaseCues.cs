@@ -114,17 +114,38 @@ namespace NocturneAccess.Systems.Navigation
 
         // The "disabled" line (0.0.146; Francesco, 3 Nov 2026): once after each load or title screen, on first reaching the chase
         // with ChaseOff on (ExploredDoors.ClearAll calls ForgetHeard, as for the way-on tone).
+        // 0.0.149 (Francesco, 3 Nov 2026 13:57 session: the line was cut by the area's arrival page, "It seems as if someone is
+        // watching you...", 0.3 s later while the fade still covered the screen): said once the player has been exploring for
+        // SettleMs with no dialogue page due or spoken meanwhile, and held against interrupts while it is read.
+        private const long SettleMs = 2000;
+        private const int TellHoldMs = 7000;
         private static bool _toldOff;
+        private static long _settledSince = -1;
 
-        internal static void ForgetHeard() => _toldOff = false;
+        internal static void ForgetHeard()
+        {
+            _toldOff = false;
+            _settledSince = -1;
+        }
 
         private static void TellOff(fldGlobalWork_t gb)
         {
-            if (_toldOff || !Off || !FieldState.IsExploring || !InChase(gb, out _))
+            if (_toldOff || !Off)
+                return;
+            long now = Clock.ElapsedMilliseconds;
+            if (!FieldState.IsExploring || !InChase(gb, out _) || Dialogue.DialogueReader.PageDue
+                || Dialogue.DialogueReader.SpokeWithin(SettleMs))
+            {
+                _settledSince = -1;
+                return;
+            }
+            if (_settledSince < 0)
+                _settledSince = now;
+            if (now - _settledSince < SettleMs)
                 return;
             _toldOff = true;
             Log.Info("[Chase] Said: the chase is disabled (ChaseOff).");
-            SpeechManager.Say("Chase disabled: set ChaseOff to false in UserData, NocturneAccess.cfg, with the game closed, to enable it.");
+            SpeechManager.SayHeld("Chase disabled: set ChaseOff to false in UserData, NocturneAccess.cfg, with the game closed, to enable it.", TellHoldMs);
         }
 
         internal static void Tick()

@@ -147,6 +147,25 @@ namespace NocturneAccess.Systems.Navigation
         internal static string DestinationOf(int field, int area, string resName)
             => Destinations.TryGetValue(Key(field, area, resName), out string d) ? d : "";
 
+        /// <summary>
+        /// The banner learned through any door of this field that the game's door table leads into (field, area), or "" (0.0.149:
+        /// the Labyrinth's doors name the area they lead to before going through them, by what another door into it showed).
+        /// </summary>
+        internal static string BannerOfArea(int field, int area)
+        {
+            string prefix = field + "/";
+            foreach (KeyValuePair<string, string> d in Destinations)
+            {
+                if (!d.Key.StartsWith(prefix, StringComparison.Ordinal))
+                    continue;
+                string[] parts = d.Key.Split('/');
+                if (parts.Length == 3 && int.TryParse(parts[1], out int from) && from != area
+                    && DoorTable.Leads(field, from, parts[2], out int lf, out int la) && lf == field && la == area)
+                    return d.Value;
+            }
+            return "";
+        }
+
         /// <summary>Every frame after going through a door: the first location banner shown in the new area is where it leads.</summary>
         private static void LearnDestination(long now)
         {

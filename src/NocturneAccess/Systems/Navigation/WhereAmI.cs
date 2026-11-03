@@ -96,13 +96,6 @@ namespace NocturneAccess.Systems.Navigation
             return names == null ? "" : Clean(() => names.GetFieldName(field));
         }
 
-        /// <summary>The game's name of an area ("B1", FldNameData.GetAreaName), or "" where it has none (0.0.109).</summary>
-        internal static string AreaName(int field, int area)
-        {
-            FldNameData names = fldGlobal.fldNameData;
-            return names == null ? "" : Clean(() => names.GetAreaName(field, area));
-        }
-
         // A name the game has no text for comes back as its id ("SUSPEND013_L0001", "AREA22_L0000": 15:21 session, 5 Oct 2026).
         private static readonly System.Text.RegularExpressions.Regex TextId = new System.Text.RegularExpressions.Regex(@"^[A-Z]+\d*_L\d+$");
 
