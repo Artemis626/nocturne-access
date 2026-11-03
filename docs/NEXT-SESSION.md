@@ -4,6 +4,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
+**3 Nov 2026: 0.0.146 (pushed, untested): "Chase disabled: set ChaseOff to false ..." once per load on reaching the chase; README recommends Chronicle. Also check 0.0.144/0.0.145 there (Raidou still, no battle, the "Edition:" log line).**
+
 **2 Nov 2026, last: 0.0.145 (pushed, untested): the pursuer named by edition (Raidou in Chronicle, Dante in Maniax: `dds3CheckDLC9` and flag 3718, the game's own test); Maniax field data compared offline (same doors and walls, scripts differ only in story parts); README "Game modes". Check the probe's "Edition:" line in the next chase log.**
 
 **2 Nov 2026, latest: 0.0.144 (pushed, untested): the Third Kalpa chase off by default (`ChaseOff`: Raidou's AI flag 2804 answered off, catches blocked; Francesco's choice after the cues failed); README "Content changed or skipped for accessibility". Watch for stage progress without his AI (areas 3 to 11). `docs/HANDOFF.md` last entry.**

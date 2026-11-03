@@ -409,6 +409,7 @@ namespace NocturneAccess.Systems.Navigation
         private static void ClearAll()
         {
             WayOn.ForgetHeard();   // the way-on tone plays again on reaching each area (0.0.122)
+            ChaseCues.ForgetHeard();   // the "chase disabled" line once per load (0.0.146)
             Doors.Clear();
             Prompts.Clear();
             Arrivals.Clear();

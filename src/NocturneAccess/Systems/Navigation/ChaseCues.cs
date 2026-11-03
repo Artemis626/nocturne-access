@@ -112,9 +112,25 @@ namespace NocturneAccess.Systems.Navigation
             }
         }
 
+        // The "disabled" line (0.0.146; Francesco, 3 Nov 2026): once after each load or title screen, on first reaching the chase
+        // with ChaseOff on (ExploredDoors.ClearAll calls ForgetHeard, as for the way-on tone).
+        private static bool _toldOff;
+
+        internal static void ForgetHeard() => _toldOff = false;
+
+        private static void TellOff(fldGlobalWork_t gb)
+        {
+            if (_toldOff || !Off || !FieldState.IsExploring || !InChase(gb, out _))
+                return;
+            _toldOff = true;
+            Log.Info("[Chase] Said: the chase is disabled (ChaseOff).");
+            SpeechManager.Say("Chase disabled: set ChaseOff to false in UserData, NocturneAccess.cfg, with the game closed, to enable it.");
+        }
+
         internal static void Tick()
         {
             fldGlobalWork_t gb = fldGlobal.fldGb;
+            TellOff(gb);
             fldTest.FLDRUN_DANTE_t d = null;
             bool on = !Off && InChase(gb, out d) && FieldState.IsExploring;
             if (on != _on)
