@@ -24,7 +24,7 @@ namespace NocturneAccess.Systems.Menus
     /// - the words: the game's own, from its cure help (Francesco's choice, 12 Oct 2026): DATITEMHELP_L0015 "Cures
     ///   Bind/Sleep/Panic", L0016 Poison, L0017 Stun, L0018 Charm, L0019 Mute, L0020 Stone (item N's help is L00NN); Fly from
     ///   DATSKILLHELP_L0201 "Turns one foe into a Fly.". The game has no word for dead: "Dead" is the mod's (to confirm with
-    ///   Francesco). Shock and Freeze have no word and end with the battle: left unsaid.
+    ///   Francesco). Shock and Freeze have no game word: the mod says "Shock" and "Freeze" (Francesco, 4 Nov 2026, 0.0.152).
     /// </summary>
     internal static class PartyStatus
     {
@@ -186,8 +186,8 @@ namespace NocturneAccess.Systems.Menus
         }
 
         /// <summary>
-        /// The game's words for the statuses in badstatus, Dead left out (0.0.133, battle). Bits 0 and 1 (shock, freeze) have no
-        /// game word and are left out. Bit order confirmed in game: 0x20 Mute (26 Oct 2026, 20:58: Art muted, Dis-Mute chosen),
+        /// The game's words for the statuses in badstatus, Dead left out (0.0.133, battle). Bits 0 and 1 (shock, freeze) are the mod's
+        /// words "Shock" and "Freeze" (0.0.152). Bit order confirmed in game: 0x20 Mute (26 Oct 2026, 20:58: Art muted, Dis-Mute chosen),
         /// 0x800 Dead (Setanta at 0 HP).
         /// </summary>
         internal static List<string> WordsFor(int bad)
@@ -204,7 +204,9 @@ namespace NocturneAccess.Systems.Menus
         {
             if (_words != null)
                 return _words;
-            _words = new Dictionary<int, string>();
+            // Shock and Freeze (bits 0, 1): the game draws them only as icons (steff_shock, freeze) and has no word for them; the
+            // mod's own words, approved by Francesco, 4 Nov 2026 (Elec hits left Art, Chimera, Quetzalcoatl shocked unsaid).
+            _words = new Dictionary<int, string> { [0] = "Shock", [1] = "Freeze" };
             foreach (var (bit, id, place) in Sources)
             {
                 string line;
