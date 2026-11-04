@@ -48,6 +48,37 @@ namespace NocturneAccess.Systems.Battle
         /// form 3 and said "Mizuchi's turn" (the demon just summoned) while Succubus acted (her skills followed: Dormina,
         /// Analyze, Zionga). The entry's unit comes from nbGetUnitWorkPointer; both readings are logged when they differ.
         /// </summary>
+        /// <summary>
+        /// The formindex of the unit acting (0.0.150): activeunit indexes nbMainProcessData_t.party on both sides, and each entry has
+        /// its own formindex. 0.0.108 read it so for the party's turn line only; the enemy's action banner, the skill's HP cost
+        /// and the half-turn line still took activeunit as a formindex. Francesco, 4 Nov 2026 (Pale Rider, 15:28:57): after a
+        /// Call Evil, "Loa 1: Last Resort" while Loa 3 (just called, 414 HP) was the one that died by it.
+        /// </summary>
+        private static int ActiveForm(nbMainProcessData_t d)
+        {
+            int unit = d?.activeunit ?? -1;
+            if (unit < 0)
+                return -1;
+            try
+            {
+                nbParty_t p = d.party != null && unit < d.party.Length ? d.party[unit] : null;
+                if (p == null || p.formindex < 0)
+                    return unit;
+                if (p.formindex != unit && unit != _formLoggedFor)
+                {
+                    _formLoggedFor = unit;
+                    Log.Info($"{Tag} Acting unit: activeunit {unit} is formindex {p.formindex} ({ActorName(p.formindex)}).");
+                }
+                return p.formindex;
+            }
+            catch (Exception)
+            {
+                return unit;
+            }
+        }
+
+        private static int _formLoggedFor = -1;
+
         private static string ActingName(nbMainProcessData_t d, int form)
         {
             string bySlot = PartyName(form);
@@ -107,7 +138,7 @@ namespace NocturneAccess.Systems.Battle
         /// </summary>
         private static void ObservePress(nbMainProcessData_t d)
         {
-            int actor = d.activeunit;
+            int actor = ActiveForm(d);
             if (actor >= 0 && actor == _pressActor && d.turn == _pressTurn && _pressP > 0
                 && d.press4_ten == _pressTen && d.press4_p == _pressP - 1)
                 HalfTurn(actor);

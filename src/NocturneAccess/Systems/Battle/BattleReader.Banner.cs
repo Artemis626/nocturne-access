@@ -60,7 +60,7 @@ namespace NocturneAccess.Systems.Battle
         private static void NoteAction()
         {
             nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
-            _actionActor = d?.activeunit ?? -1;
+            _actionActor = ActiveForm(d);
             _actionHpCost = 0;
             // The pick is over. 0.0.128 forgot the target here, but the game draws the target's help a few frames past the confirm,
             // so the target was said again over the action (Francesco, 29 Oct 2026: "Corpus Sakahagi, HP 1486 of 1600" at 21:26:30.722,
@@ -148,27 +148,6 @@ namespace NocturneAccess.Systems.Battle
         private static long _actionAt = long.MinValue / 2;   // the last action banner (0.0.133)
         private const long ActionTailMs = 500;              // help drawn this soon after an action belongs to the pick just made
 
-        // A pick of every target (Attack All, an all-foes skill; Francesco, 3 Nov 2026: Hell Biker's Attack said no targets). Log
-        // only (0.0.149), to learn what tells such a pick on screen from the cursor's process running on between turns: the
-        // process's data keeps its last pick (a turn line was cut that way in 0.0.126). Read offline: nbSetSelectOkMark collects
-        // the units CheckFormCursor allows into friendno / enemyno (friendcnt, enemycnt) and flags each unit (+0x88, 0x4).
-        private static string _allPickLogged = "";
-
-        private static void LogAllPick(nbTarSelProcessData_t t)
-        {
-            try
-            {
-                string s = $"stat {t.stat} ctype {t.ctype} crule {t.crule} carea {t.carea} nowcarea {t.nowcarea} nowno {t.nowno} nowform {t.nowform} friends {t.friendcnt} enemies {t.enemycnt}";
-                if (s == _allPickLogged)
-                    return;
-                _allPickLogged = s;
-                Log.Info($"{Tag} All-target data: {s}.");
-            }
-            catch (Exception)
-            {
-            }
-        }
-
         private static void PollTarget(long now)
         {
             // The help banner, or the cursor's process on the party's turn when the game draws no banner (0.0.119: a dead ally).
@@ -198,10 +177,10 @@ namespace NocturneAccess.Systems.Battle
             try
             {
                 t = nbTarSelProcess.GetTarSelProcessData();
+                // ctype not 0: every target at once. The game shows no pick for it: its data turns on (stat 1) for about 100 ms
+                // before the action (logged 0.0.149, 3 and 4 Nov 2026: Attack All, Mazan); the skill help already says "all foes".
                 if (t == null || t.ctype != 0)
                 {
-                    if (t != null)
-                        LogAllPick(t);
                     _targetFromData = false;
                     return;
                 }

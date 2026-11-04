@@ -4,6 +4,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
+**4 Nov 2026: 0.0.150 (pushed, untested): enemy action banners name the acting enemy by its party entry (`BattleReader.ActiveForm`; after Call Evil the Pale Rider fight named the wrong Loa); Attack All has no target pick in the game (nothing to add). Test: a fight where enemies summon (Call Evil): each "Loa N: skill" line matches the Loa that acts (Last Resort: the user dies). 0.0.149 still to test (stock revive pick, Labyrinth switches and door names, chase line). `docs/HANDOFF.md` last entry.**
+
 **3 Nov 2026: 0.0.149 (pushed, untested): the 13:53 session's fixes. Test: reach the Third Kalpa chase after a load: "Chase disabled ..." after the arrival page, not cut; area 6's switches under Actions ("Examine: There is a switch ..."), not Rooms; Labyrinth doors say "Door to area N" or a learned floor ("to B3"), never "Burial Chamber" for a corridor; in battle, a Balm of Rising or Revival Bead on a dead stock demon names each one as the cursor moves; an Attack All or all-foes skill: read the "All-target data" log lines (log only). Raidou running on the spot is not solid (walks pass through him). `docs/HANDOFF.md` last entry.**
 
 **3 Nov 2026: 0.0.148 (pushed): Insert freed (the chase key removed); the chase probe off (0.0.147).**

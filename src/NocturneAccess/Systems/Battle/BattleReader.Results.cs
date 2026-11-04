@@ -105,7 +105,7 @@ namespace NocturneAccess.Systems.Battle
             if (d != null)
             {
                 string side = d.activeunit >= FirstEnemy ? "Enemy turn. " : "";
-                string acting = d.activeunit >= 0 && d.activeunit < PartySlots ? PartyName(d.activeunit) : "";
+                string acting = d.activeunit >= 0 && d.activeunit < PartySlots ? ActingName(d, d.activeunit) : "";
                 if (acting.Length > 0)
                     side = $"{acting}'s turn. ";
                 parts.Add(side + TextUtil.Capitalize(PressTurns(d)));

@@ -254,7 +254,7 @@ namespace NocturneAccess.Systems.Battle
             if (unit == null && matches.Count > 1)
             {
                 nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
-                datUnitWork_t actor = d == null || d.activeunit < 0 ? null : nbMainProcess.nbGetUnitWorkFromFormindex(d.activeunit);
+                datUnitWork_t actor = d == null || d.activeunit < 0 ? null : nbMainProcess.nbGetUnitWorkFromFormindex(ActiveForm(d));
                 if (actor != null)
                     unit = matches.FirstOrDefault(u => u.Form == actor.nowtform);
             }
