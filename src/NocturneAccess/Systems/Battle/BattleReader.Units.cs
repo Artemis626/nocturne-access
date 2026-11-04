@@ -121,6 +121,8 @@ namespace NocturneAccess.Systems.Battle
                 SpeechManager.Say((Config.SpeakHpLeft?.Value ?? true) ? full : mp + ".", interrupt: false, force: true);
                 BattleLog.Add(full);
             }
+            if (u.Hp < oldHp)
+                LastHurtMs[form] = Clock.ElapsedMilliseconds;   // for the half-turn line (0.0.151)
             if (speakChanges && u.Hp != oldHp)
             {
                 // The amount, as the game's damage numbers show it ("7" over Pixie, 09:22 recording); an HP drop equal to

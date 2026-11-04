@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Il2Cpp;
 using Il2Cppnewbattle_H;
 using Il2Cppnewdata_H;
@@ -141,7 +142,7 @@ namespace NocturneAccess.Systems.Battle
             int actor = ActiveForm(d);
             if (actor >= 0 && actor == _pressActor && d.turn == _pressTurn && _pressP > 0
                 && d.press4_ten == _pressTen && d.press4_p == _pressP - 1)
-                HalfTurn(actor);
+                _halfTurnActor = actor;
             _pressActor = actor;
             _pressTurn = d.turn;
             _pressP = d.press4_p;
@@ -163,11 +164,35 @@ namespace NocturneAccess.Systems.Battle
             }
             else
             {
-                bool weak = BattleSkills.IsWeak(target, element, out uint raw);
-                string who = ActorName(target);
-                text = weak ? (who.Length > 0 ? $"Weakness hit on {who}, only half a turn used." : "Weakness hit, only half a turn used.")
-                            : "Critical hit, only half a turn used.";
-                Log.Info($"{Tag} Half turn: actor {actor}, nowcommand {w.nowcommand}, nowindex {w.nowindex}, element {element}, target {target}, aisyo 0x{raw:X}: {(weak ? "weak" : "not weak")}.");
+                // Every unit the action hurt, not only its first target (0.0.151; Francesco, 4 Nov 2026: enemies' hits on the
+                // party's weaknesses were not told. Mother Harlot's Mazionga, an all-party Elec skill, took half a turn at 21:47:55;
+                // the mod tested only nowtform, Art (not weak), and said "Critical hit"). The weak units hurt in this action are
+                // named; a magic skill never crits, so with none found it claims nothing.
+                var weakOnes = new List<string>();
+                // The side hit is the one facing the actor: an all-target action leaves nowtform stale (21:05:38, Attack All on Pixies
+                // kept target 0, Art).
+                bool targetSide = actor < FirstEnemy;
+                long now = Clock.ElapsedMilliseconds;
+                var checkedForms = new List<string>();
+                foreach (Unit u in Units.Values)
+                {
+                    if ((u.Form >= FirstEnemy) != targetSide)
+                        continue;
+                    bool hurt = LastHurtMs.TryGetValue(u.Form, out long at) && now - at <= HurtWindowMs;
+                    if (!hurt)
+                        continue;
+                    bool isWeak = BattleSkills.IsWeak(u.Form, element, out uint raw);
+                    checkedForms.Add($"{u.Form} 0x{raw:X}");
+                    if (isWeak)
+                        weakOnes.Add(DisplayName(u));
+                }
+                if (weakOnes.Count > 0)
+                    text = $"Weakness hit on {string.Join(", ", weakOnes)}, only half a turn used.";
+                else if (element == BattleSkills.Physical)
+                    text = "Critical hit, only half a turn used.";
+                else
+                    text = "Half a turn used.";
+                Log.Info($"{Tag} Half turn: actor {actor}, nowcommand {w.nowcommand}, nowindex {w.nowindex}, element {element}, target {target}; hurt units checked (form aisyo): {string.Join(", ", checkedForms)}; weak: [{string.Join(", ", weakOnes)}].");
             }
             SpeechManager.Say(text, interrupt: false, force: true);
             BattleLog.Add(text);

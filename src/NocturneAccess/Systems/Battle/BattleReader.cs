@@ -105,6 +105,9 @@ namespace NocturneAccess.Systems.Battle
         // Actions, sides and press turns
         private static bool _bannerIsAction, _pendingIsAction;
         private static int _actionActor = -1, _pendingActor = -1, _actionHpCost;
+        private static int _halfTurnActor = -1;   // a half turn seen this poll, said after its HP lines (0.0.151)
+        private static readonly System.Collections.Generic.Dictionary<int, long> LastHurtMs = new System.Collections.Generic.Dictionary<int, long>();   // form -> when its HP last dropped
+        private const long HurtWindowMs = 1500;   // one action's damage lines span under a second (Mazionga, 21:47:55.376 to .980)
         private static bool _sideKnown, _sideEnemy, _playerTurnUnsaid;
         private static int _pressActor = -99, _pressTurn = -1, _pressP, _pressTen;
 
@@ -179,6 +182,8 @@ namespace NocturneAccess.Systems.Battle
             _started = false;
             _resultsShown = false;
             Units.Clear();
+            LastHurtMs.Clear();
+            _halfTurnActor = -1;
             _battleNo++;
             _lastTurnKey = "";
             _enemySlots = 0;
@@ -231,6 +236,12 @@ namespace NocturneAccess.Systems.Battle
                         ObservePress(d);
                     }
                     ReadUnits(speakChanges: Config.SpeakHpChanges.Value);
+                    if (_halfTurnActor >= 0)
+                    {
+                        int actor = _halfTurnActor;
+                        _halfTurnActor = -1;
+                        HalfTurn(actor);   // after this poll's HP lines, so every unit the action hurt is known (0.0.151)
+                    }
                     LogData(force: false);
                 }
                 BattleAnalyze.Tick();
