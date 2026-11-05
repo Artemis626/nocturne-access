@@ -346,6 +346,8 @@ namespace NocturneAccess.Systems.Navigation
                             for (int at = d; prev[at].via != null; at = prev[at].from)
                                 legs.Add(prev[at].via);
                             legs.Reverse();
+                            if (legs.Count == 1)
+                                legs[0] = FewestCrossings(gb, target, warps, entries, dests, start, goal, legs[0]);
                             return legs;
                         }
                         queue.Enqueue(d);
@@ -358,6 +360,40 @@ namespace NocturneAccess.Systems.Navigation
                 Log.Warn($"{Tag} Route to {target?.ResName} could not be worked out: {ex.Message}");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Among the warps that each reach the target in one step, the one whose two walks (to it, then from its landing to the
+        /// target) cross the fewest story events; the first found when tied (0.0.155). Francesco, 5 Nov 2026 (20:59 and 21:11
+        /// sessions): the Red Temple hall's north strip (field 34 area 12) has five doors into the hall, and the first, 01d_06, was
+        /// taken every time: its lane south is cut by a shadow's sight line (01eve_02, a flat plane 1800 long), which sets the
+        /// alarm and kills the warp device. Only 01d_09's landing lies on the device's side of every line (dump 21:15:30, flooded
+        /// offline with the lines as walls).
+        /// </summary>
+        private static Warp FewestCrossings(fldGlobalWork_t gb, Poi target, List<Warp> warps, Dictionary<Warp, HashSet<int>> entries,
+            Dictionary<Warp, int> dests, int start, HashSet<int> goal, Warp first)
+        {
+            var options = warps.Where(w => dests[w] >= 0 && goal.Contains(dests[w]) && entries[w].Contains(start)).ToList();
+            if (options.Count < 2)
+                return first;
+            Warp best = first;
+            int bestCost = int.MaxValue;
+            var notes = new List<string>();
+            foreach (Warp w in options)
+            {
+                int a = WalkGrid.StoryCrossings(gb.playerX, gb.playerY, gb.playerZ, w.Zone.X, w.FloorY, w.Zone.Z);
+                int b = WalkGrid.StoryCrossings(w.DestX, w.DestY, w.DestZ, target.X, target.FloorY, target.Z);
+                int cost = (a < 0 ? 1 : a) + (b < 0 ? 1 : b);
+                notes.Add($"{w.Name} {cost}");
+                if (cost < bestCost)
+                {
+                    bestCost = cost;
+                    best = w;
+                }
+            }
+            if (best != first)
+                Log.Info($"{Tag} Route to {target.ResName}: {best.Name} crosses the fewest story events ({string.Join(", ", notes)}).");
+            return best;
         }
 
         /// <summary>
