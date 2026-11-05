@@ -9,17 +9,22 @@ In active development and playable. It speaks the game's own text through NVDA: 
 ### What you can do in game right now
 
 - **Story and menus:** dialogue with speaker names, choices, prompts, every menu, saving and loading, config, name entry.
-- **Battles:** whose turn it is, Press Turns, enemy actions, damage and healing, weaknesses and critical hits, Analyze results, skill costs, summoning with each demon's level, HP and MP, and battle results including bosses. Status keys read your party and the enemies at any time, and a battle log repeats what just happened.
+- **Battles:** whose turn it is, Press Turns, enemy actions, damage and healing, weaknesses and critical hits, statuses as they start and end, Analyze results, skill costs, summoning with each demon's level, HP and MP, and battle results including bosses. Status keys read your party and the enemies at any time, and a battle log repeats what just happened.
 - **Shops and services:** the Junk Shop with prices and owned counts, the Fountain of Life with fees, the Terminal and Amala Link travel, Rag's Jewelry trades. At the Cathedral of Shadows: both fusion tables with results and the Demon Compendium.
-- **Exploration:** a list of nearby points of interest (doors, exits, ladders, people, demons, item boxes, events); auto-walk to any of them, or spoken directions to walk there yourself; first-person blobber mode that keeps the game's own controls and announces walls and openings; "Where am I"; a memory of the doors you've been through, and of opened boxes. This works in dungeons, fixed-camera rooms and on the overworld map.
+- **Exploration:** a list of nearby points of interest (doors, exits, ladders, people, demons, item boxes, events); auto-walk to any of them, or spoken directions to walk there yourself; first-person blobber mode that keeps the game's own controls and announces walls and openings; "Where am I"; a memory of the doors you've been through, and of opened boxes; the way on (Shift+End) in the hardest dungeons; step-by-step help for the Obelisk's time puzzles; an autopilot for the Labyrinth's falling minigame. This works in dungeons, fixed-camera rooms and on the overworld map.
 
 ### How effective it is
 
-The game has been played from the start through Shinjuku, Shibuya, the Amala Network, Ginza, the Ginza Underpass, Ikebukuro and into the Assembly of Nihilo, beating bosses such as Matador, Orthrus, Yaksini, Thor and Raidou, now in long sessions with eyes completely closed. Handling stairs, ramps and ladders properly made areas that used to be a maze quick to cross.
+As of November 2026, the game has been played in Chronicle mode, in long sessions with eyes completely closed, from the start well into its second half:
+
+- **Places:** Shinjuku, Shibuya, the Amala Network (both visits), Ginza and its Underpass, Ikebukuro and Mantra's Headquarters, the Assembly of Nihilo, Kabukicho Prison, the Ikebukuro Tunnel, Asakusa and Mifunashiro, the Obelisk with its time puzzles, Yoyogi Park, the Asakusa Tunnel, the Amala Temple (all three temples), and the Labyrinth of Amala's First, Second and Third Kalpas.
+- **Bosses beaten include:** Matador, Orthrus, Yaksini, Thor, Raidou (twice, the second time at the end of the Third Kalpa), Daisoujou, Ose, Mizuchi, Kin-Ki, the Moirai sisters, the White, Red, Black and Pale Riders, Alciel and the Mother Harlot.
+
+Handling stairs, ramps, ladders and hidden warps properly made areas that used to be a maze quick to cross. In the hardest dungeons (the Labyrinth's Kalpas, the Amala Temple, Yoyogi Park's construction site), the way on (Shift+End) points to the next step of the main route.
 
 ### Why play through to the end
 
-Every new area of Nocturne has brought something the mod had never met: hidden warps in the Amala Network, ladders in the Underpass, a pyramid built differently from everything before it, corridors of steps. Each one blocked progress until it was found and fixed, often within the same day. The only way to make sure a blind player can finish the game is to play it to the end, find those spots and fix them. Every fix also carries over to the areas still ahead.
+Every new area of Nocturne has brought something the mod had never met: hidden warps in the Amala Network, ladders in the Underpass, a pyramid built differently from everything before it, corridors of steps, a prison whose floors swap places, the Obelisk's time puzzles, the Labyrinth's falling minigame and stat-locked doors. Each one blocked progress until it was found and fixed, often within the same day. The only way to make sure a blind player can finish the game is to play it to the end, find those spots and fix them. Every fix also carries over to the areas still ahead.
 
 ### Game modes
 
