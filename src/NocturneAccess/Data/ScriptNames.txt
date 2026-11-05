@@ -1,0 +1,14 @@
+# Event volumes whose area file names a procedure of another area (fFFF_AAA.f2 holds "NNN_volume"), read offline on 5 Nov 2026
+# (tools/unity/f2pos.pl). field area volume procedure. Field 34 only, and only where the area file names one: FieldScript uses it
+# only when "{area + 1:000}_{volume}" does not exist (0.0.154: the Red Temple entrance hall's 01eve_13 and 01eve_14 run
+# 013_01eve_13 and 013_01eve_14, which clear flag 1703).
+34 1 01eve_01 010_01eve_01
+34 2 01eve_01 010_01eve_01
+34 11 01eve_13 013_01eve_13
+34 11 01eve_14 013_01eve_14
+34 13 01eve_01 013_01eve_01
+34 13 01eve_07 013_01eve_07
+34 13 01eve_08 013_01eve_08
+34 14 01eve_11 013_01eve_11
+34 14 01eve_12 013_01eve_12
+34 30 01eve_02 002_01eve_02

@@ -200,7 +200,7 @@
 # (01d_19 to 21, the middle one 01d_20 into area 15's south room by the device, as the walkthrough says), entered from area 15
 # by its east door 01d_04 and area 16's doors south. Area 16's other events (01eve_07, 08: the "shadow world", collision of
 # areas 15 and 16 switched) are not used: the walks follow the collision the game has at the time.
-34 11 01d_02                                   # entrance hall (it clears flag 1703): north into the hall
+34 11 01eve_13+1703 01eve_14+1703 01d_02    # entrance hall: a shadow stepped on (1703), its west or east tile 01eve_13 / 01eve_14 clears it (013_01eve_13, 0.0.154; entering the hall alone does not); then north into the hall
 34 12 01eve_51-1703 01d_02-1703 01d_01+1703    # hall: the warp device up; else the west wing; a shadow stepped on: back out to the entrance
 34 13 01d_01-1703 01d_05                       # west wing: its north door into the hall's north strip; a shadow stepped on: back to the entrance
 34 14 01d_01-1703 01d_05                       # east wing: the same, on the east

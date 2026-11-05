@@ -4,6 +4,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
+**5 Nov 2026, evening: 0.0.154 (pushed, untested): the Red Temple shadow loop: the entrance hall tiles `01eve_13` / `01eve_14` clear flag 1703 (their procedures `013_` are named by the area file, `Data/ScriptNames.txt`), and the hall's way on leads to them while 1703 is on. 0.0.153 verified in area 13 (north door via 1 door, landing from the file). Test: a shadow in area 12, then Shift+End in area 12 and in the hall. `docs/HANDOFF.md` last entry.**
+
 **5 Nov 2026: 0.0.153 (pushed, untested): same-area door landings read offline (`Data/AreaPoints.txt`, the Amala Temple has none in game); the way on skips a warp landing where the player already walks and takes the first listed point walked to or through doors. Test in the Red Temple: entrance hall Shift+End "Via 2 doors", Home through `01d_06`, `01d_07`; the west wing leads north, no loop back to the entrance. Black screen fifth case recorded (14:13:09, after three fast doors), fade probe left off. `docs/HANDOFF.md` last entry.**
 
 **4 Nov 2026, late: 0.0.152 (pushed, untested): "Shock" and "Freeze" spoken (mod words, Francesco approved); the screen-fade probe off (re-enable in `ModMain` if the black screen returns). Test: an Elec hit that shocks a demon: "Name: Shock.", later "Shock ended". `docs/HANDOFF.md` last entry.**

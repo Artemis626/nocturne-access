@@ -360,10 +360,58 @@ namespace NocturneAccess.Systems.Navigation
         private static readonly System.Diagnostics.Stopwatch Clock = System.Diagnostics.Stopwatch.StartNew();
         private const long CacheMs = 500;
 
+        /// <summary>
+        /// The procedure event volume `volume` of `area` runs: "{area + 1:000}_{volume}", or when the script has none of that name, the
+        /// one its area file names (Data/ScriptNames.txt, read offline; 0.0.154). Francesco, 5 Nov 2026 (20:37 session): the Red
+        /// Temple's entrance hall (field 34 area 11) holds 01eve_13 and 01eve_14, whose file names 013_01eve_13 and 013_01eve_14
+        /// (they clear flag 1703, the shadows' alarm); looked up as 012_ they were dropped as phantoms, and the way on sent him
+        /// between the hall and area 12 for good.
+        /// </summary>
+        private static string ProcName(int area, string volume)
+        {
+            string own = $"{area + 1:000}_{volume}";
+            if (ProcByName.ContainsKey(own))
+                return own;
+            LoadScriptNames();
+            int field = fldGlobal.fldGb?.fieldID ?? -1;
+            return ScriptNames.TryGetValue((field, area, volume), out string other) ? other : own;
+        }
+
+        private static Dictionary<(int, int, string), string> ScriptNames;
+
+        private static void LoadScriptNames()
+        {
+            if (ScriptNames != null)
+                return;
+            ScriptNames = new Dictionary<(int, int, string), string>();
+            try
+            {
+                using System.IO.Stream s = typeof(FieldScript).Assembly.GetManifestResourceStream("ScriptNames.txt");
+                if (s == null)
+                {
+                    Log.Warn($"{Tag} ScriptNames.txt is not in the mod.");
+                    return;
+                }
+                using var reader = new System.IO.StreamReader(s);
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    string[] f = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (f.Length >= 4 && !f[0].StartsWith("#", StringComparison.Ordinal) && int.TryParse(f[0], out int field) && int.TryParse(f[1], out int area))
+                        ScriptNames[(field, area, f[2])] = f[3];
+                }
+                Log.Info($"{Tag} Procedures named by the area files: {ScriptNames.Count}.");
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"{Tag} ScriptNames.txt could not be read: {ex.Message}");
+            }
+        }
+
         /// <summary>What event volume `volume` of area `area` does now; Missing / Unknown when the script or the tables cannot tell.</summary>
         internal static ScriptVerdict Classify(int area, string volume)
         {
-            string proc = $"{area + 1:000}_{volume}";
+            string proc = ProcName(area, volume);
             long now = Clock.ElapsedMilliseconds;
             if (Cache.TryGetValue(proc, out var hit) && now - hit.At < CacheMs)
                 return hit.V;
@@ -401,7 +449,7 @@ namespace NocturneAccess.Systems.Navigation
         /// </summary>
         internal static string FirstNarration(int area, string volume)
         {
-            if (!Ensure() || _message < 0 || !ProcByName.TryGetValue($"{area + 1:000}_{volume}", out Proc p))
+            if (!Ensure() || _message < 0 || !ProcByName.TryGetValue(ProcName(area, volume), out Proc p))
                 return "";
             return new DryRun().DetailAfter(p.Start, new List<int?>(), null, stopAtPrompt: true);
         }
@@ -417,7 +465,7 @@ namespace NocturneAccess.Systems.Navigation
         /// </summary>
         internal static List<List<(int AreaPlus1, string Point)>> Placements(int area, string volume)
         {
-            if (!Ensure() || _strAt < 0 || _modelPos < 0 || _callField2 < 0 || !ProcByName.TryGetValue($"{area + 1:000}_{volume}", out Proc p))
+            if (!Ensure() || _strAt < 0 || _modelPos < 0 || _callField2 < 0 || !ProcByName.TryGetValue(ProcName(area, volume), out Proc p))
                 return null;
             var paths = new List<List<(int, string)>>();
             int budget = 20000;
