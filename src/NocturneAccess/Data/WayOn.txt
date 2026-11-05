@@ -204,8 +204,8 @@
 34 12 01eve_51-1703 01d_02-1703 01d_01+1703    # hall: the warp device up; else the west wing; a shadow stepped on: back out to the entrance
 34 13 01d_01-1703 01d_05                       # west wing: its north door into the hall's north strip; a shadow stepped on: back to the entrance
 34 14 01d_01-1703 01d_05                       # east wing: the same, on the east
-34 15 01eve_51-1703 01d_04-1703 01d_13-1703 01d_03+1703   # upper floor: the device to Skadi from the south room; else east to area 16; from the device's landing, the door south; a shadow stepped on: west to the Terminal
-34 16 01d_20-1703 01d_17-1703 01d_18-1703 01d_16-1703 01d_22-1703 01d_23+1703   # the middle west door into the device's room; the doors south to it; a shadow stepped on: the Terminal
+34 15 01eve_51-1703 01d_04-1703 01d_13-1703 01d_03+1703   # upper floor: the device to Skadi from the south room; else east to area 16; from the device's landing, the door south; a shadow stepped on: west into area 16, to its reset tiles
+34 16 01d_20-1703 01d_17-1703 01d_18-1703 01d_16-1703 01d_22-1703 01eve_07+1703 01eve_08+1703   # the middle west door into the device's room; the doors south to it; a shadow stepped on: the tiles 01eve_07 / 01eve_08 clear 1703 (017_01eve_07; the S-Terminal 01d_23 does not work while 1703 is on: "It seems that you aren't able to use the terminal", 0.0.156)
 34 17 01eve_01 01eve_03                        # Skadi's room: the boss; after it, the beam out
 
 # ---- Third Kalpa (field 43): from the entrance to the ladder down to the chase (B1F, area 27) ----

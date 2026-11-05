@@ -4,6 +4,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
+**5 Nov 2026, late night: 0.0.156 (pushed, untested): Red Temple area 16: after a shadow the way on leads to the area's reset tiles `01eve_07` / `01eve_08`, not the S-Terminal (it will not work while the alarm is on). 0.0.155 verified (door `01d_09`, device reached). Test: a shadow in area 16, Shift+End names a story event, Home onto it. `docs/HANDOFF.md` last entry.**
+
 **5 Nov 2026, night: 0.0.155 (pushed, untested): the Red Temple hall's shadows are sight lines (flat planes); door routes now pick the door whose walks cross the fewest story events (`WarpMap.FewestCrossings`): from the north strip `01d_09` is the one clear lane to the warp device. 0.0.154's hall tiles verified. Test: north strip, Shift+End, Home: through `01d_09` to the device, no event on the way. `docs/HANDOFF.md` last entry.**
 
 **5 Nov 2026, evening: 0.0.154 (pushed, untested): the Red Temple shadow loop: the entrance hall tiles `01eve_13` / `01eve_14` clear flag 1703 (their procedures `013_` are named by the area file, `Data/ScriptNames.txt`), and the hall's way on leads to them while 1703 is on. 0.0.153 verified in area 13 (north door via 1 door, landing from the file). Test: a shadow in area 12, then Shift+End in area 12 and in the hall. `docs/HANDOFF.md` last entry.**
