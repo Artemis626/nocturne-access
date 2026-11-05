@@ -1,11 +1,17 @@
-# Text Hooking Design — Handoff from Suikoden Access
+# Text Hooking Design: Handoff for Screen-Reader Mods of Unity Games
 
 Reusable design notes for a screen-reader accessibility mod on another Unity game.
 Covers **dialogue, menus and battle**. The code here is a summary, not a copy-paste port.
 
-> **Framework note:** Suikoden Access runs on **BepInEx 6 (IL2CPP)**, not MelonLoader.
-> The Harmony patterns carry over unchanged, since MelonLoader ships HarmonyX too. The
-> things that differ are listed in §9.
+Sections 1 to 9 come from **Suikoden Access** (BepInEx 6, IL2CPP). Section 10 adds what
+**Nocturne Access** (Shin Megami Tensei III Nocturne HD, MelonLoader 0.6.1, IL2CPP, 152
+versions from 30 Sept to 4 Nov 2026) learned on top of them. Navigation in 3D dungeons and
+world maps has its own document: `NAVIGATION-PLAYBOOK.md` in the Nocturne Access repository.
+Last updated 5 Nov 2026.
+
+> **Framework note:** Suikoden Access runs on **BepInEx 6 (IL2CPP)**, Nocturne Access on
+> **MelonLoader**. The Harmony patterns carry over unchanged, since MelonLoader ships
+> HarmonyX too. The things that differ are listed in §9.
 
 ---
 
@@ -285,3 +291,116 @@ Hooks on the battle UI classes (the names are Suikoden's, but the *roles* are ge
 
 On a **Mono** (non-IL2CPP) game, none of the interop concerns apply: types are referenced
 directly, and `__args` / reflection work as usual.
+
+---
+
+## 10. What Nocturne Access added (MelonLoader, 2026)
+
+Nocturne names (classes, fields, materials) appear only as examples. In a new game, find the
+equivalents; never assume the same names.
+
+### 10.1 Rules the player set (keep them)
+- **Never reconstruct text.** Speak the game's own strings: TMP writes, message-engine
+  calls, game data tables. No OCR, no guessing from images.
+- **Icon-only information** may use a word cut from one of the game's own lines (a status
+  shown only as an icon is named from the cure item's help: "Cures Mute" gives "Mute"). A
+  word the mod writes itself needs the player's consent, and is marked so in the code.
+- **Never invent class, method or field names.** Each comes from the decompile, a reference
+  repository or a log line, and is written into a class index (name, kind, source) before
+  it is used. One wrong guessed name costs a whole session.
+- **Every reply to the player uses Markdown headings** (NVDA users jump between them).
+- **Keyboard first, single keys preferred** over Shift or Ctrl combinations; keep
+  combinations for debug keys. Keep a key list (mod keys, keys the game uses, keys other
+  tools reserve, such as a graphics configurator or Steam).
+- **Content changed for accessibility is told in the README**, each change with its config
+  switch to play the original. Bosses are never skipped. Prefer cues, then automation, and
+  skip a part only when neither can work (a real-time chase).
+
+### 10.2 Infrastructure on MelonLoader
+- **One tolerant patcher**: every postfix is applied by hand, one at a time, each logged as
+  patched or failed with the reason. A missing method costs one feature.
+- **One TMP hook for everything** (`TmpRouter`): a single `TMP_Text.set_text` postfix
+  classifies each component **once** by its hierarchy path (cached by instance id) and hands
+  the text to the reader that owns that path. Readers never hook TMP themselves.
+- **Blank writes never reach readers.** Consequence learned later: a row the game empties
+  keeps its last text in the reader, so re-read the component itself before trusting a
+  highlighted slot.
+- **A per-frame `Tick` from `OnUpdate`** runs every reader. A reader may be ticked several
+  times per game frame: time every "still for a while" signal in **milliseconds**, never in
+  ticks (a three-tick wait fired every frame).
+- **No allocations in per-frame paths**: no closures, no string keys built every frame, list
+  rows built only when drawn.
+- **Config** in `UserData/<Mod>.cfg`, every option with a comment and a safe default.
+- **Log archive**: a relaunch overwrites `MelonLoader/Latest.log`, so copy every session to
+  `UserData/<Mod>/Logs/session_<date>_<time>.log`. A summary script reads the latest one.
+
+### 10.3 Speech
+- **A background speech thread** with a queue: `Say(text, interrupt, force)`. Every spoken
+  line is mirrored to the log as `[SPEECH]`, so a session's log shows exactly what the
+  player heard and when. Most bug reports were solved from these lines alone.
+- **A leader goes first:** a screen's first line waits (up to 1.5 s) while a dialogue page,
+  a prompt or a confirmation is due, so the question is said before its options.
+- **Held lines:** a line said while the player is pressing keys gets cut by their next key.
+  `SayHeld(text, ms)` protects it from interrupts for a few seconds. Lines that come as a
+  scene loads also wait until the player has control and no dialogue page is due.
+- **Earcons without files:** short tones (a wall thud, a "way on" chime) synthesised in
+  memory as a WAV and played with `winmm` `PlaySound` (`SND_MEMORY | SND_ASYNC`, buffer
+  pinned). Low, soft and distinct: the player rejected high-pitched tones.
+
+### 10.4 Text and menus
+- **An identical rewrite is never activity.** Many games rewrite the same text every frame;
+  counting it as a change keeps settle timers from ever running out.
+- **Highlights are often font materials**, and they differ per screen (`TMC01` in pause
+  and battle menus, `TMC00` on the title, `TMC08` on Yes/No, `TMC12` a blinking letter).
+  One material can mean something else on another screen. A spec per menu (component
+  paths, highlight material, opening prefix) beats one generic reader.
+- **Not every cursor is a material**: some are objects or game data (save Yes/No, stat
+  allocation, a dead row drawn greyed under the cursor). Read the draw function offline to
+  find the cursor field, and check every branch of it (draw modes differ).
+- **Texts are written while hidden** and shown later: wait for visibility. Some components
+  only hide and show without a new write: watch visibility too.
+- **Numbers drawn as sprites** come from game data (a counter component's value, unit
+  data), never from images.
+- **Prefer game data over UI rows** whenever the game has it: a battle panel lagged behind
+  a summon and named the wrong unit; the unit data was right.
+
+### 10.5 Battle
+- **Read the battle's own state struct** (active unit, press turns, targets, unit HP and
+  statuses) and speak its changes, rather than reading the drawn UI.
+- **Check what an index indexes.** "The active unit" was an index into the party array on
+  both sides, not a formation slot. The two agree until a summon reorders the entries, then
+  the wrong unit is named. Every reader using it had to be fixed (party turns, enemy
+  actions, half turns).
+- **An action can hit many units**: a "target" field is stale for all-target actions.
+  Track every unit whose HP dropped within the action's window and judge each one
+  (weakness hits on several party members at once).
+- **Some picks are never shown** (an all-target action runs its target process for 100 ms
+  with nothing on screen): log first, then decide there is nothing to speak.
+- **Before fixing a reported wrong name, find the exact line the player heard** in the
+  `[SPEECH]` log. One "wrong name" was a menu redraw spoken 40 ms before a correct line.
+
+### 10.6 Research method
+- **Read the game's code offline before guessing at runtime.** IL2CPP: the interop proxy
+  decompile gives names and field offsets; disassembling `GameAssembly.dll` read-only
+  (never loaded, never run) shows what a function does. It settled questions that runtime
+  probing had not. Never touch a DRM-protected executable.
+- **The game's data files are readable offline**: asset bundles (prefabs, tables), field
+  scripts, localization. Read what a thing does (a prompt, a flag gate, a door's target)
+  from its script rather than from its name.
+- **Probes are temporary.** A log-only probe answers one question, then goes (or is switched
+  off) once the finding is written down. Three research hooks sat on per-frame calls for
+  weeks; a probe for a rare bug wrote 900 lines a session.
+- **Hooking a small wrapper may never fire**: hook the shared function it calls.
+- **Never write regex or other backslash-heavy code through shell or perl one-liners**:
+  patterns lost their `\d` and failed silently. Edit the file, then test patterns against
+  real strings from the log.
+
+### 10.7 Working with the player
+- **Read the logs yourself after every run**; never ask the player to paste them.
+- **When the player asks "is this an error?", answer it**, and change nothing unless it is
+  one. A change made for an unasked fix had to be reverted.
+- Give exact test steps and what the player should hear. Record each session's results
+  (verified, not yet tested) in a handoff file, newest last, plus a short "next session"
+  file saying where things stopped.
+- Commit at every working state, saying what was verified; bump the version in the mod and
+  the project file together, with an entry per version in the handoff.
