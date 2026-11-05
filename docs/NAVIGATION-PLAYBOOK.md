@@ -309,3 +309,8 @@ A story volume can be a puzzle piece: SMT III's soul room raises a barrier behin
 - **A puzzle that changes the floor needs flag-gated guidance:** the way on before and after a story flag differs (a jump that breaks the floor below; shadows that disable warp devices until the entrance is re-entered). Gate candidates on the flag (`name+F`, `name-F`) instead of hoping reachability tells the two states apart.
 - **An action volume can stand behind a wall**, reachable only through its box (a Jump Off beside a ledge): test reach by the volume's footprint, as for doors, not by a radius round its centre.
 - **A map window sized for the overworld cuts big dungeon rooms**: keep dungeon areas whole up to a larger size, and bridge sub-cell floor gaps between floors a step apart (stairs), checking every saved dump for side effects.
+
+## Arrival points the game never exposes (5 Nov 2026, Red Temple)
+
+- When a door's landing is only a name in the door table and no runtime object carries its position, ship the positions from the game's area files as data (Nocturne: `Data/AreaPoints.txt` from `fFFF_AAA.f2`, `tools/unity/f2pos.pl`) and use them last, after anything learned or read in game; find the floor under each point in game. Without it, a hall of cells joined by same-area doors was "beyond doors" until walked, and a guided route looped back to the entrance.
+- A guide's "next step" must never be a warp whose landing the player can already walk to (the warp just taken), and a listed order of preference should not be overridden by "a walk beats a route through doors" when both cross no hazard.

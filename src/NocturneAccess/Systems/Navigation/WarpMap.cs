@@ -533,6 +533,10 @@ namespace NocturneAccess.Systems.Navigation
             from = "game objects";
             if (found.Count == 0 && FindBasic(name, out pos))
                 return true;
+            // Last, the area file read offline (0.0.153: the Amala Temple has no arrival point in game).
+            from = "area file, offline";
+            if (found.Count == 0 && AreaPoints.Find(_field, _area, name, out pos))
+                return true;
             if (found.Count == 0)
                 return false;
             from = "area file";

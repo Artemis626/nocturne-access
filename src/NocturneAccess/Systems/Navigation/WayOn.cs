@@ -86,6 +86,15 @@ namespace NocturneAccess.Systems.Navigation
             return total + (last < 0 ? 1 : last);
         }
 
+        /// <summary>q is a warp of this area whose landing is known and walkable from the player.</summary>
+        private static bool LandsWithinReach(fldGlobalWork_t gb, Poi q)
+        {
+            Warp w = WarpMap.At(gb, q.Index);
+            if (w == null || !w.HasDest || w.Ladder)
+                return false;
+            return WalkGrid.StoryCrossings(gb.playerX, gb.playerY, gb.playerZ, w.DestX, w.DestY, w.DestZ) >= 0;
+        }
+
         /// <summary>Shift+End.</summary>
         internal static void Speak()
         {
@@ -121,6 +130,15 @@ namespace NocturneAccess.Systems.Navigation
             // 0.0.132: a route through door pairs counts the story events on each of its walks too (Yoyogi Park's column maze, area 16,
             // 29 Oct 2026, 15:15: the north door "via 1 door" was chosen, and the walk to the pair ran into a pixie that sends the
             // player back to area 15, four times running).
+            // A warp or same-area door whose landing the player can already walk to leads nowhere new: it is the one just taken, or
+            // its far side is this room (0.0.153; Francesco, 5 Nov 2026, 13:47: the White Temple's beam 01d_22, area 22, put him
+            // on 01pos_51, and the way on named the same beam three times, "No path from here", until he took a door by hand).
+            var spent = candidates.Where(q => q.Reachable && LandsWithinReach(gb, q)).ToList();
+            if (spent.Count > 0 && spent.Count < candidates.Count)
+            {
+                Log.Info($"{Tag} Field {gb.fieldID} area {gb.areaID}: {string.Join(", ", spent.Select(q => q.ResName))} land where the player can walk already: left out.");
+                candidates = candidates.Except(spent).ToList();
+            }
             var crossings = new Dictionary<Poi, int>();
             var viaCrossings = new Dictionary<Poi, int>();
             foreach (Poi q in candidates.Where(q => q.Reachable && q.ViaWarps == 0 && q.Route == null))
@@ -128,9 +146,12 @@ namespace NocturneAccess.Systems.Navigation
             foreach (Poi q in candidates.Where(q => q.Reachable && q.ViaWarps > 0 && q.Route == null && q.Legs != null))
                 viaCrossings[q] = LegCrossings(gb, q);
             int fewest = crossings.Values.Concat(viaCrossings.Values).Where(c => c > 0).DefaultIfEmpty(-1).Min();
-            Poi pick = candidates.FirstOrDefault(q => crossings.TryGetValue(q, out int c) && c == 0)        // walked to
-                       ?? candidates.FirstOrDefault(q => q.Reachable && !crossings.ContainsKey(q)
-                                                         && (!viaCrossings.TryGetValue(q, out int v) || v == 0)) // through doors here
+            // Walked to or through doors here, crossing no story event: the first in the listed order (0.0.153; a walk used to come
+            // before any door route, and the Red Temple's west wing, field 34 area 13, chose 01d_05 back to the entrance over its north
+            // door 01d_01 "via 1 door", the listed first: a loop through areas 11, 12 and 13, 5 Nov 2026 14:12).
+            Poi pick = candidates.FirstOrDefault(q => (crossings.TryGetValue(q, out int c) && c == 0)    // walked to
+                                                      || (q.Reachable && !crossings.ContainsKey(q)
+                                                          && (!viaCrossings.TryGetValue(q, out int v) || v == 0))) // through doors here
                        ?? candidates.FirstOrDefault(q => (crossings.TryGetValue(q, out int c) || viaCrossings.TryGetValue(q, out c)) && c == fewest) // through story events
                        ?? candidates.FirstOrDefault(q => q.Reachable)                                      // no route planned
                        ?? candidates.FirstOrDefault(q => q.Listed);                                        // beyond doors

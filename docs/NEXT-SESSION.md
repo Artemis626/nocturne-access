@@ -4,6 +4,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
+**5 Nov 2026: 0.0.153 (pushed, untested): same-area door landings read offline (`Data/AreaPoints.txt`, the Amala Temple has none in game); the way on skips a warp landing where the player already walks and takes the first listed point walked to or through doors. Test in the Red Temple: entrance hall Shift+End "Via 2 doors", Home through `01d_06`, `01d_07`; the west wing leads north, no loop back to the entrance. Black screen fifth case recorded (14:13:09, after three fast doors), fade probe left off. `docs/HANDOFF.md` last entry.**
+
 **4 Nov 2026, late: 0.0.152 (pushed, untested): "Shock" and "Freeze" spoken (mod words, Francesco approved); the screen-fade probe off (re-enable in `ModMain` if the black screen returns). Test: an Elec hit that shocks a demon: "Name: Shock.", later "Shock ended". `docs/HANDOFF.md` last entry.**
 
 **4 Nov 2026, night: 0.0.151 (pushed, untested): enemies' (and the party's) half turns name every weak unit the action hurt ("Weakness hit on Quetzalcoatl, only half a turn used."), magic no longer called a critical; the pipe probe off. Test: a fight where an all-party spell hits a demon's weakness (Mazionga on an Elec-weak demon). Open: a word for shock and freeze (status bits 0 and 1, no game word), Francesco to choose. 0.0.150 verified (Oberon named, 21:08:29). `docs/HANDOFF.md` last entry.**
