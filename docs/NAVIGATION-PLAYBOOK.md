@@ -325,3 +325,47 @@ A story volume can be a puzzle piece: SMT III's soul room raises a barrier behin
 - A route search that runs for every listed point must be cheap: cache its path plans per map build and never log inside them (0.0.157 logged 375 plans a second and made the screen reader lag).
 - A walk that starts inside a trigger volume crosses it too: count a landing inside one, or the cheapest chain will happily land the player in a guard's box.
 - Give the walking map each trigger volume's true shape, turned by its facing, never the upright rectangle round its corners (0.0.160). A slanted guard box's rectangle covered most of its room and held the next door, so the route counted the box as the target's own and walked through it, while elsewhere the same rectangles counted crossings that did not exist. Long thin triggers also looked "room-sized" by their rectangle and were dropped. When the offline solver and the game agree but the mod's walk fails, compare the mod's own copy of the hazards with the solver's.
+
+## The way on: what proved effective (26 Oct to 6 Nov 2026, after the Red Temple)
+
+The way on (Shift+End in Nocturne Access) is a guided next step for the hardest dungeons: one key says "Way on." and then the
+same line the directions key gives for the next point of the main route, and the walk key goes there. It carried the player
+through the Labyrinth's Second and Third Kalpas, the Amala Network's soul rooms, Yoyogi Park's pixie maze, the Asakusa and
+Ikebukuro tunnels and all three Amala temples, the Red Temple last (Skadi beaten 6 Nov 2026, after 8 versions in two days).
+What made it work, in the order it matters:
+
+- **Keep it on demand and small.** One key, one answer, spoken in the same words as the directions key; nothing is said while the
+  player walks. A soft, low tone once per area says the area has a way on; elsewhere the key says "None known for this area."
+  Build it only for places the player cannot get through with the general aids (the player's call), not for every dungeon.
+- **Data per area, a short ordered list of candidates.** Each area lists the points that lead on (doors, warps, tiles, devices), in
+  the order of the main route. The mod picks, at the moment of the key press: the first listed point that can be walked to (or
+  reached through doors and warps of the area) crossing no hazard; then the one crossing the fewest; then any reachable one; then
+  one "beyond doors". Log every candidate's status on one line ("01d_20 via 5 doors, 01d_17 not here, 01d_10 via 2 doors through
+  2 story events; chosen 01d_20"): that line explained every failure.
+- **Take the route from the game, not from the guide.** Walkthroughs give the order of the rooms; the game's door table, area files
+  and field scripts give what each door really does and where it lands. Match the guide to the files, and where guides disagree
+  or do not exist, solve it from the files alone (the Third Kalpa by stat doors, the Red Temple with its alarm).
+- **Gate candidates on the game's own state**, not on what the walking map happens to reach: story flags (`name+F` shown only while
+  flag F is on, `name-F` while it is off), the player's stats (`name@S20`). A puzzle that changes the map (a floor that breaks, an
+  alarm that kills the warp devices) needs a different list for each state.
+- **Hazards are costs, not walls.** Story triggers that punish the player (barrier souls, warping pixies, guards' sight lines) are
+  crossed only where there is no way round: a cost higher than any detour gives the fewest crossed, and still finds a route when
+  one crossing is unavoidable. A hard wall found no route at all.
+- **Give each hazard its true shape**: the volume turned by its facing, planes as lines with the player's radius, never the upright
+  rectangle round its corners. Count a walk that starts or lands inside a hazard as crossing it.
+- **Choose among doors and chains of doors by what their walks cross**, then by the number of doors: a cheapest-first search over
+  the area's doors (1 per door, 100 per hazard crossed, a landing inside a hazard counted). List order alone took the one door in
+  five that set off the alarm.
+- **Know every door's landing.** Doors may be one way, and their landings may be readable only from the area files: ship them as
+  data. Never send the player to a warp whose landing they can already walk to (the warp just taken), unless that landing is the
+  reason (inside a hazard).
+- **When the solution is to set off a hazard on purpose, say so first** ("Sets off the alarm on purpose.", the player's consent for
+  the words), and give the state change its own short tones, played about a second after the game's flag settles, so the player
+  knows the map has changed.
+- **Keep it cheap.** The candidate search runs for every listed point at every list rebuild: cache path plans per map build and
+  never log inside them (one version logged 375 plans a second and made the screen reader lag).
+- **The working loop.** Each failure: read the session log, ask for a navigation dump at the exact spot, reproduce it offline on the
+  dump, fix, bump the version, the player tests the same spot. When fixes start to stack up in one place (three in a row), stop
+  patching: build a small solver from the game's files (shapes, doors, devices, resets, game states), get the full route from it,
+  then make the mod's data and its own copy of the hazards agree with the solver. The last Red Temple bug was the mod's copy (upright
+  rectangles), found by comparing it with the solver's turned shapes.

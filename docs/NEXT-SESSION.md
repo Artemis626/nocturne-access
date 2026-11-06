@@ -2,12 +2,19 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (6 Nov 2026): the Red Temple, troubleshooting in progress (0.0.160 to test)
+## RESUME HERE (6 Nov 2026, 15:26): the Red Temple is DONE; Francesco plays on
 
-**What we are doing.** Francesco is in the Amala Temple's Red Temple (field 34, areas 11 to 17; boss Skadi in area 17) and is
-about to test 0.0.160. Since 5 Nov the way on (Shift+End) and Home have failed here again and again (loops, walks into shadows,
-"beyond doors", unreachable doors), so this one area is being troubleshot on its own, version by version (0.0.153 to 0.0.160),
-each fix from his session log and his Shift+F6 dumps. Read his next log first.
+**Result.** 0.0.160 verified (15:06 session): from area 16's middle tile the way on and Home took the solver's chain (`01d_11`,
+`01d_03`, `01d_15`, `01d_22`, `01d_17`, `01d_20`) crossing no shadow, then area 15's device to the altar; **Skadi beaten**
+(15:22), saved at the Amala Temple's Terminal. The troubleshooting (0.0.153 to 0.0.160) is closed; the general lessons on the way
+on are in `docs/NAVIGATION-PLAYBOOK.md`, "The way on: what proved effective". Next: read Francesco's next session log wherever he
+goes; still open from this stretch: hide one-way doors that lead into the player's own room from the Pages list? (his call);
+area 15's alarm warning (`!01d_07`) was never needed in play, so it is still unheard.
+
+**What we were doing (kept for reference).** Francesco was in the Amala Temple's Red Temple (field 34, areas 11 to 17; boss Skadi
+in area 17). From 5 Nov the way on (Shift+End) and Home failed here again and again (loops, walks into shadows, "beyond doors",
+unreachable doors), so this one area was troubleshot on its own, version by version (0.0.153 to 0.0.160), each fix from his
+session log and his Shift+F6 dumps.
 
 **Why this area is hard (all read from the game's files, see `docs/HANDOFF.md` entries 5 and 6 Nov):**
 - **Shadows** (event volumes whose procedures set flag 1703, `COMM 0x8`) are flat vertical planes (sight lines up to 2400 long, at
@@ -52,7 +59,9 @@ story events`; Home from `01pos_22` goes south first, no `01eve_05` hit; area 15
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
-**6 Nov 2026, 15:03: 0.0.160 (pushed, untested): story volumes by their turned shape (the Red Temple's slanted shadows; Home from `01d_22` cut through `01eve_05`, and the way on preferred `01d_10` by wrong counts); long shadows no longer dropped as room-sized. 0.0.159 verified (no slowdown, middle tile and its tone). Test steps: `docs/HANDOFF.md` last entry.**
+**6 Nov 2026, 15:26: the Red Temple finished with 0.0.160 (verified: the clear chain in area 16, the device, Skadi beaten, saved). `docs/HANDOFF.md` last entry.**
+
+**6 Nov 2026, 15:03: 0.0.160 (pushed, verified 15:08): story volumes by their turned shape (the Red Temple's slanted shadows; Home from `01d_22` cut through `01eve_05`, and the way on preferred `01d_10` by wrong counts); long shadows no longer dropped as room-sized. 0.0.159 verified (no slowdown, middle tile and its tone). Test steps: `docs/HANDOFF.md` last entry.**
 
 **6 Nov 2026, afternoon: 0.0.159 (pushed, untested): the slowdown fixed (crossing counts cached and quiet: 3535 logged plans in three minutes before); landings inside a shadow count as crossings (the chain took `01d_16` into `01eve_05`; area 15's warning door was wrongly dropped); area 16 fallbacks with the alarm on. Test steps: `docs/HANDOFF.md` last entry.**
 

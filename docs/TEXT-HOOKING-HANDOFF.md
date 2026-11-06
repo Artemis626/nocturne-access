@@ -395,6 +395,13 @@ equivalents; never assume the same names.
   patterns lost their `\d` and failed silently. Edit the file, then test patterns against
   real strings from the log.
 
+### 10.6b A guided next step for the hardest dungeons (the "way on")
+- One key says the next point of the main route in the directions key's own words; the walk key goes there. Data is a short
+  ordered list of candidates per area, matched to the game's own door table, area files and scripts (or solved from them alone),
+  gated on the game's flags and stats, picked by fewest hazards crossed. It took a blind player through every maze Nocturne has,
+  the last a guarded maze with an alarm (6 Nov 2026). Full list of what worked: `NAVIGATION-PLAYBOOK.md`, "The way on: what proved
+  effective".
+
 ### 10.7 Working with the player
 - **Read the logs yourself after every run**; never ask the player to paste them.
 - **When the player asks "is this an error?", answer it**, and change nothing unless it is
