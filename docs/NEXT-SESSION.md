@@ -4,6 +4,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
+**6 Nov 2026, afternoon: 0.0.159 (pushed, untested): the slowdown fixed (crossing counts cached and quiet: 3535 logged plans in three minutes before); landings inside a shadow count as crossings (the chain took `01d_16` into `01eve_05`; area 15's warning door was wrongly dropped); area 16 fallbacks with the alarm on. Test steps: `docs/HANDOFF.md` last entry.**
+
 **6 Nov 2026, later: 0.0.158 (pushed, untested): way-on warning "Sets off the alarm on purpose." (area 15 `01d_07`), alarm tones (falling when a shadow sets it off, rising when a tile resets it, about 1 s after, config `AlarmSound`); area 16's doors are one way (why "No path" and "beyond doors"). Question open: leave one-way doors into the player's room out of the Pages list? `docs/HANDOFF.md` last entry.**
 
 **6 Nov 2026: 0.0.157 (pushed, untested): the Red Temple solved offline with new tools (`tools/unity/f2vol.pl` shadow shapes, `tools/unity/shadowroute.pl` route with alarm states): area 15 sets the alarm on purpose at `01d_07`, area 16 resets at its middle tile `01eve_08`, then a clear chain to `01d_20` and the Skadi device; multi-door chains now avoid story events (`WarpMap.LeastCrossingChain`). Test steps: `docs/HANDOFF.md` last entry.**

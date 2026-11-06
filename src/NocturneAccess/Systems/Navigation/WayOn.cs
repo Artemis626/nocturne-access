@@ -75,7 +75,7 @@ namespace NocturneAccess.Systems.Navigation
             foreach (Warp leg in q.Legs)
             {
                 int c = WalkGrid.StoryCrossings(sx, sy, sz, leg.Zone.X, leg.FloorY, leg.Zone.Z);
-                total += c < 0 ? 1 : c;
+                total += (c < 0 ? 1 : c) + WarpMap.LandingCost(leg, q);
                 if (!leg.HasDest)
                     return total;
                 sx = leg.DestX;
@@ -86,13 +86,17 @@ namespace NocturneAccess.Systems.Navigation
             return total + (last < 0 ? 1 : last);
         }
 
-        /// <summary>q is a warp of this area whose landing is known and walkable from the player.</summary>
+        /// <summary>q is a warp of this area whose landing is known and walkable from the player crossing no story event (0.0.159: a landing behind a shadow line is not "walkable already").</summary>
         private static bool LandsWithinReach(fldGlobalWork_t gb, Poi q)
         {
             Warp w = WarpMap.At(gb, q.Index);
             if (w == null || !w.HasDest || w.Ladder)
                 return false;
-            return WalkGrid.StoryCrossings(gb.playerX, gb.playerY, gb.playerZ, w.DestX, w.DestY, w.DestZ) >= 0;
+            // A landing inside a story volume is never "walkable already": the walk test does not count the volume it ends in, and area
+            // 15's 01d_07 (its landing inside the shadow 01eve_04: the alarm on purpose) was left out (14:34:08).
+            if (WalkGrid.SoftZoneAt(w.DestX, w.DestZ) >= 0)
+                return false;
+            return WalkGrid.StoryCrossings(gb.playerX, gb.playerY, gb.playerZ, w.DestX, w.DestY, w.DestZ) == 0;
         }
 
         /// <summary>Shift+End.</summary>

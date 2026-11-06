@@ -989,7 +989,7 @@ namespace NocturneAccess.Systems.Navigation
                 if (runs != null && _softZones.Count > 0)
                 {
                     int crossed = LastPath.Where(k => _soft[k] != 0 && _soft[k] != _allow).Select(k => _soft[k]).Distinct().Count();
-                    if (crossed > 0)
+                    if (crossed > 0 && !_quiet)
                         Log.Info($"[Nav:Walk] The route crosses {crossed} story event{(crossed == 1 ? "" : "s")}: no way round {(crossed == 1 ? "it" : "them")}.");
                 }
                 return runs;
@@ -1008,13 +1008,55 @@ namespace NocturneAccess.Systems.Navigation
         /// </summary>
         internal static int StoryCrossings(float px, float py, float pz, float tx, float ty, float tz)
         {
-            List<PathRun> runs = Plan(px, py, pz, tx, ty, tz, 0f, false, out _, out _);
+            // 0.0.159: kept per grid build and story volumes, and quiet (Francesco, 6 Nov 2026: after 0.0.157's chain search the
+            // Pages list and NVDA slowed down; the log held 3535 plans in three minutes, 375 in one second, each one logged).
+            string key = $"{px:0} {py:0} {pz:0} {tx:0} {ty:0} {tz:0}";
+            if (_crossBuild != _builds || _crossSoft != _softKey)
+            {
+                _crossCache.Clear();
+                _crossBuild = _builds;
+                _crossSoft = _softKey;
+            }
+            if (_crossCache.TryGetValue(key, out int known))
+                return known;
+            _quiet = true;
+            List<PathRun> runs;
+            try
+            {
+                runs = Plan(px, py, pz, tx, ty, tz, 0f, false, out _, out _);
+            }
+            finally
+            {
+                _quiet = false;
+            }
+            int result;
             if (runs == null)
-                return -1;
-            if (_softZones.Count == 0 || LastPath.Count == 0)
-                return 0;
-            short own = _soft[LastPath[LastPath.Count - 1]];   // a story event that is itself the target is not crossed
-            return LastPath.Where(k => _soft[k] != 0 && _soft[k] != own).Select(k => _soft[k]).Distinct().Count();
+                result = -1;
+            else if (_softZones.Count == 0 || LastPath.Count == 0)
+                result = 0;
+            else
+            {
+                short own = _soft[LastPath[LastPath.Count - 1]];   // a story event that is itself the target is not crossed
+                result = LastPath.Where(k => _soft[k] != 0 && _soft[k] != own).Select(k => _soft[k]).Distinct().Count();
+            }
+            if (_crossCache.Count > 4000)
+                _crossCache.Clear();
+            _crossCache[key] = result;
+            return result;
+        }
+
+        private static readonly Dictionary<string, int> _crossCache = new Dictionary<string, int>();
+        private static int _crossBuild = -1;
+        private static string _crossSoft = "";
+        private static bool _quiet;
+
+        /// <summary>The story volume (soft zone) whose box holds (x, z), or -1 (0.0.159: a door landing inside a shadow sets it off).</summary>
+        internal static int SoftZoneAt(float x, float z)
+        {
+            foreach (Zone zone in _softZones)
+                if (zone.Contains(x, z, 0f))
+                    return zone.Id;
+            return -1;
         }
 
         private static List<PathRun> PlanAllowing(float px, float py, float pz, float tx, float ty, float tz, float minDist, bool fourWay,

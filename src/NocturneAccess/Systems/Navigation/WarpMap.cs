@@ -372,11 +372,26 @@ namespace NocturneAccess.Systems.Navigation
             foreach (Warp w in legs)
             {
                 int c = WalkGrid.StoryCrossings(x, y, z, w.Zone.X, w.FloorY, w.Zone.Z);
-                total += c < 0 ? 1 : c;
+                total += (c < 0 ? 1 : c) + LandingCost(w, target);
                 x = w.DestX; y = w.DestY; z = w.DestZ;
             }
             int last = WalkGrid.StoryCrossings(x, y, z, target.X, target.FloorY, target.Z);
             return total + (last < 0 ? 1 : last);
+        }
+
+        /// <summary>
+        /// 1 when the warp lands inside a story volume other than the target's own, else 0 (0.0.159; Francesco, 6 Nov 2026, 14:36: the
+        /// chain to area 16's door 01d_20 took 01d_16, whose landing 01pos_16 (4500 2700) lies inside the shadow box 01eve_05: the
+        /// alarm on arrival. A walk that starts inside a volume was not counted as crossing it).
+        /// </summary>
+        internal static int LandingCost(Warp w, Poi target)
+        {
+            if (w == null || !w.HasDest)
+                return 0;
+            int zone = WalkGrid.SoftZoneAt(w.DestX, w.DestZ);
+            if (zone < 0)
+                return 0;
+            return target != null && WalkGrid.SoftZoneAt(target.X, target.Z) == zone ? 0 : 1;
         }
 
         /// <summary>
@@ -423,7 +438,7 @@ namespace NocturneAccess.Systems.Navigation
                 {
                     if (dests[v] < 0 || settled.Contains(v) || !entries[v].Contains(region))
                         continue;
-                    int d = fromDist + 1 + Cost(x, y, z, v.Zone.X, v.FloorY, v.Zone.Z);
+                    int d = fromDist + 1 + Cost(x, y, z, v.Zone.X, v.FloorY, v.Zone.Z) + LandingCost(v, target) * EventCost;
                     if (dist.TryGetValue(v, out int old) && old <= d)
                         continue;
                     dist[v] = d;
@@ -478,7 +493,7 @@ namespace NocturneAccess.Systems.Navigation
             {
                 int a = WalkGrid.StoryCrossings(gb.playerX, gb.playerY, gb.playerZ, w.Zone.X, w.FloorY, w.Zone.Z);
                 int b = WalkGrid.StoryCrossings(w.DestX, w.DestY, w.DestZ, target.X, target.FloorY, target.Z);
-                int cost = (a < 0 ? 1 : a) + (b < 0 ? 1 : b);
+                int cost = (a < 0 ? 1 : a) + (b < 0 ? 1 : b) + LandingCost(w, target);
                 notes.Add($"{w.Name} {cost}");
                 if (cost < bestCost)
                 {
