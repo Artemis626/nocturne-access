@@ -175,7 +175,10 @@ namespace NocturneAccess.Systems.Navigation
             PointsOfInterest.Select(gb, pick);
             // A stat route says its stat (mod words Francesco kept, 2 Nov 2026): "Way on, Strength."
             string word = pick.Names.Select(n => RouteWord.TryGetValue(n, out string w) ? w : null).FirstOrDefault(w => w != null);
-            RouteGuide.SpeakWith(word != null ? $"Way on, {word}. " : Words + " ");
+            string lead = word != null ? $"Way on, {word}. " : Words + " ";
+            if (pick.Names.Any(Alarming.Contains))
+                lead += AlarmWords + " ";
+            RouteGuide.SpeakWith(lead);
         }
 
         private static readonly Dictionary<int, int> Until = new Dictionary<int, int>();
@@ -193,6 +196,7 @@ namespace NocturneAccess.Systems.Navigation
             }
             // 0.0.140: "01d_11+1700" holds only once story flag 1700 is set, "01d_04-1700" only while it is off (the Black Temple:
             // a Jump Off on 2F breaks the 1F floor, flag 1700, and opens the hole down to B1F).
+            Alarming.Clear();
             names = names.Select(Gated).Where(n => n != null).ToList();
             names = ByStat(names);
             return names.Count > 0;
@@ -247,7 +251,23 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         /// <summary>The volume name of a candidate whose flag condition holds now, else null.</summary>
+        // 0.0.158: "!01d_07-1703": taking this point sets off the Red Temple's alarm on purpose (its landing lies inside a shadow);
+        // the way on says so first (Francesco, 6 Nov 2026, asked for the warning; the words are the mod's).
+        private static readonly HashSet<string> Alarming = new HashSet<string>(StringComparer.Ordinal);
+        private const string AlarmWords = "Sets off the alarm on purpose.";
+
         private static string Gated(string token)
+        {
+            bool alarming = token.StartsWith("!", StringComparison.Ordinal);
+            if (alarming)
+                token = token.Substring(1);
+            string name = GatedPlain(token);
+            if (alarming && name != null)
+                Alarming.Add(name);
+            return name;
+        }
+
+        private static string GatedPlain(string token)
         {
             int at = token.IndexOfAny(new[] { '+', '-' });
             if (at < 0 || !int.TryParse(token.Substring(at + 1), out int flag))

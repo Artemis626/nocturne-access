@@ -204,7 +204,7 @@
 34 12 01eve_51-1703 01d_02-1703 01d_01+1703    # hall: the warp device up; else the west wing; a shadow stepped on: back out to the entrance
 34 13 01d_01-1703 01d_05                       # west wing: its north door into the hall's north strip; a shadow stepped on: back to the entrance
 34 14 01d_01-1703 01d_05                       # east wing: the same, on the east
-34 15 01eve_51-1703 01d_07-1703 01d_03+1703   # upper floor (0.0.157, from tools/unity/shadowroute.pl): the device to Skadi when reached clear; else 01d_07, whose landing is inside the shadow 01eve_04: the alarm on purpose (every shadow then sleeps); with the alarm on, west through 01d_06 and 01d_03 into area 16
+34 15 01eve_51-1703 !01d_07-1703 01d_03+1703   # upper floor (0.0.157, from tools/unity/shadowroute.pl): the device to Skadi when reached clear; else 01d_07, whose landing is inside the shadow 01eve_04: the alarm on purpose (every shadow then sleeps); with the alarm on, west through 01d_06 and 01d_03 into area 16
 34 16 01d_20-1703 01d_17-1703 01d_22-1703 01d_10-1703 01eve_08+1703 01eve_07+1703   # (0.0.157, shadowroute.pl) alarm on: its middle reset tile 01eve_08 (3600 3600; the west tile 01eve_07 leaves a pocket); alarm off: 01d_20 into area 15's device room, by 01d_11, 01d_03, 01d_15, 01d_22, 01d_17 (the one clear chain; 01d_16 and 01d_18 land inside shadows); from the west pocket back to area 15 by 01d_10. The S-Terminal 01d_23 refuses while the alarm is on
 34 17 01eve_01 01eve_03                        # Skadi's room: the boss; after it, the beam out
 

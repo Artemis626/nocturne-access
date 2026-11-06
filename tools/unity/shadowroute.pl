@@ -105,6 +105,12 @@ for my $a (@areas) { next unless @{ $shapes{$a} // [] };
 for my $row (split /;/, ($ENV{RESET} // '')) { my ($a, $t) = split ' ', $row; next unless defined $t;
     for my $rn (@{ $region{$a}{on}{$t} // [] }) { for my $ro (@{ $region{$a}{off}{$t} // [] }) { add("$a/on/$rn", "$a/off/$ro", "$a:$t (reset tile, alarm off)", 1); } } }
 
+# SHOWAREA=N: every point of area N with its regions in both states, and every move out of its regions.
+if (defined(my $sa = $ENV{SHOWAREA})) {
+    for my $p (sort keys %{ $pos{$sa} // {} }) { printf "  %-9s %6.0f %6.0f  off R%-8s on R%s\n", $p, @{ $pos{$sa}{$p} }, join(',', @{ $region{$sa}{off}{$p} // [] }), join(',', @{ $region{$sa}{on}{$p} // [] }); }
+    for my $f (sort keys %edges) { next unless $f =~ m{^$sa/}; printf "  %-10s -> %s\n", $f, join(', ', map { "$_->[1] to $_->[0]" } @{ $edges{$f} }); }
+}
+
 # Cheapest route from the start (alarm off) to the goal device (alarm off).
 my @start = map { "$startA/off/$_" } @{ $region{$startA}{off}{$startP} // [] };
 my %goal = map { ("$goalA/off/$_" => 1) } @{ $region{$goalA}{off}{$goalV} // [] };

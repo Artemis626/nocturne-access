@@ -39,6 +39,37 @@ namespace NocturneAccess.Speech
 
         private static GCHandle _pulse;
 
+        /// <summary>
+        /// The Red Temple's alarm (0.0.158; Francesco, 6 Nov 2026: a simple cue when the shadows' alarm goes on, and another when it
+        /// goes off): on, two soft low notes falling a fourth, A3 then E3 (220, 165 Hz); off, the same rising, E3 then A3. Lower
+        /// than the way-on tone (D4 to G4) and three notes' worth shorter.
+        /// </summary>
+        internal static void AlarmOn() => Play(ref _alarmOn, () => TwoNotes(220.0, 165.0), "alarm-on tone");
+
+        internal static void AlarmOff() => Play(ref _alarmOff, () => TwoNotes(165.0, 220.0), "alarm-off tone");
+
+        private static GCHandle _alarmOn, _alarmOff;
+
+        private static byte[] TwoNotes(double first, double second)
+        {
+            const int rate = 22050;
+            var all = new List<short>();
+            foreach (var (hz, ms) in new[] { (first, 170), (second, 260) })
+            {
+                int n = rate * ms / 1000;
+                for (int i = 0; i < n; i++)
+                {
+                    double t = (double)i / rate;
+                    double attack = Math.Min(1.0, t / 0.012);
+                    double decay = Math.Exp(-t * 5.0);
+                    double release = Math.Min(1.0, (n - i) / (rate * 0.02));
+                    double wave = Math.Sin(2 * Math.PI * hz * t) + 0.3 * Math.Sin(2 * Math.PI * 2 * hz * t);   // the octave: audible on small speakers
+                    all.Add((short)(0.5 / 1.3 * attack * decay * release * wave * short.MaxValue));
+                }
+            }
+            return Wav(all.ToArray(), rate);
+        }
+
         private static byte[] MakePulse()
         {
             const int rate = 22050;
