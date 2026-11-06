@@ -316,3 +316,9 @@ A story volume can be a puzzle piece: SMT III's soul room raises a barrier behin
 - A guide's "next step" must never be a warp whose landing the player can already walk to (the warp just taken), and a listed order of preference should not be overridden by "a walk beats a route through doors" when both cross no hazard.
 - An event volume's script is not always named after its own area: the area file can name another area's procedure (the Red Temple hall's tiles run `013_...` from area 11's file). Read the name from the file before calling a volume a phantom; a flag-clearing tile missed this way made a guided route loop between two doors.
 - When several doors or warps reach a goal in the same number of steps, choose by what their walks cross (hazards, story triggers), not by list order. A trigger can be a flat plane (a guard's sight line): flood a dump with those planes as walls to see which door leads to the clear side (the Red Temple hall: one door in five).
+
+## A guarded maze solved offline (6 Nov 2026, the Red Temple)
+
+- When guided routes keep failing in one place, stop patching data from guesses: model the place from the game's files and search it. Two small tools did it: one reads every trigger volume's true shape (`tools/unity/f2vol.pl`: position, yaw, plane or box size from the area file), one floods each area with the hazards as walls and searches the doors, warp devices and resets between areas (`tools/unity/shadowroute.pl`).
+- Model the game's states, not just its walls: the alarm the guards set also puts them to sleep, so the only way through used it on purpose. A search with "alarm off" and "alarm on" copies of every region, and the switches between them, found it at once.
+- Check where each door lands, not only where it starts: six doors landed inside a guard's box, which sets the alarm on arrival.

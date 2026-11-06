@@ -511,6 +511,9 @@ namespace NocturneAccess.Systems.Navigation
         private static int _softBuild = -1;
         private const float SoftCost = 2000f;   // more than any detour in a 400-cell grid: the fewest story events first, then the shortest
 
+        /// <summary>The area has story volumes routes go round (0.0.157: chains of warps are then chosen by their crossings too).</summary>
+        internal static bool HasSoftZones => _softZones.Count > 0;
+
         /// <summary>The story volumes routes go round (PointsOfInterest.Build, the listed story events of this area).</summary>
         internal static void SetSoftZones(List<Zone> zones)
         {

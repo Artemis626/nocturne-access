@@ -348,6 +348,8 @@ namespace NocturneAccess.Systems.Navigation
                             legs.Reverse();
                             if (legs.Count == 1)
                                 legs[0] = FewestCrossings(gb, target, warps, entries, dests, start, goal, legs[0]);
+                            else if (WalkGrid.HasSoftZones && Crossings(gb, legs, target) > 0)
+                                legs = LeastCrossingChain(gb, target, warps, entries, dests, start, goal, legs);
                             return legs;
                         }
                         queue.Enqueue(d);
@@ -360,6 +362,99 @@ namespace NocturneAccess.Systems.Navigation
                 Log.Warn($"{Tag} Route to {target?.ResName} could not be worked out: {ex.Message}");
                 return null;
             }
+        }
+
+        /// <summary>The story events crossed walking a chain of warps to the target (a walk with no plan counts one).</summary>
+        private static int Crossings(fldGlobalWork_t gb, List<Warp> legs, Poi target)
+        {
+            float x = gb.playerX, y = gb.playerY, z = gb.playerZ;
+            int total = 0;
+            foreach (Warp w in legs)
+            {
+                int c = WalkGrid.StoryCrossings(x, y, z, w.Zone.X, w.FloorY, w.Zone.Z);
+                total += c < 0 ? 1 : c;
+                x = w.DestX; y = w.DestY; z = w.DestZ;
+            }
+            int last = WalkGrid.StoryCrossings(x, y, z, target.X, target.FloorY, target.Z);
+            return total + (last < 0 ? 1 : last);
+        }
+
+        /// <summary>
+        /// The chain of warps to the target whose walks cross the fewest story events, then the fewest warps (0.0.157), when the
+        /// fewest-warps chain crosses one: a cheapest-first search whose steps cost 1 per warp and 100 per story event crossed.
+        /// Francesco, 6 Nov 2026 (13:59 session): the Red Temple's area 16 (field 34) is a maze of rooms joined by same-area doors
+        /// with six shadows (sight lines and boxes) between them; read offline (tools/unity/shadowroute.pl), only one chain from its
+        /// middle reset tile to the door into area 15's device room crosses none: 01d_11, 01d_03, 01d_15, 01d_22, 01d_17, then 01d_20.
+        /// </summary>
+        private static List<Warp> LeastCrossingChain(fldGlobalWork_t gb, Poi target, List<Warp> warps, Dictionary<Warp, HashSet<int>> entries,
+            Dictionary<Warp, int> dests, int start, HashSet<int> goal, List<Warp> fewest)
+        {
+            const int EventCost = 100;
+            int Cost(float x, float y, float z, float tx, float ty, float tz)
+            {
+                int c = WalkGrid.StoryCrossings(x, y, z, tx, ty, tz);
+                return c < 0 ? EventCost : c * EventCost;
+            }
+            // States: the start (null) or the last warp taken; its position is the player's or the warp's landing.
+            var dist = new Dictionary<Warp, int>();
+            var prev = new Dictionary<Warp, Warp>();
+            var settled = new HashSet<Warp>();
+            int startDist = 0;
+            Warp best = null;
+            bool bestIsStart = false;
+            int bestTotal = int.MaxValue;
+            var open = new List<Warp>();
+            // Expand the start.
+            void Expand(Warp from, int fromDist)
+            {
+                float x = from == null ? gb.playerX : from.DestX, y = from == null ? gb.playerY : from.DestY, z = from == null ? gb.playerZ : from.DestZ;
+                int region = from == null ? start : dests[from];
+                if (goal.Contains(region))
+                {
+                    int total = fromDist + Cost(x, y, z, target.X, target.FloorY, target.Z);
+                    if (total < bestTotal)
+                    {
+                        bestTotal = total;
+                        best = from;
+                        bestIsStart = from == null;
+                    }
+                }
+                foreach (Warp v in warps)
+                {
+                    if (dests[v] < 0 || settled.Contains(v) || !entries[v].Contains(region))
+                        continue;
+                    int d = fromDist + 1 + Cost(x, y, z, v.Zone.X, v.FloorY, v.Zone.Z);
+                    if (dist.TryGetValue(v, out int old) && old <= d)
+                        continue;
+                    dist[v] = d;
+                    prev[v] = from;
+                    if (!open.Contains(v))
+                        open.Add(v);
+                }
+            }
+            Expand(null, startDist);
+            int guard = 0;
+            while (open.Count > 0 && guard++ < 200)
+            {
+                Warp w = open.OrderBy(o => dist[o]).First();
+                open.Remove(w);
+                if (dist[w] >= bestTotal)
+                    break;
+                settled.Add(w);
+                Expand(w, dist[w]);
+            }
+            if (bestIsStart || best == null)
+                return fewest;
+            var legs = new List<Warp>();
+            for (Warp at = best; at != null; at = prev[at])
+                legs.Add(at);
+            legs.Reverse();
+            int was = Crossings(gb, fewest, target);
+            int now = Crossings(gb, legs, target);
+            if (now >= was)
+                return fewest;
+            Log.Info($"{Tag} Route to {target.ResName}: {string.Join(", ", legs.Select(l => l.Name))} crosses {now} story events (the fewest warps, {string.Join(", ", fewest.Select(l => l.Name))}, crossed {was}).");
+            return legs;
         }
 
         /// <summary>

@@ -4,6 +4,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
+**6 Nov 2026: 0.0.157 (pushed, untested): the Red Temple solved offline with new tools (`tools/unity/f2vol.pl` shadow shapes, `tools/unity/shadowroute.pl` route with alarm states): area 15 sets the alarm on purpose at `01d_07`, area 16 resets at its middle tile `01eve_08`, then a clear chain to `01d_20` and the Skadi device; multi-door chains now avoid story events (`WarpMap.LeastCrossingChain`). Test steps: `docs/HANDOFF.md` last entry.**
+
 **5 Nov 2026, late night: 0.0.156 (pushed, untested): Red Temple area 16: after a shadow the way on leads to the area's reset tiles `01eve_07` / `01eve_08`, not the S-Terminal (it will not work while the alarm is on). 0.0.155 verified (door `01d_09`, device reached). Test: a shadow in area 16, Shift+End names a story event, Home onto it. `docs/HANDOFF.md` last entry.**
 
 **5 Nov 2026, night: 0.0.155 (pushed, untested): the Red Temple hall's shadows are sight lines (flat planes); door routes now pick the door whose walks cross the fewest story events (`WarpMap.FewestCrossings`): from the north strip `01d_09` is the one clear lane to the warp device. 0.0.154's hall tiles verified. Test: north strip, Shift+End, Home: through `01d_09` to the device, no event on the way. `docs/HANDOFF.md` last entry.**
