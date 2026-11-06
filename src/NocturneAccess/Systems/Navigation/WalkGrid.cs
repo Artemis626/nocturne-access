@@ -456,6 +456,7 @@ namespace NocturneAccess.Systems.Navigation
         // Kept clear of a warp: the player drifts off a run in turns (15:56:59: the hit of 01d_03 fired 13 inside its box while the
         // route ran 10 outside it) and its collision radius is 30.
         private const float AvoidMargin = 45f;
+        private const float LandingRadius = 30f;   // the player's collision radius: a landing this near a story volume is inside it
         private static short[] _avoid = Array.Empty<short>();   // per node: 0, or the warp zone's id + 1
         private static short _allow;                            // during Plan: the zone id + 1 that may be entered
         private static int[] _component = Array.Empty<int>();   // per node: connected region (avoid applied), -1 not walkable
@@ -480,7 +481,7 @@ namespace NocturneAccess.Systems.Navigation
             int marked = 0;
             foreach (Zone zone in zones)
             {
-                float reach = Math.Max(zone.HalfDepth, zone.HalfWidth) + AvoidMargin + CellSize;
+                float reach = (float)Math.Sqrt(zone.HalfDepth * zone.HalfDepth + zone.HalfWidth * zone.HalfWidth) + AvoidMargin + CellSize;   // a turned box's corners (0.0.160)
                 ForCells(zone.X - reach, zone.Z - reach, zone.X + reach, zone.Z + reach, (c, x, z) =>
                 {
                     if (!zone.Contains(x, z, AvoidMargin))
@@ -534,7 +535,7 @@ namespace NocturneAccess.Systems.Navigation
             int marked = 0;
             foreach (Zone zone in _softZones)
             {
-                float reach = Math.Max(zone.HalfDepth, zone.HalfWidth) + AvoidMargin + CellSize;
+                float reach = (float)Math.Sqrt(zone.HalfDepth * zone.HalfDepth + zone.HalfWidth * zone.HalfWidth) + AvoidMargin + CellSize;   // a turned box's corners (0.0.160)
                 ForCells(zone.X - reach, zone.Z - reach, zone.X + reach, zone.Z + reach, (c, x, z) =>
                 {
                     if (!zone.Contains(x, z, AvoidMargin))
@@ -1050,11 +1051,12 @@ namespace NocturneAccess.Systems.Navigation
         private static string _crossSoft = "";
         private static bool _quiet;
 
-        /// <summary>The story volume (soft zone) whose box holds (x, z), or -1 (0.0.159: a door landing inside a shadow sets it off).</summary>
+        /// <summary>The story volume (soft zone) whose box holds (x, z), or -1 (0.0.159: a door landing inside a shadow sets it off).
+        /// 0.0.160: within the player's collision radius (30) of it, since a shadow plane has no depth of its own.</summary>
         internal static int SoftZoneAt(float x, float z)
         {
             foreach (Zone zone in _softZones)
-                if (zone.Contains(x, z, 0f))
+                if (zone.Contains(x, z, LandingRadius))
                     return zone.Id;
             return -1;
         }

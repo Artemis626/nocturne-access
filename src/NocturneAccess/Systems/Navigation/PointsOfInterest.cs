@@ -213,6 +213,9 @@ namespace NocturneAccess.Systems.Navigation
         /// enters it, so a walkable cell inside it (VolumeMargin around) is in reach whatever the distance to the centre.</summary>
         public bool HasBox;
         public float BoxX0, BoxX1, BoxZ0, BoxZ1;
+        /// <summary>The volume's own shape, turned by its facing (WarpMap.ZoneOf; 0.0.160): story events are gone round by it, not by
+        /// the upright rectangle BoxX0..BoxZ1, which for a turned shadow covers whole rooms.</summary>
+        public WalkGrid.Zone Shape;
         /// <summary>An action volume as big as a room (a lift platform: the Obelisk 99F's 01eve_09, 2000 across; 0.0.105): reached,
         /// walked to and arrived at by its box, as a door is.</summary>
         public bool Big;
@@ -374,7 +377,10 @@ namespace NocturneAccess.Systems.Navigation
                 // A room-sized event volume is an area trigger unless its script is an action (0.0.105, below): the Obelisk 99F's
                 // lift 01eve_09 ("Ride", to the next floor) is a platform 2000 across and was left out as a trigger; in every dump
                 // it is the only room-sized volume whose script is an action (one other is a story trigger).
-                bool roomSized = kind == PoiKind.Event && RoomSized(box);
+                // 0.0.160: in dungeons by the volume's turned shape: a long strip or a plane is no room (the Red Temple's shadows: area
+                // 12's sight line 01eve_09, a plane 2400 long at yaw 166, and area 16's 01eve_06, a box 1800 by 300 at yaw -78, were
+                // left out as area triggers by their upright rectangles, so routes never went round them).
+                bool roomSized = kind == PoiKind.Event && (world ? RoomSized(box) : RoomSizedTurned(box, p, i));
                 // What the volume's own script does now (FieldScript, 0.0.71; Francesco, 12 Oct 2026: "Event" was too vague,
                 // switches and jump-offs are actions): an action is spoken with the game's prompt and narration, a story event
                 // as such, and one with nothing to do now (played already, or off in the game's on/off table) is left out.
@@ -511,6 +517,7 @@ namespace NocturneAccess.Systems.Navigation
                     BoxX1 = bx1,
                     BoxZ0 = bz0,
                     BoxZ1 = bz1,
+                    Shape = WarpMap.ZoneOf(box, p, i, out _),
                     DoorKind = generic && !toWorld && !jump && !awayWarp ? DoorTable.KindOf(gb.fieldID, gb.areaID, name) : "",
                     Destination = destination,
                     DestinationIsField = destinationIsField,
@@ -644,15 +651,15 @@ namespace NocturneAccess.Systems.Navigation
                 ListResetWarps(gb, kept);
                 // The story events still listed (not played yet) are gone round by routes where another way exists (0.0.120).
                 // 0.0.130: not those whose every path only puts the player just past them (Yoyogi Park's unguarded catwalks).
-                WalkGrid.SetSoftZones(kept.Where(q => q.Kind == PoiKind.Event && q.Story && q.HasBox && !PassThrough(gb, q)).Select(q => new WalkGrid.Zone
+                // 0.0.160: by each volume's turned shape (Francesco, 6 Nov 2026, 14:51: Home from area 16's door 01d_22 to 01d_17
+                // walked west then south through the shadow box 01eve_05, 1400 by 400 at yaw 56; its upright rectangle held 01d_17
+                // itself, so the walk counted the box as the target's own and crossed it freely. Offline, dump 14:54:13 with the
+                // six shadows turned: 01pos_22 and 01d_17 share the room's south-east part).
+                WalkGrid.SetSoftZones(kept.Where(q => q.Kind == PoiKind.Event && q.Story && q.HasBox && !PassThrough(gb, q)).Select(q =>
                 {
-                    Id = q.Index,
-                    X = (q.BoxX0 + q.BoxX1) / 2f,
-                    Z = (q.BoxZ0 + q.BoxZ1) / 2f,
-                    NX = 0f,
-                    NZ = 1f,
-                    HalfDepth = (q.BoxZ1 - q.BoxZ0) / 2f,
-                    HalfWidth = (q.BoxX1 - q.BoxX0) / 2f,
+                    WalkGrid.Zone zone = q.Shape;
+                    zone.Id = q.Index;
+                    return zone;
                 }).ToList());
             }
             else
@@ -986,6 +993,19 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>A story volume as big as a room (more than 1500 across): a trigger for walking into an area, not a thing to go to.</summary>
         private static bool RoomSized(putevebox_s box)
             => Footprint(box, out float x0, out float x1, out float z0, out float z1) && (x1 - x0 > 1500f || z1 - z0 > 1500f);
+
+        /// <summary>
+        /// A story volume as big as a room by its turned shape (dungeons, 0.0.160): more than 1500 along one side and more than 400
+        /// along the other. A strip or a plane is crossed, not a room entered.
+        /// </summary>
+        private static bool RoomSizedTurned(putevebox_s box, Vector4 centre, int index)
+        {
+            if (FieldData.BoxCorners(box) == 0)
+                return false;
+            WalkGrid.Zone zone = WarpMap.ZoneOf(box, centre, index, out _);
+            float a = zone.HalfWidth * 2f, b = zone.HalfDepth * 2f;
+            return Math.Max(a, b) > 1500f && Math.Min(a, b) > 400f;
+        }
 
         /// <summary>A volume's box footprint in X and Z (gEvnRngBox.vtx); false without a box (all zero for people).</summary>
         private static bool Footprint(putevebox_s box, out float x0, out float x1, out float z0, out float z1)

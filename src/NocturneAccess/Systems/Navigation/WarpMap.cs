@@ -592,7 +592,7 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         /// <summary>A volume's shape in X and Z from its box corners and facing; without a box, 100 around its centre.</summary>
-        private static WalkGrid.Zone ZoneOf(putevebox_s box, Vector4 centre, int id, out float floorY)
+        internal static WalkGrid.Zone ZoneOf(putevebox_s box, Vector4 centre, int id, out float floorY)
         {
             var zone = new WalkGrid.Zone { Id = id, X = centre.x, Z = centre.z, NX = 0f, NZ = 1f, HalfDepth = 100f, HalfWidth = 100f };
             floorY = centre.y + 100f;

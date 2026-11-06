@@ -193,6 +193,21 @@ if ($ENV{NAVBLOCK}) {
     }
     print "nodes blocked by NAVBLOCK: $blocked\n";
 }
+# NAVOBOX="cx cz nx nz halfdepth halfwidth;...": turned boxes blocked as WalkGrid.Zone.Contains with AvoidMargin 45 (0.0.160: the
+# Red Temple's shadows are planes and boxes turned by their yaw; nx nz is the depth axis, gEvnRngBox.boxnml).
+if ($ENV{NAVOBOX}) {
+    my $blocked = 0; my $m = $ENV{NAVOBOXMARGIN} // 45;
+    for my $r (split /;/, $ENV{NAVOBOX}) {
+        my ($ox, $oz, $nx, $nz, $hd, $hw) = split ' ', $r;
+        for my $c (0 .. $W * $H - 1) {
+            my ($cx, $cz) = ($gx + ($c % $W) * $C, $gz + int($c / $W) * $C);
+            my ($dx, $dz) = ($cx - $ox, $cz - $oz);
+            next unless abs($dx * $nx + $dz * $nz) <= $hd + $m && abs($dz * $nx - $dx * $nz) <= $hw + $m;
+            for my $l (0 .. ($cnt[$c] // 0) - 1) { my $k = $c * $layers + $l; if ($st[$k] == 1) { $st[$k] = 2; $blocked++ } }
+        }
+    }
+    print "nodes blocked by NAVOBOX: $blocked\n";
+}
 my @Dx = (0, 1, 1, 1, 0, -1, -1, -1); my @Dz = (1, 1, 0, -1, -1, -1, 0, 1);
 # NAVHEAD=180: a floor with another floor of its cell less than this above it (Y points down: a smaller y) is no place to
 # stand (WalkGrid 0.0.74, the Nihilo core's spiral ramp under its floor).

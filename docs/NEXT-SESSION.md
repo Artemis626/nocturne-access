@@ -2,11 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (6 Nov 2026, before a compact): the Red Temple, troubleshooting in progress
+## RESUME HERE (6 Nov 2026): the Red Temple, troubleshooting in progress (0.0.160 to test)
 
 **What we are doing.** Francesco is in the Amala Temple's Red Temple (field 34, areas 11 to 17; boss Skadi in area 17) and is
-about to test 0.0.159. Since 5 Nov the way on (Shift+End) and Home have failed here again and again (loops, walks into shadows,
-"beyond doors", unreachable doors), so this one area is being troubleshot on its own, version by version (0.0.153 to 0.0.159),
+about to test 0.0.160. Since 5 Nov the way on (Shift+End) and Home have failed here again and again (loops, walks into shadows,
+"beyond doors", unreachable doors), so this one area is being troubleshot on its own, version by version (0.0.153 to 0.0.160),
 each fix from his session log and his Shift+F6 dumps. Read his next log first.
 
 **Why this area is hard (all read from the game's files, see `docs/HANDOFF.md` entries 5 and 6 Nov):**
@@ -32,19 +32,27 @@ the north strip `01d_09`; device to area 15; `01d_13`, `01d_07` (alarm on purpos
 purpose."); `01d_06`, `01d_03` into area 16; six inner doors to the middle tile `01eve_08` (alarm off); `01d_11`, `01d_03`,
 `01d_15`, `01d_22`, `01d_17`, `01d_20` into area 15's device room; the Skadi device.
 
-**What the mod now does (0.0.153 to 0.0.159):** offline arrival points (`AreaPoints`); area-file procedure names (`FieldScript.ProcName`);
+**What the mod now does (0.0.153 to 0.0.160):** offline arrival points (`AreaPoints`); area-file procedure names (`FieldScript.ProcName`);
 door routes by fewest story events crossed (`WarpMap.FewestCrossings` one step, `LeastCrossingChain` multi-step) with a landing
 inside a story volume counted as a crossing (`WarpMap.LandingCost`); spent warps skipped only when clear (`WayOn.LandsWithinReach`);
 way-on data areas 11 to 16 gated by 1703 (`Data/WayOn.txt`, `!name` = warning); alarm tones (`AlarmCue`, config `AlarmSound`);
-crossing counts cached and quiet (`WalkGrid.StoryCrossings`; 0.0.157's version slowed NVDA with 375 logged plans a second).
+crossing counts cached and quiet (`WalkGrid.StoryCrossings`; 0.0.157's version slowed NVDA with 375 logged plans a second);
+**0.0.160: story volumes gone round by their turned shape** (`Poi.Shape`, `WarpMap.ZoneOf`), not their upright rectangle: until
+then a turned shadow's rectangle covered whole rooms, so crossing counts were wrong both ways, and Home from `01pos_22` cut through
+`01eve_05` (its rectangle held the target `01d_17`, counted as the target's own); long shadows are no longer dropped as
+"room-sized" (area 12 `01eve_09`, area 16 `01eve_06`). Offline check: `tools/navregions.pl` with `NAVOBOX` (shapes from a dump's
+`boxnml` and `size`; command in the `docs/HANDOFF.md` 14:48 entry).
 
 **Verified so far:** hall tiles (0.0.154), north strip `01d_09` and the first device (0.0.155), area 16 west tile (0.0.156),
-the alarm-on tone (0.0.158). **To check in the next log (0.0.159):** area 15 Shift+End warns and names `01d_07` (not "left out");
-after `01eve_08`, `[Nav:Warp] Route to 01d_20: ... crosses 0 story events` and no walk through `01d_16`; no bursts of "The route
-crosses" lines; the alarm-off tone on the tile; the Skadi device reached. If a step fails: compare with the solver's route
+the alarm-on tone (0.0.158), the middle tile with the alarm-off tone, no slowdown (0.0.159). **To check in the next log
+(0.0.160):** after `01eve_08`, "Way on" names `01d_20` via 5 doors with no "through"; `[Nav:Warp] Route to 01d_20: ... crosses 0
+story events`; Home from `01pos_22` goes south first, no `01eve_05` hit; area 15 with the alarm off: Shift+End warns and names
+`01d_07` (not yet seen with 0.0.159); the Skadi device reached. If a step fails: compare with the solver's route
 (`SHOWAREA`), read the `[Nav:WayOn]` and `[Nav:Warp] Route to` lines, and ask for a Shift+F6 where it happened.
 
 ## Next: shops, Fountain and fusion (3 Oct 2026)
+
+**6 Nov 2026, 15:03: 0.0.160 (pushed, untested): story volumes by their turned shape (the Red Temple's slanted shadows; Home from `01d_22` cut through `01eve_05`, and the way on preferred `01d_10` by wrong counts); long shadows no longer dropped as room-sized. 0.0.159 verified (no slowdown, middle tile and its tone). Test steps: `docs/HANDOFF.md` last entry.**
 
 **6 Nov 2026, afternoon: 0.0.159 (pushed, untested): the slowdown fixed (crossing counts cached and quiet: 3535 logged plans in three minutes before); landings inside a shadow count as crossings (the chain took `01d_16` into `01eve_05`; area 15's warning door was wrongly dropped); area 16 fallbacks with the alarm on. Test steps: `docs/HANDOFF.md` last entry.**
 
