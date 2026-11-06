@@ -2,6 +2,48 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
+## RESUME HERE (6 Nov 2026, before a compact): the Red Temple, troubleshooting in progress
+
+**What we are doing.** Francesco is in the Amala Temple's Red Temple (field 34, areas 11 to 17; boss Skadi in area 17) and is
+about to test 0.0.159. Since 5 Nov the way on (Shift+End) and Home have failed here again and again (loops, walks into shadows,
+"beyond doors", unreachable doors), so this one area is being troubleshot on its own, version by version (0.0.153 to 0.0.159),
+each fix from his session log and his Shift+F6 dumps. Read his next log first.
+
+**Why this area is hard (all read from the game's files, see `docs/HANDOFF.md` entries 5 and 6 Nov):**
+- **Shadows** (event volumes whose procedures set flag 1703, `COMM 0x8`) are flat vertical planes (sight lines up to 2400 long, at
+  angles) or boxes. Crossing one, or landing inside one, sets the **alarm** (flag 1703): the warp devices stop ("The warp device
+  is not functioning"), the S-Terminal refuses ("It seems that you aren't able to use the terminal"), and while it is on every
+  shadow's script ends at once (they sleep). Flag 1706 (Skadi's room, `018_01eve_01`) turns them off for good.
+- **Reset tiles** clear 1703 (`COMM 0x9`): the entrance hall's `01eve_13` / `01eve_14` (area 11; their procedures are named
+  `013_...` by the area file, `Data/ScriptNames.txt`) and area 16's `01eve_07` (west, leaves a pocket) / `01eve_08` (middle).
+- **Doors are one way**: each moves the player to its own landing on one side of its wall; from the landing side it does nothing
+  ("No path" is right). Six doors land inside a shadow (12 `01d_08`, 15 `01d_04`, 15 `01d_07`, 16 `01d_16`, 16 `01d_18`,
+  16 `01d_19`). The game exposes no arrival points here (`Data/AreaPoints.txt`, offline).
+- **Warp devices** (work only with the alarm off): area 12 `01eve_51` to area 15 `01pos_11`; area 15 `01eve_50` back to area 12;
+  area 15 `01eve_51` to Skadi (area 17). With the shadows awake, area 15's arrival side cannot reach its Skadi device: the
+  game's solution sets the alarm on purpose.
+
+**How it is solved (offline tools, game files only):** `tools/unity/f2vol.pl` (every volume's shape from an area file) and
+`tools/unity/shadowroute.pl` (floods each area with shadows as walls and without, joins regions by the door table, devices and
+reset tiles, marks landings in shadows, cheapest route). Run:
+`TMPDIR=<scratch> RESET="11 01eve_13;11 01eve_14;16 01eve_07;16 01eve_08" perl tools/unity/shadowroute.pl research/gamedata/f034 34 "11 12 13 14 15 16 17" 11 01pos_01 15 01eve_51 "12 01eve_51 15 01pos_11;15 01eve_50 12 01pos_12"`
+(about 50 s; `SHOWAREA=16` prints that area's points and moves). **The route:** hall `01d_02`; west wing `01d_02`, `01d_01`;
+the north strip `01d_09`; device to area 15; `01d_13`, `01d_07` (alarm on purpose, the way on warns "Sets off the alarm on
+purpose."); `01d_06`, `01d_03` into area 16; six inner doors to the middle tile `01eve_08` (alarm off); `01d_11`, `01d_03`,
+`01d_15`, `01d_22`, `01d_17`, `01d_20` into area 15's device room; the Skadi device.
+
+**What the mod now does (0.0.153 to 0.0.159):** offline arrival points (`AreaPoints`); area-file procedure names (`FieldScript.ProcName`);
+door routes by fewest story events crossed (`WarpMap.FewestCrossings` one step, `LeastCrossingChain` multi-step) with a landing
+inside a story volume counted as a crossing (`WarpMap.LandingCost`); spent warps skipped only when clear (`WayOn.LandsWithinReach`);
+way-on data areas 11 to 16 gated by 1703 (`Data/WayOn.txt`, `!name` = warning); alarm tones (`AlarmCue`, config `AlarmSound`);
+crossing counts cached and quiet (`WalkGrid.StoryCrossings`; 0.0.157's version slowed NVDA with 375 logged plans a second).
+
+**Verified so far:** hall tiles (0.0.154), north strip `01d_09` and the first device (0.0.155), area 16 west tile (0.0.156),
+the alarm-on tone (0.0.158). **To check in the next log (0.0.159):** area 15 Shift+End warns and names `01d_07` (not "left out");
+after `01eve_08`, `[Nav:Warp] Route to 01d_20: ... crosses 0 story events` and no walk through `01d_16`; no bursts of "The route
+crosses" lines; the alarm-off tone on the tile; the Skadi device reached. If a step fails: compare with the solver's route
+(`SHOWAREA`), read the `[Nav:WayOn]` and `[Nav:Warp] Route to` lines, and ask for a Shift+F6 where it happened.
+
 ## Next: shops, Fountain and fusion (3 Oct 2026)
 
 **6 Nov 2026, afternoon: 0.0.159 (pushed, untested): the slowdown fixed (crossing counts cached and quiet: 3535 logged plans in three minutes before); landings inside a shadow count as crossings (the chain took `01d_16` into `01eve_05`; area 15's warning door was wrongly dropped); area 16 fallbacks with the alarm on. Test steps: `docs/HANDOFF.md` last entry.**
