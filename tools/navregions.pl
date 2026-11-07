@@ -51,7 +51,7 @@ close $F;
 ($px, $pz) = ($player->[0], $player->[2]) unless defined $pz;
 ($player->[0], $player->[2]) = ($px, $pz);   # a given "player x z" also starts the flood there
 
-my (@floors, @walls);
+my (@floors, @walls, @marked);
 my ($x0, $z0, $x1, $z1) = (1e9, 1e9, -1e9, -1e9);
 for my $q (sort { $a->{id} <=> $b->{id} } values %poly) {
     my @p = @{ $q->{p} };
@@ -59,8 +59,9 @@ for my $q (sort { $a->{id} <=> $b->{id} } values %poly) {
     next if $hitOff{$q->{hoji}} || ($q->{npc} > 0 && $npcOff{$q->{npc}});
     if (abs($q->{ny}) >= 0.5) {
         # NAVATTR80=1: Attr 0x80 floors count too (0.0.63; the Mantra pyramid, field 24 area 17, has its floors in 0x80).
-        next if @p < 3 || ($q->{attr} && !($ENV{NAVATTR80} && $q->{attr} == 0x80));
+        next if @p < 3;
         next if $ENV{NAVUP} && $q->{ny} > 0;   # NAVUP=1: faces looking down are not floors (0.0.65)
+        if ($q->{attr} && !($ENV{NAVATTR80} && $q->{attr} == 0x80)) { push @marked, $q if $q->{attr} == 0x1; next; }
         push @floors, $q;
         for (@p) { $x0 = $_->[0] if $_->[0] < $x0; $x1 = $_->[0] if $_->[0] > $x1; $z0 = $_->[2] if $_->[2] < $z0; $z1 = $_->[2] if $_->[2] > $z1; }
     } elsif (abs($q->{ny}) < 0.2) {
@@ -110,6 +111,24 @@ for my $f (@floors) {
     } }
 }
 print "floor heights dropped by the layer cap: $lost cells\n";
+# NAVMARKED (default 1; WalkGrid 0.0.161): a floor of Attr exactly 0x1 (the solid boxes; overlays float over voids, never) whose cells
+# hold no ground floor for at least half its area, over at least $MarkedMin cells, is a floor in those bare cells only.
+# Mifunashiro's Third Stratum (field 35 area 7) joins its halves by a ramp that is only 0x1 and 0x800 polygons (#32, #33, #185);
+# elsewhere such polygons are caps of wall boxes (small) or overlays on ground floors (not bare), and stay out.
+my ($MarkedMin, $markedFloors, $markedCells) = (150, 0, 0);
+if ($ENV{NAVMARKED} // 1) {
+    for my $f (@marked) {
+        my ($fx0, $fz0, $fx1, $fz1) = (1e9, 1e9, -1e9, -1e9);
+        for (@{ $f->{p} }) { $fx0 = $_->[0] if $_->[0] < $fx0; $fx1 = $_->[0] if $_->[0] > $fx1; $fz0 = $_->[2] if $_->[2] < $fz0; $fz1 = $_->[2] if $_->[2] > $fz1; }
+        my ($i0, $i1, $j0, $j1) = cells($fx0, $fz0, $fx1, $fz1); my @in; my $bare = 0;
+        for my $j ($j0 .. $j1) { for my $i ($i0 .. $i1) { my ($x, $z) = ($gx + $i * $C, $gz + $j * $C); next unless inside($f->{p}, $x, $z);
+            my $c = $j * $W + $i; push @in, [$c, $x, $z]; $bare++ unless $cnt[$c]; } }
+        next unless @in >= $MarkedMin && $bare * 2 >= @in;
+        $markedFloors++;
+        for (@in) { my ($c, $x, $z) = @$_; next if $cnt[$c]; $hgt[$c * $layers] = planey($f, $x, $z); $st[$c * $layers] = 1; $cnt[$c] = 1; $markedCells++; }
+    }
+    print "marked floors taken where no ground floor lies: $markedFloors ($markedCells cells)\n";
+}
 # NAVSEAM=1 (WalkGrid 0.0.77, default): a cell with no floor at its centre whose two sides, half a cell from the centre north and
 # south (or east and west), lie on floors within the merge band takes the higher of the two (Ginza 1F, field 19 area 2: the hall
 # floor ends at z -1090, the pocket in front of door 01d_08 starts at -1100, and the row of centres at -1095 cut it off).
@@ -224,7 +243,12 @@ sub step { my ($i, $j, $y) = @_; return -1 if $i < 0 || $j < 0 || $i >= $W || $j
 sub steps { my ($i, $j, $y) = @_; return () if $i < 0 || $j < 0 || $i >= $W || $j >= $H; my $c = $j * $W + $i;
     my @in = grep { abs($hgt[$_] - $y) <= $MaxStep } map { $c * $layers + $_ } 0 .. ($cnt[$c] // 0) - 1;
     # NAVCONT=1 (WalkGrid 0.0.74): where the floor walked on continues into the cell (within 5), no move to a floor under it.
-    if ($ENV{NAVCONT}) { my @same = grep { abs($hgt[$_] - $y) <= 5 } @in; if (@same) { my $lim = (sort { $a <=> $b } map { $hgt[$_] } @same)[-1]; @in = grep { $hgt[$_] <= $lim } @in; } }
+    # 0.0.161: the floor walked on is the cell's floor nearest y within NAVCONTBAND (default 20; a ramp rises about 10 a cell, so the
+    # old 5 never held on ramps and Mifunashiro's First Stratum dropped a route through its ramp). NAVCONTOLD=1: the 0.0.74 rule.
+    if ($ENV{NAVCONT} && $ENV{NAVCONTOLD}) { my @same = grep { abs($hgt[$_] - $y) <= 5 } @in; if (@same) { my $lim = (sort { $a <=> $b } map { $hgt[$_] } @same)[-1]; @in = grep { $hgt[$_] <= $lim } @in; } }
+    elsif ($ENV{NAVCONT}) { my $band = $ENV{NAVCONTBAND} // 20; my ($lim, $best);
+        for (@in) { my $d = abs($hgt[$_] - $y); if ($d <= $band && (!defined $best || $d < $best)) { $best = $d; $lim = $hgt[$_]; } }
+        @in = grep { $hgt[$_] <= $lim } @in if defined $lim; }
     return grep { $st[$_] == 1 } @in; }
 my @comp; my @info; my $label = 0;
 for my $k0 (0 .. $W * $H * $layers - 1) {

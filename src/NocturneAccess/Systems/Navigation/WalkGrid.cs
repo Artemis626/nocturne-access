@@ -196,7 +196,8 @@ namespace NocturneAccess.Systems.Navigation
             bool world = FieldState.WorldMapField(field);
             MaxStep = world ? WorldMaxStep : DungeonMaxStep;
             var floors = new List<CollisionPoly>();
-            var walls = new List<(float ax, float az, float bx, float bz, float lo, float hi)>();
+            var marked = new List<CollisionPoly>();
+            var walls =new List<(float ax, float az, float bx, float bz, float lo, float hi)>();
             var worldWalls = new List<CollisionPoly>();
             float minX = float.MaxValue, minZ = float.MaxValue, maxX = float.MinValue, maxZ = float.MinValue;
             foreach (CollisionPoly p in CollisionCache.Polys)
@@ -208,8 +209,14 @@ namespace NocturneAccess.Systems.Navigation
                     // Faces looking down (Y points down: Normal.y > 0) are ceilings and the undersides of blocks, never walked on
                     // (0.0.65): the cube hall's 450-unit blocks have their undersides 50 under the floor, which steps of 55 would
                     // join. The floor under the player faces up in all 60 saved dumps.
-                    if (p.Points.Length < 3 || !p.IsGroundAttr || p.Normal.y > 0f)
+                    if (p.Points.Length < 3 || p.Normal.y > 0f)
                         continue;
+                    if (!p.IsGroundAttr)
+                    {
+                        if (!world && p.Attr == BoxAttr)
+                            marked.Add(p);   // taken below only where it stands alone (0.0.161)
+                        continue;
+                    }
                     floors.Add(p);
                     foreach (Vector4 v in p.Points)
                     {
@@ -314,6 +321,7 @@ namespace NocturneAccess.Systems.Navigation
                     _count[c] = (byte)(n + 1);
                 });
             }
+            int markedCells = AddMarkedFloors(marked);
             int seams = BridgeSeams(floors);
 
             int railed = 0;
@@ -378,9 +386,61 @@ namespace NocturneAccess.Systems.Navigation
             Log.Info($"[Nav:Walk] Grid for field {field} area {area}: {_w} x {_h} cells of {CellSize} from {FieldData.F(_x0)} {FieldData.F(_z0)}, " +
                      $"{floors.Count} floors, {(world ? worldWalls.Count + " world-map" : walls.Count.ToString())} walls, {(world ? crossings + " moves through walls blocked, " : "")}{walkable} walkable places, {multi} cells with more than one level" +
                      $"{(dropped > 0 ? $", {dropped} floor heights over the limit of {Layers} left out" : "")}" +
+                     $"{(markedCells > 0 ? $", {markedCells} cells of marked floors standing alone" : "")}" +
                      $"{(seams > 0 ? $", {seams} seam cells bridged" : "")}{(railed > 0 ? $", {railed} places blocked by railings" : "")}, {clock.ElapsedMilliseconds} ms.");
             ApplyAvoid(world ? new List<Zone>() : WarpMap.Zones(field, area));
         }
+
+        /// <summary>
+        /// Floors of Attr exactly 0x1 (the attribute of the game's solid boxes: most 0x1 polygons are walls) are floors only where
+        /// one stands alone: over at least MarkedMinCells cells, at least half of them with no ground floor, and then only in those
+        /// bare cells (0.0.161). Mifunashiro's Third Stratum (field 35 area 7) joins its upper and lower halves by a ramp that exists
+        /// only as 0x1 and 0x800 polygons (#32, #33, #185, y 400 to 800): with no floor there, the Mirror Chamber door was "beyond
+        /// doors" until Francesco walked down by hand (7 Nov 2026, 22:19 to 22:22; dumps 22:19:47, 22:20:09). Over all 238 saved
+        /// dumps the other 0x1 floors are caps of small wall boxes (under 150 cells) and stay out. The overlays (0x100, 0x800,
+        /// 0x1000, 0x2000, 0x8000) stay out too: dozens of them float over empty space, up to 36 000 cells (field 15 area 3), and
+        /// would be walked on as air (tools/overlayfloors.pl, tools/navregions.pl NAVMARKED). Returns the cells added.
+        /// </summary>
+        private static int AddMarkedFloors(List<CollisionPoly> marked)
+        {
+            int added = 0;
+            var cells = new List<(int c, float y)>();
+            foreach (CollisionPoly f in marked)
+            {
+                float fx0 = float.MaxValue, fz0 = float.MaxValue, fx1 = float.MinValue, fz1 = float.MinValue;
+                foreach (Vector4 v in f.Points)
+                {
+                    fx0 = Math.Min(fx0, v.x); fx1 = Math.Max(fx1, v.x);
+                    fz0 = Math.Min(fz0, v.z); fz1 = Math.Max(fz1, v.z);
+                }
+                cells.Clear();
+                int bare = 0;
+                ForCells(fx0, fz0, fx1, fz1, (c, x, z) =>
+                {
+                    if (!CollisionCache.ContainsXZ(f.Points, x, z))
+                        return;
+                    cells.Add((c, PlaneY(f, x, z)));
+                    if (_count[c] == 0)
+                        bare++;
+                });
+                if (cells.Count < MarkedMinCells || bare * 2 < cells.Count)
+                    continue;
+                foreach ((int c, float y) in cells)
+                {
+                    if (_count[c] != 0)
+                        continue;
+                    _height[c * Layers] = y;
+                    _state[c * Layers] = 1;
+                    _near[c * Layers] = NearRange;
+                    _count[c] = 1;
+                    added++;
+                }
+            }
+            return added;
+        }
+
+        private const int MarkedMinCells = 150;
+        private const uint BoxAttr = 0x1;
 
         /// <summary>
         /// A cell with no floor at its centre whose two sides, half a cell from the centre north and south (or east and west), lie on
@@ -1185,12 +1245,20 @@ namespace NocturneAccess.Systems.Navigation
             if (i < 0 || j < 0 || i >= _w || j >= _h)
                 return 0;
             int c = j * _w + i, n = 0;
-            float lowest = float.MaxValue;   // Y points down: no node below the floor that continues here
+            // Y points down: no node below the floor that continues here. 0.0.161: the continuing floor is the cell's floor nearest
+            // y within ContinueBand (20, was 5 and the lowest of those): a ramp rises about 10 a cell, so with 5 it never counted,
+            // and Mifunashiro's First Stratum (field 35 area 1) let a route drop from its ramp onto the floor 75 under it; the
+            // player climbed the ramp instead, was pushed along the walkway's wall and the walk re-planned the same path three
+            // times (Francesco, 7 Nov 2026, 22:08:54; dump 22:09:42). Floors merge within MergeBand (20), so nearest is one floor.
+            float lowest = float.MaxValue, nearest = float.MaxValue;
             for (int l = 0; l < _count[c]; l++)
             {
-                float h = _height[c * Layers + l];
-                if (Math.Abs(h - y) <= ContinueBand)
-                    lowest = lowest == float.MaxValue ? h : Math.Max(lowest, h);
+                float h = _height[c * Layers + l], d = Math.Abs(h - y);
+                if (d <= ContinueBand && d < nearest)   // a tie keeps the first layer, as tools/navregions.pl does
+                {
+                    nearest = d;
+                    lowest = h;
+                }
             }
             for (int l = 0; l < _count[c]; l++)
             {
@@ -1201,7 +1269,7 @@ namespace NocturneAccess.Systems.Navigation
             return n;
         }
 
-        private const float ContinueBand = 5f;
+        private const float ContinueBand = 20f;
 
         /// <summary>The walkable node of cell (i, j) reachable from a floor at height y (within MaxStep), or -1.</summary>
         private static int Step(int i, int j, float y)

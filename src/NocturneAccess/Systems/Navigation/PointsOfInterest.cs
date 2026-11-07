@@ -296,6 +296,10 @@ namespace NocturneAccess.Systems.Navigation
         // Larger place polygons are whole rooms, not door pads. Ginza's door pads are 800 x 400 (field 19, 4 Oct 2026: the Terminal,
         // Rag's Jewelry and the Cathedral lost their names and were taken for plain doors, "explored"); Shibuya's were under 700.
         private const float PadMaxSize = 1000f;
+        // 0.0.161: or a long thin pad: Mifunashiro's S-Terminal pad (field 35 area 4, basyo 2, polygon #264) is 1100 by 600, and its
+        // door 01d_03 was a plain "Door, passage" (Francesco, 7 Nov 2026). Over all saved dumps this admits only it and field 18
+        // area 2's basyo 5 (600 by 1110); every pad admitted before stays.
+        private const float PadMaxLong = 1200f, PadMaxArea = 700000f;
 
         private static int _selected = -1;     // gEvnRng index
         private static int _field = int.MinValue, _area = int.MinValue;
@@ -1155,7 +1159,8 @@ namespace NocturneAccess.Systems.Navigation
                 if ((c.Attr & 0x1000) == 0 || c.Basyo == 0 || c.Points.Length < 3 || Math.Abs(c.Normal.y) < 0.5f)
                     continue;
                 Bounds(c, out float x0, out float z0, out float x1, out float z1);
-                if (x1 - x0 <= PadMaxSize && z1 - z0 <= PadMaxSize)
+                float w = x1 - x0, h = z1 - z0;
+                if (w <= PadMaxSize && h <= PadMaxSize || Math.Max(w, h) <= PadMaxLong && w * h <= PadMaxArea)
                     pads.Add(c);
             }
             return pads;

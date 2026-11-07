@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (6 Nov 2026, 15:26): the Red Temple is DONE; Francesco plays on
+## RESUME HERE (7 Nov 2026): Mifunashiro fixes in 0.0.161 to test (the Red Temple is done)
+
+**7 Nov 2026, 22:57: 0.0.161 (pushed, untested):** Mifunashiro (field 35): the Third Stratum ramp (Attr 0x1 polygons only) is a floor now (`WalkGrid.AddMarkedFloors`), the S-Terminal pad 1100 by 600 names its door, and walks no longer drop through a ramp onto the floor under it (`ContinueBand` 20, nearest floor). Test steps and the all-dump check: `docs/HANDOFF.md` last entry. Francesco reached the Mirror Chamber and lost to the Archangels (game over); he resumes from the S-Terminal save (File 2).
+
+## Earlier: the Red Temple is DONE (6 Nov 2026, 15:26)
 
 **Result.** 0.0.160 verified (15:06 session): from area 16's middle tile the way on and Home took the solver's chain (`01d_11`,
 `01d_03`, `01d_15`, `01d_22`, `01d_17`, `01d_20`) crossing no shadow, then area 15's device to the altar; **Skadi beaten**

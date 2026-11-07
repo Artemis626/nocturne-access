@@ -369,3 +369,10 @@ What made it work, in the order it matters:
   patching: build a small solver from the game's files (shapes, doors, devices, resets, game states), get the full route from it,
   then make the mod's data and its own copy of the hazards agree with the solver. The last Red Temple bug was the mod's copy (upright
   rectangles), found by comparing it with the solver's turned shapes.
+
+## Ramps, marked floors and long pads (7 Nov 2026, Mifunashiro)
+
+- **A ramp is a floor the walker stays on.** A rule that says "never drop through the floor you walk on" must recognise that floor in the next cell by the slope's rise per cell, not by a near-exact height: with a 5-unit band a ramp rising 10 a cell never counted, and a route dropped through it onto the floor 75 below, so the player, who stayed on the ramp, was pushed along a wall and the walk re-planned the same impossible path. Take the next cell's floor nearest the walker's height within the merge band.
+- **Read every floor attribute before dropping one.** The walking map took only plain floors because marked overlays float over empty space; but one level joined its halves by a ramp made only of the solid-box attribute (0x1). Survey all dumps first (`tools/overlayfloors.pl`: each marked floor and how much of it has no plain floor at all), then admit the narrowest class that explains the case: here only 0x1 floors that stand alone over 150 cells; every overlay class floated over voids somewhere, one over 36 000 cells.
+- **Size rules need every saved case.** A "pads larger than 1000 are rooms" limit dropped a 1100 by 600 S-Terminal pad; list every polygon of that kind across all dumps before moving the limit, and move it only as far as the one case needs.
+- **Check a walking-map change old against new on every dump, point by point.** A change that only removes impossible moves still shrinks floods; the points lost are the ones to explain (here the Ikebukuro Tunnel's inner room, which is entered by a ladder, not by stepping off a ramp).
