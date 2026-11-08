@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (7 Nov 2026): Mifunashiro fixes in 0.0.161 to test (the Red Temple is done)
+## RESUME HERE (8 Nov 2026): Mifunashiro cleared; 0.0.162 to test
+
+**8 Nov 2026: 0.0.162 (pushed, untested):** explored doors are written only when the game saves (a game over had left doors "Explored" that the reloaded save never went through). 0.0.161 verified (S-Terminal door named, the Third Stratum ramp walkable, Mirror Chamber door reached). Mifunashiro cleared, saved in files 2 and 1. `docs/HANDOFF.md` last entry.
+
+## Earlier (7 Nov 2026): Mifunashiro fixes in 0.0.161
 
 **7 Nov 2026, 22:57: 0.0.161 (pushed, untested):** Mifunashiro (field 35): the Third Stratum ramp (Attr 0x1 polygons only) is a floor now (`WalkGrid.AddMarkedFloors`), the S-Terminal pad 1100 by 600 names its door, and walks no longer drop through a ramp onto the floor under it (`ContinueBand` 20, nearest floor). Test steps and the all-dump check: `docs/HANDOFF.md` last entry. Francesco reached the Mirror Chamber and lost to the Archangels (game over); he resumes from the S-Terminal save (File 2).
 

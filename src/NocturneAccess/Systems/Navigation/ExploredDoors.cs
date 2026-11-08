@@ -103,8 +103,9 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         /// <summary>
-        /// Adds one line to the file in play, at once (a crash or a quit without saving keeps it). A new game not yet saved has no
-        /// file: everything is written at its first save (WriteAll).
+        /// Adds one line to the file in play, at once (a crash or a quit without saving keeps it): for map facts only, never explored
+        /// doors (0.0.162: those wait for the game's save). A new game not yet saved has no file: everything is written at its first
+        /// save (WriteAll).
         /// </summary>
         internal static void Append(string line, string what)
         {
@@ -760,7 +761,11 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
             Log.Info($"{Tag} {key} marked ({how}).");
-            Append("door " + key, key);
+            // 0.0.162: written only when the game saves (WriteAll), never at once: an explored door is progress of this save, and a
+            // run lost to a game over or a quit without saving must not keep it. Francesco, 8 Nov 2026: after the Archangels' game
+            // over (7 Nov 22:29) he reloaded File 2, saved at 22:12 with 1248 doors, and it loaded 1256: the eight doors of
+            // Mifunashiro's lower strata walked after that save said "Explored". Map facts (prompts, arrivals, destinations,
+            // rooms behind doors, routes) are still appended at once: they hold for every save.
         }
     }
 }
