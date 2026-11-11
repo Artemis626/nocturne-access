@@ -434,10 +434,9 @@ namespace NocturneAccess.Systems.Navigation
                         Skipped.Add($"{name} {script}");
                         continue;
                     }
-                    // A volume whose prompt the game has shown before stays listed (the old "Event, Examine") even when the dry
-                    // run finds nothing to do: a safety net while the dry run is new.
-                    if (script != null && script.Outcome == ScriptOutcome.Inactive && ExploredDoors.PromptOf(gb.fieldID, gb.areaID, name).Length > 0)
-                        script = new ScriptVerdict { Outcome = ScriptOutcome.Unknown, Procedure = script.Procedure, Reason = "idle by the dry run, but its prompt was seen: " + script.Reason };
+                    // 0.0.163: the 0.0.71 safety net (a volume whose prompt was once seen stayed listed though the dry run found
+                    // nothing to do) is gone. Across the 20 archived sessions it held one volume only: Nyx's Lounge's 01eve_01
+                    // (field 19 area 6), Loki's "Talk" from before he left, a phantom event (Francesco, 11 Nov 2026).
                     if (script != null && script.Outcome == ScriptOutcome.Inactive)
                     {
                         Skipped.Add($"{name} {script}");

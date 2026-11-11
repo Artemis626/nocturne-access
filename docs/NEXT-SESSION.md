@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (8 Nov 2026): Mifunashiro cleared; 0.0.162 to test
+## RESUME HERE (11 Nov 2026): research for the Fourth Kalpa (field 44) to start
+
+**Next, a dedicated session (Francesco, 11 Nov):** (2) the Fourth Kalpa disables the map on purpose (sense of loss); before any way on, find cleaner area data than the banner names ("Area 22", "Hell's Maze"): the door table graph, area files, the game's own area/floor tables; (3) proposals for when every listed door is "explored" (mental mapping), built on that data. 0.0.163 (pushed, untested): the Nyx's Lounge phantom Talk event removed. `docs/HANDOFF.md` last entry.
+
+## Earlier (8 Nov 2026): Mifunashiro cleared; 0.0.162
 
 **8 Nov 2026: 0.0.162 (pushed, untested):** explored doors are written only when the game saves (a game over had left doors "Explored" that the reloaded save never went through). 0.0.161 verified (S-Terminal door named, the Third Stratum ramp walkable, Mirror Chamber door reached). Mifunashiro cleared, saved in files 2 and 1. `docs/HANDOFF.md` last entry.
 
