@@ -18,6 +18,7 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 
 ## Current state (27 Oct 2026) and focus
 
+- **RESUME HERE (13 Nov 2026, new chat):** 0.0.165's Third Kalpa second way-on set failed (12 Nov 20:48: B1F chose the ladder; flag 2003 is off after the Kalpa is done, wrong gate). Find the right flag and fix `WayOn.txt` `43 27` / `43 28`: `docs/NEXT-SESSION.md` top, `docs/HANDOFF.md` last entry.
 - **13 Nov 2026, later (latest):** 0.0.165 built, untested: the Third Kalpa's second way-on set (area 27 `01d_16+2003-2004`, area 28 shaft); way-on tokens take several flag conditions. `docs/HANDOFF.md` last entry.
 - **13 Nov 2026 (latest):** 0.0.164 verified (B4 marks, A1). No way on for the Fourth Kalpa (Francesco). The Third Kalpa's area 28 shaft (off B1F `01d_16`) drops to the Fourth Kalpa's area 29 and B2's switch (flags 2004, 302); a second way-on set (two lines `+2003-2004`), built in 0.0.165, see `docs/FOURTH-KALPA-PLAN.md`.
 - **12 Nov 2026, later (latest):** 0.0.164 built, untested: Francesco's A1 (Labyrinth doors no longer say "area N") and B4 (explored doors: "leads to unexplored doors" / "nothing new behind it", `AreaRoutes.LeadsOf`, landings learned after each door: `lands` lines). `docs/HANDOFF.md` last entry.

@@ -117,3 +117,5 @@ The rest of the way back to area 27 (entrance, hub, stat route) is the same as t
 dump) before trusting it as "first traversal done".
 
 - 13 Nov 2026, 0.0.165: the Third Kalpa's second way-on set built (untested).
+
+- 13 Nov 2026: 0.0.165 failed in game: flag 2003 is off after the Third Kalpa is done, so the gate `+2003` never holds; the right flag is still to find.

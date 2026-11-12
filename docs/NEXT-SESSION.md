@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (13 Nov 2026): 0.0.165, the Third Kalpa's second way-on set, to test
+## RESUME HERE (13 Nov 2026, new chat): fix the gate of the Third Kalpa's second way-on set
+
+**0.0.165 failed in game (12 Nov 20:48):** Third Kalpa B1F still chose the ladder to the Raidou area; `01d_16+2003-2004` never qualified: flag 2003 is off after the Kalpa is done. Find the right flag (candidates and method: `docs/HANDOFF.md` last entry), change `Data/WayOn.txt` lines `43 27` and `43 28`, build, ask Francesco to retest. Background: `docs/FOURTH-KALPA-PLAN.md` (last sections).
+
+## Earlier (13 Nov 2026): 0.0.165 built
 
 **0.0.165 (pushed, untested):** Third Kalpa B1F names the side room door and its shaft while flag 2003 is on and 2004 off; test steps in `docs/HANDOFF.md` last entry.
 
