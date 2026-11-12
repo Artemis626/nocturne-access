@@ -119,3 +119,9 @@ dump) before trusting it as "first traversal done".
 - 13 Nov 2026, 0.0.165: the Third Kalpa's second way-on set built (untested).
 
 - 13 Nov 2026: 0.0.165 failed in game: flag 2003 is off after the Third Kalpa is done, so the gate `+2003` never holds; the right flag is still to find.
+
+- 13 Nov 2026, 0.0.166: the gate is flag **1984** (`+1984-2004`), read offline: 2003 is set only by the Third Kalpa's `002_door`
+  on its field call to field 44 while flag 286 is on (a path the normal route never takes), so it stays off. 1984 is set by the
+  Fourth Kalpa's `001_start` (f044) the first time the player lands in its area 0, with the opening camera `01cam_04`; no script
+  in f043 or f044 clears it, and field 44 has no Maniax variant. Francesco's logs: the first landing in field 44 area 0 was 11 Nov
+  15:35:03 (from the falling minigame, field 999); field 44 area 29 and field 43 area 28 never visited, so 2004 is off.
