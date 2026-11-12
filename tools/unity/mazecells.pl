@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 # One-way door maze of the Fourth Kalpa as grid cells: each door, its room cell, the area and cell it lands in.
+# Usage: perl tools/unity/mazecells.pl research/gamedata/f044 19,20,21,22 [cell] (field 44 file names; docs/FOURTH-KALPA-PLAN.md).
 use strict; use warnings;
 my ($dir, $areas, $cell) = @ARGV; $cell //= 1800;
 my %pts;
