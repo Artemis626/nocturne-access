@@ -91,3 +91,27 @@ his word.
 ## Built
 
 - 12 Nov 2026, 0.0.164: A1 and B4 (untested). B4 says "nothing new behind it" rather than "dead end" (a door can loop back).
+
+## The Third Kalpa holds the key (13 Nov 2026, from Francesco's 12 Nov session and the scripts)
+
+Francesco solved the Fourth Kalpa's maze by himself, eyes closed (12 Nov). His verdict: the Kalpa is meant to be solved without a
+map, so **no way on for the Fourth Kalpa** (none is built; keep it that way unless he asks). The B2 Soul (area 27): "[game line removed] [game line removed]"
+
+How the two Kalpas join (no door joins them; holes run the falling minigame, door-table rows of warptype 3 that run an event):
+- Third Kalpa area 1, hole `01eve_02` (procedure `002_01eve_02`, event 80, row to pipe event 1006): the normal way down, landing in
+  the Fourth Kalpa's area 0 (1F).
+- **Third Kalpa area 28, hole `01eve_01`** ("There is a shaft leading downward", procedure `029_01eve_01`, event 84, pipe 1010): a
+  second way down. Area 28 is a small room off **area 27 (B1F) through door `01d_16`** (not gated). Pipe 1010's other end is the
+  Fourth Kalpa's **area 29**, whose `01eve_01` is the shaft back up ("Return to the previous Kalpa?", `030_01eve_01`, event 85).
+- Fourth Kalpa area 29's door `01d_01` lands at area 27's `01pos_03` (-2124 300): **the west part of B2, beside the switch**
+  `01eve_01` (-1500 100, `028_01eve_01`, "There is a switch. Will you activate it?", sets flags 2004 and 302), on the far side of
+  the blocked path `01d_06` ("The path is blocked...") that the main route meets.
+
+### Two sets of way-on data for the Third Kalpa (Francesco's question 1)
+Possible with what exists: way-on candidates are already gated by story flags (`name+F`, `name-F`, `WayOn.Gated`). The first
+traversal's data stays; the second needs only two lines, used while flag 2003 is on and 2004 off:
+- area 27: `01d_16+2003-2004` before its present candidates (the side room, not the ladder down);
+- area 28: `01eve_01+2003-2004` (the shaft).
+The rest of the way back to area 27 (entrance, hub, stat route) is the same as the first traversal's. Flag 2003 is set by
+`002_door` (after the scripted move into area 1 at the Kalpa's end, with 1982); to confirm in game (a log line of the way on, or a
+dump) before trusting it as "first traversal done".
