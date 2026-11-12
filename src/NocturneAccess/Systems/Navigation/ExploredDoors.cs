@@ -174,7 +174,18 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             if (now - _destMs > ArriveWindowMs)
             {
-                Log.Info($"{Tag} No banner on arriving in {_destField}/{_destArea} through {_destKey}: no destination learned.");
+                // 0.0.164 (Francesco's A1): in the Labyrinth a door with no banner after it takes the name of the area left, the
+                // last banner shown (a fallback: in the 11 Nov 2026 session the game showed its banner on every arrival, the mod only
+                // leaves a repeated one unsaid, which is why "Hell's Maze" was heard once; "area 22" came from areas not yet entered).
+                string same = PointsOfInterest.Labyrinth(_destField) ? Menus.AnnouncementReader.LocationShownText.Trim() : "";
+                if (same.Length > 0 && !(Destinations.TryGetValue(_destKey, out string had) && had == same))
+                {
+                    Destinations[_destKey] = same;
+                    Log.Info($"{Tag} {_destKey} leads to \"{same}\" (no banner on arriving in {_destField}/{_destArea}: the name of the area left).");
+                    Append($"dest {_destKey}\t{same}", $"The destination of {_destKey}");
+                }
+                else if (same.Length == 0)
+                    Log.Info($"{Tag} No banner on arriving in {_destField}/{_destArea} through {_destKey}: no destination learned.");
                 _destKey = null;
                 return;
             }
@@ -350,6 +361,9 @@ namespace NocturneAccess.Systems.Navigation
         internal static bool BattleField(int field) => field >= 200 && field < 300;
 
         internal static bool IsExplored(int field, int area, string resName) => Doors.Contains(Key(field, area, resName));
+
+        /// <summary>The same by its key "field/area/name" (AreaRoutes.LeadsOf, 0.0.164).</summary>
+        internal static bool IsExploredKey(string key) => Doors.Contains(key);
 
         internal static void Install()
         {
@@ -579,6 +593,7 @@ namespace NocturneAccess.Systems.Navigation
                 _arriveX = gb.playerX;
                 _arriveY = gb.playerY;
                 _arriveZ = gb.playerZ;
+                AreaRoutes.StartLanding(_cameFrom, gb.fieldID, gb.areaID, _arriveX, _arriveZ);   // 0.0.164: the doors walkable from here
             }
             if (now - _exploringSinceMs < ArriveHitMs)
                 return;
@@ -677,6 +692,7 @@ namespace NocturneAccess.Systems.Navigation
             string key = _crossing;
             _crossing = null;
             Mark(key, jumped ? "moved by the game after leaving it, same area" : $"came out {FieldData.F(Math.Abs(side))} beyond it, same area");
+            AreaRoutes.StartLanding(key, gb.fieldID, gb.areaID, gb.playerX, gb.playerZ);   // 0.0.164: the doors walkable from its landing
             if (jumped)
             {
                 // A warp's arrival point lies beside its way back (area 3: 01d_03 leads to 01pos_02, beside 01d_02, which leads

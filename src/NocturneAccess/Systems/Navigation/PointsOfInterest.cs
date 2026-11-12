@@ -148,6 +148,10 @@ namespace NocturneAccess.Systems.Navigation
         /// into" once the Digging Manikin has dug it. "" when none is known.</summary>
         public string Behind = "";
 
+        /// <summary>An explored door: what the player's own exploration shows behind it, "leads to unexplored doors" or "nothing
+        /// new behind it" (AreaRoutes.LeadsOf, 0.0.164); "" when not known.</summary>
+        public string Leads = "";
+
         /// <summary>A door walked into (movetype 2) at the end of a run of steep, shallow steps into another area of this field:
         /// an escalator (Ikebukuro's East Hall, 14 Oct 2026; Francesco chose the word). EscalatorDir +1 up, -1 down, 0 not known.</summary>
         public bool Escalator;
@@ -170,6 +174,7 @@ namespace NocturneAccess.Systems.Navigation
             string head = Explored ? (inSentence ? "explored " : "Explored ") + lower : inSentence ? lower : word;
             string kind = ShownKind;
             return head + (Destination.Length > 0 ? " to " + Destination : "") + (kind.Length > 0 ? ", " + kind : "")
+                   + (Explored && Leads.Length > 0 ? ", " + Leads : "")
                    + (Behind.Length > 0 ? ": " + Behind : "");
         }
 
@@ -199,7 +204,7 @@ namespace NocturneAccess.Systems.Navigation
             : (State.Length > 0 ? State + " " : "") + (Name.Length > 0 || Soul || Demon ? Label : Label.ToLowerInvariant());
 
         /// <summary>Something beyond the plain label is known (End says it first).</summary>
-        public bool HasDetail => State.Length > 0 || DoorKind.Length > 0 || Destination.Length > 0 || Behind.Length > 0;
+        public bool HasDetail => State.Length > 0 || DoorKind.Length > 0 || Destination.Length > 0 || Behind.Length > 0 || Leads.Length > 0;
 
         /// <summary>Doors only: the in-reach check uses fldEveHit.OldHitDoor, which resets on leaving the volume (gFldEveRngIdx does not).</summary>
         public bool IsDoorLike => Kind == PoiKind.Door || Kind == PoiKind.Place;
@@ -485,8 +490,11 @@ namespace NocturneAccess.Systems.Navigation
                     if (destination.Length == 0 && Labyrinth(gb.fieldID) && DoorTable.Leads(gb.fieldID, gb.areaID, name, out int lf, out int la)
                         && lf == gb.fieldID && la >= 0 && la != gb.areaID)
                     {
-                        string areaName = ExploredDoors.BannerOfArea(lf, la);
-                        destination = areaName.Length > 0 ? areaName : $"area {la}";
+                        // 0.0.164 (Francesco's A1, 12 Nov 2026): no "area N" any more: the game's area numbers are loading chunks
+                        // (the Fourth Kalpa's Hell's Maze is one grid split into areas 19 to 22). An area whose banner is not
+                        // known yet (never entered: the 11 Nov 2026 "area 22" and "area 19") says only "Door"; the banner is learned
+                        // on the first arrival and then names every door into that area.
+                        destination = ExploredDoors.BannerOfArea(lf, la);
                     }
                     escalator = EscalatorAt(gb, name, p.x, p.z, float.IsNaN(floorY) ? p.y + 100f : floorY, out escalatorDir);
                     behind = ExploredDoors.BehindLine(gb.fieldID, gb.areaID, name);

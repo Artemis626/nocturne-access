@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (12 Nov 2026): Fourth Kalpa proposals waiting for Francesco's choice
+## RESUME HERE (12 Nov 2026): 0.0.164 (A1, B4) to test in the Fourth Kalpa
+
+**0.0.164 (pushed, untested):** A1 (no "area N" on Labyrinth doors) and B4 ("leads to unexplored doors" / "nothing new behind it" on explored doors, from landings learned after each door). Test steps: `docs/HANDOFF.md` last entry. The other proposals (A2, A3, B5, B6, C7, C8) wait for Francesco.
+
+## Earlier (12 Nov 2026): Fourth Kalpa proposals
 
 **12 Nov:** the research is done (`docs/FOURTH-KALPA-PLAN.md`): Hell's Maze is one grid of one-way doors north and east; proposals A1 to C8 (suggested first: A1 no area numbers, B4 "leads on" marks on explored doors). Build only what Francesco picks.
 

@@ -15,8 +15,9 @@ of the Shift+F6 dumps 11 Nov 21:34:51, 21:35:06, 21:46:13, and the session log o
   mod has heard the banner of the area it leads to (0.0.109, 0.0.149). Areas whose banner never shows keep their number.
 - **The game has nine names for the whole Kalpa** (`AREA44_L0001` to `L0009`): 1F, B1, B2, Burial Chamber, The Road to Hell,
   Hell's Vault, Hell's Maze, Hell's Hall, Wicked King's Hall. It has 31 areas. A banner names a floor or a section, so
-  several areas share one name, and the banner shows only when the name changes: in the 11 Nov session "Hell's Maze" was heard
-  entering area 20, then areas 21, 22 and 19 were silent and stayed "area 21", "area 22", "area 19".
+  several areas share one name. (Corrected 12 Nov, after A1 was built: the game shows the banner on every arrival; the mod only
+  leaves a repeated banner unsaid, so "Hell's Maze" was heard once, and the doors learned it for areas 21, 22 and 19 on first
+  arrival. "Area 21", "area 22", "area 19" were said only for doors into areas not yet entered.)
 - Place names (`BASYO44`): Peephole, Hall of Candles, Hole, Ladder, Switch, Burial Chamber, Wicked King's Hall (pads on the
   floor, as elsewhere).
 
@@ -86,3 +87,7 @@ proposals below.
 ### Suggested order
 A1 and B4 first (small, no spoilers, useful everywhere), then B5, then A2 if Francesco wants it; A3, B6 and C last, each on
 his word.
+
+## Built
+
+- 12 Nov 2026, 0.0.164: A1 and B4 (untested). B4 says "nothing new behind it" rather than "dead end" (a door can loop back).

@@ -18,6 +18,7 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 
 ## Current state (27 Oct 2026) and focus
 
+- **12 Nov 2026, later (latest):** 0.0.164 built, untested: Francesco's A1 (Labyrinth doors no longer say "area N") and B4 (explored doors: "leads to unexplored doors" / "nothing new behind it", `AreaRoutes.LeadsOf`, landings learned after each door: `lands` lines). `docs/HANDOFF.md` last entry.
 - **12 Nov 2026 (latest):** the Fourth Kalpa researched offline (`docs/FOURTH-KALPA-PLAN.md`: nine game names for 31 areas, auto-map only for the upper areas, Hell's Maze one grid of one-way doors north and east, beam traps, flag 276 states); proposals A1 to C8 wait for Francesco's choice. `tools/unity/mazecells.pl`.
 - **11 Nov 2026 (latest):** 0.0.163 built, untested: the 0.0.71 learned-prompt safety net removed (it kept only Nyx's Lounge's phantom Loki Talk event). 0.0.162 verified (explored doors written at saves). Next: a dedicated research session for the Fourth Kalpa (field 44, map disabled by the game): cleaner area data, then proposals for navigating when every door is explored (`docs/NEXT-SESSION.md` top).
 - **8 Nov 2026 (latest):** 0.0.162 built, verified 11 Nov: explored doors written only at the game's saves (`ExploredDoors.Mark` no longer appends: a game over left doors "Explored" in the reloaded save); map facts still appended at once. 0.0.161 verified 8 Nov (S-Terminal door, Third Stratum ramp, Mirror Chamber); Mifunashiro cleared. `docs/HANDOFF.md` last entry.

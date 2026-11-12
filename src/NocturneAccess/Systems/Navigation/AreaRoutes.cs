@@ -41,6 +41,14 @@ namespace NocturneAccess.Systems.Navigation
 
         private static readonly Dictionary<string, HashSet<string>> Passes = new Dictionary<string, HashSet<string>>();
         private static readonly Dictionary<string, HashSet<string>> Reach = new Dictionary<string, HashSet<string>>();
+        // 0.0.164: where each door landed the player, "f/a" of the landing and the doors walkable from it ("lands" lines).
+        private static readonly Dictionary<string, (string Area, HashSet<string> Names)> Lands = new Dictionary<string, (string, HashSet<string>)>();
+        private static string _landDoor;              // the door just gone through, until the doors at its landing are learned
+        private static int _landField, _landArea;
+        private static float _landX, _landZ;
+        private static long _landMs;
+        private const long LandWindowMs = 20000;      // loading, the fade-in, then the first list build
+        private const float LandReach = 600f;         // the player may walk on (Home goes on to the next door) before the build
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
 
         // The current area's door regions and closures, once per walk grid.
@@ -58,6 +66,8 @@ namespace NocturneAccess.Systems.Navigation
         {
             Passes.Clear();
             Reach.Clear();
+            Lands.Clear();
+            _landDoor = null;
             DoorRegions.Clear();
             Closures.Clear();
             _learnedKey = "";
@@ -72,11 +82,115 @@ namespace NocturneAccess.Systems.Navigation
                 Add(Passes, parts[1], parts[2]);
             else if (parts.Length >= 2 && parts[0] == "reach")
                 Reach[parts[1]] = new HashSet<string>(parts.Skip(2));   // the latest line wins
+            else if (parts.Length >= 3 && parts[0] == "lands")
+                Lands[parts[1]] = (parts[2], new HashSet<string>(parts.Skip(3)));   // the latest line wins
         }
 
         internal static IEnumerable<string> Lines()
             => Passes.OrderBy(p => p.Key, StringComparer.Ordinal).SelectMany(p => p.Value.OrderBy(t => t, StringComparer.Ordinal).Select(t => $"pass {p.Key} {t}"))
-                .Concat(Reach.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => ReachLine(p.Key, p.Value)));
+                .Concat(Reach.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => ReachLine(p.Key, p.Value)))
+                .Concat(Lands.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => LandsLine(p.Key, p.Value.Area, p.Value.Names)));
+
+        private static string LandsLine(string key, string area, HashSet<string> names)
+            => $"lands {key} {area} {string.Join(" ", names.OrderBy(n => n, StringComparer.Ordinal))}".TrimEnd();
+
+        /// <summary>
+        /// ExploredDoors: the player just went through door "door" and stands at its landing (another area, or a move in the same
+        /// area). The doors walkable from there are learned at the next list build (0.0.164, for the "leads on" marks).
+        /// </summary>
+        internal static void StartLanding(string door, int field, int area, float x, float z)
+        {
+            _landDoor = door;
+            _landField = field;
+            _landArea = area;
+            _landX = x;
+            _landZ = z;
+            _landMs = Clock.ElapsedMilliseconds;
+        }
+
+        private static void LearnLanding(fldGlobalWork_t gb, List<Poi> doors)
+        {
+            if (_landDoor == null)
+                return;
+            if (Clock.ElapsedMilliseconds - _landMs > LandWindowMs)
+            {
+                Log.Info($"{Tag} The doors at the landing of {_landDoor} were not learned: no list was built there in time.");
+                _landDoor = null;
+                return;
+            }
+            if (gb.fieldID != _landField || gb.areaID != _landArea)
+                return;   // a build of another area (a battle field, the area left): wait for the landing's
+            float dx = gb.playerX - _landX, dz = gb.playerZ - _landZ;
+            if (dx * dx + dz * dz > LandReach * LandReach)
+            {
+                Log.Info($"{Tag} The doors at the landing of {_landDoor} were not learned: the player walked on {FieldData.F((float)Math.Sqrt(dx * dx + dz * dz))} first.");
+                _landDoor = null;
+                return;
+            }
+            string key = _landDoor, at = $"{gb.fieldID}/{gb.areaID}";
+            _landDoor = null;
+            var names = new HashSet<string>(doors.Where(q => q.Reachable && q.Route == null).SelectMany(q => q.Names));
+            if (Lands.TryGetValue(key, out var old) && old.Area == at && old.Names.SetEquals(names))
+                return;
+            Lands[key] = (at, names);
+            Log.Info($"{Tag} {key} lands in {at} by the doors {string.Join(" ", names.OrderBy(n => n, StringComparer.Ordinal))}: learned.");
+            ExploredDoors.Append(LandsLine(key, at, names), $"The landing of {key}");
+        }
+
+        // ---- What lies behind an explored door (0.0.164, Francesco's B4, 12 Nov 2026) ----
+
+        /// <summary>The mod's words for what the player's own exploration shows behind an explored door ("" when not known).</summary>
+        internal const string LeadsOnWords = "leads to unexplored doors", NothingNewWords = "nothing new behind it";
+
+        /// <summary>
+        /// Behind explored door doorKey, through the doors the player has walked and the landings learned: an unexplored door
+        /// the player cannot already walk to (hereKeys) gives LeadsOnWords; every way behind it known and walked, NothingNewWords;
+        /// a door with no landing learned on the way, "" (nothing is guessed). Only what the player has seen is used: the door
+        /// table is never read for this, so nothing beyond his own exploration is told (Francesco, 11 Nov 2026: the Fourth Kalpa
+        /// takes the map away on purpose).
+        /// </summary>
+        internal static string LeadsOf(string doorKey, HashSet<string> hereKeys)
+        {
+            var seen = new HashSet<string> { doorKey };
+            var queue = new Queue<string>();
+            queue.Enqueue(doorKey);
+            bool unknown = false;
+            int steps = 0;
+            while (queue.Count > 0 && steps++ < 500)
+            {
+                string d = queue.Dequeue();
+                var next = new List<string>();
+                if (Lands.TryGetValue(d, out var land))
+                    next.AddRange(land.Names.Select(n => land.Area + "/" + n));
+                else if (Passes.TryGetValue(d, out HashSet<string> arrivals))
+                    foreach (string t in arrivals)
+                    {
+                        next.Add(t);
+                        if (Reach.TryGetValue(t, out HashSet<string> linked))
+                            next.AddRange(linked.Select(n => AreaOf(t) + "/" + n));
+                        else
+                            unknown = true;
+                    }
+                else
+                {
+                    unknown = true;
+                    continue;
+                }
+                foreach (string e in next)
+                {
+                    if (!seen.Add(e))
+                        continue;
+                    if (!ExploredDoors.IsExploredKey(e))
+                    {
+                        if (!hereKeys.Contains(e))
+                            return LeadsOnWords;
+                        continue;
+                    }
+                    queue.Enqueue(e);
+                }
+            }
+            return unknown ? "" : NothingNewWords;
+        }
 
         private static string ReachLine(string key, HashSet<string> names) => $"reach {key} {string.Join(" ", names.OrderBy(n => n, StringComparer.Ordinal))}".TrimEnd();
 
@@ -157,6 +271,11 @@ namespace NocturneAccess.Systems.Navigation
             {
                 List<Poi> doors = pois.Where(q => q.Kind == PoiKind.Door && !q.Warp).ToList();
                 Learn(gb, doors);
+                LearnLanding(gb, doors);
+                // What lies behind each explored door, from the player's own exploration (0.0.164): routes on or off.
+                var here = new HashSet<string>(doors.Where(q => q.Reachable && q.Route == null).SelectMany(q => q.Names).Select(n => ExploredDoors.Key(gb.fieldID, gb.areaID, n)));
+                foreach (Poi q in doors.Where(q => q.Explored))
+                    q.Leads = LeadsOf(ExploredDoors.Key(gb.fieldID, gb.areaID, q.ResName), here);
                 if (!Enabled || Passes.Count == 0)
                     return;
                 List<Poi> starts = doors.Where(q => q.Reachable).ToList();
