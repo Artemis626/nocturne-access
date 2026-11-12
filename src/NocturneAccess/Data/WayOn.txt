@@ -237,4 +237,5 @@
 43 29 01d_01                                   # Luck, B1F: into area 27
 43 19 01d_15 01d_06 01eve_01                   # Magic: the Magic 20 door, then the room door and the ladder down
 43 26 01d_03 01d_02                            # Magic, B1F: west into area 27
-43 27 01d_08 01d_06                            # B1F: the ladder down (Raidou or Dante, then the chase), through the room door
+43 27 01d_16+2003-2004 01d_08 01d_06            # B1F: the ladder down (Raidou or Dante, then the chase), through the room door; second traversal (after 2003, before 2004): the side room 28
+43 28 01eve_01+2003-2004 01d_01                # side room off B1F: the shaft down to the Fourth Kalpa's area 29, beside B2's switch (pipe 1010; docs/FOURTH-KALPA-PLAN.md); else back out

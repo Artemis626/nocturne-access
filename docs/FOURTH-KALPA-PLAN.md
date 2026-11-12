@@ -115,3 +115,5 @@ traversal's data stays; the second needs only two lines, used while flag 2003 is
 The rest of the way back to area 27 (entrance, hub, stat route) is the same as the first traversal's. Flag 2003 is set by
 `002_door` (after the scripted move into area 1 at the Kalpa's end, with 1982); to confirm in game (a log line of the way on, or a
 dump) before trusting it as "first traversal done".
+
+- 13 Nov 2026, 0.0.165: the Third Kalpa's second way-on set built (untested).

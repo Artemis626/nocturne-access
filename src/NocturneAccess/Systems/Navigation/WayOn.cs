@@ -271,13 +271,27 @@ namespace NocturneAccess.Systems.Navigation
             return name;
         }
 
+        // 0.0.165: several conditions, all to hold: "01d_16+2003-2004" (the Third Kalpa's second traversal, after flag 2003 and
+        // before the Fourth Kalpa's switch sets 2004; Francesco, 13 Nov 2026).
         private static string GatedPlain(string token)
         {
             int at = token.IndexOfAny(new[] { '+', '-' });
-            if (at < 0 || !int.TryParse(token.Substring(at + 1), out int flag))
+            if (at < 0)
                 return token;
-            bool set = EventBit.evtBitCheck(flag);
-            return (token[at] == '+') == set ? token.Substring(0, at) : null;
+            string name = token.Substring(0, at);
+            for (int i = at; i < token.Length;)
+            {
+                char sign = token[i];
+                int j = token.IndexOfAny(new[] { '+', '-' }, i + 1);
+                if (j < 0)
+                    j = token.Length;
+                if (!int.TryParse(token.Substring(i + 1, j - i - 1), out int flag))
+                    return token;   // not a flag condition: a plain name, as before
+                if ((sign == '+') != EventBit.evtBitCheck(flag))
+                    return null;
+                i = j;
+            }
+            return name;
         }
 
         private static void Load()

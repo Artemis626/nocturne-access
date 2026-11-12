@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (13 Nov 2026): a second Third Kalpa way-on set proposed
+## RESUME HERE (13 Nov 2026): 0.0.165, the Third Kalpa's second way-on set, to test
+
+**0.0.165 (pushed, untested):** Third Kalpa B1F names the side room door and its shaft while flag 2003 is on and 2004 off; test steps in `docs/HANDOFF.md` last entry.
+
+## Earlier (13 Nov 2026): the second set proposed
 
 **13 Nov:** 0.0.164 verified (B4 marks heard, no "area N"). No way on for the Fourth Kalpa (Francesco). The second traversal of the Third Kalpa (to area 28's shaft, which drops to the Fourth Kalpa's B2 switch) needs two way-on lines gated `+2003-2004` (`docs/FOURTH-KALPA-PLAN.md`, last section): build on Francesco's word, check flag 2003 first.
 
