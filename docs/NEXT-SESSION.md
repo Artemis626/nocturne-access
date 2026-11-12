@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (11 Nov 2026): research for the Fourth Kalpa (field 44) to start
+## RESUME HERE (12 Nov 2026): Fourth Kalpa proposals waiting for Francesco's choice
+
+**12 Nov:** the research is done (`docs/FOURTH-KALPA-PLAN.md`): Hell's Maze is one grid of one-way doors north and east; proposals A1 to C8 (suggested first: A1 no area numbers, B4 "leads on" marks on explored doors). Build only what Francesco picks.
+
+## Earlier (11 Nov 2026): research for the Fourth Kalpa (field 44) to start
 
 **Next, a dedicated session (Francesco, 11 Nov):** (2) the Fourth Kalpa disables the map on purpose (sense of loss); before any way on, find cleaner area data than the banner names ("Area 22", "Hell's Maze"): the door table graph, area files, the game's own area/floor tables; (3) proposals for when every listed door is "explored" (mental mapping), built on that data. 0.0.163 (pushed, untested): the Nyx's Lounge phantom Talk event removed. `docs/HANDOFF.md` last entry.
 
