@@ -2,9 +2,9 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (13 Nov 2026): test 0.0.166, the Third Kalpa second way-on set gated by flag 1984
+## RESUME HERE (13 Nov 2026): 0.0.166 verified; the side room door needs the Star Key
 
-**0.0.166 (pushed, untested):** `Data/WayOn.txt` `43 27` and `43 28` now gate on `+1984-2004` (1984: the Fourth Kalpa entered, set by f044 `001_start`). Francesco: Shift+End in Third Kalpa B1F should name the side room door, then the shaft. Read `[Nav:WayOn] Field 43 area 27` in his log. `docs/HANDOFF.md` last entry.
+**Francesco gets the Star Key first (Fourth Kalpa leader, Loki in Ginza, the Collector Manikin in Asakusa; `docs/HANDOFF.md` last entry), then decides how the way on handles it. Nothing to build now.** Earlier: **0.0.166:** `Data/WayOn.txt` `43 27` and `43 28` now gate on `+1984-2004` (1984: the Fourth Kalpa entered, set by f044 `001_start`). Francesco: Shift+End in Third Kalpa B1F should name the side room door, then the shaft. Read `[Nav:WayOn] Field 43 area 27` in his log. `docs/HANDOFF.md` last entry.
 
 ## Earlier (13 Nov 2026): 0.0.165 failed
 
