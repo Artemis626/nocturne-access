@@ -722,7 +722,7 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         /// <summary>gEvnRng[index]'s centre in X and Z and its volume's facing (gEvnRngBox.boxnml, 0 0 without one).</summary>
-        private static bool DoorCentre(int index, out float x, out float z, out float nx, out float nz)
+        internal static bool DoorCentre(int index, out float x, out float z, out float nx, out float nz)
         {
             x = z = nx = nz = 0f;
             Il2CppReferenceArray<fldResHead_t> ranges = fldEveHit.gEvnRng;

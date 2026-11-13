@@ -40,6 +40,37 @@ namespace NocturneAccess.Speech
         private static GCHandle _pulse;
 
         /// <summary>
+        /// The door cue (0.0.167; Francesco, 13 Nov 2026: speech can cut the game's "Open Door" prompt, a sound cannot): two soft
+        /// taps on C4 (262 Hz, a little of the octave), 60 ms each, 70 ms apart, like a knock; one pitch, unlike the way-on tone's
+        /// rising fourth and higher than the chase pulse.
+        /// </summary>
+        internal static void Door() => Play(ref _door, MakeDoor, "door tone");
+
+        private static GCHandle _door;
+
+        private static byte[] MakeDoor()
+        {
+            const int rate = 22050;
+            var all = new List<short>();
+            for (int tap = 0; tap < 2; tap++)
+            {
+                if (tap == 1)
+                    all.AddRange(new short[rate * 70 / 1000]);
+                int n = rate * 60 / 1000;
+                for (int i = 0; i < n; i++)
+                {
+                    double t = (double)i / rate;
+                    double attack = Math.Min(1.0, t / 0.004);
+                    double decay = Math.Exp(-t * 40.0);
+                    double release = Math.Min(1.0, (n - i) / (rate * 0.008));
+                    double wave = Math.Sin(2 * Math.PI * 261.63 * t) + 0.3 * Math.Sin(2 * Math.PI * 523.25 * t);
+                    all.Add((short)(0.5 / 1.3 * attack * decay * release * wave * short.MaxValue));
+                }
+            }
+            return Wav(all.ToArray(), rate);
+        }
+
+        /// <summary>
         /// The Red Temple's alarm (0.0.158; Francesco, 6 Nov 2026: a simple cue when the shadows' alarm goes on, and another when it
         /// goes off): on, two soft low notes falling a fourth, A3 then E3 (220, 165 Hz); off, the same rising, E3 then A3. Lower
         /// than the way-on tone (D4 to G4) and three notes' worth shorter.

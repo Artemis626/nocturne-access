@@ -158,6 +158,19 @@ namespace NocturneAccess.Systems.Menus
             }
         }
 
+        /// <summary>How long after the screen reader receives it no interrupt may cut the interaction prompt (0.0.167).</summary>
+        private const int PromptHoldMs = 1200;
+
+        /// <summary>
+        /// A prompt for going through a door: the game's PANELMES words "Open Door" (L0002), "Enter" (L0004, L0011) and "Exit"
+        /// (L0010), in `ETC_EN` (0.0.167).
+        /// </summary>
+        internal static bool IsDoorPrompt(string text)
+            => text == "Open Door" || text == "Enter" || text == "Exit";
+
+        /// <summary>Whether the interaction prompt on screen is a door prompt (0.0.167: the blobber's cues then say "door ahead").</summary>
+        internal static bool DoorPromptShown => IsDoorPrompt(InteractionPromptText);
+
         /// <summary>The interaction prompt on screen ("Talk", "Open Door"), or "" when none is shown (0.0.53: event volumes learn it).</summary>
         internal static string InteractionPromptText
         {
@@ -265,7 +278,16 @@ namespace NocturneAccess.Systems.Menus
                                 Log.Info($"{Tag} \"{e.Text}\" written with a dialogue page: the floor the elevator is on, not spoken.");
                                 continue;
                             }
-                            SpeechManager.Say(e.Text, interrupt: false, force: true);
+                            if (EntryOfPath.TryGetValue(PromptPath, out Entry prompt) && prompt == e)
+                            {
+                                // 0.0.167: the interaction prompt is held, so a blobber turn cue or "Arrived." waits for it
+                                // (13 Nov 2026 21:41:37: "Open Door" cut 0.18 s later by "North, wall ahead.").
+                                SpeechManager.SayHeld(e.Text, PromptHoldMs);
+                                if (IsDoorPrompt(e.Text) && Config.DoorSound.Value)
+                                    Earcons.Door();
+                            }
+                            else
+                                SpeechManager.Say(e.Text, interrupt: false, force: true);
                         }
                         else if (now - e.ChangedAt > WaitForVisibleMs)
                         {

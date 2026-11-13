@@ -6,6 +6,7 @@ using Il2Cppfield_H;
 using Il2Cpplibsdf_H;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
+using NocturneAccess.Systems.Menus;
 
 namespace NocturneAccess.Systems.Navigation
 {
@@ -383,7 +384,7 @@ namespace NocturneAccess.Systems.Navigation
             if (diff > 2)
                 return;
             _facingSpoken = goal;
-            CellView v = GridSense.Look(gb.playerX, gb.playerY, gb.playerZ, goal, _cell);
+            CellView v = WithGameDoor(GridSense.Look(gb.playerX, gb.playerY, gb.playerZ, goal, _cell), gb.playerX, gb.playerZ, goal);
             _view = v;
             _viewFacing = goal;
             _haveView = true;
@@ -415,7 +416,7 @@ namespace NocturneAccess.Systems.Navigation
             _cueCell = cell;
 
             int facing = GridSense.Normalize90(gb.PlayerKakudoGoal);
-            CellView v = GridSense.Look(x, gb.playerY, z, facing, _cell);
+            CellView v = WithGameDoor(GridSense.Look(x, gb.playerY, z, facing, _cell), x, z, facing);
             string change = Changes(v, facing);
             _view = v;
             _viewFacing = facing;
@@ -453,7 +454,7 @@ namespace NocturneAccess.Systems.Navigation
         private static void SpeakCentred(fldGlobalWork_t gb, bool centred)
         {
             int facing = GridSense.Normalize90(gb.PlayerKakudoGoal);
-            CellView v = GridSense.Look(gb.playerX, gb.playerY, gb.playerZ, facing, _cell);
+            CellView v = WithGameDoor(GridSense.Look(gb.playerX, gb.playerY, gb.playerZ, facing, _cell), gb.playerX, gb.playerZ, facing);
             _view = v;
             _viewFacing = facing;
             _haveView = true;
@@ -476,6 +477,46 @@ namespace NocturneAccess.Systems.Navigation
             if (v.Right != _view.Right) parts.Add(Describe(v.Right, "right"));
             return parts.Count == 0 ? "" : TextUtil.Capitalize(string.Join(", ", parts)) + ".";
         }
+
+        /// <summary>
+        /// The game's door prompt wins over the walking map (0.0.167): while "Open Door" (or "Enter", "Exit") is on screen and the
+        /// door volume the game is touching (fldEveHit.OldHitDoor) lies in front of the facing, a wall ahead is a door ahead. On
+        /// 13 Nov 2026 21:41:37 (Fourth Kalpa 1F, door 01d_01 in a north wall) the turn cue said "North, wall ahead." with the
+        /// prompt up, and that was the door.
+        /// </summary>
+        private static CellView WithGameDoor(CellView v, float px, float pz, int facing)
+        {
+            try
+            {
+                if (v.Ahead == SideKind.Door || !AnnouncementReader.DoorPromptShown)
+                    return v;
+                int door = fldEveHit.OldHitDoor;
+                if (door < 0 || !ExploredDoors.DoorCentre(door, out float cx, out float cz, out float nx, out float nz))
+                    return v;
+                GridSense.Direction(facing, out float dx, out float dz);
+                bool inFront;
+                if (nx != 0f || nz != 0f)
+                    inFront = -(dx * nx + dz * nz) > DoorFacingCos;   // the volume faces out to the player's side
+                else
+                {
+                    float ox = cx - px, oz = cz - pz;
+                    float len = (float)Math.Sqrt(ox * ox + oz * oz);
+                    inFront = len < 1f || (dx * ox + dz * oz) / len > DoorFacingCos;
+                }
+                if (inFront)
+                {
+                    Log.Info($"[Nav:Blob] The game's door prompt is up for volume {door} ahead: door, not {v.Ahead}.");
+                    v.Ahead = SideKind.Door;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[Nav:Blob] Door prompt check: {ex.Message}");
+            }
+            return v;
+        }
+
+        private const float DoorFacingCos = 0.7f;   // within about 45 degrees
 
         private static string Describe(SideKind k, string where)
         {

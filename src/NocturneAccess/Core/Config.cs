@@ -68,6 +68,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<bool> WallBumpSound { get; private set; }
         internal static MelonPreferences_Entry<bool> WayOnSound { get; private set; }
         internal static MelonPreferences_Entry<bool> AlarmSound { get; private set; }
+        internal static MelonPreferences_Entry<bool> DoorSound { get; private set; }
         internal static MelonPreferences_Entry<bool> PipeNoDamage { get; private set; }
         internal static MelonPreferences_Entry<bool> ChaseSound { get; private set; }
         internal static MelonPreferences_Entry<bool> ChaseOff { get; private set; }
@@ -144,6 +145,8 @@ namespace NocturneAccess.Core
                 "A soft two-note tone, once, on reaching an area where Shift+End has a way on (after loading a save, and the first time you enter each such area).");
             AlarmSound = navigation.CreateEntry("AlarmSound", true, "Alarm tones",
                 "In the Amala Temple's Red Temple: two low falling notes when a shadow sets off the alarm (the warp devices stop), two rising notes when a reset tile switches it off.");
+            DoorSound = navigation.CreateEntry("DoorSound", true, "Door tone",
+                "Two soft taps, like a knock, when the game shows a door prompt (\"Open Door\", \"Enter\", \"Exit\"): the door can be gone through from where you stand.");
             PipeNoDamage = navigation.CreateEntry("PipeNoDamage", true, "No damage in the falling minigame",
                 "The Labyrinth of Amala falling minigame takes no HP from the party for the objects hit (the game takes it at the end, down to 1 HP each). Macca lost to hits is unchanged.");
             ChaseSound = navigation.CreateEntry("ChaseSound", true, "Chase pulse",
