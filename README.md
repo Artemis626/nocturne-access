@@ -26,6 +26,13 @@ Handling stairs, ramps, ladders and hidden warps properly made areas that used t
 
 Every new area of Nocturne has brought something the mod had never met: hidden warps in the Amala Network, ladders in the Underpass, a pyramid built differently from everything before it, corridors of steps, a prison whose floors swap places, the Obelisk's time puzzles, the Labyrinth's falling minigame and stat-locked doors. Each one blocked progress until it was found and fixed, often within the same day. The only way to make sure a blind player can finish the game is to play it to the end, find those spots and fix them. Every fix also carries over to the areas still ahead.
 
+### Design principles
+
+- **The game stays as vanilla as possible.** The mod makes up for what a blind player cannot see. It does not make up for what every player finds hard: an obscure quest or an unintuitive chain of events is the same puzzle with or without the mod, so the mod leaves it to the player. Example: the Labyrinth's Star Key, found only through a chain of conversations across several places.
+- **The way on (Shift+End) is a last resort.** It is used only in dungeons where getting through feels impossible without the game's map, never to point the way through the story.
+- **Where the game hides the map from everyone, so does the mod.** It makes moving without the map completely reliable instead. The Labyrinth's Fourth Kalpa gives no map to any player; with the mod it was crossed blind, challenging but doable, with no way on.
+- **Changes are a last resort too, and always disclosed.** Sound cues come first, then help that does the task for you, and skipping a part only when nothing else works. Every change is listed below with its switch, and bosses are never skipped.
+
 ### Game modes
 
 **Recommended: play in Chronicle mode.** The Chronicle Pack is free DLC on Steam (it must be downloaded separately from the game). It is the mode the mod is played and tested in, so it is the one with full compatibility.
