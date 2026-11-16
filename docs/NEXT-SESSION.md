@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (13 Nov 2026): test 0.0.167, door prompts protected
+## RESUME HERE (16 Nov 2026): test 0.0.168, Fourth Kalpa cues
+
+**0.0.168 (pushed, untested):** cursed floor lines (areas 2 and 4), the Twelve Meters challenge line in areas 11 to 26 and on Shift+End there, the secret tone and line at the new-moon arrival in area 23 (`Systems/Navigation/FourthKalpaCues.cs`). Test steps: `docs/HANDOFF.md` last entry. 0.0.167 ran in the 16 Nov session (door ahead swap logged once); Francesco's verdict on the knock still to hear.
+
+## Earlier (13 Nov 2026): 0.0.167, door prompts protected
 
 **0.0.167 (pushed, untested):** the game's interaction prompt is held (no cue cuts "Open Door"), the blobber says "door ahead" when the game's door prompt is up in front, and a knock tone plays with door prompts (`DoorSound`). Test steps: `docs/HANDOFF.md` last entry. Francesco is on the Star Key quest (Fourth Kalpa leader next).
 

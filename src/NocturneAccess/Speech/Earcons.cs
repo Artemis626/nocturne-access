@@ -48,6 +48,35 @@ namespace NocturneAccess.Speech
 
         private static GCHandle _door;
 
+        /// <summary>
+        /// The secret-area cue (0.0.168; Francesco, 16 Nov 2026: arriving where only sight tells a special place was reached): three
+        /// soft notes rising G3, C4, E4 (196, 262, 330 Hz), 160, 160 and 320 ms, the way-on tone's timbre; a chord unlike every other
+        /// cue, and not high.
+        /// </summary>
+        internal static void Secret() => Play(ref _secret, MakeSecret, "secret tone");
+
+        private static GCHandle _secret;
+
+        private static byte[] MakeSecret()
+        {
+            const int rate = 22050;
+            var all = new List<short>();
+            foreach (var (hz, ms) in new[] { (196.0, 160), (261.63, 160), (329.63, 320) })
+            {
+                int n = rate * ms / 1000;
+                for (int i = 0; i < n; i++)
+                {
+                    double t = (double)i / rate;
+                    double attack = Math.Min(1.0, t / 0.012);
+                    double decay = Math.Exp(-t * 5.0);
+                    double release = Math.Min(1.0, (n - i) / (rate * 0.02));
+                    double wave = Math.Sin(2 * Math.PI * hz * t) + 0.25 * Math.Sin(2 * Math.PI * 2 * hz * t);
+                    all.Add((short)(0.45 / 1.25 * attack * decay * release * wave * short.MaxValue));
+                }
+            }
+            return Wav(all.ToArray(), rate);
+        }
+
         private static byte[] MakeDoor()
         {
             const int rate = 22050;

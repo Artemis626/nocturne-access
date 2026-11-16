@@ -108,6 +108,13 @@ namespace NocturneAccess.Systems.Navigation
                 SpeechManager.Say($"{Words} Not available here.", interrupt: true);
                 return;
             }
+            if (FourthKalpaCues.InChallenge(gb.fieldID, gb.areaID))
+            {
+                // 0.0.168: no way on beyond the Twelve Meters of Eternity, by Francesco's choice; say why (16 Nov 2026).
+                Log.Info($"{Tag} Field {gb.fieldID} area {gb.areaID}: beyond the Twelve Meters of Eternity, the challenge line.");
+                SpeechManager.Say(FourthKalpaCues.ChallengeWords, interrupt: true, force: true);
+                return;
+            }
             Load();
             if (!Known(gb.fieldID, gb.areaID, out List<string> names))
             {

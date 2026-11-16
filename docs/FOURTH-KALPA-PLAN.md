@@ -125,3 +125,10 @@ dump) before trusting it as "first traversal done".
   Fourth Kalpa's `001_start` (f044) the first time the player lands in its area 0, with the opening camera `01cam_04`; no script
   in f043 or f044 clears it, and field 44 has no Maniax variant. Francesco's logs: the first landing in field 44 area 0 was 11 Nov
   15:35:03 (from the falling minigame, field 999); field 44 area 29 and field 43 area 28 never visited, so 2004 is off.
+
+## The Twelve Meters of Eternity and the curse (16 Nov 2026, 0.0.168)
+- The corridor is area 10 (B1) `01eve_01`, procedure `011_01eve_01`: `evtCommand_GET_MOON` (0x25) picks door row 64 at phase 0
+  (area 23 `01pos_04`, toward the Wicked King, Beelzebub), 61 at odd phases (area 11), 63 at 2 and 6 (area 20), else 62 (area 14).
+  `011_01eve_02` (row 65) leads back to area 0 `01pos_05`.
+- Cursed (damage) areas: 2 and 4; their uncursed twins 3 and 5 after flag 276.
+- Built as spoken cues only (`FourthKalpaCues`); still no way on here.
