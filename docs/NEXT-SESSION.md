@@ -2,7 +2,9 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (16 Nov 2026, night): test 0.0.169, Fourth Kalpa cues completed
+## RESUME HERE (16 Nov 2026, night): test 0.0.169 and 0.0.170
+
+**0.0.170 (pushed, untested):** a miss or null on one target of an attack is said ("Chimera: Null.", "Decarabia: Missed.") from the game's word popups (`BattleReader.Words.cs`, `nbAddMojiEffKoukaPacket` types 3 and 4); words to confirm. `docs/HANDOFF.md` last entry.
 
 **0.0.169 (pushed, untested):** cursed area 24 added, story scenes and facilities no longer count as leaving, the curse-lifted line (game text) on the Wicked King's defeat, the section exit tone and line on landing back in B1. Open: blocked attack on an ally not announced in battle. `docs/HANDOFF.md` last entry.
 

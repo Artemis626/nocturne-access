@@ -129,6 +129,7 @@ namespace NocturneAccess.Systems.Battle
             // no help banner (a dead ally under a Balm of Rising, 26 Oct 2026, 21:08:29 and 21:22:01: the pick was silent).
             Patcher.Postfix("Battle", typeof(nbTarSelProcess), nameof(nbTarSelProcess.nbTarSelProcess1), new[] { typeof(Il2Cppkernel_H.dds3ProcessID_t) },
                 AccessTools.Method(typeof(BattleReader), nameof(AfterTarSel)));
+            InstallWords();
         }
 
         private static TmpRouter.Handler Classify(string path)
@@ -216,8 +217,12 @@ namespace NocturneAccess.Systems.Battle
                 else
                     _targetCallAt = long.MinValue / 2;
                 if (!_started)
+                {
                     _tarSelAt = long.MinValue / 2;
+                    Words.Clear();
+                }
                 SpeakPendingBanner(now);
+                SpeakWords(now);
 
                 if (!_started && now - _activeSince >= StartDelayMs)
                 {
