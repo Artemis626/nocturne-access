@@ -46,7 +46,15 @@ namespace NocturneAccess.Systems.Navigation
         private static long _pendingMs;
         private static int _damageLoggedArea = int.MinValue;
 
-        private static bool Cursed(int field, int area) => field == Field && (area == 2 || area == 4);
+        // 0.0.169: area 24 too (Hell's Hall on the Wicked King's side; 16 damage steps in the 16 Nov 20:56 session); the twins
+        // after flag 276 are 3, 5 and 25 (door rows 212 to 215, 222).
+        private static bool Cursed(int field, int area) => field == Field && (area == 2 || area == 4 || area == 24);
+
+        private const int KingFlag = 276;   // the door rows' gate to the uncursed twins: set with the Wicked King's defeat
+        private const string LiftedId = "<F044INF_L0078>";   // "The curse has been lifted." (the area 8 Soul's line)
+        internal const string ExitWords = "Twelve Meters of Eternity behind you: back in B1, beside the ladder down to B2.";
+        private static int _kingFlag = -1;   // unknown until read in the field
+        private static bool _exit;
 
         /// <summary>Areas 11 to 26 of the Fourth Kalpa, beyond the Twelve Meters of Eternity.</summary>
         internal static bool InChallenge(int field, int area) => field == Field && area >= ChallengeFirst && area <= ChallengeLast;
@@ -57,9 +65,11 @@ namespace NocturneAccess.Systems.Navigation
             if (gb == null)
                 return;
             int field = gb.fieldID, area = gb.areaID;
-            if (field >= 200 && field < 300)
-                return;   // a battle: the field comes back to the same area
+            if (field < 0 || field >= 200)
+                return;   // not a place (0.0.169): battles 2xx, story scenes 7xx (749: the Wicked King), facilities 8xx, the falling minigame 999
             long now = Clock.ElapsedMilliseconds;
+            if (field == Field && FieldState.IsExploring)
+                WatchKing(now);
 
             if (field != _field || area != _area)
             {
@@ -80,6 +90,9 @@ namespace NocturneAccess.Systems.Navigation
                 {
                     if (_secret && Config.SecretSound.Value)
                         Earcons.Secret();
+                    else if (_exit && Config.SecretSound.Value)
+                        Earcons.SectionExit();
+                    _exit = false;
                     Log.Info($"[Nav:Kalpa4] Said in area {area}, {now - _pendingMs} ms after the change.");
                     SpeechManager.SayHeld(_pending, HoldMs);
                     _pending = null;
@@ -115,12 +128,58 @@ namespace NocturneAccess.Systems.Navigation
                 line = Join(line, ChallengeWords);
             }
 
+            bool exit = false;
+            if (field == Field && area == CorridorArea && InChallenge(oldField, oldArea))
+            {
+                // Every section's end warp lands in area 10 at 01pos_06, by the ladder down to B2 (area 11 01d_04, area 14
+                // 01d_02, area 21 01d_16, area 23 01d_04; 16 Nov 22:16:54: Hell's Hall to B1, then the ladder 5 s later).
+                exit = true;
+                line = Join(line, ExitWords);
+            }
+
             if (line == null)
                 return;
+            _exit = exit;
             Log.Info($"[Nav:Kalpa4] Field {oldField} area {oldArea} to field {field} area {area}: \"{line}\" once the player has control.");
             _pending = line;
             _secret = secret;
             _pendingMs = now;
+        }
+
+        /// <summary>
+        /// The Wicked King's defeat (0.0.169): flag 276 going on while in the field says the game's own "The curse has been lifted."
+        /// once the player has control. Read without a word the first time (a save loaded after the fight).
+        /// </summary>
+        private static void WatchKing(long now)
+        {
+            int on;
+            try
+            {
+                on = EventBit.evtBitCheck(KingFlag) ? 1 : 0;
+            }
+            catch
+            {
+                return;
+            }
+            if (_kingFlag == 0 && on == 1)
+            {
+                string text = "";
+                try
+                {
+                    text = TextUtil.Clean(Localize.GetLocalizeText(LiftedId) ?? "").TrimStart('>', ' ').Trim();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn($"[Nav:Kalpa4] {LiftedId}: {ex.Message}");
+                }
+                Log.Info($"[Nav:Kalpa4] Flag {KingFlag} on: the curse lifted; {LiftedId} reads \"{text}\".");
+                if (text.Length > 0 && !text.StartsWith("<"))
+                {
+                    _pending = Join(_pending, text);
+                    _pendingMs = now;
+                }
+            }
+            _kingFlag = on;
         }
 
         private static string Join(string a, string b) => a == null ? b : a + " " + b;

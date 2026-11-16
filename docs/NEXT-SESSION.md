@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (16 Nov 2026): test 0.0.168, Fourth Kalpa cues
+## RESUME HERE (16 Nov 2026, night): test 0.0.169, Fourth Kalpa cues completed
+
+**0.0.169 (pushed, untested):** cursed area 24 added, story scenes and facilities no longer count as leaving, the curse-lifted line (game text) on the Wicked King's defeat, the section exit tone and line on landing back in B1. Open: blocked attack on an ally not announced in battle. `docs/HANDOFF.md` last entry.
+
+## Earlier (16 Nov 2026): 0.0.168, Fourth Kalpa cues (verified 20:56: cursed area 2, secret warp)
 
 **0.0.168 (pushed, untested):** cursed floor lines (areas 2 and 4), the Twelve Meters challenge line in areas 11 to 26 and on Shift+End there, the secret tone and line at the new-moon arrival in area 23 (`Systems/Navigation/FourthKalpaCues.cs`). Test steps: `docs/HANDOFF.md` last entry. 0.0.167 ran in the 16 Nov session (door ahead swap logged once); Francesco's verdict on the knock still to hear.
 

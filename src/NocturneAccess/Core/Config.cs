@@ -148,8 +148,8 @@ namespace NocturneAccess.Core
                 "In the Amala Temple's Red Temple: two low falling notes when a shadow sets off the alarm (the warp devices stop), two rising notes when a reset tile switches it off.");
             DoorSound = navigation.CreateEntry("DoorSound", true, "Door tone",
                 "Two soft taps, like a knock, when the game shows a door prompt (\"Open Door\", \"Enter\", \"Exit\"): the door can be gone through from where you stand.");
-            SecretSound = navigation.CreateEntry("SecretSound", true, "Secret area tone",
-                "Three soft rising notes with \"Secret area reached via warp.\", when a warp takes you somewhere only sight would tell you is special (the Fourth Kalpa's Twelve Meters of Eternity at new moon).");
+            SecretSound = navigation.CreateEntry("SecretSound", true, "Secret area and section exit tones",
+                "Three soft rising notes with \"Secret area reached via warp.\", when a warp takes you somewhere only sight would tell you is special (the Fourth Kalpa's Twelve Meters of Eternity at new moon); and three soft notes returning home when a section beyond it ends and drops you back in B1.");
             PipeNoDamage = navigation.CreateEntry("PipeNoDamage", true, "No damage in the falling minigame",
                 "The Labyrinth of Amala falling minigame takes no HP from the party for the objects hit (the game takes it at the end, down to 1 HP each). Macca lost to hits is unchanged.");
             ChaseSound = navigation.CreateEntry("ChaseSound", true, "Chase pulse",

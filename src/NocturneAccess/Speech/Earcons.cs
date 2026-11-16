@@ -57,6 +57,34 @@ namespace NocturneAccess.Speech
 
         private static GCHandle _secret;
 
+        /// <summary>
+        /// A challenge section left (0.0.169; the Fourth Kalpa's end warps back to B1): C4, G3, C4 (262, 196, 262 Hz), 140, 140 and
+        /// 300 ms, soft; a return home, unlike the secret tone's rise.
+        /// </summary>
+        internal static void SectionExit() => Play(ref _sectionExit, MakeSectionExit, "section exit tone");
+
+        private static GCHandle _sectionExit;
+
+        private static byte[] MakeSectionExit()
+        {
+            const int rate = 22050;
+            var all = new List<short>();
+            foreach (var (hz, ms) in new[] { (261.63, 140), (196.0, 140), (261.63, 300) })
+            {
+                int n = rate * ms / 1000;
+                for (int i = 0; i < n; i++)
+                {
+                    double t = (double)i / rate;
+                    double attack = Math.Min(1.0, t / 0.012);
+                    double decay = Math.Exp(-t * 5.0);
+                    double release = Math.Min(1.0, (n - i) / (rate * 0.02));
+                    double wave = Math.Sin(2 * Math.PI * hz * t) + 0.25 * Math.Sin(2 * Math.PI * 2 * hz * t);
+                    all.Add((short)(0.45 / 1.25 * attack * decay * release * wave * short.MaxValue));
+                }
+            }
+            return Wav(all.ToArray(), rate);
+        }
+
         private static byte[] MakeSecret()
         {
             const int rate = 22050;
