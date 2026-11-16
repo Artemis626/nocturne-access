@@ -17,7 +17,7 @@ namespace NocturneAccess.Systems.Battle
     /// offline (GameAssembly.dll, RVA 0x273F180, and its callers): type 3 from nbActionProcess.SetMissPacket and from
     /// SetAllPacket (a miss), type 4 from SetAllPacket where the result is 0x10000 (the null affinity, as nbParty_t.aisyo holds
     /// it: "Null" on the Analyze screen), types 1 and 2 from nbMakeDamagePacket by the damage type (the weakness and critical
-    /// hits, said by the half-turn line). Only 3 and 4 are said, as "Chimera: Null." / "Decarabia: Missed.", when the popup
+    /// hits, said by the half-turn line). Only 3 and 4 are said, as "Chimera: Block." / "Decarabia: Missed.", when the popup
     /// shows: startframe frames (30 a second) after the packet is made, at most MaxDelayMs.
     /// </summary>
     internal static partial class BattleReader
@@ -70,7 +70,8 @@ namespace NocturneAccess.Systems.Battle
                 string who = ActorName(w.Form);
                 if (who.Length == 0)
                     continue;
-                string text = $"{who}: {(w.Type == MojiNull ? "Null" : "Missed")}.";
+                // "Block": the word the game's popup shows (Francesco, 16 Nov 2026).
+                string text = $"{who}: {(w.Type == MojiNull ? "Block" : "Missed")}.";
                 SpeechManager.Say(text, interrupt: false, force: true);
                 BattleLog.Add(text);
             }
