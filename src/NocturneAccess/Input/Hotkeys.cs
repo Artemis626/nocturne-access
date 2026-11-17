@@ -45,7 +45,8 @@ namespace NocturneAccess.Input
             Add("battle status", Config.KeyBattleStatus, KeyCode.F2, BattleReader.SpeakStatus);
             Add("dump UI", Config.KeyDumpUi, KeyCode.F6, UiTreeDumper.Dump);
             Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle, shift: true);
-            Add("routes through other areas", Config.KeyAreaRoutes, KeyCode.F7, AreaRoutes.Toggle);
+            Add("routes through other areas", Config.KeyAreaRoutes, KeyCode.None, AreaRoutes.Toggle);
+            Add("key help", Config.KeyHelp, KeyCode.F7, KeyHelp.Speak);
             Add("navigation dump", Config.KeyNavDump, KeyCode.F6, NavDump.Dump, shift: true);
             Add("battle dump", Config.KeyBattleDump, KeyCode.F2, BattleDump.Dump, shift: true);
             // F4 is shared too: the falling minigame's autopilot while falling (Francesco, 23 Oct 2026), blobber mode elsewhere.
@@ -127,6 +128,17 @@ namespace NocturneAccess.Input
             if (option.Length > 0)
                 text += " Selected: " + option;
             SpeechManager.Say(text, interrupt: true, force: true);
+        }
+
+        /// <summary>The key bound to the named action ("Shift+End"), or "" when it has none (0.0.172, the key help).</summary>
+        internal static string KeyText(string name)
+        {
+            foreach (Binding b in Bindings)
+            {
+                if (b.Name == name)
+                    return b.Text.Replace("PageUp", "Page Up").Replace("PageDown", "Page Down");
+            }
+            return "";
         }
 
         private static void Add(string name, MelonPreferences_Entry<string> entry, KeyCode fallback, Action action,

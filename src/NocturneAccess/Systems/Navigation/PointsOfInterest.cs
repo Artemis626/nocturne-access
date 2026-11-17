@@ -487,7 +487,11 @@ namespace NocturneAccess.Systems.Navigation
                     // any door into it; the game's own area-name table is a list of floors there, not indexed by area
                     // (FldNameData.GetAreaName(43, 7) gives AREA43_L0007 "Burial Chamber" for a corridor whose banner is "B3":
                     // Francesco, 3 Nov 2026).
-                    if (destination.Length == 0 && Labyrinth(gb.fieldID) && DoorTable.Leads(gb.fieldID, gb.areaID, name, out int lf, out int la)
+                    // 0.0.172 (Francesco, 17 Nov 2026: early areas' landmarks are not named): elsewhere too for a door already
+                    // gone through, since doors walked before 0.0.78 (14 Oct 2026) never learned a destination (Shibuya's Club
+                    // Inferno door, 17/6/01d_02, first learned on 17 Nov at 16:37:19).
+                    if (destination.Length == 0 && (Labyrinth(gb.fieldID) || ExploredDoors.IsExplored(gb.fieldID, gb.areaID, name))
+                        && DoorTable.Leads(gb.fieldID, gb.areaID, name, out int lf, out int la)
                         && lf == gb.fieldID && la >= 0 && la != gb.areaID)
                     {
                         // 0.0.164 (Francesco's A1, 12 Nov 2026): no "area N" any more: the game's area numbers are loading chunks
@@ -495,6 +499,8 @@ namespace NocturneAccess.Systems.Navigation
                         // known yet (never entered: the 11 Nov 2026 "area 22" and "area 19") says only "Door"; the banner is learned
                         // on the first arrival and then names every door into that area.
                         destination = ExploredDoors.BannerOfArea(lf, la);
+                        if (!Labyrinth(gb.fieldID) && destination.Equals(here, StringComparison.OrdinalIgnoreCase))
+                            destination = "";   // the floor's own name says nothing outside the Labyrinth
                     }
                     escalator = EscalatorAt(gb, name, p.x, p.z, float.IsNaN(floorY) ? p.y + 100f : floorY, out escalatorDir);
                     behind = ExploredDoors.BehindLine(gb.fieldID, gb.areaID, name);

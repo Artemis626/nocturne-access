@@ -172,6 +172,11 @@ namespace NocturneAccess.Systems.Navigation
         {
             if (_destKey == null)
                 return;
+            if (now - _destMs > ArriveWindowMs && _destFirst != null)
+            {
+                Learn(_destFirst, "the floor's banner, nothing after it");
+                return;
+            }
             if (now - _destMs > ArriveWindowMs)
             {
                 // 0.0.164 (Francesco's A1): in the Labyrinth a door with no banner after it takes the name of the area left, the
@@ -190,13 +195,42 @@ namespace NocturneAccess.Systems.Navigation
                 return;
             }
             if (Menus.AnnouncementReader.LocationShows == _destShows)
+            {
+                // 0.0.172: the floor's name came first and nothing followed within FollowMs: it stands.
+                if (_destFirst != null && now - _destFirstMs > FollowMs)
+                    Learn(_destFirst, "the floor's banner, nothing after it");
                 return;
-            string key = _destKey, text = Menus.AnnouncementReader.LocationShownText.Trim();
+            }
+            _destShows = Menus.AnnouncementReader.LocationShows;
+            string text = Menus.AnnouncementReader.LocationShownText.Trim();
+            if (text.Length == 0)
+                return;
+            // 0.0.172 (Francesco, 17 Nov 2026): the Great Underpass of Ginza shows the floor's banner, then the place's ("B2" at
+            // 16:09:57, "Terminal" 1.6 s later, entering the Terminal room 22/9 from 22/8): the door learned "B2", the same as the
+            // floor left, which the Pages list leaves unsaid. A first banner equal to the one of the area left waits FollowMs for
+            // a place banner, which wins.
+            if (_destFirst == null && text.Equals(_destLeft, StringComparison.OrdinalIgnoreCase))
+            {
+                _destFirst = text;
+                _destFirstMs = now;
+                return;
+            }
+            Learn(text, _destFirst != null ? $"after the floor's \"{_destFirst}\"" : "the banner");
+        }
+
+        private const long FollowMs = 4000;
+        private static string _destLeft, _destFirst;
+        private static long _destFirstMs;
+
+        private static void Learn(string text, string why)
+        {
+            string key = _destKey;
             _destKey = null;
-            if (text.Length == 0 || (Destinations.TryGetValue(key, out string old) && old == text))
+            _destFirst = null;
+            if (key == null || text.Length == 0 || (Destinations.TryGetValue(key, out string old) && old == text))
                 return;
             Destinations[key] = text;
-            Log.Info($"{Tag} {key} leads to \"{text}\" (the banner on arriving in {_destField}/{_destArea}).");
+            Log.Info($"{Tag} {key} leads to \"{text}\" ({why} on arriving in {_destField}/{_destArea}).");
             Append($"dest {key}\t{text}", $"The destination of {key}");
         }
 
@@ -520,6 +554,8 @@ namespace NocturneAccess.Systems.Navigation
                     _destArea = area;
                     _destMs = now;
                     _destShows = Menus.AnnouncementReader.LocationShows;
+                    _destLeft = Menus.AnnouncementReader.LocationShownText.Trim();
+                    _destFirst = null;
                     StartBehind(_leaving, now);
                 }
                 else

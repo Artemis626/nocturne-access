@@ -61,7 +61,7 @@ The mod works alongside other MelonLoader mods for this game, such as Nocturne G
 
 ## Keys
 
-See `docs/KEYS.md`.
+Press **F7** on any screen to hear its keys: the game's own (from its button guide) and the mod's. The full list is in `docs/KEYS.md`.
 
 ## Building
 

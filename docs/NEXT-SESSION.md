@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (16 Nov 2026, night): test 0.0.169 and 0.0.170
+## RESUME HERE (17 Nov 2026): test 0.0.172 (key help F7, early-area landmarks), then 0.0.169 to 0.0.171
+
+**0.0.172 (pushed, untested):** F7 says the keys of the screen (the game's button guide, then the mod's keys; `KeyHelp`), first for the Demon Compendium; routes through other areas lost F7 (config only). Door destinations: a floor banner followed by a place banner takes the place ("Terminal" in the Great Underpass); explored doors without a destination take the banner of their area (Shibuya's Club Inferno). Test steps: `docs/HANDOFF.md` last entry. Next for the public release: key help pages for the other screens (battle, shops, fusion), wording of the mod keys to confirm.
+
+## Earlier (16 Nov 2026, night): 0.0.169 to 0.0.171
 
 **0.0.170 (pushed, untested):** a miss or null on one target of an attack is said ("Chimera: Block.", "Decarabia: Missed.", 0.0.171, Francesco chose "Block") from the game's word popups (`BattleReader.Words.cs`, `nbAddMojiEffKoukaPacket` types 3 and 4). `docs/HANDOFF.md` last entry.
 

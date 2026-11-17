@@ -74,6 +74,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<bool> ChaseSound { get; private set; }
         internal static MelonPreferences_Entry<bool> ChaseOff { get; private set; }
         internal static MelonPreferences_Entry<string> KeyAreaRoutes { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyHelp { get; private set; }
 
         // Debug
         internal static MelonPreferences_Entry<bool> VerboseLogging { get; private set; }
@@ -200,8 +201,12 @@ namespace NocturneAccess.Core
                 "Names the selected point of interest, then speaks directions to it from where you stand (first person: ahead, left, right; fixed-camera rooms: the key direction on screen). Press again for new directions as you go.");
             KeyWayOn = keys.CreateEntry("WayOn", "Shift+End", "Way on key",
                 "Says \"Way on.\", selects the area's way onward (from walkthroughs, where the mod has one) and speaks its directions as End does; Home then walks there.");
-            KeyAreaRoutes = keys.CreateEntry("AreaRoutes", "F7", "Routes through other areas key",
-                "Turns on or off the routes through other areas in the Page Up list, Home and End.");
+            // 0.0.172: F7 is the key help (Francesco, 17 Nov 2026); the routes switch has no key by default (a new entry, so a saved
+            // "AreaRoutes = F7" no longer binds it); AreaRoutes in the Navigation section still turns the routes on.
+            KeyAreaRoutes = keys.CreateEntry("AreaRoutesToggle", "None", "Routes through other areas key",
+                "Turns on or off the routes through other areas in the Page Up list, Home and End (no key by default since 0.0.172).");
+            KeyHelp = keys.CreateEntry("KeyHelp", "F7", "Key help",
+                "Says the keys of the current screen: the game's own button guide (\"Q, E: Toggle Sort.\"), then the mod's keys for a menu, the field or a battle.");
 
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);
