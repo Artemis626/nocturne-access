@@ -111,9 +111,9 @@ namespace NocturneAccess.Systems.Menus
                 Add("centre on the square", "centre on the square");
                 Add("blobber mode", "blobber mode on or off");
             }
-            else
+            else if (WhereAmI.GameLoaded)
             {
-                Add("where am I", "your macca");
+                Add("where am I", "your macca");   // not on the title and load screens, before a save is loaded (0.0.174)
             }
             Add("repeat", "repeat the last line");
             Add("key help", "these keys");

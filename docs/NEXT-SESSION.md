@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (18 Nov 2026): test 0.0.173 (greyed shop rows, Second Kalpa curse cues), 0.0.172 (key help F7, early-area landmarks), then 0.0.169 to 0.0.171
+## RESUME HERE (18 Nov 2026, night): 0.0.174 built; 0.0.168 to 0.0.172 verified 21:58 (F7, Block, Missed, secret and exit lines); Francesco reached the Fifth Kalpa (field 45)
+
+**0.0.174 (pushed, untested):** door volumes with no door-table row are left out (Fourth Kalpa B2 `01d_06`), Delete and F7 on the load screen skip the macca, each Kalpa's last shaft says "to Fourth Kalpa", "to Fifth Kalpa". Test steps: `docs/HANDOFF.md` last entry. Still untested: 0.0.173 (shop rows, Second Kalpa curse), the Underpass Terminal door.
+
+## Earlier (18 Nov 2026): test 0.0.173 (greyed shop rows, Second Kalpa curse cues), 0.0.172 (key help F7, early-area landmarks), then 0.0.169 to 0.0.171
 
 **0.0.173 (pushed, untested):** a BUY row you cannot afford follows the game's cursor and starts with "Insufficient macca" (`FacilityReader.ShopCursorSlot`, `ShopPrefix`); the Second Kalpa's cursed areas 13 and 25 (twins 24 and 26 after flag 276) get the Fourth Kalpa's curse lines, Efreet's room (area 16) says "This area is free from the curse." Star Key obtained (18 Nov); no way on for Efreet (Francesco). Test steps: `docs/HANDOFF.md` last entry. Open: words for an owned Magatama in the BUY list; the Star Key way on (Third Kalpa B1F side room) is Francesco's to decide now that he has the key.
 

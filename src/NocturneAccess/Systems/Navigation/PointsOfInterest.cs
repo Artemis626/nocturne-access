@@ -294,6 +294,10 @@ namespace NocturneAccess.Systems.Navigation
             [(40, 0, "01eve_04")] = 43,
             [(40, 0, "01eve_05")] = 44,
             [(40, 0, "01eve_06")] = 45,
+            // Each Kalpa's last shaft down (0.0.174; jumped 18 Nov 2026 21:11:06, 22:08:44, 22:36:32 and landed in fields 43, 44, 45).
+            [(42, 1, "01eve_02")] = 43,
+            [(43, 28, "01eve_01")] = 44,
+            [(44, 1, "01eve_02")] = 45,
         };
 
         /// <summary>Event volumes the last Build left out because their script has nothing to do now (for the log).</summary>
@@ -447,6 +451,14 @@ namespace NocturneAccess.Systems.Navigation
                         Skipped.Add($"{name} {script}");
                         continue;
                     }
+                }
+                // A door volume the door table has no row for, in any flag state: the game does nothing there (0.0.174; Fourth
+                // Kalpa B2's 01d_06, listed as "Door" in the middle of a corridor, 18 Nov 2026).
+                if ((kind == PoiKind.Door || kind == PoiKind.Place) && !world && FieldData.DoorVolume.IsMatch(name)
+                    && DoorTable.HasNoRows(gb.fieldID, gb.areaID, name))
+                {
+                    Skipped.Add($"{name} has no row in the door table");
+                    continue;
                 }
                 // A door the game jumps down through (door table movetype 4: Assembly of Nihilo B12's 01d_03, 01d_05, 01d_06 land
                 // on B13; the game's prompt "Jump Off", 11 Oct 2026, 21:55:14): an action, not a room (Francesco, 12 Oct 2026).

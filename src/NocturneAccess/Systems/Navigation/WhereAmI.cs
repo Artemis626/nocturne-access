@@ -112,6 +112,16 @@ namespace NocturneAccess.Systems.Navigation
             }
         }
 
+        /// <summary>A save is loaded: the field is a real one (the game's fields start at 1; the title and load screens show 0).</summary>
+        internal static bool GameLoaded
+        {
+            get
+            {
+                fldGlobalWork_t gb = fldGlobal.fldGb;
+                return gb != null && gb.fieldID > 0;
+            }
+        }
+
         internal static void Speak()
         {
             var parts = new List<string>();
@@ -142,13 +152,18 @@ namespace NocturneAccess.Systems.Navigation
 
             // The party's macca (0.0.80, Francesco, 14 Oct 2026): first in menus, shops and institutions, where it is what Delete is
             // pressed for; not while walking (Francesco, 15 Oct 2026, 0.0.82).
-            string macca = exploring ? "" : Macca.Spoken();
-            if (macca.Length > 0)
-                parts.Insert(0, macca);
+            // No game loaded (title and load screens: field 0, which no bundle has): no macca, no moon (0.0.174; 18 Nov 2026 the
+            // load screen said "0 macca. Moon new.").
+            if (GameLoaded)
+            {
+                string macca = exploring ? "" : Macca.Spoken();
+                if (macca.Length > 0)
+                    parts.Insert(0, macca);
 
-            string moon = MoonPhase();   // last, as Francesco asked (0.0.46)
-            if (moon.Length > 0)
-                parts.Add(moon);
+                string moon = MoonPhase();   // last, as Francesco asked (0.0.46)
+                if (moon.Length > 0)
+                    parts.Add(moon);
+            }
 
             string text = parts.Count == 0 ? "Location not known." : string.Join(". ", parts) + ".";
             Log.Info($"[Nav:Where] Field {(gb == null ? "-" : gb.fieldID.ToString())} area {(gb == null ? "-" : gb.areaID.ToString())}" +

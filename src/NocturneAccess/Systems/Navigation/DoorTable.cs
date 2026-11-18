@@ -191,6 +191,32 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         /// <summary>The entry the game would take for this door now (fldWap.fldDoor_Find).</summary>
+        /// <summary>
+        /// True when the field's door table is loaded and holds no row at all (in any flag state) for this door volume (0.0.174):
+        /// the game has nothing to do there. Fourth Kalpa B2's 01d_06 (field 44 area 27, mid-corridor, walked through with no
+        /// prompt, 18 Nov 2026); the same in 40/0 01d_06, 42/1 01d_03, 43/0 01d_02, 43/4 01d_07, 43/7 01d_08, 44/0 01d_02 and
+        /// Yoyogi Park 16/0 (F0NN.WAP read offline: no rows; none ever gone through in the explored files).
+        /// </summary>
+        internal static bool HasNoRows(int field, int area, string resName)
+        {
+            try
+            {
+                Refresh(field);
+                if (Entries.Count == 0)
+                    return false;   // no table: unknown, keep the door
+                foreach (Entry e in Entries)
+                {
+                    if (e.AreaPlus1 == area + 1 && e.Name == resName)
+                        return false;
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private static Entry Find(int area, string name)
         {
             foreach (Entry e in Entries)
