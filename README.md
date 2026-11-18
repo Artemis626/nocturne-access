@@ -53,7 +53,18 @@ Keys: `docs/KEYS.md`. Project state and roadmap: `docs/HANDOFF.md`.
 - Shin Megami Tensei III Nocturne HD Remaster, Steam version.
 - MelonLoader 0.6.1, from the official releases only: https://github.com/LavaGang/MelonLoader/releases
 - .NET 6 Desktop Runtime (x64).
-- NVDA, with the 64-bit NVDA controller client DLL beside `smt3hd.exe`.
+- NVDA, with the 64-bit NVDA controller client DLL (see below).
+
+### Screen reader support
+
+For now the mod supports **NVDA only**. It speaks by calling NV Access's 64-bit controller client, `nvdaControllerClient.dll`, directly. Other screen readers (JAWS, Narrator and others) are not supported yet. Supporting them is a goal for later.
+
+The controller client can't be distributed with this mod because of licence incompatibility, so you need to download it yourself, once:
+
+1. Open NV Access's official release page: https://download.nvaccess.org/releases/stable/
+2. Download the file whose name ends in `_controllerClient.zip`, for example `nvda_2025.3_controllerClient.zip`.
+3. In the zip, open the `x64` folder and copy `nvdaControllerClient.dll`. Use the 64-bit copy, not the 32-bit one in `x86`.
+4. Paste it into the game folder, beside `smt3hd.exe` (for example `steamapps\common\smt3hd`). The mod also looks in the game's `UserLibs` folder.
 
 The mod works alongside other MelonLoader mods for this game, such as Nocturne Graphics Configurator.
 
