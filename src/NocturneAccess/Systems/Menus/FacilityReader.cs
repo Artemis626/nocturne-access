@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using HarmonyLib;
 using Il2Cpp;
 using Il2Cppcamp_H;
@@ -67,6 +68,13 @@ namespace NocturneAccess.Systems.Menus
             Patcher.Postfix("Shop prices", typeof(fclShopDraw), nameof(fclShopDraw.shpDrawItem),
                 new[] { typeof(string), typeof(uint), typeof(ushort), typeof(int) },
                 AccessTools.Method(typeof(FacilityReader), nameof(AfterShopItem)));
+            // Which list was drawn last, BUY or SELL: only a BUY row is greyed for its price (0.0.173).
+            Patcher.Postfix("Shop lists", typeof(fclShopDraw), nameof(fclShopDraw.shpDrawBuyItem),
+                new[] { typeof(sbyte), typeof(lstListWindow_t), typeof(sbyte) },
+                AccessTools.Method(typeof(FacilityReader), nameof(AfterBuyList)));
+            Patcher.Postfix("Shop lists", typeof(fclShopDraw), nameof(fclShopDraw.shpDrawSellItem),
+                new[] { typeof(sbyte), typeof(lstListWindow_t), typeof(sbyte) },
+                AccessTools.Method(typeof(FacilityReader), nameof(AfterSellList)));
             Patcher.Postfix("Shop prices", typeof(fclShopDraw), nameof(fclShopDraw.shpDrawNumsControl),
                 new[] { typeof(cmpCursorInfo_t), typeof(int), typeof(sbyte) },
                 AccessTools.Method(typeof(FacilityReader), nameof(AfterShopQuantity)));
@@ -107,6 +115,70 @@ namespace NocturneAccess.Systems.Menus
             if (PathsLogged.Count < 24 && PathsLogged.Add(__0))
                 Log.Info($"{Tag} Shop row \"{__0}\": item {__2}, price {__3}.");
         }
+
+        private static bool _buyList;
+
+        private static void AfterBuyList() => _buyList = true;
+
+        private static void AfterSellList() => _buyList = false;
+
+        /// <summary>
+        /// The shop row under the game's list cursor (slot = Shift + 1), for a row drawn without the highlight material
+        /// (0.0.173). fclShopDraw.shpDrawBuyItem draws a row the player cannot buy (price above dds3GlobalWork_t.maka, or a
+        /// Magatama already owned: fclMisc.fclChkItemHearts, rstCalcCore.cmbChkGetHearts) through
+        /// cmpCmdSel.cmpGetCursorBlurFontCol with its disabled flag, and the row under the cursor stays TMC00 like the others
+        /// (F6 dump 18 Nov 2026 21:22:13: Kamurogi, 45000 Macca, with 40882): the list fell silent, "Shop list closed".
+        /// </summary>
+        internal static int ShopCursorSlot(Func<IList<(int Slot, string Text, TMP_Text Component)>> rows, out string detail)
+        {
+            detail = "";
+            IList<(int Slot, string Text, TMP_Text Component)> shown = rows();
+            if (!shown.Any(r => r.Component != null && !string.IsNullOrEmpty(r.Text) && UiUtil.IsVisible(r.Component)))
+                return -1;
+            cmpCursorPos_t pos = fclShopInit.GBWK?.ListWindow?.CursorInfo?.CursorPos;
+            if (pos == null)
+            {
+                detail = "no shop cursor";
+                return -1;
+            }
+            int slot = pos.Shift + 1;
+            var row = shown.FirstOrDefault(r => r.Slot == slot);
+            if (row.Component == null || string.IsNullOrEmpty(row.Text) || !UiUtil.IsVisible(row.Component))
+            {
+                detail = $"index {pos.Index}, shift {pos.Shift}: row {slot} not shown";
+                return -1;
+            }
+            detail = $"index {pos.Index}, shift {pos.Shift}";
+            return slot;
+        }
+
+        /// <summary>"Insufficient macca" (Francesco's words, 18 Nov 2026) before a BUY row priced above the party's macca, else "".</summary>
+        internal static string ShopPrefix(bool opening)
+        {
+            try
+            {
+                if (!_buyList)
+                    return "";
+                cmpCursorPos_t pos = fclShopInit.GBWK?.ListWindow?.CursorInfo?.CursorPos;
+                int? macca = Macca.Amount();
+                if (pos == null || !macca.HasValue)
+                    return "";
+                string key = "shop_row" + (pos.Shift + 1).ToString("00", CultureInfo.InvariantCulture);
+                foreach (KeyValuePair<string, ShopRow> kv in ShopRows)
+                {
+                    if (kv.Key == key || kv.Key.EndsWith("/" + key, StringComparison.Ordinal))
+                        return kv.Value.Price > macca.Value ? InsufficientWords : "";
+                }
+            }
+            catch (Exception ex)
+            {
+                if (_errors++ < 5)
+                    Log.Error($"{Tag} Shop prefix: {ex.Message}");
+            }
+            return "";
+        }
+
+        private const string InsufficientWords = "Insufficient macca";
 
         private static void AfterShopQuantity(int __1, sbyte __2)
         {

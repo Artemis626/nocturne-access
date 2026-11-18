@@ -165,6 +165,10 @@ namespace NocturneAccess.Systems.Menus
                 CloseWhenUnhighlighted = true,
                 RowDetail = FacilityReader.ShopDetail,
                 GamePosition = FacilityReader.ShopPosition,
+                // A BUY row the player cannot afford is drawn greyed and never TMC01 under the cursor (18 Nov 2026, Kamurogi): the
+                // game's cursor, "Insufficient macca" before it (0.0.173).
+                GameCursor = FacilityReader.ShopCursorSlot,
+                Prefix = FacilityReader.ShopPrefix,
             },
             // The Cathedral of Shadows' demon tables are read by FusionReader (0.0.50), from the game's cursor.
             new MenuSpec

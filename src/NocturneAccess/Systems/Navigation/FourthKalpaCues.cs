@@ -48,7 +48,17 @@ namespace NocturneAccess.Systems.Navigation
 
         // 0.0.169: area 24 too (Hell's Hall on the Wicked King's side; 16 damage steps in the 16 Nov 20:56 session); the twins
         // after flag 276 are 3, 5 and 25 (door rows 212 to 215, 222).
-        private static bool Cursed(int field, int area) => field == Field && (area == 2 || area == 4 || area == 24);
+        // 0.0.173: the Second Kalpa (field 42) has the same design: before flag 276 area 14 01d_01 leads to area 13 and area 16's
+        // ladder 01d_02 to area 25 (door rows 132, 144), after it to their twins 24 and 26 (rows 131, 143; F042.WAP); 13 and 24 share
+        // one area file (f042_014.f2 = f042_025.f2), as the Fourth Kalpa's cursed area 2 and its twin 3 share a layout. The Soul by
+        // area 14's door says "It's cursed, y'know." (F042INF_L0055) or "The curse has been undone." (L0056). Not seen in game yet:
+        // Francesco crossed after Beelzebub (18 Nov 2026), so only the uncursed twins.
+        private static bool Cursed(int field, int area) =>
+            (field == Field && (area == 2 || area == 4 || area == 24)) || (field == SecondKalpa && (area == 13 || area == 25));
+
+        private const int SecondKalpa = 42;
+        private const int EfreetArea = 16;   // B3, Efreet (the Star Key chain): beyond the cursed areas 13 and 25
+        internal const string FreeWords = "This area is free from the curse.";   // Francesco's words, 18 Nov 2026
 
         private const int KingFlag = 276;   // the door rows' gate to the uncursed twins: set with the Wicked King's defeat
         private const string LiftedId = "<F044INF_L0078>";   // "The curse has been lifted." (the area 8 Soul's line)
@@ -100,11 +110,11 @@ namespace NocturneAccess.Systems.Navigation
                 }
             }
 
-            if (field == Field && !Cursed(field, area) && area != _damageLoggedArea && FieldState.IsExploring
+            if ((field == Field || field == SecondKalpa) && !Cursed(field, area) && area != _damageLoggedArea && FieldState.IsExploring
                 && fldPlayer.fldPlayerAct == DamageFloorAct)
             {
                 _damageLoggedArea = area;
-                Log.Info($"[Nav:Kalpa4] A damage-floor reaction in area {area}, not listed as cursed: add it if it repeats.");
+                Log.Info($"[Nav:Kalpa4] A damage-floor reaction in field {field} area {area}, not listed as cursed: add it if it repeats.");
             }
         }
 
@@ -117,6 +127,9 @@ namespace NocturneAccess.Systems.Navigation
                 line = CursedWords;
             else if (wasCursed && !isCursed)
                 line = ClearWords;
+            // Efreet's room, by any way in (Francesco, 18 Nov 2026: a label instead of a way on); it replaces the clear line.
+            if (field == SecondKalpa && area == EfreetArea && oldArea != area)
+                line = FreeWords;
 
             if (InChallenge(field, area) && !InChallenge(oldField, oldArea))
             {

@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (17 Nov 2026): test 0.0.172 (key help F7, early-area landmarks), then 0.0.169 to 0.0.171
+## RESUME HERE (18 Nov 2026): test 0.0.173 (greyed shop rows, Second Kalpa curse cues), 0.0.172 (key help F7, early-area landmarks), then 0.0.169 to 0.0.171
+
+**0.0.173 (pushed, untested):** a BUY row you cannot afford follows the game's cursor and starts with "Insufficient macca" (`FacilityReader.ShopCursorSlot`, `ShopPrefix`); the Second Kalpa's cursed areas 13 and 25 (twins 24 and 26 after flag 276) get the Fourth Kalpa's curse lines, Efreet's room (area 16) says "This area is free from the curse." Star Key obtained (18 Nov); no way on for Efreet (Francesco). Test steps: `docs/HANDOFF.md` last entry. Open: words for an owned Magatama in the BUY list; the Star Key way on (Third Kalpa B1F side room) is Francesco's to decide now that he has the key.
+
+## Earlier (17 Nov 2026): 0.0.172
 
 **0.0.172 (pushed, untested):** F7 says the keys of the screen (the game's button guide, then the mod's keys; `KeyHelp`), first for the Demon Compendium; routes through other areas lost F7 (config only). Door destinations: a floor banner followed by a place banner takes the place ("Terminal" in the Great Underpass); explored doors without a destination take the banner of their area (Shibuya's Club Inferno). Test steps: `docs/HANDOFF.md` last entry. Next for the public release: key help pages for the other screens (battle, shops, fusion), wording of the mod keys to confirm.
 
