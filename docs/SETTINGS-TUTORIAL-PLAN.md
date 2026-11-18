@@ -1,4 +1,69 @@
-# Settings menu and tutorial: plan (17 Nov 2026)
+# Settings menu and tutorial: plan (17 Nov 2026, decisions 18 Nov 2026)
+
+## Francesco's decisions (18 Nov 2026): study only, build later
+
+Nothing below is to be built now. These decisions replace the open choices in the 17 Nov sections where they differ.
+
+### When: after the playthrough and the public release
+
+- Build and test these features only **after Francesco's full playthrough is finished**. At that point the mod drops its "work in progress / game in progress" label, is confirmed as mostly accessible and playable from start to finish, and is **made public** (only on his explicit word: the repository's visibility is never changed without it).
+- The current priority doesn't change: the playthrough, its fixes, and key help pages for the remaining screens come first.
+
+### Tutorial: reactive, limited to the opening areas
+
+- **First-time tips across the whole game are rejected as a first goal.** Testing them properly would mean replaying a large part of the game, at least half of it, and Francesco wants to move on to other projects after this one.
+- **Instead: a well-built reactive tutorial in the game's first two stretches:**
+  1. **Tokyo before the Conception.** It has no threat or fail state, so it's the safe place to teach the field keys: Page Up / Page Down, Home, End, Delete, F1, F4 blobber mode, Shift+Page Up / Page Down filters, F7 key help.
+  2. **The first areas after the Conception.** They bring light combat and interaction with low risk. They teach the battle keys (F2, F3, F5, F8), the first menus and party picks, doors and item boxes, and End before Home.
+- **After that the tutorial ends.** The exceptions are a few places with mechanics of their own. Francesco named **the Labyrinth of Amala**, for example the way on (Shift+End), the falling minigame autopilot, and the cues of the later Kalpas. Each would be a single lesson triggered on arrival, chosen case by case.
+- **Why this works:** testing needs only a new game played to just past the Conception, plus one visit to each exception. A fresh save file reaches every lesson.
+- **What to study before building:**
+  - The field and area numbers of Tokyo before the Conception and of the first post-Conception areas, read offline (door table, area files, story flags). These decide where each lesson starts and ends.
+  - The scripted scenes in those areas. Lessons must wait for dialogue and never talk over a cutscene (`SpeechOrder`).
+  - Which lesson a key belongs to, so that no key is taught before it can be used. For example, End and Home need points in the list, and F2 needs a battle.
+  - The flag that ends the tutorial region, so the tutorial stops by itself when the player passes it.
+- The event layer and the lesson steps described further down stay as planned; only the scope shrinks to these areas.
+- Every lesson line is the mod's own wording and needs Francesco's approval.
+
+### Settings menu: inside the game's own Config screen
+
+- **The chosen anchor is option 1:** rows that look and behave exactly like the game's Config menu, opened from it. It's the best visual anchor, a large accessibility gain, and a strong portfolio piece.
+- **How it opens:** through the game's own Config entry, from the field menu or the title menu. No new key; this settles the "how it opens" question.
+- **Build in small steps, each tested before the next:**
+  1. **One new tab in the game's Config screen with one option.** A good candidate is a true/false sound setting such as `WallBumpSound`: it takes effect at once and is easy to hear. Checks for this step:
+     - the tab is visible and drawn like the game's own
+     - `ConfigReader` speaks it
+     - the cursor moves into it and back out
+     - changing the value writes `NocturneAccess.cfg`
+     - the game's own settings save is unchanged
+     - it works from both the field menu and the title menu
+  2. **More true/false settings,** then numbers and choices.
+  3. **Key rebinding last,** since it needs key capture and conflict checks.
+- **Study before step 1, offline:**
+  - The game's Config screen classes: how it builds its tabs and rows, counts them, moves the cursor, changes values and saves. Read the decompile in `research/decomp` and `GameAssembly.dll`, and record every name in `docs/class-index.md`.
+  - The row and tab prefabs in the asset bundles (`tools/unity/`).
+  - Whether the title-menu Config and the field-menu Config are the same screen.
+  - The highlight material and cursor of that screen, already known to `ConfigReader`.
+- **Risk:** our rows must never reach the game's own settings save, and the game's tab or row count must not break when a tab is added. Step 1 exists to prove both.
+
+### Long-term goals (no roadmap, no test plan)
+
+These are recorded as wishes. They come after the settings menu and the tutorial are built and tested, not before.
+
+- **Screen readers other than NVDA.** Today speech goes only through `nvdaControllerClient.dll` (`Speech/SpeechManager`). Possible routes:
+  - a multi-reader library such as Tolk or the newer UniversalSpeech-style wrappers (JAWS, Narrator, NVDA)
+  - Windows SAPI or OneCore voices as a fallback when no reader runs
+  - a `SpeechBackend` config entry, which already exists as a string and could select the output
+
+  Braille output (`BrailleOutput`) would need checking per reader. Study first which libraries are maintained, which licences fit GPL-3.0, and how each handles interrupt versus queue, which the mod relies on.
+- **Audio description for certain cutscenes.** A sighted player sees things in some scenes that no dialogue says. Questions to study:
+  - Which scenes matter for understanding the story or the next step.
+  - How to detect a scene's start and its moments, from the event script's procedure and its commands (`FieldScript`, the field scripts read offline), or from camera and animation commands.
+  - Where the description text comes from. The mod can't reconstruct the game's text, so descriptions are the mod's own writing. Each one needs Francesco's consent and is labelled as the mod's, never presented as the game's. They should come from the scene's content, not from a walkthrough's copyrighted text.
+  - Timing: say a description between dialogue pages, never over voiced lines.
+  - A setting to switch descriptions off, in the settings menu above.
+
+## 17 Nov 2026 analysis
 
 Status: **ideas only, nothing to build yet** (Francesco, 17 Nov 2026: "experimental thoughts that don't need coding right now"). This records what could be achieved and how, so a later session can start from it. Every design choice marked "Francesco" below is still his to make.
 
