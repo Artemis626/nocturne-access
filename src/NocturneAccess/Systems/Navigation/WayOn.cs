@@ -232,6 +232,7 @@ namespace NocturneAccess.Systems.Navigation
         private static readonly (char Tag, int Id, string Word)[] DemonStats =
             { ('S', 0, "Strength"), ('M', 2, "Magic"), ('V', 3, "Vitality"), ('A', 4, "Agility"), ('L', 5, "Luck") };
         internal const string NoDemonWords = "no demon of yours passes yet";
+        internal const string MitamaWords = "Mitama bonuses not counted";
 
         private static List<string> ByDemon(List<string> names)
         {
@@ -253,8 +254,10 @@ namespace NocturneAccess.Systems.Navigation
                 bool passes = best.Name != null && best.Have >= need;
                 // The numbers too (Francesco, 20 Nov 2026): "Way on, Magic, no demon of yours passes yet: best Beidou Xingjun,
                 // 24 of 25." / "Way on, Agility, Raidou, 25 of 20."
+                // When none passes, the door ignores Mitama fusion bonuses, which the Stats screen adds in silently (Francesco,
+                // 20 Nov 2026, his choice: Clotho said Magic 26 and failed at 22; 0.0.179).
                 RouteWord[v] = passes ? $"{s.Word}, {best.Name}, {best.Have} of {need}"
-                    : best.Name != null ? $"{s.Word}, {NoDemonWords}: best {best.Name}, {best.Have} of {need}"
+                    : best.Name != null ? $"{s.Word}, {NoDemonWords}: best {best.Name}, {best.Have} of {need}, {MitamaWords}"
                     : $"{s.Word}, {NoDemonWords}";
                 Log.Info($"{Tag} Demon door {v}: {s.Word} {need}; best owned {best.Name ?? "none"} with {best.Have}{(passes ? "" : ", not passed")}.");
             }
