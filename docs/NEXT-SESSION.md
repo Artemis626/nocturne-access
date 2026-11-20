@@ -2,7 +2,7 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (20 Nov 2026, later): 0.0.176 built, untested ("No effect on X." for ailments and instakills that fail, `BattleReader.NoEffect.cs`); 0.0.175 built, untested: the Fifth Kalpa way on (field 45, `Data/WayOn.txt`; demon test doors `@dM25`); Francesco in area 7 after its second switch
+## RESUME HERE (20 Nov 2026, later): 0.0.177 (demon door numbers, "best Beidou Xingjun, 24 of 25"), 0.0.176 built, untested ("No effect on X." for ailments and instakills that fail, `BattleReader.NoEffect.cs`); 0.0.175 built, untested: the Fifth Kalpa way on (field 45, `Data/WayOn.txt`; demon test doors `@dM25`); Francesco in area 7 after its second switch
 
 Test steps and the route: `docs/HANDOFF.md` last entry. Open: words for demon doors and for failed ailments (Francesco); area 7 switch logic to verify.
 
