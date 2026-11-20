@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Il2Cpp;
 using Il2Cppfield_H;
+using Il2Cppnewdata_H;
 using NocturneAccess.Core;
 using NocturneAccess.Speech;
 
@@ -222,10 +223,74 @@ namespace NocturneAccess.Systems.Navigation
         private static readonly HashSet<string> Tied = new HashSet<string>(StringComparer.Ordinal);
         private static readonly Dictionary<string, string> RouteWord = new Dictionary<string, string>(StringComparer.Ordinal);
 
+        // ---- Demon test doors (0.0.175; Francesco, 20 Nov 2026: the Fifth Kalpa's way on) ----
+        // The Fifth Kalpa's "Voice of the Door" asks the player to choose a demon (fldCommand_FLD_ANAHORI_INIT / GET, script
+        // commands 0x161 / 0x162) and passes when prm_NAKAMA_GET_PARAM (0x171, datCalc.datGetNakamaParam(did, id)) of that demon
+        // is at least the number: "01eve_03@dM25" is a door needing a demon with Magic 25 (ids as the Third Kalpa's: S 0, M 2,
+        // V 3, A 4, L 5). The door stays in the list either way (on the Fifth Kalpa's main route both are compulsory); the line
+        // names the stat and the owned demon with the most of it that passes, or says none does yet.
+        private static readonly (char Tag, int Id, string Word)[] DemonStats =
+            { ('S', 0, "Strength"), ('M', 2, "Magic"), ('V', 3, "Vitality"), ('A', 4, "Agility"), ('L', 5, "Luck") };
+        internal const string NoDemonWords = "no demon of yours passes yet";
+
+        private static List<string> ByDemon(List<string> names)
+        {
+            var result = new List<string>();
+            foreach (string n in names)
+            {
+                int at = n.IndexOf("@d", StringComparison.Ordinal);
+                if (at < 0 || at + 3 > n.Length || !int.TryParse(n.Substring(at + 3), out int need))
+                {
+                    result.Add(n);
+                    continue;
+                }
+                var s = DemonStats.FirstOrDefault(x => x.Tag == n[at + 2]);
+                string v = n.Substring(0, at);
+                result.Add(v);
+                if (s.Word == null)
+                    continue;
+                (string Name, int Have) best = BestDemon(s.Id);
+                bool passes = best.Name != null && best.Have >= need;
+                RouteWord[v] = passes ? $"{s.Word}, {best.Name}" : $"{s.Word}, {NoDemonWords}";
+                Log.Info($"{Tag} Demon door {v}: {s.Word} {need}; best owned {best.Name ?? "none"} with {best.Have}{(passes ? "" : ", not passed")}.");
+            }
+            return result;
+        }
+
+        /// <summary>The owned demon (DDS3_GBWK.unitwork from 1, as datGetNakamaParam searches it) with the most of a stat.</summary>
+        private static (string Name, int Have) BestDemon(int statId)
+        {
+            (string, int) best = (null, -1);
+            try
+            {
+                var units = dds3GlobalWork.DDS3_GBWK?.unitwork;
+                if (units == null)
+                    return best;
+                for (int k = 1; k < units.Length; k++)
+                {
+                    datUnitWork_t w = units[k];
+                    if (w == null || w.maxhp == 0)
+                        continue;
+                    int have = datCalc.datGetNakamaParam(w.id, statId);
+                    if (have <= best.Item2)
+                        continue;
+                    string name = TextUtil.Clean(datDevilName.Get(w.id) ?? "");
+                    if (name.Length > 0)
+                        best = (name, have);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"{Tag} Demon stats: {ex.Message}");
+            }
+            return best;
+        }
+
         private static List<string> ByStat(List<string> names)
         {
             Tied.Clear();
             RouteWord.Clear();
+            names = ByDemon(names);
             var routes = new List<(string Name, int Id, string Word, int Need, int Have)>();
             foreach (string n in names)
             {

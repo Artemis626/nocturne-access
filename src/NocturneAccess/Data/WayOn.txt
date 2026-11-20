@@ -239,3 +239,36 @@
 43 26 01d_03 01d_02                            # Magic, B1F: west into area 27
 43 27 01d_16+1984-2004 01d_08 01d_06            # B1F: the ladder down (Raidou or Dante, then the chase), through the room door; second traversal (Fourth Kalpa entered, 1984 set by its 001_start; B2 switch not used, 2004): the side room 28
 43 28 01eve_01+1984-2004 01d_01                # side room off B1F: the shaft down to the Fourth Kalpa's area 29, beside B2's switch (pipe 1010; docs/FOURTH-KALPA-PLAN.md); else back out
+# ---- Fifth Kalpa (field 45): from the Hall of Candles to the lift into the deepest part (0.0.175, 20 Nov 2026) ----
+# Read offline from F045.WAP (tools/unity/wap.pl), the area files (f045_AAA.f2, AAA = area + 1, flooded by
+# tools/unity/waybfs.pl with BASEPLANE=1: these areas' floor is a plane the game adds at y 0 over the polygons' bounds) and
+# f045.bf (procedures named area + 1). Route checked against Samurai Gamers' Fifth Kalpa walkthrough (steps 2 to 20 and after
+# Metatron). The Voice of the Door tests (areas 13 to 18) send the player through door rows 120 to 138 when the chosen demon
+# passes (datGetNakamaParam), else row 136, back to area 13's 01pos_02. Without the special doors (light 193, black 206,
+# chaos 194, Pixie), every way to area 19 needs both a Magic 25 and an Agility 20 demon (SKIP runs of waybfs.pl).
+45 0  01d_01                                   # Hall of Candles: north into area 2
+45 2  01d_04 01d_02                            # the ladder down to area 4; from the entrance part, through area 3 (flag 273)
+45 3  01d_02                                   # back into area 2's ladder part
+45 4  01d_02 01d_06 01d_04 01d_01              # the door into area 6; from the ladder landing or the side cells, into the main part
+45 5  01d_06 01d_01 01d_04                     # back into area 4 (from the ladder up from area 7, or the side rooms)
+45 6  01d_08 01d_06 01d_04                     # the ladder down into area 7 (beside its first switch), through the room doors
+45 7  01d_08 01eve_01-2030 01eve_02-2031 01d_06 01d_07   # the ladder down to area 11; else a switch not yet used (they move blocks, gimmicks 1 and 2); else up and round through area 6
+45 8  01eve_01                                 # the heart test's maze (flag 294 off): the way out, back to area 7
+45 9  01eve_01                                 # the heart test passed (flag 294): back to area 7
+45 10 01d_01                                   # Mitra's and Thor's tombs: back to area 7
+45 11 01d_11 01d_05 01d_09 01d_03              # the ladder down to area 15, through 01d_03 (area 12), 01d_09, 01d_05
+45 12 01d_04                                   # back into area 11's next cell
+45 15 01d_01 01d_06 01d_03                     # into area 13, the Voice of the Door hub
+45 13 01eve_01@dA20 01eve_03@dM25              # from the west part, the Agility 20 door (area 18); from the east, the Magic 25 door into the west part
+45 14 01d_01 01d_02 01d_05                     # side rooms: back into area 13
+45 16 01d_01 01d_10                            # side rooms: back into area 13
+45 18 01d_10 01d_09 01d_06 01d_03 01d_01 01d_04 01d_11   # the chain of one-way doors to area 17 (01d_11, 04, 01, 03, 06, 09, 10)
+45 17 01d_11 01d_01                            # the ladder down to area 19 (Metatron)
+45 19 01d_05 01d_01                            # north part: the ladder down to area 24; south part: the door to area 23 (flag 277, after Metatron)
+45 23 01d_02                                   # north into area 19's north part
+45 24 01d_01                                   # into area 25
+45 25 01d_02                                   # into area 26
+45 26 01eve_01                                 # "The lift leads to the deepest part of the Labyrinth. Ride the lift?"
+45 20 01d_15                                   # the counting doors' rooms ("Attention trespassers..."): the ladder back up to area 15
+45 21 01d_01 01d_02 01d_03                     # back into area 20
+45 22 01d_01                                   # Ahriman's, Noah's and Baal Avatar's tombs: back into area 21

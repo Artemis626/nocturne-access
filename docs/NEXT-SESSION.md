@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (18 Nov 2026, night): 0.0.174 built; 0.0.168 to 0.0.172 verified 21:58 (F7, Block, Missed, secret and exit lines); Francesco reached the Fifth Kalpa (field 45)
+## RESUME HERE (20 Nov 2026): 0.0.175 built, untested: the Fifth Kalpa way on (field 45, `Data/WayOn.txt`; demon test doors `@dM25`); Francesco in area 7 after its second switch
+
+Test steps and the route: `docs/HANDOFF.md` last entry. Open: words for demon doors and for failed ailments (Francesco); area 7 switch logic to verify.
+
+## Earlier (18 Nov 2026, night): 0.0.174 built; 0.0.168 to 0.0.172 verified 21:58 (F7, Block, Missed, secret and exit lines); Francesco reached the Fifth Kalpa (field 45)
 
 **0.0.174 (pushed, untested):** door volumes with no door-table row are left out (Fourth Kalpa B2 `01d_06`), Delete and F7 on the load screen skip the macca, each Kalpa's last shaft says "to Fourth Kalpa", "to Fifth Kalpa". Test steps: `docs/HANDOFF.md` last entry. Still untested: 0.0.173 (shop rows, Second Kalpa curse), the Underpass Terminal door.
 

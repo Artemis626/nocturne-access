@@ -21,9 +21,21 @@ for (my $b = 0; $b + 24 <= $L; $b += 4) {
     $b = $nx - 4 if 0;
   }
 }
+# BASEPLANE=1 (20 Nov 2026, the Fifth Kalpa, field 45): the game adds a flat floor at y 0 over the bounding box of the area's
+# polygons (live dump 20 Nov 13:35:45, area 8: plane #0 mode2D 1, min [4400 -2200] max [9400 2200] = the f2 polygons' bounds);
+# those areas' files hold walls and trigger sheets only, so without it the flood finds no floor.
+if ($ENV{BASEPLANE} && @lines) {
+  my ($x0, $x1, $z0, $z1);
+  for (@lines) { while (/(-?[\d.e+-]+) (-?[\d.e+-]+) (-?[\d.e+-]+) 1(?: \||$)/g) { my ($x, $z) = ($1, $3);
+    $x0 = $x if !defined $x0 || $x < $x0; $x1 = $x if !defined $x1 || $x > $x1; $z0 = $z if !defined $z0 || $z < $z0; $z1 = $z if !defined $z1 || $z > $z1 } }
+  unshift @lines, sprintf "  #%d mode2D 1 edges 4 n 0 -1 0 0 num 0 min [%g %g] max [%g %g] block 0 hit 1 res 65537 hoji 0 npc -1 elv 0 0 0 0 | attr 0x0 myuka 0 | pts %g 0 %g 1 | %g 0 %g 1 | %g 0 %g 1 | %g 0 %g 1",
+    $id++, $x0, $z0, $x1, $z1, $x0, $z1, $x0, $z0, $x1, $z0, $x1, $z1;
+}
 print "Synthetic dump from $file\n== Player\nfieldID $field areaID $area blockID 0\nplayer $px $py $pz; old\n== Collision\n";
 print "$_\n" for @lines;
 print "== Points of interest and walk grid\n";
 my %seen; my $g = 0;
 while ($d =~ /((?:\d\d\d_)?\d\d(?:d|pos|eve|npc)_\d\d)\0/g) { my ($n, $at) = ($1, $-[1]); next if $seen{$n}++ || $at + 28 > $L;
-  my ($x, $y, $z) = unpack 'f<3', substr($d, $at + 16, 12); printf "  gEvnRng %d point \"%s\" at %.0f %.0f d 0\n", $g++, $n, $x, $z; }
+  my ($x, $y, $z) = unpack 'f<3', substr($d, $at + 16, 12);
+  next if abs($x) > 1e6 || abs($z) > 1e6;   # a script procedure's name ("001_01eve_01" in f045), not a point
+  printf "  gEvnRng %d point \"%s\" at %.0f %.0f d 0\n", $g++, $n, $x, $z; }
