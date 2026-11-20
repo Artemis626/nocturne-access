@@ -72,6 +72,7 @@ namespace NocturneAccess.Systems.Battle
             if (_actionActor < FirstEnemy)
                 Menus.MenuReader.PartyActed();
             datUnitWork_t w = nbMainProcess.nbGetUnitWorkFromFormindex(_actionActor);
+            NoteAilment(w, _actionActor);   // 0.0.176: "No effect on X." for an ailment that does not take
             if (w != null && w.nowcommand == 1)
                 _actionHpCost = BattleSkills.HpCost(w.nowindex, w);
         }

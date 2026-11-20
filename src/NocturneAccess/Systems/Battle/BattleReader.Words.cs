@@ -46,7 +46,10 @@ namespace NocturneAccess.Systems.Battle
         {
             try
             {
-                if (!_active || (__4 != MojiMiss && __4 != MojiNull) || __3 == null)
+                if (!_active || __3 == null)
+                    return;
+                NotePopup(__3.formindex);   // any popup on a unit: a weakness, critical, miss or null is an effect (0.0.176)
+                if (__4 != MojiMiss && __4 != MojiNull)
                     return;
                 int form = __3.formindex;
                 long delay = Math.Min(Math.Max(__0, 0) * FrameMs, MaxDelayMs);

@@ -220,9 +220,11 @@ namespace NocturneAccess.Systems.Battle
                 {
                     _tarSelAt = long.MinValue / 2;
                     Words.Clear();
+                    ClearAilment();
                 }
                 SpeakPendingBanner(now);
                 SpeakWords(now);
+                TickAilment(now);
 
                 if (!_started && now - _activeSince >= StartDelayMs)
                 {
