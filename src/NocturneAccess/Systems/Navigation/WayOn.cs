@@ -261,7 +261,13 @@ namespace NocturneAccess.Systems.Navigation
             return result;
         }
 
-        /// <summary>The owned demon (DDS3_GBWK.unitwork from 1, as datGetNakamaParam searches it) with the most of a stat.</summary>
+        /// <summary>
+        /// The demon the door would accept with the most of a stat. Only the units the game's own pick offers count
+        /// (fldMain.fldAnahoriSelectInit, read offline 20 Nov 2026: unitwork 0 to 15 whose flag has 0x1 and none of 0x4, 0x10,
+        /// 0x800, with HP above 0): Raidou was named for the Agility door and is not in the game's list (Francesco, 20 Nov 2026,
+        /// 0.0.178). datGetNakamaParam reads the base stat only, without the Mitama bonus the Stats screen adds: Clotho shown
+        /// with Magic 26 and Matador with Agility 22 after Mitama fusions both failed (21:54, 21:59), as the game reads them.
+        /// </summary>
         private static (string Name, int Have) BestDemon(int statId)
         {
             (string, int) best = (null, -1);
@@ -270,10 +276,10 @@ namespace NocturneAccess.Systems.Navigation
                 var units = dds3GlobalWork.DDS3_GBWK?.unitwork;
                 if (units == null)
                     return best;
-                for (int k = 1; k < units.Length; k++)
+                for (int k = 1; k < units.Length && k < 16; k++)
                 {
                     datUnitWork_t w = units[k];
-                    if (w == null || w.maxhp == 0)
+                    if (w == null || w.maxhp == 0 || (w.flag & 0x1) == 0 || (w.flag & 0x814) != 0 || w.hp == 0)
                         continue;
                     int have = datCalc.datGetNakamaParam(w.id, statId);
                     if (have <= best.Item2)
