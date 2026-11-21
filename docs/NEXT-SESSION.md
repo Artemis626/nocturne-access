@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (21 Nov 2026): 0.0.180 built, untested: battle skill costs after a summon (party index, not slot), the way on chooses again after its own same-area door (Fifth Kalpa area 18). Francesco redoes Metatron (game over)
+## RESUME HERE (21 Nov 2026, night): 0.0.181 built, untested: the Geis Magatama given once Metatron is beaten (`PrizeGifts`, config `GeisGift`); Yurakucho Tunnel (field 21) way on from the door table only (`tools/unity/waygraph.pl`). Metatron beaten, the Labyrinth done; Francesco suspended in the tunnel, area 3
+
+Test: the gift line after loading; Shift+End through the tunnel to area 6's exit north. Details: `docs/HANDOFF.md` last entry.
+
+## Earlier (21 Nov 2026): 0.0.180 built, untested: battle skill costs after a summon (party index, not slot), the way on chooses again after its own same-area door (Fifth Kalpa area 18). Francesco redoes Metatron (game over)
 
 Test: Skill rows in battle after a summon say "Agidyne, 10 MP"; area 18: after a way-on door, End names the next way-on point. Details: `docs/HANDOFF.md` last entry.
 

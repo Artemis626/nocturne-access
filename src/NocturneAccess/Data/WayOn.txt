@@ -272,3 +272,35 @@
 45 20 01d_15                                   # the counting doors' rooms ("Attention trespassers..."): the ladder back up to area 15
 45 21 01d_01 01d_02 01d_03                     # back into area 20
 45 22 01d_01                                   # Ahriman's, Noah's and Baal Avatar's tombs: back into area 21
+
+# ---- Yurakucho Tunnel (field 21): from Yurakucho Station to the exit north to Sannou-Nagatacho and the Diet Building (0.0.181, 21 Nov 2026) ----
+# The area files hold only part of the collision the game builds (area 1: 29 floors offline, 72 in game), so no offline flood:
+# every line is the door table's graph (F021.WAP, tools/unity/waygraph.pl): each area's doors, nearest to the goal first (area 6's
+# 01eve_02, to field 8). The live map chooses the first one the player can reach. Same-area doors (one-way) are left to the routes
+# "via N doors"; their landings come from Data/AreaPoints.txt (the game's list names none). The guides give no floor-by-floor route.
+21 0 01eve_01
+21 1 01eve_02
+21 2 01eve_01
+21 3 01eve_04
+21 4 01eve_06
+21 5 01eve_01
+21 6 01eve_02
+21 7 01eve_06
+21 8 01d_13
+21 9 01d_07
+21 10 01d_02
+21 11 01d_01 01d_02 01d_03
+21 12 01d_07
+21 13 01eve_08
+21 14 01d_05
+21 15 01d_05
+21 16 01d_06
+21 17 01d_05
+21 18 01d_05
+21 19 01d_03
+21 20 01d_01 01d_02
+21 21 01eve_01
+21 22 01eve_08
+21 23 01eve_02
+21 24 01eve_01
+21 25 01d_05

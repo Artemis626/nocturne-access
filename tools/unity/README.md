@@ -30,3 +30,4 @@ area names `common_en` `FLDTERM_EN`, `AREA_EN`, `BASYO_EN`.
   each flood. Area files with no floors (only automap planes, e.g. Third Kalpa areas 0, 1, 5, 20, 21) flood nothing (0.0.141).
 - `wapdest.pl <wap.txt> <dir of fNNN files> <areas...>` (`FIELD=NNN`, default 34): each door's real destination with its
   point's position, following the after_flag 1 follow-up warp (`DoorTable`, 0.0.139).
+- `waygraph.pl <wap.txt> <field> <goal area> <goal volume>` (`SHOW=1`, `SKIP`) (21 Nov 2026): way-on lines from the door table alone, each area's doors nearest to the goal first, for fields whose area files lack collision the game builds (Yurakucho Tunnel, field 21).

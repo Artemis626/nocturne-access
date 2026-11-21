@@ -73,6 +73,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<bool> PipeNoDamage { get; private set; }
         internal static MelonPreferences_Entry<bool> ChaseSound { get; private set; }
         internal static MelonPreferences_Entry<bool> ChaseOff { get; private set; }
+        internal static MelonPreferences_Entry<bool> GeisGift { get; private set; }
         internal static MelonPreferences_Entry<string> KeyAreaRoutes { get; private set; }
         internal static MelonPreferences_Entry<string> KeyHelp { get; private set; }
 
@@ -157,6 +158,8 @@ namespace NocturneAccess.Core
                 "In the Labyrinth's Third Kalpa chase: a soft low pulse while Raidou (or Dante) comes nearer within 30 metres, or is within 12 metres; faster as he closes in. He catches you within 2.5 metres.");
             ChaseOff = navigation.CreateEntry("ChaseOff", true, "Third Kalpa chase off",
                 "Accessibility change (Francesco, 2 Nov 2026: Raidou, or Dante, is too fast to avoid by ear). In the Labyrinth's Third Kalpa chase the pursuer stands still and never starts a battle; the stages, doors and story go on as the game's. On by default. The boss fight at the end is not affected. Set to false for the game's chase, with the mod's pulse and Insert key.");
+            GeisGift = navigation.CreateEntry("GeisGift", true, "Geis Magatama after Metatron",
+                "Accessibility change (Francesco, 21 Nov 2026): the Puzzle Boy minigame in Asakusa is visual only, and its prize, the Geis Magatama, is needed for later challenges. Once Metatron is beaten in the Labyrinth of Amala, the mod gives Geis the way the Puzzle Boy does (and marks his prize as taken). On by default; false leaves it to the minigame.");
 
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);
