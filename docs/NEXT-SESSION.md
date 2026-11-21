@@ -2,7 +2,11 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (20 Nov 2026, night): 0.0.179 adds ", Mitama bonuses not counted" to a demon door line with no passing demon (Francesco). 0.0.178 built, untested: the demon doors count only the demons the game offers (Raidou out); the door tests base stats without the Mitama bonus (the game's rule); screen watch back on for the black screen
+## RESUME HERE (21 Nov 2026): 0.0.180 built, untested: battle skill costs after a summon (party index, not slot), the way on chooses again after its own same-area door (Fifth Kalpa area 18). Francesco redoes Metatron (game over)
+
+Test: Skill rows in battle after a summon say "Agidyne, 10 MP"; area 18: after a way-on door, End names the next way-on point. Details: `docs/HANDOFF.md` last entry.
+
+## Earlier (20 Nov 2026, night): 0.0.179 adds ", Mitama bonuses not counted" to a demon door line with no passing demon (Francesco). 0.0.178 built, untested: the demon doors count only the demons the game offers (Raidou out); the door tests base stats without the Mitama bonus (the game's rule); screen watch back on for the black screen
 
 Francesco is suspended at the Fifth Kalpa's Agility door (field 45 area 13); no demon passes it yet (Matador 19 of 20 to the game, 22 on the Stats screen). Test: Shift+End there should say "no demon of yours passes yet: best Matador, 19 of 20". At the next black screen, F6 at once, then read the `[Screen]` lines before the dump. Details: `docs/HANDOFF.md` last entry.
 

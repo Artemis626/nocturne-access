@@ -90,12 +90,15 @@ namespace NocturneAccess.Systems.Battle
         internal static string CostOfActing(string itemText)
         {
             nbMainProcessData_t d = nbMainProcess.nbGetMainProcessData();
-            if (d == null || d.activeunit < 0)
+            // activeunit is a party index, not a slot (0.0.150); read as a slot it named another unit once the order changed, whose
+            // skills lacked the row, so no cost was said (Francesco, 21 Nov 2026: Boogie-Woogie, Agidyne, Tarukaja; 0.0.180).
+            int form = BattleReader.ActiveForm(d);
+            if (form < 0)
                 return "";
-            int id = SkillId(d.activeunit, itemText);
+            int id = SkillId(form, itemText);
             if (id < 0)
                 return "";
-            return Cost(id, nbMainProcess.nbGetUnitWorkFromFormindex(d.activeunit), out string text) ? text : "";
+            return Cost(id, nbMainProcess.nbGetUnitWorkFromFormindex(form), out string text) ? text : "";
         }
 
         /// <summary>

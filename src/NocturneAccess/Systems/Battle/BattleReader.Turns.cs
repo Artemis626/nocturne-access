@@ -55,7 +55,7 @@ namespace NocturneAccess.Systems.Battle
         /// and the half-turn line still took activeunit as a formindex. Francesco, 4 Nov 2026 (Pale Rider, 15:28:57): after a
         /// Call Evil, "Loa 1: Last Resort" while Loa 3 (just called, 414 HP) was the one that died by it.
         /// </summary>
-        private static int ActiveForm(nbMainProcessData_t d)
+        internal static int ActiveForm(nbMainProcessData_t d)
         {
             int unit = d?.activeunit ?? -1;
             if (unit < 0)

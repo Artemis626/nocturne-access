@@ -700,6 +700,8 @@ namespace NocturneAccess.Systems.Navigation
                 bool chosen = moveType >= 0 && !WarpMap.IsTouchMoveType(moveType);
                 if (took != null && !chosen)
                     SpeechManager.Say("Warped.", interrupt: false);
+                if (res != null)
+                    WayOn.TakenInArea(gb.fieldID, gb.areaID, res);
                 Log.Info($"{Tag} Moved by the game to {FieldData.F(px)} {FieldData.F(py)} {FieldData.F(pz)} in the same area" +
                          (took == null ? " (no door left just before: an event, not said)" : chosen ? $" ({res}, taken with confirm)" : $" (after {res})") + ".");
             }

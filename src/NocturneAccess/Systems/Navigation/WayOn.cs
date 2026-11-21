@@ -46,11 +46,36 @@ namespace NocturneAccess.Systems.Navigation
             _toneField = _toneArea = int.MinValue;
         }
 
+        // ---- Choosing again after the way on's own door (0.0.180) ----
+        // Francesco, 21 Nov 2026 (14:16:50): the Fifth Kalpa's area 18 is a chain of same-area doors. Its way-on door 01d_09 put
+        // him beside the exit 01d_10 (first in the area's list), but the selected point stayed 01d_09, now behind him, and End said
+        // "Explored door, nothing new behind it. Beyond doors, no known way yet". When the game moves the player through the
+        // chosen way-on door inside the area, the way on chooses again, silently, once the player has control: End and Home
+        // then go to the next way-on point.
+        private const long RechooseDelayMs = 600;
+        private static readonly System.Diagnostics.Stopwatch Clock = System.Diagnostics.Stopwatch.StartNew();
+        private static long _rechooseAt = -1;
+
+        /// <summary>ExploredDoors: the game moved the player through 'name' without leaving the area.</summary>
+        internal static void TakenInArea(int field, int area, string name)
+        {
+            if (!IsMarked(field, area, name))
+                return;
+            _rechooseAt = Clock.ElapsedMilliseconds + RechooseDelayMs;
+            Log.Info($"{Tag} Field {field} area {area}: the way-on door {name} taken inside the area; choosing again.");
+        }
+
         internal static void Tick()
         {
             fldGlobalWork_t gb = fldGlobal.fldGb;
             if (gb == null)
                 return;
+            if (_rechooseAt >= 0 && Clock.ElapsedMilliseconds >= _rechooseAt && FieldState.IsExploring && !AutoWalk.Active)
+            {
+                _rechooseAt = -1;
+                if (gb.fieldID == _markField && gb.areaID == _markArea)
+                    Choose(gb, speak: false);
+            }
             if (gb.fieldID != _toneField || gb.areaID != _toneArea)
             {
                 _toneField = gb.fieldID;
@@ -116,11 +141,19 @@ namespace NocturneAccess.Systems.Navigation
                 SpeechManager.Say(FourthKalpaCues.ChallengeWords, interrupt: true, force: true);
                 return;
             }
+            _rechooseAt = -1;
+            Choose(gb, speak: true);
+        }
+
+        /// <summary>Chooses the way on and selects it for Home and End; says it when 'speak' (Shift+End), else only logs.</summary>
+        private static void Choose(fldGlobalWork_t gb, bool speak)
+        {
             Load();
             if (!Known(gb.fieldID, gb.areaID, out List<string> names))
             {
                 Log.Info($"{Tag} No way on known for field {gb.fieldID} area {gb.areaID}.");
-                SpeechManager.Say($"{Words} None known for this area.", interrupt: true);
+                if (speak)
+                    SpeechManager.Say($"{Words} None known for this area.", interrupt: true);
                 return;
             }
 
@@ -180,11 +213,14 @@ namespace NocturneAccess.Systems.Navigation
             Marked.Clear();
             if (pick == null)
             {
-                SpeechManager.Say($"{Words} Not found from here.", interrupt: true);
+                if (speak)
+                    SpeechManager.Say($"{Words} Not found from here.", interrupt: true);
                 return;
             }
             Marked.UnionWith(pick.Names);
             PointsOfInterest.Select(gb, pick);
+            if (!speak)
+                return;
             // A stat route says its stat (mod words Francesco kept, 2 Nov 2026): "Way on, Strength."
             string word = pick.Names.Select(n => RouteWord.TryGetValue(n, out string w) ? w : null).FirstOrDefault(w => w != null);
             string lead = word != null ? $"Way on, {word}. " : Words + " ";
