@@ -14,3 +14,6 @@ obj/
 .vs/
 .vscode/
 .idea/
+
+# Francesco's save backups (tools/backup-saves.sh). Personal game data: never commit.
+save-backups/
