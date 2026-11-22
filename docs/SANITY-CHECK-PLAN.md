@@ -60,7 +60,8 @@ mod's `Explored` files into `save-backups/<date>_<label>/` (git-ignored). First 
   `ModMain.cs` and the csproj.
 - **2. Probes and log volume:** about 1.3 MB of log per hour of play (20:30 session: 9000 lines in 70 min). The largest shares:
   `[Nav:Trace]` (NavProbe, 20%), `[Battle:Data]` (16%), `[SPEECH]`, `[Nav:Walk]`. The archive keeps 20 sessions (15 MB now).
-  Open for Francesco: keep NavProbe and `[Battle:Data]` on for the playthrough, then behind a config switch, off for players.
+  Decided (Francesco, 22 Nov 2026): change nothing during the playthrough; once the game is finished, put NavProbe, `[Battle:Data]`
+  and GameFlagWatch behind a config switch, default off.
 - **3. Code health:** every per-frame reader runs inside `ModMain.OnUpdate`'s try/catch, errors capped at 3 per reader per session
   with a total at exit. No TODO-like comments. Every config entry is read. `activeunit`: the battle turn line's fallback (used only
   when the game's party entry cannot be read) looked the name up by party index as a slot; now by `ActiveForm` (0.0.184). The
