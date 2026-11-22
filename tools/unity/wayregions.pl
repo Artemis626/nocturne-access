@@ -72,6 +72,8 @@ for my $a (sort { $a <=> $b } keys %areas) {
     for my $i (1 .. $#r) { my ($p, $q) = ($find->($r[0]), $find->($r[$i])); if ($p ne $q) { $uf{$q} = $p; print "# area $a: $name joins R$r[0] and R$r[$i]\n" if $ENV{SHOW} } }
   }
   # Trusted only when every door volume and landing of this area has a part; otherwise the area is one part ("a:*").
+  # A script move whose volume is not in the area file is a leftover procedure (area 8's 009_01eve_03 and 06, 22 Nov 2026): dropped.
+  @rows = grep { !($_->{mt} eq 'script' && $_->{a} == $a && !exists $regs{$_->{vol}}) } @rows;
   my @needed = (map { $_->{vol} } grep { $_->{a} == $a } @rows), (map { $_->{at} } grep { $_->{d} == $a } @rows);
   my @lost = grep { !$regs{$_} || !@{ $regs{$_} } } @needed;
   if (@lost) { print "# area $a: one part (no floor part for @lost)\n" if $ENV{SHOW}; $whole{$a} = 1; next }

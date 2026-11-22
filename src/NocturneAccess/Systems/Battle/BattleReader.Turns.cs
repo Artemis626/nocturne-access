@@ -33,11 +33,11 @@ namespace NocturneAccess.Systems.Battle
                 return "";
             _lastTurnKey = key;
             string name = ActingName(d, form);   // the acting party entry's own unit (0.0.108), else the slot's (0.0.88)
-            if (name.Length == 0 && Units.TryGetValue(form, out Unit u))
+            if (name.Length == 0 && Units.TryGetValue(ActiveForm(d), out Unit u))   // 0.0.184: by the entry's formindex, not the party index
                 name = u.Name;
             if (name.Length == 0)
                 return "";
-            Log.Info($"{Tag} Turn: formindex {form} ({name}), press4_p {d.press4_p}, press4_ten {d.press4_ten}.");
+            Log.Info($"{Tag} Turn: activeunit {form} ({name}), press4_p {d.press4_p}, press4_ten {d.press4_ten}.");
             string side = _playerTurnUnsaid ? "Player turn. " : "";
             _playerTurnUnsaid = false;
             return $"{side}{name}'s turn";
@@ -82,7 +82,7 @@ namespace NocturneAccess.Systems.Battle
 
         private static string ActingName(nbMainProcessData_t d, int form)
         {
-            string bySlot = PartyName(form);
+            string bySlot = PartyName(ActiveForm(d));   // 0.0.184: the fallback by the entry's formindex too
             try
             {
                 nbParty_t p = d.party != null && form < d.party.Length ? d.party[form] : null;

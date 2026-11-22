@@ -53,3 +53,25 @@ changes what he hears. Commit and push each working fix.
 Before any change that writes to the game's save state (as 0.0.181's Geis gift does), run `bash tools/backup-saves.sh <label>`
 with the game closed: it copies `%APPDATA%/Sega/smt3hd` (`SMT3HDDATA.sav` holds every save file and the suspend data) and the
 mod's `Explored` files into `save-backups/<date>_<label>/` (git-ignored). First backup: `save-backups/2026-11-21_22-05_before-0.0.181`.
+
+## Results, first pass (22 Nov 2026, 0.0.184)
+- **1. Build and start-up:** 0 warnings, 0 errors; `[Patch] Summary` 49 patched, 0 not declared, 0 failed (52 until 0.0.181:
+  FadeWatch's 3 hooks off); no mod error, exception or warning in the sessions of 21 Nov 18:11, 20:30 and 22:10. Version equal in
+  `ModMain.cs` and the csproj.
+- **2. Probes and log volume:** about 1.3 MB of log per hour of play (20:30 session: 9000 lines in 70 min). The largest shares:
+  `[Nav:Trace]` (NavProbe, 20%), `[Battle:Data]` (16%), `[SPEECH]`, `[Nav:Walk]`. The archive keeps 20 sessions (15 MB now).
+  Open for Francesco: keep NavProbe and `[Battle:Data]` on for the playthrough, then behind a config switch, off for players.
+- **3. Code health:** every per-frame reader runs inside `ModMain.OnUpdate`'s try/catch, errors capped at 3 per reader per session
+  with a total at exit. No TODO-like comments. Every config entry is read. `activeunit`: the battle turn line's fallback (used only
+  when the game's party entry cannot be read) looked the name up by party index as a slot; now by `ActiveForm` (0.0.184). The
+  other uses are a side test (`>= FirstEnemy`), the party-entry lookup (`ActingName`) and logs.
+- **4. Data files:** no duplicate lines in `WayOn.txt` or `AreaPoints.txt`; `ScriptNames.txt` still field 34 only; every way-on
+  field has its README row. Every way-on name checked against the area files (`fNNN_AAA.f2`): the Fifth Kalpa's 14 `01d_05`, 15
+  `01d_03`, 16 `01d_10` are in the door table but not in the f2 files (verified in game, so built elsewhere at run time); the
+  Yurakucho Tunnel's area 8 `01eve_03` and `01eve_06` have script procedures but no volume: removed, and `wayregions.pl` now drops
+  such leftovers (area 8 splits into two parts, each with its slide: `21 8 01eve_04 01eve_05`).
+- **5. Player-facing:** `docs/KEYS.md` matches every key default in `Core/Config.cs`. Francesco's own `NocturneAccess.cfg` keeps
+  about ten entries the mod no longer creates (`Status`, `StepTest`, `TurnTest`, `PoiCurrent`, `FirstPersonFlag`,
+  `FirstPersonFlags`, `FirstPersonAutoChain`, `FirstPersonChainIgnore`, the old `Probe` and routes key): MelonLoader keeps them, a
+  fresh install has none; harmless. Mod words listed in `docs/MOD-WORDS.md` (chosen ones and the open ones).
+- **Not done yet:** the class-index pass over every name used (section 3, last item), README "Content changed" read through.

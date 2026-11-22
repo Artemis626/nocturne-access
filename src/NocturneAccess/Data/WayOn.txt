@@ -274,9 +274,9 @@
 45 22 01d_01                                   # Ahriman's, Noah's and Baal Avatar's tombs: back into area 21
 
 # ---- Yurakucho Tunnel (field 21): from Yurakucho Station to the exit north to Sannou-Nagatacho and the Diet Building (0.0.181; redone 0.0.183, 22 Nov 2026) ----
-# Built by tools/unity/wayregions.pl: each area file flooded offline into its walkable parts (areas 1, 2, 5, 8, 12, 22, 23, 24 lack
+# Built by tools/unity/wayregions.pl: each area file flooded offline into its walkable parts (areas 1, 2, 5, 12, 22, 23, 24 lack
 # collision in their files and count as one part), the door table (F021.WAP) plus the slides (prompt-less 01eve volumes whose
-# procedure calls CALL_FIELD2: area 3 01eve_14 to area 13's south part, area 8 01eve_03 to 06 to area 11, area 10 01eve_12 / 13 to
+# procedure calls CALL_FIELD2: area 3 01eve_14 to area 13's south part, area 8 01eve_04 and 05 to area 11 (its 01eve_03 and 06 procedures have no volume), area 10 01eve_12 / 13 to
 # area 14) joining the parts, each part's exits nearest to the goal first (area 6's 01eve_02, to field 8). Every part's own exit is
 # listed, so a sealed pocket (area 13's west part, where area 3's ladder 01eve_04 lands) names its way back. The live map takes the
 # first one the player can reach, walking or through same-area doors (landings from Data/AreaPoints.txt). 0.0.181's area-only graph
@@ -289,7 +289,7 @@
 21 5 01eve_01
 21 6 01eve_02
 21 7 01eve_06 01d_04 01d_05 01d_02
-21 8 01eve_03 01eve_04 01eve_05 01eve_06
+21 8 01eve_04 01eve_05
 21 9 01d_07 01d_02
 21 10 01eve_12 01d_09 01d_03 01d_06 01d_12
 21 11 01d_01 01d_02 01d_03
