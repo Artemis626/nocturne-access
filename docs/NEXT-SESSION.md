@@ -2,7 +2,9 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (21 Nov 2026, before a compact): next, a general sanity check of the mod, `docs/SANITY-CHECK-PLAN.md`; 0.0.182 installed (black-screen probe off); save backups with `tools/backup-saves.sh`
+## RESUME HERE (22 Nov 2026): 0.0.183 built, untested: the Yurakucho Tunnel way on by the parts of each area, with the slides (`tools/unity/wayregions.pl`); the Geis gift verified. Francesco is in area 13's west strip: Shift+End should lead back up the ladder to area 3, then the slide `01eve_14`. Then the sanity check, `docs/SANITY-CHECK-PLAN.md`. Details: `docs/HANDOFF.md` last entry.
+
+## Earlier (21 Nov 2026, before a compact): next, a general sanity check of the mod, `docs/SANITY-CHECK-PLAN.md`; 0.0.182 installed (black-screen probe off); save backups with `tools/backup-saves.sh`
 
 Read Francesco's test logs first (the Geis line after loading, the Yurakucho Tunnel way on), then the plan.
 
