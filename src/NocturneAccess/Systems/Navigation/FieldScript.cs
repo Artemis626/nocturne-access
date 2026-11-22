@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Il2Cpp;
@@ -463,6 +464,18 @@ namespace NocturneAccess.Systems.Navigation
         /// puts the player just past itself (01pos_51 or 01pos_52, 200 from the south catwalk), which the formation flag 1123
         /// decides per volume. Null when the script cannot be read.
         /// </summary>
+        /// <summary>
+        /// A slide (0.0.184, Francesco's word, 22 Nov 2026): a story volume whose every path, with the flags of now, puts the
+        /// player in another area (CALL_FIELD2). The Yurakucho Tunnel's prompt-less 01eve volumes (f021.bf: 004_01eve_14 to area
+        /// + 1 14 at 01pos_07; 009_01eve_03 to 06; 011_01eve_12, 13) slide the player down. The caller checks there is no narration.
+        /// </summary>
+        internal static bool IsSlide(int area, string volume)
+        {
+            List<List<(int AreaPlus1, string Point)>> paths = Placements(area, volume);
+            return paths != null && paths.Count > 0
+                && paths.All(p => p.Count > 0 && p.All(t => t.AreaPlus1 != 0 && t.AreaPlus1 != area + 1));
+        }
+
         internal static List<List<(int AreaPlus1, string Point)>> Placements(int area, string volume)
         {
             if (!Ensure() || _strAt < 0 || _modelPos < 0 || _callField2 < 0 || !ProcByName.TryGetValue(ProcName(area, volume), out Proc p))

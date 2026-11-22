@@ -41,7 +41,7 @@ namespace NocturneAccess.Systems.Navigation
         public string Mark = "";         // world map: where an entrance lies when several share its name ("10 metres south of Mifunashiro", 0.0.95)
         public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp || AwayWarp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") + (Mark.Length > 0 ? ", " + Mark : "") : Name.Length > 0 ? Name + " door" : DoorWord)
             : Kind == PoiKind.Place ? (Detail.Length > 0 ? $"{Name}: {Detail}" : Name)
-            : Kind == PoiKind.Event ? (Action ? ActionLabel : Story ? (Detail.Length > 0 ? "Story event: " + Detail : "Story event") : Name.Length > 0 ? "Event, " + Name : "Event")
+            : Kind == PoiKind.Event ? (Action ? ActionLabel : Slide ? "Slide" : Story ? (Detail.Length > 0 ? "Story event: " + Detail : "Story event") : Name.Length > 0 ? "Event, " + Name : "Event")
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
 
         /// <summary>
@@ -50,6 +50,7 @@ namespace NocturneAccess.Systems.Navigation
         /// a switch"). A story event runs as soon as it is walked into. Neither: the old "Event" (the script could not tell).
         /// </summary>
         public bool Action, Story, Jump;
+        public bool Slide;               // a silent story volume that only moves the player to another area (FieldScript.IsSlide, 0.0.184): "Slide"
         public string Prompt = "", Detail = "";
         public string ScriptNote = "";   // the dry run's verdict, for the log
 
@@ -198,7 +199,7 @@ namespace NocturneAccess.Systems.Navigation
         /// "explored door", "empty item box"; a door with a kind as on Page Up: "explored door, room".</summary>
         public string InSentence => NextStep ? StepPhrase(true)
             : Action ? Spoken   // the game's own words keep their capitals: "Walking to Examine: There's a switch"
-            : Kind == PoiKind.Event ? (Story ? "story event" : Name.Length > 0 ? "event, " + Name : "event")
+            : Kind == PoiKind.Event ? (Slide ? "slide" : Story ? "story event" : Name.Length > 0 ? "event, " + Name : "event")
             : PlainDoor ? DoorPhrase(true)
             : DoorKind.Length > 0 || ToWorld ? Spoken.ToLowerInvariant()
             : (State.Length > 0 ? State + " " : "") + (Name.Length > 0 || Soul || Demon ? Label : Label.ToLowerInvariant());
@@ -562,6 +563,9 @@ namespace NocturneAccess.Systems.Navigation
                              : script?.Outcome == ScriptOutcome.Story ? FieldScript.FirstNarration(gb.areaID, name) : placeDetail,   // 0.0.97: the tile's narration ("Time passed quickly")
                     ScriptNote = script?.ToString() ?? "",
                 });
+                Poi added = list[list.Count - 1];
+                if (added.Kind == PoiKind.Event && added.Story && added.Detail.Length == 0 && FieldScript.IsSlide(gb.areaID, name))
+                    added.Slide = true;
             }
 
             // Event volumes next to doors carry the door's place name ("Room A203"): keep one only when no real door has
