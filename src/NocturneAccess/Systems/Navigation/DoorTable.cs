@@ -71,6 +71,25 @@ namespace NocturneAccess.Systems.Navigation
             }
         }
 
+        /// <summary>
+        /// True when the entry the game would take now is gated by a story flag that is on (0.0.185): the Diet Building's
+        /// 01eve_02 (field 33 area 0, row flag 1672, to area 1 at 01pos_02) plays the statue scene once and sets 1672; from then
+        /// on its procedure only idles and the row makes it a plain door.
+        /// </summary>
+        internal static bool GatedRowOn(int field, int area, string resName)
+        {
+            try
+            {
+                Refresh(field);
+                Entry e = Find(area, resName);
+                return e != null && e.Flag != 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         /// <summary>The movetype of the entry the game would take for this door now, or -1 (2: fired by walking in).</summary>
         internal static int MoveTypeOf(int field, int area, string resName)
         {

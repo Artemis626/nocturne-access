@@ -9,6 +9,7 @@ needs Francesco's consent (CLAUDE.md). The status comes from the records (`docs/
 - "Way on." and the way-on lines (Shift+End, his design, 26 Oct 2026); "Way on, Strength." and the stat routes (2 Nov).
 - "Way on, Magic, best Beidou Xingjun, 24 of 25" (the numbers, his request, 20 Nov); ", Mitama bonuses not counted" (20 Nov).
 - "Slide" (22 Nov 2026, for the Yurakucho Tunnel's slides).
+- "You've been warped." (a script move from an event volume, the Diet Building's trick paintings, 22 Nov 2026).
 - "No effect on X." (failed ailment or instakill, 20 Nov).
 - "Block" (a null on a target, 16 Nov); "Insufficient macca" (shop rows, 18 Nov).
 - "Dead" (party panel, confirmed 12 Oct); "Shock" and "Freeze" (statuses, 4 Nov); "Panic ended" and the other "... ended" lines (0.0.134).

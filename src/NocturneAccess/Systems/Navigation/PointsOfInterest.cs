@@ -447,6 +447,14 @@ namespace NocturneAccess.Systems.Navigation
                     // 0.0.163: the 0.0.71 safety net (a volume whose prompt was once seen stayed listed though the dry run found
                     // nothing to do) is gone. Across the 20 archived sessions it held one volume only: Nyx's Lounge's 01eve_01
                     // (field 19 area 6), Loki's "Talk" from before he left, a phantom event (Francesco, 11 Nov 2026).
+                    // 0.0.185: an event volume whose scene is played and whose door-table row a story flag has switched on is a
+                    // door now (the Diet Building's 01eve_02 after the statue scene, flag 1672: Francesco, 22 Nov 2026, the door
+                    // vanished with the event).
+                    if (script != null && script.Outcome == ScriptOutcome.Inactive && DoorTable.GatedRowOn(gb.fieldID, gb.areaID, name))
+                    {
+                        kind = PoiKind.Door;
+                        script = null;
+                    }
                     if (script != null && script.Outcome == ScriptOutcome.Inactive)
                     {
                         Skipped.Add($"{name} {script}");

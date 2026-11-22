@@ -20,7 +20,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.184";
+        internal const string ModVersion = "0.0.185";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
@@ -55,6 +55,7 @@ namespace NocturneAccess.Core
             ChaseCues.Install();
             ExploredDoors.Install();
             GameFlagWatch.Install();
+            ScriptWarps.Install();
             // Capture.FadeWatch.Install(): off since 0.0.182 (Francesco, 21 Nov 2026: the black screen comes from moving through doors
             // faster than the game's transition, with the way on and Home chaining doors; on 0.0.178 to 0.0.181; Capture/FadeWatch.cs kept).
             BlobberMode.Init();
@@ -106,6 +107,7 @@ namespace NocturneAccess.Core
             // ("chase probe", ChaseProbe.Tick): off since 0.0.148 (Francesco, 3 Nov 2026; the chase is off by default; Capture/ChaseProbe.cs kept for a later accessible chase)
             ("chase cues", ChaseCues.Tick),
             ("prize gifts", Systems.PrizeGifts.Tick),
+            ("script warps", ScriptWarps.Tick),
             ("pipe autopilot", PipePilot.Tick),
             ("way-on tone", WayOn.Tick),
             ("alarm cue", AlarmCue.Tick),
