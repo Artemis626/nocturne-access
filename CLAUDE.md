@@ -20,6 +20,7 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 
 - **21 Nov 2026: first formal publication on Francesco's website done** (his go-ahead): letsaccessit.wordpress.com/projects/ (page 19) and /projects/nocturne-access-technical-overview/ (page 13, content = `docs/TECHNICAL-OVERVIEW.md`, 0.0.179) are live; the menu (wp_navigation id 4) has About and Projects. Next on the site: his own presentation, published as he writes it. Game state: next bullet.
 
+- **RESUME HERE (23 Nov 2026, later afternoon): 0.0.189 built, untested: an "Open Door" event with a door-table row (any flag) is in the Doors filter, "Door, includes an event, passage" (`Poi.DoorEvent`, `DoorTable.KindOf anyFlag`; Francesco's words; Central Tower 2F `01eve_03`). `docs/HANDOFF.md` last entry.**
 - **RESUME HERE (23 Nov 2026, afternoon): 0.0.188 built, untested: `ExploredDoors.IsDoorName` takes event-named volumes with a live door-table row as doors (Diet Building Central Tower 1F `01eve_02` was never marked explored). Francesco: 0.0.185 to 0.0.187 effective. `docs/HANDOFF.md` last entry.**
 - **RESUME HERE (23 Nov 2026, later): 0.0.187 built, untested: world map says "Entrance to X", filter "Entrances" (`PointsOfInterest.FilterName`; Francesco). `docs/HANDOFF.md` last entry.**
 - **RESUME HERE (23 Nov 2026): 0.0.186 built, untested: `AreaRoutes.LeadsOf` one room deep (0.0.164 searched every room, so nearly every door said "leads to unexplored doors"); "no unexplored doors behind it" replaces "nothing new behind it" (Francesco). `docs/HANDOFF.md` last entry.**

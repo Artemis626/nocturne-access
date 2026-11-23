@@ -133,14 +133,16 @@ namespace NocturneAccess.Systems.Navigation
         private static bool _loggedEmpty;
 
         /// <summary>"room", "passage", "exit", "to exit" (a room whose only other way out is one door off the field, 0.0.59, 0.0.126) or "" for door volume resName in (field, area).</summary>
-        internal static string KindOf(int field, int area, string resName)
+        /// <param name="anyFlag">0.0.189: when no row is live, take the first row whatever its flag (an "Open Door" event whose
+        /// door row a story flag switches on after its scene: the Diet Building's Central Tower 2F 01eve_03, flag 1673).</param>
+        internal static string KindOf(int field, int area, string resName, bool anyFlag = false)
         {
             if (!(Config.DoorKinds?.Value ?? true))
                 return "";
             try
             {
                 Refresh(field);
-                Entry e = Find(area, resName);
+                Entry e = Find(area, resName) ?? (anyFlag ? Entries.FirstOrDefault(x => x.AreaPlus1 == area + 1 && x.Name == resName) : null);
                 if (e == null || e.WarpType != 0)
                     return "";
                 e.Dest(field, area, out int toField, out int toArea);

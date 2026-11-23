@@ -41,7 +41,7 @@ namespace NocturneAccess.Systems.Navigation
         public string Mark = "";         // world map: where an entrance lies when several share its name ("10 metres south of Mifunashiro", 0.0.95)
         public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp || AwayWarp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? "Entrance to " + Name : "Entrance") + (Mark.Length > 0 ? ", " + Mark : "") : Name.Length > 0 ? Name + " door" : DoorWord)
             : Kind == PoiKind.Place ? (Detail.Length > 0 ? $"{Name}: {Detail}" : Name)
-            : Kind == PoiKind.Event ? (Action ? ActionLabel : Slide ? "Slide" : Story ? (Detail.Length > 0 ? "Story event: " + Detail : "Story event") : Name.Length > 0 ? "Event, " + Name : "Event")
+            : Kind == PoiKind.Event ? (DoorEvent ? DoorEventWords : Action ? ActionLabel : Slide ? "Slide" : Story ? (Detail.Length > 0 ? "Story event: " + Detail : "Story event") : Name.Length > 0 ? "Event, " + Name : "Event")
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
 
         /// <summary>
@@ -50,6 +50,15 @@ namespace NocturneAccess.Systems.Navigation
         /// a switch"). A story event runs as soon as it is walked into. Neither: the old "Event" (the script could not tell).
         /// </summary>
         public bool Action, Story, Jump;
+        /// <summary>
+        /// An event whose game prompt is "Open Door" (prompt 2): listed with the doors, "Door, includes an event, passage"
+        /// (Francesco, 23 Nov 2026, 0.0.189: the Diet Building's Central Tower 2F door to East Wing 2F, 01eve_03, plays the
+        /// statue's scene first and only then becomes a door; under Actions it was missed). The kind comes from its door row
+        /// whatever the flag (DoorTable.KindOf anyFlag).
+        /// </summary>
+        public bool DoorEvent;
+        internal const string DoorEventWords = "Door, includes an event";
+        internal const int OpenDoorPrompt = 2;   // fldPanel.inputpanel_mes0[2], "Open Door" (the script prompt table in every dump)
         public bool Slide;               // a silent story volume that only moves the player to another area (FieldScript.IsSlide, 0.0.184): "Slide"
         public string Prompt = "", Detail = "";
         public string ScriptNote = "";   // the dry run's verdict, for the log
@@ -198,6 +207,7 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>The label inside a sentence: game names and "Soul" keep their capitals, the mod's own words do not;
         /// "explored door", "empty item box"; a door with a kind as on Page Up: "explored door, room".</summary>
         public string InSentence => NextStep ? StepPhrase(true)
+            : DoorEvent ? "door, includes an event" + (DoorKind.Length > 0 ? ", " + DoorKind : "")
             : Action ? Spoken   // the game's own words keep their capitals: "Walking to Examine: There's a switch"
             : Kind == PoiKind.Event ? (Slide ? "slide" : Story ? "story event" : Name.Length > 0 ? "event, " + Name : "event")
             : PlainDoor ? DoorPhrase(true)
@@ -575,6 +585,12 @@ namespace NocturneAccess.Systems.Navigation
                 Poi added = list[list.Count - 1];
                 if (added.Kind == PoiKind.Event && added.Story && added.Detail.Length == 0 && FieldScript.IsSlide(gb.areaID, name))
                     added.Slide = true;
+                if (added.Kind == PoiKind.Event && script?.Outcome == ScriptOutcome.Action && script.Prompt == Poi.OpenDoorPrompt && !world
+                    && !DoorTable.HasNoRows(gb.fieldID, gb.areaID, name))   // the tunnel's "It won't open from this side" backs have no row: stay actions
+                {
+                    added.DoorEvent = true;
+                    added.DoorKind = DoorTable.KindOf(gb.fieldID, gb.areaID, name, anyFlag: true);
+                }
             }
 
             // Event volumes next to doors carry the door's place name ("Room A203"): keep one only when no real door has
@@ -887,7 +903,7 @@ namespace NocturneAccess.Systems.Navigation
                 case PoiKind.Place:
                     return PoiCategory.Rooms;
                 case PoiKind.Event:
-                    return q.Action ? PoiCategory.Actions : PoiCategory.Events;
+                    return q.DoorEvent ? PoiCategory.Doors : q.Action ? PoiCategory.Actions : PoiCategory.Events;
             }
             if (q.Jump && q.Prompt.Length > 0)
                 return PoiCategory.Actions;

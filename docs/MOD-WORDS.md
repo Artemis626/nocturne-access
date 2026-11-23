@@ -9,6 +9,7 @@ needs Francesco's consent (CLAUDE.md). The status comes from the records (`docs/
 - "Way on." and the way-on lines (Shift+End, his design, 26 Oct 2026); "Way on, Strength." and the stat routes (2 Nov).
 - "Way on, Magic, best Beidou Xingjun, 24 of 25" (the numbers, his request, 20 Nov); ", Mitama bonuses not counted" (20 Nov).
 - "Slide" (22 Nov 2026, for the Yurakucho Tunnel's slides).
+- "Door, includes an event" (an "Open Door" event with a door row, in the Doors filter; Francesco, 23 Nov 2026).
 - "Entrance to X" and the filter "Entrances" on the world map (was "X entrance", "Doors"; Francesco, 23 Nov 2026).
 - "leads to unexplored doors" / "no unexplored doors behind it" (an explored door, one room deep; Francesco chose the second wording, 23 Nov 2026).
 - "You've been warped." (a script move from an event volume, the Diet Building's trick paintings, 22 Nov 2026).
