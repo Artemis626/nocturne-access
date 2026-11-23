@@ -2,7 +2,9 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (23 Nov 2026, later afternoon): 0.0.189 built, untested: "Open Door" events with a door row listed as "Door, includes an event, passage" in Doors (`Poi.DoorEvent`). Also 0.0.188 below.
+## RESUME HERE (23 Nov 2026, evening): 0.0.190 built, untested: the Diet Building statue room (East Wing 1F, area 23): the randomly drawn true statue says "Examine, true statue" (`PointsOfInterest.StatueMark`, flags 1687 to 1691). Also 0.0.189, 0.0.188 below.
+
+## Earlier (23 Nov 2026, later afternoon): 0.0.189 built, untested: "Open Door" events with a door row listed as "Door, includes an event, passage" in Doors (`Poi.DoorEvent`). Also 0.0.188 below.
 
 ## Earlier (23 Nov 2026, afternoon): 0.0.188 built, untested: event-named doors marked explored (`ExploredDoors.IsDoorName`: Central Tower 1F `01eve_02`). 0.0.185 to 0.0.187 effective (Francesco).
 

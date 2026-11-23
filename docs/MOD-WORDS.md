@@ -25,6 +25,7 @@ needs Francesco's consent (CLAUDE.md). The status comes from the records (`docs/
 
 ## Never recorded as confirmed (open)
 
+- "Examine, true statue" (the Diet Building statue room, 0.0.190; to confirm).
 - "Story event", "Event", "Actions" (the filter), "Examine: There's a switch" (event wording, open since 0.0.71).
 - "Missed" (a miss on a target, 0.0.170; only "Block" was chosen).
 - "Unavailable" (a skill already chosen in the inheritance list, 0.0.127), "Skills left to inherit: N" (0.0.77).

@@ -296,6 +296,36 @@ namespace NocturneAccess.Systems.Navigation
             [(31, 5, "01eve_07")] = "to elevator for next floor",
         };
 
+        // ---- The Diet Building's statue room (0.0.190; Francesco, 23 Nov 2026) ----
+        // East Wing 1F (field 33 area 23): eight "Examine" statues; the voice asks to find its "true self". Sighted players look
+        // for the statue whose floor reflection shows no figure (Samurai Gamers, Game8), which leads to Mot. Read offline
+        // (f033.bf): 024_start, while flag 1687 is off, sets 1687, clears 1688 to 1691 and sets one of them at random; the
+        // true statue is 01eve_01 with 1688, 01eve_03 with 1689, 01eve_05 with 1690, 01eve_06 with 1691 (it sets 1686 and
+        // 2327); 01eve_02, 04, 07, 08 are never true. A wrong pick clears 1687 (a new draw on the next entry) and
+        // 024_randcallfield sends the player away. The true one says ", true statue" (mod words, to confirm) while 1687 is on
+        // and 1686 off.
+        private static readonly (string Volume, int Flag)[] TrueStatues = { ("01eve_01", 1688), ("01eve_03", 1689), ("01eve_05", 1690), ("01eve_06", 1691) };
+        private const int StatueDrawn = 1687, StatueFound = 1686;
+        internal const string TrueStatueWords = "true statue";
+
+        private static string StatueMark(fldGlobalWork_t gb, string name)
+        {
+            if (gb.fieldID != 33 || gb.areaID != 23)
+                return "";
+            try
+            {
+                if (!EventBit.evtBitCheck(StatueDrawn) || EventBit.evtBitCheck(StatueFound))
+                    return "";
+                foreach (var (volume, flag) in TrueStatues)
+                    if (volume == name && EventBit.evtBitCheck(flag))
+                        return ", " + TrueStatueWords;
+            }
+            catch
+            {
+            }
+            return "";
+        }
+
         // The Labyrinth entrance's shafts (field 40 area 0; Francesco, 2 Nov 2026: five "Hole" points told apart only by sight). Each
         // one's procedure (001_01eve_02 to 06, f040.bf) ends in FLD_CALL_WAPEX 66 to 70, the door rows whose u10 is the Kalpa's field
         // (41 to 45; the 20:59:50 dump's door table): the point says the game's name of that field ("to First Kalpa").
@@ -577,7 +607,7 @@ namespace NocturneAccess.Systems.Navigation
                     Action = script?.Outcome == ScriptOutcome.Action || jump,
                     Story = script?.Outcome == ScriptOutcome.Story,
                     Prompt = (jump ? FieldScript.PanelText(JumpPrompt) : script?.Outcome == ScriptOutcome.Action ? script.PromptText : "")
-                             + (WayMarks.TryGetValue((gb.fieldID, gb.areaID, name), out string way) ? " " + way : ""),   // "Ride to elevator for next floor"
+                             + (WayMarks.TryGetValue((gb.fieldID, gb.areaID, name), out string way) ? " " + way : "") + StatueMark(gb, name),   // "Ride to elevator for next floor"
                     Detail = script?.Outcome == ScriptOutcome.Action ? script.Detail
                              : script?.Outcome == ScriptOutcome.Story ? FieldScript.FirstNarration(gb.areaID, name) : placeDetail,   // 0.0.97: the tile's narration ("Time passed quickly")
                     ScriptNote = script?.ToString() ?? "",
