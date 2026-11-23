@@ -39,7 +39,7 @@ namespace NocturneAccess.Systems.Navigation
         public bool ToWorld;            // a dungeon door that leads to the world map (DoorTable.ToField below 10): "Exit to overworld" (0.0.44), never "explored" (0.0.45)
 
         public string Mark = "";         // world map: where an entrance lies when several share its name ("10 metres south of Mifunashiro", 0.0.95)
-        public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp || AwayWarp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? Name + " entrance" : "Entrance") + (Mark.Length > 0 ? ", " + Mark : "") : Name.Length > 0 ? Name + " door" : DoorWord)
+        public string Label => Kind == PoiKind.Door ? (Jump && Prompt.Length > 0 ? Prompt : Warp || AwayWarp ? "Warp" : Ladder ? LadderLabel : ToWorld ? "Exit to overworld" : World ? (Name.Length > 0 ? "Entrance to " + Name : "Entrance") + (Mark.Length > 0 ? ", " + Mark : "") : Name.Length > 0 ? Name + " door" : DoorWord)
             : Kind == PoiKind.Place ? (Detail.Length > 0 ? $"{Name}: {Detail}" : Name)
             : Kind == PoiKind.Event ? (Action ? ActionLabel : Slide ? "Slide" : Story ? (Detail.Length > 0 ? "Story event: " + Detail : "Story event") : Name.Length > 0 ? "Event, " + Name : "Event")
             : Kind == PoiKind.Person ? (Soul ? "Soul" : Demon ? "Demon" : "Person") : "Item box";
@@ -202,6 +202,7 @@ namespace NocturneAccess.Systems.Navigation
             : Kind == PoiKind.Event ? (Slide ? "slide" : Story ? "story event" : Name.Length > 0 ? "event, " + Name : "event")
             : PlainDoor ? DoorPhrase(true)
             : DoorKind.Length > 0 || ToWorld ? Spoken.ToLowerInvariant()
+            : Kind == PoiKind.Door && World && Name.Length > 0 ? "entrance to " + Name + (Mark.Length > 0 ? ", " + Mark : "")   // 0.0.187 (Francesco): "walking to entrance to Asakusa"
             : (State.Length > 0 ? State + " " : "") + (Name.Length > 0 || Soul || Demon ? Label : Label.ToLowerInvariant());
 
         /// <summary>Something beyond the plain label is known (End says it first).</summary>
@@ -908,6 +909,9 @@ namespace NocturneAccess.Systems.Navigation
 
         private static readonly string[] CategoryNames = { "All", "Doors", "Rooms", "Exits", "Warps", "Ladders", "Souls", "Demons", "Item boxes", "Actions", "Events" };
 
+        /// <summary>The filter's name; on the world map the Doors filter is "Entrances" (Francesco, 23 Nov 2026, 0.0.187).</summary>
+        private static string FilterName(fldGlobalWork_t gb, PoiCategory c) => c == PoiCategory.Doors && FieldState.WorldMap(gb) ? "Entrances" : CategoryNames[(int)c];
+
         /// <summary>
         /// Whether an NPC is in the world: its object (fldNpc_tag.fldObj) is active. The basement keeps npc_hoji_01 (hojiID
         /// 1, a Soul model) with its object inactive: the game never fires its hit, its collision box (Attr 0x80) does not stop
@@ -1326,7 +1330,7 @@ namespace NocturneAccess.Systems.Navigation
             {
                 Selected = null;
                 _selected = -1;
-                SpeechManager.Say(_filter == PoiCategory.All ? "No points of interest here." : $"No {CategoryNames[(int)_filter].ToLowerInvariant()} here.", interrupt: true);
+                SpeechManager.Say(_filter == PoiCategory.All ? "No points of interest here." : $"No {FilterName(gb, _filter).ToLowerInvariant()} here.", interrupt: true);
                 return;
             }
 
@@ -1371,7 +1375,7 @@ namespace NocturneAccess.Systems.Navigation
                 _selected = -1;
             }
             Log.Info($"[Nav:Poi] Filter {next}: {n} of {reachable.Count}.");
-            SpeechManager.Say($"{CategoryNames[(int)next]}, {n}.", interrupt: true);
+            SpeechManager.Say($"{FilterName(gb, next)}, {n}.", interrupt: true);
         }
 
         /// <summary>Selects a point (AutoWalk, the next door of a route through other areas), so End and Home use it.</summary>

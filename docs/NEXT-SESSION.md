@@ -2,7 +2,9 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (23 Nov 2026): 0.0.186 built, untested: an explored door's tag looks one room deep, "no unexplored doors behind it" (Francesco's words; `AreaRoutes.LeadsOf`). Also untested: 0.0.185 below. `docs/HANDOFF.md` last entry.
+## RESUME HERE (23 Nov 2026, later): 0.0.187 built, untested: world map "Entrance to X" and the filter "Entrances" (Francesco). Also untested: 0.0.186 and 0.0.185 below.
+
+## Earlier (23 Nov 2026): 0.0.186 built, untested: an explored door's tag looks one room deep, "no unexplored doors behind it" (Francesco's words; `AreaRoutes.LeadsOf`). Also untested: 0.0.185 below. `docs/HANDOFF.md` last entry.
 
 ## Earlier (22 Nov 2026, night): 0.0.185 built, untested: the Diet Building (field 33): the door after the statue scene listed again (`DoorTable.GatedRowOn`), "You've been warped." after a script move from an event volume (`ScriptWarps`, the trick paintings). Tunnel way on verified to its exit. `docs/HANDOFF.md` last entry.
 
