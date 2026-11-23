@@ -140,56 +140,43 @@ namespace NocturneAccess.Systems.Navigation
         // ---- What lies behind an explored door (0.0.164, Francesco's B4, 12 Nov 2026) ----
 
         /// <summary>The mod's words for what the player's own exploration shows behind an explored door ("" when not known).</summary>
-        internal const string LeadsOnWords = "leads to unexplored doors", NothingNewWords = "nothing new behind it";
+        internal const string LeadsOnWords = "leads to unexplored doors", NothingNewWords = "no unexplored doors behind it";
 
         /// <summary>
-        /// Behind explored door doorKey, through the doors the player has walked and the landings learned: an unexplored door
-        /// the player cannot already walk to (hereKeys) gives LeadsOnWords; every way behind it known and walked, NothingNewWords;
-        /// a door with no landing learned on the way, "" (nothing is guessed). Only what the player has seen is used: the door
-        /// table is never read for this, so nothing beyond his own exploration is told (Francesco, 11 Nov 2026: the Fourth Kalpa
-        /// takes the map away on purpose).
+        /// The room right behind explored door doorKey, as the player's own exploration knows it: its doors from the landing
+        /// learned there (Lands), or from the door the player came in by and the doors it reaches (Passes, Reach). An unexplored
+        /// door there that the player cannot already walk to (hereKeys) gives LeadsOnWords; every door there explored,
+        /// NothingNewWords; nothing learned, "" (nothing is guessed). Only doors count, never events or item boxes, and the door
+        /// table is never read (Francesco, 11 Nov 2026: the Fourth Kalpa takes the map away on purpose).
+        /// 0.0.186 (Francesco, 23 Nov 2026, the Diet Building): one room deep. 0.0.164 followed explored doors on through every
+        /// room, so one unexplored door anywhere tagged nearly every door, the one just come in by too; and its words "nothing
+        /// new behind it" were contradicted by item boxes and people behind the door.
         /// </summary>
         internal static string LeadsOf(string doorKey, HashSet<string> hereKeys)
         {
-            var seen = new HashSet<string> { doorKey };
-            var queue = new Queue<string>();
-            queue.Enqueue(doorKey);
-            bool unknown = false;
-            int steps = 0;
-            while (queue.Count > 0 && steps++ < 500)
+            var room = new List<string>();
+            bool known = false;
+            if (Lands.TryGetValue(doorKey, out var land))
             {
-                string d = queue.Dequeue();
-                var next = new List<string>();
-                if (Lands.TryGetValue(d, out var land))
-                    next.AddRange(land.Names.Select(n => land.Area + "/" + n));
-                else if (Passes.TryGetValue(d, out HashSet<string> arrivals))
-                    foreach (string t in arrivals)
-                    {
-                        next.Add(t);
-                        if (Reach.TryGetValue(t, out HashSet<string> linked))
-                            next.AddRange(linked.Select(n => AreaOf(t) + "/" + n));
-                        else
-                            unknown = true;
-                    }
-                else
-                {
-                    unknown = true;
-                    continue;
-                }
-                foreach (string e in next)
-                {
-                    if (!seen.Add(e))
-                        continue;
-                    if (!ExploredDoors.IsExploredKey(e))
-                    {
-                        if (!hereKeys.Contains(e))
-                            return LeadsOnWords;
-                        continue;
-                    }
-                    queue.Enqueue(e);
-                }
+                known = true;
+                room.AddRange(land.Names.Select(n => land.Area + "/" + n));
             }
-            return unknown ? "" : NothingNewWords;
+            else if (Passes.TryGetValue(doorKey, out HashSet<string> arrivals))
+                foreach (string t in arrivals)
+                {
+                    room.Add(t);
+                    if (Reach.TryGetValue(t, out HashSet<string> linked))
+                    {
+                        known = true;
+                        room.AddRange(linked.Select(n => AreaOf(t) + "/" + n));
+                    }
+                }
+            if (!known)
+                return "";
+            foreach (string e in room)
+                if (e != doorKey && !ExploredDoors.IsExploredKey(e) && !hereKeys.Contains(e))
+                    return LeadsOnWords;
+            return NothingNewWords;
         }
 
         private static string ReachLine(string key, HashSet<string> names) => $"reach {key} {string.Join(" ", names.OrderBy(n => n, StringComparer.Ordinal))}".TrimEnd();

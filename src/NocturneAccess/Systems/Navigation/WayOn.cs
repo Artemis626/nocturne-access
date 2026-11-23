@@ -49,7 +49,7 @@ namespace NocturneAccess.Systems.Navigation
         // ---- Choosing again after the way on's own door (0.0.180) ----
         // Francesco, 21 Nov 2026 (14:16:50): the Fifth Kalpa's area 18 is a chain of same-area doors. Its way-on door 01d_09 put
         // him beside the exit 01d_10 (first in the area's list), but the selected point stayed 01d_09, now behind him, and End said
-        // "Explored door, nothing new behind it. Beyond doors, no known way yet". When the game moves the player through the
+        // "Explored door, no unexplored doors behind it. Beyond doors, no known way yet". When the game moves the player through the
         // chosen way-on door inside the area, the way on chooses again, silently, once the player has control: End and Home
         // then go to the next way-on point.
         private const long RechooseDelayMs = 600;
