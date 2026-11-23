@@ -95,14 +95,22 @@ sub sd { my ($px, $pz, $ax, $az, $bx, $bz) = @_; my ($dx, $dz) = ($bx - $ax, $bz
 sub cells { my ($a0, $b0, $a1, $b1) = @_; my $i0 = floor(($a0 - $gx) / $C); $i0 = 0 if $i0 < 0; my $i1 = ceil(($a1 - $gx) / $C); $i1 = $W - 1 if $i1 > $W - 1; my $j0 = floor(($b0 - $gz) / $C); $j0 = 0 if $j0 < 0; my $j1 = ceil(($b1 - $gz) / $C); $j1 = $H - 1 if $j1 > $H - 1; return ($i0, $i1, $j0, $j1); }
 
 my (@cnt, @hgt, @st, @dropped);
-my $lost = 0;
+my $lost = 0; our $smallTaken = 0;
 for my $f (@floors) {
     my ($fx0, $fz0, $fx1, $fz1) = (1e9, 1e9, -1e9, -1e9);
     for (@{ $f->{p} }) { $fx0 = $_->[0] if $_->[0] < $fx0; $fx1 = $_->[0] if $_->[0] > $fx1; $fz0 = $_->[2] if $_->[2] < $fz0; $fz1 = $_->[2] if $_->[2] > $fz1; }
     my ($i0, $i1, $j0, $j1) = cells($fx0, $fz0, $fx1, $fz1);
+    # NAVSMALL=1 (0.0.191 trial): a floor that holds no cell centre is put in the cell of its centroid (the Diet Building's spiral
+    # stairs, field 33 area 28: wedge steps 20 apart, narrower than a cell, so no centre lay on them and the stairs were a gap).
+    my @only;
+    if ($ENV{NAVSMALL}) {
+        my $any = 0;
+        for my $j ($j0 .. $j1) { for my $i ($i0 .. $i1) { $any = 1, last if inside($f->{p}, $gx + $i * $C, $gz + $j * $C) } last if $any }
+        if (!$any) { my ($sx, $sz) = (0, 0); $sx += $_->[0], $sz += $_->[2] for @{ $f->{p} }; my $np = @{ $f->{p} }; my ($ci, $cj) = (floor(($sx / $np - $gx) / $C + 0.5), floor(($sz / $np - $gz) / $C + 0.5)); @only = ($ci, $cj) if $ci >= 0 && $ci < $W && $cj >= 0 && $cj < $H; $smallTaken++ if @only }
+    }
     for my $j ($j0 .. $j1) { CELL: for my $i ($i0 .. $i1) {
         my ($x, $z) = ($gx + $i * $C, $gz + $j * $C);
-        next unless inside($f->{p}, $x, $z);
+        if (@only) { next unless $i == $only[0] && $j == $only[1]; } else { next unless inside($f->{p}, $x, $z); }
         my $y = planey($f, $x, $z); my $c = $j * $W + $i; my $n = $cnt[$c] // 0;
         # NAVMERGEHI=1 (WalkGrid 0.0.74): floors merged within $Merge keep the higher one (smaller y), where the player stands.
         for my $l (0 .. $n - 1) { my $k = $c * $layers + $l; if (abs($hgt[$k] - $y) <= $Merge) { $hgt[$k] = $y if $ENV{NAVMERGEHI} && $y < $hgt[$k]; next CELL; } }

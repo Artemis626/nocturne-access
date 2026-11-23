@@ -368,6 +368,9 @@ namespace NocturneAccess.Systems.Navigation
         /// (they clear flag 1703, the shadows' alarm); looked up as 012_ they were dropped as phantoms, and the way on sent him
         /// between the hall and area 12 for good.
         /// </summary>
+        /// <summary>True when the field's script has the procedure volume `volume` of `area` runs (ProcName), 0.0.191.</summary>
+        internal static bool HasProcedure(int area, string volume) => Ensure() && ProcByName.ContainsKey(ProcName(area, volume));
+
         private static string ProcName(int area, string volume)
         {
             string own = $"{area + 1:000}_{volume}";

@@ -45,6 +45,7 @@ namespace NocturneAccess.Systems.Navigation
         private const long ArriveWindowMs = 15000; // loading and the fade-in, until the player can move
         private const long ArriveHitMs = 1500;     // seen: OldHitDoor set 0.25 s after the change
         private const float ArriveReach = 300f;
+        private const float EventDoorReach = 250f;   // 0.0.191: a door taken through gFldEveRngIdx counts within this of its centre
         private const float CrossReach = 120f;     // beyond a door's plane: gone through it (0.0.51)
         private const float JumpReach = 300f;      // one frame's move beyond this: the game moved the player (walking is 16 a tick)
         private const float PairReach = 500f;      // a door's other volume (Amala 01d_02 and 01d_03: 360 apart)
@@ -578,6 +579,16 @@ namespace NocturneAccess.Systems.Navigation
             // The door volume the player stands in: its key is taken while exploring, when the area's own volumes are surely
             // loaded; the time keeps running while the door's transition (no longer exploring) starts.
             int hit = fldEveHit.OldHitDoor;
+            // 0.0.191: a door the game runs through the event volume index instead (gFldEveRngIdx): the Diet Building's wing doors
+            // unlocked from the far side (33/10/01d_04 to Central Tower 2F, 33/15/01d_06 to 1F) were never marked, either way.
+            // Only within EventDoorReach of the door's centre: the event index can keep its last value after the player leaves.
+            if (hit < 0)
+            {
+                int ev = fldEveHit.gFldEveRngIdx;
+                if (ev >= 0 && DoorKey(field, area, ev) != null && DoorCentre(ev, out float ex, out float ez, out _, out _)
+                    && (gb.playerX - ex) * (gb.playerX - ex) + (gb.playerZ - ez) * (gb.playerZ - ez) <= EventDoorReach * EventDoorReach)
+                    hit = ev;
+            }
             if (hit < 0)
             {
                 if (_hit >= 0 && _leaving != null)

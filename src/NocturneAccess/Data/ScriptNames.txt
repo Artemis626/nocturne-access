@@ -12,3 +12,5 @@
 34 14 01eve_11 013_01eve_11
 34 14 01eve_12 013_01eve_12
 34 30 01eve_02 002_01eve_02
+# 0.0.191: the Diet Building conference room (field 33 area 28): its file names 029_01eve_01 for 01d_03, the boss trigger strip.
+33 28 01d_03 029_01eve_01

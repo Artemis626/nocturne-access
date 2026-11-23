@@ -423,6 +423,11 @@ namespace NocturneAccess.Systems.Navigation
                     if (npc.Type == 999)
                         takara = npc.ItemBoxIdx;
                 }
+                // 0.0.191: a door-named volume the door table has no row for, whose area file names a script procedure, is an event:
+                // the Diet Building's conference room (field 33 area 28) starts the boss fight from 01d_03, a strip 500 wide across
+                // the room, running 029_01eve_01 (flag 1681; Data/ScriptNames.txt); 0.0.174 dropped it as a dead door.
+                if (kind == PoiKind.Door && !world && DoorTable.HasNoRows(gb.fieldID, gb.areaID, name) && FieldScript.HasProcedure(gb.areaID, name))
+                    kind = PoiKind.Event;
                 if (kind == null)
                 {
                     if (h.resourceType == 10 && EventName.IsMatch(name))

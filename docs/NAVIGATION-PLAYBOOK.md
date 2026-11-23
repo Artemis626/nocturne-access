@@ -381,3 +381,11 @@ What made it work, in the order it matters:
 - An area file can hold no floor at all: the game may build a flat floor at run time over the polygons' bounds (fields 44 and 45). Compare one live dump's floor list with the offline decode before trusting an offline flood (`f2dump.pl BASEPLANE=1`).
 - Doors that test a chosen party member are script warps with a pass row and a fail row: read the test (stat id, threshold) from the script and check the party's own numbers at run time, rather than guessing a route from a guide's order.
 - Moving blocks driven by switches are not in the area file: offline the room looks open. Let the live map decide, and order the way-on candidates so that a blocked way falls back to an unused switch, then to the way round.
+
+### Yurakucho Tunnel and Diet Building lessons (21 to 23 Nov 2026)
+- An area is not one room: build route graphs on the walkable parts of each area (flood the area file, give every door and landing its part), and look for scripted moves (CALL_FIELD2 slides) the door table lacks; one graph node per area sent the player from a sealed pocket to a ladder in another part.
+- A volume's name does not say what it is: event-named volumes become doors once a story flag switches on their door row, door-named volumes with no door row can be story triggers named by the area file, and an "Open Door" event can play a scene before it is a door. Read the door table rows in every flag state and the area file's procedure names together.
+- The game may run a door through its event index (gFldEveRngIdx) rather than the door index (OldHitDoor), for doors unlocked by script: track both, guarded by distance.
+- "Explored behind this door" must stay one room deep: following explored doors further tags every door in a hub-shaped building.
+- Puzzles drawn at random (the Diet Building's true statue) cannot come from a walkthrough: read the draw and its flags from the script and mark the live answer.
+- Thin stair wedges narrower than a map cell, and small floorless bands the game still lets the player cross, cut a walking map sampled at cell centres: check a live dump's polygons before trusting "not reachable".
