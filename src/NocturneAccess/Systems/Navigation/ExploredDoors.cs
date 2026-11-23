@@ -773,6 +773,14 @@ namespace NocturneAccess.Systems.Navigation
             return true;
         }
 
+        /// <summary>
+        /// A door volume's name: "NNd_MM", or an event-named volume the door table makes a door now (0.0.188: the Diet Building's
+        /// Central Tower 1F 01eve_02 to West Wing 1F, flag 1672, was never marked explored; the Ikebukuro Tunnel's 01eve stairs).
+        /// </summary>
+        private static bool IsDoorName(int field, int area, string name) =>
+            DoorName.IsMatch(name) || (name.Length > 0 && !FieldState.WorldMapField(field) && DoorTable.MoveTypeOf(field, area, name) >= 0);
+
+
         /// <summary>The key of gEvnRng[index] when it is a door volume ("NNd_MM", type 10), else null.</summary>
         private static string DoorKey(int field, int area, int index)
         {
@@ -781,7 +789,7 @@ namespace NocturneAccess.Systems.Navigation
                 return null;
             fldResHead_t h = ranges[index];
             string name = h?.resourceName ?? "";
-            return h != null && h.resourceType == 10 && DoorName.IsMatch(name) ? Key(field, area, name) : null;
+            return h != null && h.resourceType == 10 && IsDoorName(field, area, name) ? Key(field, area, name) : null;
         }
 
         /// <summary>The door volume nearest (x, y, z) within ArriveReach on that floor, as its key, or null.</summary>
@@ -794,7 +802,7 @@ namespace NocturneAccess.Systems.Navigation
             for (int i = 0; i < n; i++)
             {
                 fldResHead_t h = ranges[i];
-                if (h == null || h.sisei == null || h.resourceType != 10 || !DoorName.IsMatch(h.resourceName ?? ""))
+                if (h == null || h.sisei == null || h.resourceType != 10 || !IsDoorName(gb.fieldID, gb.areaID, h.resourceName ?? ""))
                     continue;
                 float dx = h.sisei.pos.x - x, dz = h.sisei.pos.z - z;
                 float dist = (float)Math.Sqrt(dx * dx + dz * dz);

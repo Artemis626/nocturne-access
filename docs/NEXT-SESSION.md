@@ -2,7 +2,9 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (23 Nov 2026, later): 0.0.187 built, untested: world map "Entrance to X" and the filter "Entrances" (Francesco). Also untested: 0.0.186 and 0.0.185 below.
+## RESUME HERE (23 Nov 2026, afternoon): 0.0.188 built, untested: event-named doors marked explored (`ExploredDoors.IsDoorName`: Central Tower 1F `01eve_02`). 0.0.185 to 0.0.187 effective (Francesco).
+
+## Earlier (23 Nov 2026, later): 0.0.187 built, untested: world map "Entrance to X" and the filter "Entrances" (Francesco). Also untested: 0.0.186 and 0.0.185 below.
 
 ## Earlier (23 Nov 2026): 0.0.186 built, untested: an explored door's tag looks one room deep, "no unexplored doors behind it" (Francesco's words; `AreaRoutes.LeadsOf`). Also untested: 0.0.185 below. `docs/HANDOFF.md` last entry.
 
