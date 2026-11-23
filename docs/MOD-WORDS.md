@@ -9,6 +9,7 @@ needs Francesco's consent (CLAUDE.md). The status comes from the records (`docs/
 - "Way on." and the way-on lines (Shift+End, his design, 26 Oct 2026); "Way on, Strength." and the stat routes (2 Nov).
 - "Way on, Magic, best Beidou Xingjun, 24 of 25" (the numbers, his request, 20 Nov); ", Mitama bonuses not counted" (20 Nov).
 - "Slide" (22 Nov 2026, for the Yurakucho Tunnel's slides).
+- "Examine, true statue" (the Diet Building statue room; Francesco kept it, 23 Nov 2026).
 - "Door, includes an event" (an "Open Door" event with a door row, in the Doors filter; Francesco, 23 Nov 2026).
 - "Entrance to X" and the filter "Entrances" on the world map (was "X entrance", "Doors"; Francesco, 23 Nov 2026).
 - "leads to unexplored doors" / "no unexplored doors behind it" (an explored door, one room deep; Francesco chose the second wording, 23 Nov 2026).
@@ -25,7 +26,6 @@ needs Francesco's consent (CLAUDE.md). The status comes from the records (`docs/
 
 ## Never recorded as confirmed (open)
 
-- "Examine, true statue" (the Diet Building statue room, 0.0.190; to confirm).
 - "Story event", "Event", "Actions" (the filter), "Examine: There's a switch" (event wording, open since 0.0.71).
 - "Missed" (a miss on a target, 0.0.170; only "Block" was chosen).
 - "Unavailable" (a skill already chosen in the inheritance list, 0.0.127), "Skills left to inherit: N" (0.0.77).

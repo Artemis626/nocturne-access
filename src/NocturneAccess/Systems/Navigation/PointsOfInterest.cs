@@ -302,7 +302,7 @@ namespace NocturneAccess.Systems.Navigation
         // (f033.bf): 024_start, while flag 1687 is off, sets 1687, clears 1688 to 1691 and sets one of them at random; the
         // true statue is 01eve_01 with 1688, 01eve_03 with 1689, 01eve_05 with 1690, 01eve_06 with 1691 (it sets 1686 and
         // 2327); 01eve_02, 04, 07, 08 are never true. A wrong pick clears 1687 (a new draw on the next entry) and
-        // 024_randcallfield sends the player away. The true one says ", true statue" (mod words, to confirm) while 1687 is on
+        // 024_randcallfield sends the player away. The true one says ", true statue" (mod words, Francesco kept them) while 1687 is on
         // and 1686 off.
         private static readonly (string Volume, int Flag)[] TrueStatues = { ("01eve_01", 1688), ("01eve_03", 1689), ("01eve_05", 1690), ("01eve_06", 1691) };
         private const int StatueDrawn = 1687, StatueFound = 1686;
