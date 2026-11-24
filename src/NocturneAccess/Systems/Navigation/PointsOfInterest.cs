@@ -848,6 +848,7 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         private const float PairLandingReach = 75f;
+        private const float TwinReach = 500f;   // 0.0.192: a same-named landmark this near and walked to stands for one beyond doors
 
         /// <summary>
         /// Nothing listed: the warps that fire when walked into and that the player can walk up to are listed (0.0.120). The
@@ -904,6 +905,19 @@ namespace NocturneAccess.Systems.Navigation
                 {
                     q.Reachable = false;
                     q.Redundant = true;
+                }
+            }
+            // 0.0.192: a named landmark beyond doors whose twin of the same name stands within TwinReach and is walked to is the
+            // same place seen from the other side: the Assembly of Nihilo's Marunouchi Entrance (field 20 area 24) has the Terminal
+            // room's two doors 200 apart, 01d_03 (in, walkable) and 01d_04 (its inner side); map order put 01d_04 first, so Page Up
+            // said "Terminal door, beyond doors" and Home "No known way there yet" (Francesco, 24 Nov 2026, 22:25).
+            foreach (Poi q in kept.Where(q => !q.Reachable && !q.Redundant && q.Landmark && q.Name.Length > 0))
+            {
+                if (kept.Any(o => o != q && o.Reachable && o.Kind == q.Kind && o.Name == q.Name
+                                  && (o.X - q.X) * (o.X - q.X) + (o.Z - q.Z) * (o.Z - q.Z) <= TwinReach * TwinReach))
+                {
+                    q.Redundant = true;
+                    Log.Info($"[Nav:Poi] {q.ResName} ({q.Name}) left out: its twin of the same name is walked to nearby.");
                 }
             }
             foreach (Poi q in kept.Where(q => !q.Reachable && !q.Redundant && q.Landmark))
