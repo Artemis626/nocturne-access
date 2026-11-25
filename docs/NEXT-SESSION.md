@@ -2,7 +2,9 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (25 Nov 2026, later): 0.0.194 built, untested: the mod settings window (Shift+F; field, overworld, battle only; a small uGUI window with two settings, wall bump sound and door tone; the game sees no key while it is open). Test steps and what to check: `docs/HANDOFF.md` last entry. If Francesco likes the design, the full settings list next (`docs/SETTINGS-TUTORIAL-PLAN.md`). 0.0.193 still to test.
+## RESUME HERE (25 Nov 2026, later still): 0.0.195 built, untested: the settings window grouped under four categories (Speech, Battle, Navigation, Sounds; 14 settings; content changes such as the chase stay in the cfg file only). 0.0.194 verified 15:07.
+
+## Earlier (25 Nov 2026, later): 0.0.194 built, verified 15:07: the mod settings window (Shift+F; field, overworld, battle only; a small uGUI window with two settings, wall bump sound and door tone; the game sees no key while it is open). Test steps and what to check: `docs/HANDOFF.md` last entry. If Francesco likes the design, the full settings list next (`docs/SETTINGS-TUTORIAL-PLAN.md`). 0.0.193 still to test.
 
 ## Earlier (25 Nov 2026, new chat): 0.0.193 built, untested: "You've been warped." only for script moves within one area (`ScriptWarps`). 0.0.192 verified (Marunouchi Terminal door). Open first: the Diet Building conference room stairs door `33/28/01d_02` "not reachable" (spiral wedge steps narrower than a cell + a 50-unit floorless band; dump `2026-11-23_21-09-29`; offline trial `NAVSMALL=1`); the 25 Nov dump is of area 10, not the room. Then the sanity check second pass. Francesco: side content before the final dungeon.
 

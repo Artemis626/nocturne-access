@@ -10,6 +10,8 @@ Francesco replaced the settings-menu decision below:
 - **Built as 0.0.194** (`Systems/Menus/ModSettings.cs`): wall bump sound and door tone. IMGUI is stripped from this game's build, so the window is uGUI with the game's font. While it is open the game sees no key (postfixes on `SteamInputAssign.keycheck` and `InputUtil.GetKey`). Details and test checks: `docs/HANDOFF.md`, 25 Nov entry.
 - **Next, if approved:** the player settings listed in part 1 below (true/false first, then numbers and choices, key rebinding last), each marked "now" or "after restart".
 
+- **0.0.194 verified 25 Nov (Francesco: "clean and simple"); 0.0.195 groups 14 player settings under Speech, Battle, Navigation and Sounds.** Kept in the cfg file only, by Francesco's choice: content changes (the Raidou chase, Geis, falling-minigame damage), restart-only switches that could silence the mod, debug entries, the keys.
+
 ## Francesco's decisions (18 Nov 2026): study only, build later
 
 Nothing below is to be built now. These decisions replace the open choices in the 17 Nov sections where they differ.

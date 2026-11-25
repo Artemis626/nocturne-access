@@ -18,8 +18,11 @@ namespace NocturneAccess.Systems.Menus
 {
     /// <summary>
     /// The mod settings window (0.0.194; Francesco, 25 Nov 2026): a small visible window with spoken rows, opened with Shift+F
-    /// (F is the game's own menu key) only in the field, on the overworld and in battle, never inside a game menu. First test:
-    /// two settings; the full list follows if the design works (docs/SETTINGS-TUTORIAL-PLAN.md).
+    /// (F is the game's own menu key) only in the field, on the overworld and in battle, never inside a game menu. 0.0.194 tested
+    /// two settings (verified 25 Nov 15:07, "clean and simple"); 0.0.195 groups the player settings under categories (Francesco).
+    /// Left out on purpose, file only: content changes (ChaseOff, GeisGift, PipeNoDamage: Francesco, the Raidou chase), switches that
+    /// could silence the mod or need a restart (Read dialogue, menus, battles; pad injection; first person), development and
+    /// debug entries, the speech backend and the keys.
     ///
     /// Drawing: the game's build has IMGUI stripped (GUI.Label and GUI.Box are missing from its UnityEngine.IMGUIModule), so the
     /// window is a uGUI Canvas with an Image panel and one TextMeshProUGUI in the game's own font.
@@ -41,15 +44,25 @@ namespace NocturneAccess.Systems.Menus
         private sealed class Item
         {
             public MelonPreferences_Entry<bool> Entry;
+            public string Note = "";          // said after a change ("Takes effect at the next start.")
+            public Action<bool> Changed;      // what the game needs besides the new value (routes: cancel a journey)
             public string Label => string.IsNullOrEmpty(Entry.DisplayName) ? Entry.Identifier : Entry.DisplayName;
             public string Value => Entry.Value ? "On" : "Off";
         }
 
-        private static readonly List<Item> Items = new List<Item>();
+        private sealed class Category
+        {
+            public string Name;
+            public readonly List<Item> Items = new List<Item>();
+            public int Row;
+        }
+
+        private static readonly List<Category> Categories = new List<Category>();
         private static bool _open;
         private static bool _releaseHold;
         private static long _closedMs;
-        private static int _row;
+        private static int _cat;
+        private static bool _inCategory;
         private static GameObject _root;
         private static TextMeshProUGUI _text;
         private static RectTransform _panel;
@@ -61,11 +74,38 @@ namespace NocturneAccess.Systems.Menus
         /// <summary>The game sees no key: the window is open, or a key pressed in it is still held.</summary>
         private static bool Blocking => _open || _releaseHold;
 
+        private static Category Cat(string name, params Item[] items)
+        {
+            var c = new Category { Name = name };
+            c.Items.AddRange(items);
+            Categories.Add(c);
+            return c;
+        }
+
+        private static Item Bool(MelonPreferences_Entry<bool> entry, string note = "", Action<bool> changed = null)
+            => new Item { Entry = entry, Note = note, Changed = changed };
+
         internal static void Install()
         {
-            Items.Clear();
-            Items.Add(new Item { Entry = Config.WallBumpSound });
-            Items.Add(new Item { Entry = Config.DoorSound });
+            Categories.Clear();
+            Cat("Speech",
+                Bool(Config.SpeakerEveryPage),
+                Bool(Config.BrailleOutput));
+            Cat("Battle",
+                Bool(Config.SpeakHpChanges),
+                Bool(Config.SpeakHpLeft));
+            Cat("Navigation",
+                Bool(Config.BlobberOnAtStart, "Takes effect at the next start. F4 switches blobber mode now."),
+                Bool(Config.DoorKinds),
+                Bool(Config.PoiMapOrder),
+                Bool(Config.AreaRoutes, changed: on => { if (!on) AutoWalk.CancelJourney("routes through other areas turned off"); }));
+            Cat("Sounds",
+                Bool(Config.WallBumpSound),
+                Bool(Config.DoorSound),
+                Bool(Config.WayOnSound),
+                Bool(Config.AlarmSound),
+                Bool(Config.SecretSound),
+                Bool(Config.ChaseSound));
 
             var action = AccessTools.Method(typeof(ModSettings), nameof(AfterAction));
             var any = AccessTools.Method(typeof(ModSettings), nameof(AfterAnyKey));
@@ -106,7 +146,7 @@ namespace NocturneAccess.Systems.Menus
             PadInput.ReleaseAll();
             _open = true;
             _releaseHold = false;
-            _row = Math.Min(_row, Items.Count - 1);
+            _inCategory = false;
             try
             {
                 Build();
@@ -117,7 +157,7 @@ namespace NocturneAccess.Systems.Menus
                 Log.Error($"{Tag} Window not drawn: {ex}");
             }
             Log.Info($"{Tag} Opened.");
-            SpeechManager.Say($"Mod settings. W and S: move. A, D or Enter: change. C: close. {RowLine()}", interrupt: true, force: true);
+            SpeechManager.Say($"Mod settings. W and S: move. Enter: open. C: back. {RowLine()}", interrupt: true, force: true);
         }
 
         private static void Close()
@@ -147,22 +187,37 @@ namespace NocturneAccess.Systems.Menus
             }
 
             bool shift = UnityInput.GetKey(KeyCode.LeftShift) || UnityInput.GetKey(KeyCode.RightShift);
-            if (Down(KeyCode.C) || Down(KeyCode.Escape) || shift && Down(KeyCode.F))
+            if (shift && Down(KeyCode.F))
             {
                 Close();
+                return true;
+            }
+            if (Down(KeyCode.C) || Down(KeyCode.Escape) || Down(KeyCode.Backspace))
+            {
+                if (_inCategory)
+                    Back();
+                else
+                    Close();
                 return true;
             }
             if (Down(KeyCode.W) || Down(KeyCode.UpArrow))
                 Move(-1);
             else if (Down(KeyCode.S) || Down(KeyCode.DownArrow))
                 Move(1);
-            else if (Down(KeyCode.A) || Down(KeyCode.D) || Down(KeyCode.LeftArrow) || Down(KeyCode.RightArrow)
-                     || Down(KeyCode.Return) || Down(KeyCode.KeypadEnter) || Down(KeyCode.Space))
-                Change();
+            else if (Down(KeyCode.Return) || Down(KeyCode.KeypadEnter) || Down(KeyCode.Space)
+                     || Down(KeyCode.A) || Down(KeyCode.D) || Down(KeyCode.LeftArrow) || Down(KeyCode.RightArrow))
+            {
+                if (_inCategory)
+                    Change();
+                else
+                    Enter();
+            }
             else if (Down(KeyCode.F1))
                 SpeechManager.Say(RowLine(), interrupt: true, force: true);
             else if (Down(KeyCode.F7))
-                SpeechManager.Say("W and S: move. A, D or Enter: change. C, Escape or Shift+F: close. F1: repeat.", interrupt: true, force: true);
+                SpeechManager.Say(_inCategory
+                    ? "W and S: move. A, D or Enter: change. C: back to the categories. Shift+F: close. F1: repeat."
+                    : "W and S: move. Enter: open a category. C or Shift+F: close. F1: repeat.", interrupt: true, force: true);
             return true;
         }
 
@@ -170,32 +225,66 @@ namespace NocturneAccess.Systems.Menus
 
         private static void Move(int step)
         {
-            int next = _row + step;
-            if (next < 0 || next >= Items.Count)
+            int count = _inCategory ? Categories[_cat].Items.Count : Categories.Count;
+            int at = _inCategory ? Categories[_cat].Row : _cat;
+            int next = at + step;
+            if (next >= 0 && next < count)
             {
-                // No wrap: the edge says the same row again, so the player hears where the list ends.
-                SpeechManager.Say(RowLine(), interrupt: true, force: true);
-                return;
+                // No wrap: at an edge the same row is said again, so the player hears where the list ends.
+                if (_inCategory)
+                    Categories[_cat].Row = next;
+                else
+                    _cat = next;
+                Redraw();
             }
-            _row = next;
+            SpeechManager.Say(RowLine(), interrupt: true, force: true);
+        }
+
+        private static void Enter()
+        {
+            _inCategory = true;
+            Redraw();
+            SpeechManager.Say($"{Categories[_cat].Name}. {RowLine()}", interrupt: true, force: true);
+        }
+
+        private static void Back()
+        {
+            _inCategory = false;
             Redraw();
             SpeechManager.Say(RowLine(), interrupt: true, force: true);
         }
 
         private static void Change()
         {
-            Item item = Items[_row];
-            item.Entry.Value = !item.Entry.Value;
+            Category c = Categories[_cat];
+            Item item = c.Items[c.Row];
+            bool on = !item.Entry.Value;
+            item.Entry.Value = on;
             Config.Save(item.Entry);
-            Log.Info($"{Tag} {item.Entry.Identifier} = {item.Entry.Value}.");
+            try
+            {
+                item.Changed?.Invoke(on);
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"{Tag} {item.Entry.Identifier}: {ex.Message}");
+            }
+            Log.Info($"{Tag} {item.Entry.Identifier} = {on}.");
             Redraw();
-            SpeechManager.Say($"{item.Label}, {item.Value}.", interrupt: true, force: true);
+            string note = item.Note.Length > 0 ? " " + item.Note : "";
+            SpeechManager.Say($"{item.Label}, {item.Value}.{note}", interrupt: true, force: true);
         }
 
         private static string RowLine()
         {
-            Item item = Items[_row];
-            return $"{item.Label}, {item.Value}, {_row + 1} of {Items.Count}.";
+            if (!_inCategory)
+            {
+                Category c = Categories[_cat];
+                return $"{c.Name}, {c.Items.Count} settings, {_cat + 1} of {Categories.Count}.";
+            }
+            Category cat = Categories[_cat];
+            Item item = cat.Items[cat.Row];
+            return $"{item.Label}, {item.Value}, {cat.Row + 1} of {cat.Items.Count}.";
         }
 
         // ---- Drawing ----
@@ -247,19 +336,33 @@ namespace NocturneAccess.Systems.Menus
             _text.fontSize = size;
 
             var sb = new StringBuilder();
-            sb.Append("<b>Nocturne Access settings</b>\n\n");
-            for (int i = 0; i < Items.Count; i++)
+            int rows;
+            if (!_inCategory)
             {
-                string line = $"{Items[i].Label}: {Items[i].Value}";
-                sb.Append(i == _row ? $"<color=#FFD54A>> {line}</color>\n" : $"   {line}\n");
+                sb.Append("<b>Nocturne Access settings</b>\n\n");
+                for (int i = 0; i < Categories.Count; i++)
+                    Row(sb, $"{Categories[i].Name} ({Categories[i].Items.Count})", i == _cat);
+                sb.Append("\n<size=70%>W S: move    Enter: open    C: close</size>");
+                rows = Categories.Count;
             }
-            sb.Append($"\n<size=70%>W S: move    A D Enter: change    C: close</size>");
+            else
+            {
+                Category c = Categories[_cat];
+                sb.Append($"<b>Nocturne Access settings: {c.Name}</b>\n\n");
+                for (int i = 0; i < c.Items.Count; i++)
+                    Row(sb, $"{c.Items[i].Label}: {c.Items[i].Value}", i == c.Row);
+                sb.Append("\n<size=70%>W S: move    A D Enter: change    C: back</size>");
+                rows = c.Items.Count;
+            }
             _text.text = sb.ToString();
 
-            int lines = Items.Count + 4;
+            int lines = rows + 4;
             float pad = Screen.height / 40f;
-            _panel.sizeDelta = new Vector2(Math.Max(Screen.width * 0.42f, size * 18f), lines * size * 1.35f + pad * 2);
+            _panel.sizeDelta = new Vector2(Math.Max(Screen.width * 0.42f, size * 20f), lines * size * 1.35f + pad * 2);
         }
+
+        private static void Row(StringBuilder sb, string line, bool selected)
+            => sb.Append(selected ? $"<color=#FFD54A>> {line}</color>\n" : $"   {line}\n");
 
         /// <summary>The font of a visible game text, so the window looks like the game's own; null if none is found.</summary>
         private static TMP_FontAsset GameFont()
