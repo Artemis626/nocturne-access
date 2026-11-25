@@ -300,7 +300,7 @@ namespace NocturneAccess.Systems.Navigation
         // opens, and the game says so nowhere. Read offline (f032.bf, 001_start): flag 146 puts the arrival at 01pos_31 (north),
         // 147 at 01pos_32 (west), 145 at 01pos_29 (east), none of them at 01pos_33 (south); AppMedia's tower chart: "Yosuga east,
         // Musubi west, Shijima north, other south" (https://appmedia.jp/?p=5582803). Francesco (no Reason) opened the south one.
-        // The game's words for the Reasons (F032INF_L0010 to L0012); "none" is the mod's (Francesco to confirm). Door table rows
+        // The game's words for the Reasons (F032INF_L0010 to L0012); "none" is the mod's (Francesco kept it, 25 Nov 2026). Door table rows
         // (F032.WAP): area 1 01d_03 to 01pos_04 (0, 6450), area 4 to 01pos_08 (-6450, 0), area 7 to 01pos_11 (0, -6450), area 10
         // to 01pos_15 (6450, 0); back: 01d_04, 01d_08, 01d_11, 01d_15.
         private static readonly Dictionary<(int Field, int Area, string Volume), string> ReasonDoors = new Dictionary<(int, int, string), string>
