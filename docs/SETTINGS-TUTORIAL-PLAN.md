@@ -1,5 +1,15 @@
 # Settings menu and tutorial: plan (17 Nov 2026, decisions 18 Nov 2026)
 
+## Change of plan (25 Nov 2026): a simple window, built now
+
+Francesco replaced the settings-menu decision below:
+
+- **A simple visible window,** small, with generic easy-to-render text. A game-like menu inside the Config screen would serve only sighted players, who are a small part of the mod's users. The settings menu is no longer tied to the end of the playthrough; the tutorial still is.
+- **Key: Shift+F** (F is the game's own menu key). It opens only when the game is active: the field, the overworld, a battle. Never inside a game menu, to avoid confusion.
+- **First test with one or two options;** the full feature list once the design and behaviour are approved.
+- **Built as 0.0.194** (`Systems/Menus/ModSettings.cs`): wall bump sound and door tone. IMGUI is stripped from this game's build, so the window is uGUI with the game's font. While it is open the game sees no key (postfixes on `SteamInputAssign.keycheck` and `InputUtil.GetKey`). Details and test checks: `docs/HANDOFF.md`, 25 Nov entry.
+- **Next, if approved:** the player settings listed in part 1 below (true/false first, then numbers and choices, key rebinding last), each marked "now" or "after restart".
+
 ## Francesco's decisions (18 Nov 2026): study only, build later
 
 Nothing below is to be built now. These decisions replace the open choices in the 17 Nov sections where they differ.

@@ -76,6 +76,9 @@ namespace NocturneAccess.Core
                 return null;
 
             string path = UiUtil.PathOf(component.transform);
+            // The mod's own settings window speaks for itself (0.0.194): never a reader's text.
+            if (path.StartsWith(Systems.Menus.ModSettings.RootName, StringComparison.Ordinal))
+                return null;
             foreach ((string name, Func<string, Handler> classify) in Classifiers)
             {
                 Handler handler = classify(path);

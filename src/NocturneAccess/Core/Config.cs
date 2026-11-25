@@ -76,6 +76,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<bool> GeisGift { get; private set; }
         internal static MelonPreferences_Entry<string> KeyAreaRoutes { get; private set; }
         internal static MelonPreferences_Entry<string> KeyHelp { get; private set; }
+        internal static MelonPreferences_Entry<string> KeyModSettings { get; private set; }
 
         // Debug
         internal static MelonPreferences_Entry<bool> VerboseLogging { get; private set; }
@@ -210,6 +211,9 @@ namespace NocturneAccess.Core
                 "Turns on or off the routes through other areas in the Page Up list, Home and End (no key by default since 0.0.172).");
             KeyHelp = keys.CreateEntry("KeyHelp", "F7", "Key help",
                 "Says the keys of the current screen: the game's own button guide (\"Q, E: Toggle Sort.\"), then the mod's keys for a menu, the field or a battle.");
+            // 0.0.194: the mod settings window (Francesco, 25 Nov 2026: Shift+F, F being the game's own menu key; field, overworld and battle only).
+            KeyModSettings = keys.CreateEntry("ModSettings", "Shift+F", "Mod settings key",
+                "Opens or closes the mod settings window (in the field, on the overworld and in battle; never inside a game menu). While it is open the game sees no keys.");
 
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);

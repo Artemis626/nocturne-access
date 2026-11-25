@@ -47,6 +47,7 @@ namespace NocturneAccess.Input
             Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle, shift: true);
             Add("routes through other areas", Config.KeyAreaRoutes, KeyCode.None, AreaRoutes.Toggle);
             Add("key help", Config.KeyHelp, KeyCode.F7, KeyHelp.Speak);
+            Add("mod settings", Config.KeyModSettings, KeyCode.F, ModSettings.Toggle, shift: true);
             Add("navigation dump", Config.KeyNavDump, KeyCode.F6, NavDump.Dump, shift: true);
             Add("battle dump", Config.KeyBattleDump, KeyCode.F2, BattleDump.Dump, shift: true);
             // F4 is shared too: the falling minigame's autopilot while falling (Francesco, 23 Oct 2026), blobber mode elsewhere.
@@ -69,6 +70,9 @@ namespace NocturneAccess.Input
         internal static void Update()
         {
             if (_disabled)
+                return;
+            // While the mod settings window is open it takes every key itself (0.0.194).
+            if (ModSettings.Update())
                 return;
 
             bool shift = false, ctrl = false, alt = false;

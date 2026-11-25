@@ -20,7 +20,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.193";
+        internal const string ModVersion = "0.0.194";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
@@ -56,6 +56,7 @@ namespace NocturneAccess.Core
             ExploredDoors.Install();
             GameFlagWatch.Install();
             ScriptWarps.Install();
+            ModSettings.Install();
             // Capture.FadeWatch.Install(): off since 0.0.182 (Francesco, 21 Nov 2026: the black screen comes from moving through doors
             // faster than the game's transition, with the way on and Home chaining doors; on 0.0.178 to 0.0.181; Capture/FadeWatch.cs kept).
             BlobberMode.Init();
