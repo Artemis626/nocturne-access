@@ -3,7 +3,7 @@
 Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster (Steam, Unity 2019.4.10f1 IL2CPP). One MelonLoader 0.6.1 mod (net6.0, HarmonyX, Il2CppInterop) speaking through NVDA via `nvdaControllerClient.dll`. GPL-3.0.
 
 - Repo: `E:\Claude projects\Nocturne Access`. Game: `E:\SteamLibrary\steamapps\common\smt3hd`.
-- Francesco is a low-vision NVDA user: he tests in game and decides design; Claude writes the code and owns the architecture.
+- Francesco is a low-vision NVDA user: he tests in game and decides design; Claude writes the code and owns the architecture. He is sighted but visually impaired (25 Nov 2026), so he can check the screen himself, roughly; the mod still targets blind play, and he plays with his eyes closed.
 
 ## Read first, every session
 
