@@ -307,3 +307,39 @@
 21 23 01eve_02
 21 24 01eve_01
 21 25 01d_04 01d_07
+
+# ---- Tower of Kagutsuchi (field 32): from the Terminal floor (175F, area 13) to the lift into the upper tower (field 36) (0.0.197, 25 Nov 2026) ----
+# Route: Samurai Gamers' Obelisk Revisited and Tower of Kagutsuchi walkthrough, steps 7 to 15, matched offline to the door table
+# (wap.txt), the area files' points and floors (f032_014 to f032_020.f2, tools/unity/f2pos.pl, tools/navregions.pl on f2dump
+# floods) and the field script (f032.bf: every "Ride" is ACT_WIN_DSP3(5); CALL_FIELD2 moves between areas; OBJ_PATH_MOVE moves
+# a block inside one). Heights: smaller y is higher. Area 13 holds 175F (y -500, the Terminal, the arrival from 167F at y 0)
+# and 179F (y -1500 to -2000); area 15 is the stairs from 175F up to 179F; area 14 the 179F west wing; area 16 is 186F (y 0)
+# to 188F (y -1000), with the 189F block top at -1500; area 17 the shaft from 196F (y 0) to 231F (y -9000); area 18 the
+# corridor; area 19 Ahriman's floor (01eve_03, the fight unless the Shijima Reason was taken) and its lift up (01eve_02, script
+# command 0x20F with door 46: field 36, 285F).
+# Area 13 (175F to 179F): 175F's door 01d_01 to the stairs (area 15), whose 01d_03 lands on 179F north (01pos_03); 179F's
+# 01d_07 into the west wing (area 14, 01pos_05); its block 1 ride 01eve_01 carries the player south (z 2250 to 250; walking
+# past 179F's 01eve_03 in area 13 brings that block back north, 014_01eve_03); the door pair 01d_02 / 01d_01 to the wing's
+# south part; 01d_04 back into area 13 (01pos_04, 179F middle); the door pair 01d_04 / 01d_05 to the south strip; up its
+# stairs to the ride 01eve_02 (y -2000) to area 16 (01pos_01). Side lifts 01eve_08 / 01eve_09 go up to area 16's pockets and
+# back (chests): listed last in area 13 only, for a player standing in their landing pockets.
+32 13 01eve_02 01d_04 01d_07 01d_01 01d_06 01eve_09 01eve_08   # 179F south strip: the ride to 186F; 179F middle: the door pair; 179F north: the west wing; 175F: the stairs; the south-west room: back to the wing
+32 14 01d_04 01d_02 01eve_01 01d_06 01eve_04                    # 179F west wing: back into area 13's middle, else the door pair, else block 1 south; from the north-west room, back to area 13; on block 2's far end, ride back
+32 15 01d_03 01d_01                                            # the stairs up to 179F; from the east room, back to area 13's south strip
+# Area 16 (186F to 188F): three lifts in a row along x 250: block 1 (01eve_05 up at z -250, 01eve_07 down), block 7 (01eve_10
+# up at z 750, 01eve_09 down), block 2 (01eve_06 up at z 1755 from 188F, 01eve_08 down); each rises 500. The guide's order:
+# block 7 up from 187F; the east stairs down and back up to 187F, block 1 up; along the row of block tops at 188F, block 2 up
+# to 189F; the west stairs down, up again to the row, block 7 down; north under block 2 and its stairs to the ride 01eve_02
+# (y -500) to area 17. Francesco's 25 Nov 22:16 to 22:22 rides showed block 2 and block 1 reachable from the start too, and
+# block 1's top cut off (only its ride down), so each ride is gated on the blocks' places ('>' at the path end, up; '<' not):
+# without the gates the first reachable ride is block 2 or block 1. Block 7's id is its object's, atari_hoji_07 (its path is
+# path_hoji_05; ids 1 and 2 seen in the log as "gimmick flag ... id 1" and "id 2"). Last: block 1 down when it was raised
+# alone (the 22:16:44 case).
+32 16 01eve_02 01eve_09>1>2>7 01eve_06>1>7<2 01eve_05>7<1 01eve_10<7 01eve_07>1<7   # 187F: the ride to 196F; the lifts in the guide's order
+# Area 17 (196F to 231F): six lifts in a shaft, each ridden up from its lower stop: block 3 (01eve_05, east, 196F level y -500
+# to -4000), block 1 (01eve_01, west, -4000 to -6000), block 6 (01eve_15, west, -7000 to -9000, "west to the stairs, go up"),
+# then the ride 01eve_09 at the top to area 18. Block 2 (01eve_04, west at y -500) and block 5 (01eve_13) lead to chests,
+# block 4 (01eve_10) to the Terminal (01d_01, y -6000): from the Terminal's platform, block 4 down (01eve_11).
+32 17 01eve_09 01eve_15 01eve_01 01eve_11 01eve_05             # 231F: the ride to the corridor; the lifts up in order; from the Terminal, back down
+32 18 01eve_02                                                 # the corridor (two door pairs, taken by Home) to the ride up to Ahriman's floor
+32 19 01eve_02                                                 # past Ahriman (01eve_03) to the ride into the upper tower (field 36)

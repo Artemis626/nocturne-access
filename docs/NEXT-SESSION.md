@@ -2,7 +2,9 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (25 Nov 2026, new chat 2): 0.0.196 built, untested: the Kagutsuchi Tower (field 32): route lifts no longer say "You've been warped." (a banner naming a new place was shown), the 167F doors say their Reason ("Door, passage, Reason: Shijima"; south "Reason: none", Francesco kept it). Conference room door and sanity check pass 2 skipped for now (Francesco). `docs/HANDOFF.md` last entry.
+## RESUME HERE (25 Nov 2026, night): 0.0.197 built, untested: Shift+End way on in the Kagutsuchi Tower from the 175F Terminal (field 32 area 13) to the ride into field 36 past Ahriman (area 19), from Samurai Gamers' guide matched to the game's data; area 16's three lifts gated on the blocks' positions (new tokens `>N` / `<N`, the game's gimmick flags). 0.0.196 verified. Test steps: `docs/HANDOFF.md` last entry. Next: read his test log; then the way on for field 36 (285F onwards) by the same method. Conference stairs door and sanity check pass 2 still skipped (Francesco).
+
+## Earlier (25 Nov 2026, new chat 2): 0.0.196 built, untested: the Kagutsuchi Tower (field 32): route lifts no longer say "You've been warped." (a banner naming a new place was shown), the 167F doors say their Reason ("Door, passage, Reason: Shijima"; south "Reason: none", Francesco kept it). Conference room door and sanity check pass 2 skipped for now (Francesco). `docs/HANDOFF.md` last entry.
 
 ## Earlier (25 Nov 2026, later still): 0.0.195 built, untested: the settings window grouped under four categories (Speech, Battle, Navigation, Sounds; 14 settings; content changes such as the chase stay in the cfg file only). 0.0.194 verified 15:07.
 

@@ -394,25 +394,39 @@ namespace NocturneAccess.Systems.Navigation
 
         // 0.0.165: several conditions, all to hold: "01d_16+2003-2004" (the Third Kalpa's second traversal, after flag 2003 and
         // before the Fourth Kalpa's switch sets 2004; Francesco, 13 Nov 2026).
+        // 0.0.197: '>' and '<' test a moving block of this area instead of a story flag: "01eve_06>1>7" holds once the held
+        // objects 1 and 7 are at their path end (fldGlobal.fldGbChkGimic(field, area + 1, hojiID) not 0: the game's own gimmick
+        // flag, set by OBJ_PATH_MOVE when a ride ends), "01eve_07<7" while 7 is not. The Kagutsuchi Tower's 186F to 188F lifts
+        // (field 32 area 16) must be ridden in the guide's order, and each lift is reachable in states that lead nowhere.
+        private static readonly char[] Signs = { '+', '-', '>', '<' };
+
         private static string GatedPlain(string token)
         {
-            int at = token.IndexOfAny(new[] { '+', '-' });
+            int at = token.IndexOfAny(Signs);
             if (at < 0)
                 return token;
             string name = token.Substring(0, at);
             for (int i = at; i < token.Length;)
             {
                 char sign = token[i];
-                int j = token.IndexOfAny(new[] { '+', '-' }, i + 1);
+                int j = token.IndexOfAny(Signs, i + 1);
                 if (j < 0)
                     j = token.Length;
-                if (!int.TryParse(token.Substring(i + 1, j - i - 1), out int flag))
-                    return token;   // not a flag condition: a plain name, as before
-                if ((sign == '+') != EventBit.evtBitCheck(flag))
+                if (!int.TryParse(token.Substring(i + 1, j - i - 1), out int id))
+                    return token;   // not a condition: a plain name, as before
+                bool on = sign == '+' || sign == '-' ? EventBit.evtBitCheck(id) : AtPathEnd(id);
+                if ((sign == '+' || sign == '>') != on)
                     return null;
                 i = j;
             }
             return name;
+        }
+
+        /// <summary>Whether held object (gimmick) 'hoji' of the player's area stands at its path end.</summary>
+        private static bool AtPathEnd(int hoji)
+        {
+            fldGlobalWork_t gb = fldGlobal.fldGb;
+            return gb != null && fldGlobal.fldGbChkGimic(gb.fieldID, gb.areaID + 1, hoji) != 0;
         }
 
         private static void Load()
