@@ -2,7 +2,9 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (24 Nov 2026): 0.0.192 built, untested: same-named landmark twins (the Marunouchi Entrance Terminal doors) listed once. Francesco is on side content before the final dungeon. Still open: the conference room stairs door below.
+## RESUME HERE (25 Nov 2026, new chat): 0.0.193 built, untested: "You've been warped." only for script moves within one area (`ScriptWarps`). 0.0.192 verified (Marunouchi Terminal door). Open first: the Diet Building conference room stairs door `33/28/01d_02` "not reachable" (spiral wedge steps narrower than a cell + a 50-unit floorless band; dump `2026-11-23_21-09-29`; offline trial `NAVSMALL=1`); the 25 Nov dump is of area 10, not the room. Then the sanity check second pass. Francesco: side content before the final dungeon.
+
+## Earlier (24 Nov 2026): 0.0.192 built, untested: same-named landmark twins (the Marunouchi Entrance Terminal doors) listed once. Francesco is on side content before the final dungeon. Still open: the conference room stairs door below.
 
 ## Earlier (23 Nov 2026, night, before a compact): 0.0.191 built, untested: the Diet Building conference room's boss trigger listed (`01d_03`, `ScriptNames.txt`), doors taken through the event index marked explored (`ExploredDoors`, `gFldEveRngIdx`). Open first: the conference room's stairs door `01d_02` "not reachable" (spiral wedge steps narrower than a cell and a 50-unit band with no floor; `docs/HANDOFF.md` last entry, offline trial `NAVSMALL=1`). Then the sanity check's second pass (`docs/SANITY-CHECK-PLAN.md`: class-index pass, README "Content changed" read-through). Francesco has nearly finished the Diet Building (final boss beaten).
 

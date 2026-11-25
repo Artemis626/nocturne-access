@@ -90,6 +90,15 @@ namespace NocturneAccess.Systems.Navigation
             if (now - _exploringSinceMs < SettleMs)
                 return;
             fldGlobalWork_t gb = fldGlobal.fldGb;
+            // 0.0.193 (Francesco, 25 Nov 2026: cutscenes and elevators said it at every scene change): only a move inside the same
+            // area is said. Into another area the game's place banner already tells it (the Obelisk's lift 31/12/01eve_01 to area
+            // 0, field 17's 01eve_01 to area 8); every Diet Building painting heard (33/9, 33/14) stayed in its area.
+            if (gb == null || gb.fieldID != _field || gb.areaID != _area)
+            {
+                Log.Info($"{Tag} {_field}/{_area}/{_volume} moved the player to field {gb?.fieldID} area {gb?.areaID}: another area, not said.");
+                _calledMs = -1;
+                return;
+            }
             Log.Info($"{Tag} {_field}/{_area}/{_volume} moved the player to area {gb?.areaID} at {FieldData.F(gb?.playerX ?? 0)} {FieldData.F(gb?.playerZ ?? 0)}: \"{Words}\"");
             SpeechManager.SayHeld(Words, HoldMs);
             _calledMs = -1;
