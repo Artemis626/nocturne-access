@@ -24,6 +24,8 @@ namespace NocturneAccess.Systems.Navigation
         internal const string Words = "You've been warped.";
         private const long SettleMs = 400, GiveUpMs = 30000;
         private const int HoldMs = 2500;
+        /// <summary>A banner shown this long before the move still counts as telling it (0.0.196).</summary>
+        private const long BannerBeforeMs = 3000;
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private static long _calledMs = -1, _exploringSinceMs = -1;
@@ -96,6 +98,19 @@ namespace NocturneAccess.Systems.Navigation
             if (gb == null || gb.fieldID != _field || gb.areaID != _area)
             {
                 Log.Info($"{Tag} {_field}/{_area}/{_volume} moved the player to field {gb?.fieldID} area {gb?.areaID}: another area, not said.");
+                _calledMs = -1;
+                return;
+            }
+            // 0.0.196 (Francesco, 25 Nov 2026: the Kagutsuchi Tower's lifts, field 32, said it): a lift inside one area shows the
+            // floor banner of a new place ("162F" then "167F") around the move, so the game tells it. The Diet Building paintings
+            // show the banner too, but with the same name as before ("West Wing 2F"): those are still said.
+            long bannerAgo = Menus.AnnouncementReader.LocationShownMs < 0 ? long.MaxValue
+                : Menus.AnnouncementReader.NowMs - Menus.AnnouncementReader.LocationShownMs;
+            long sinceCall = now - _calledMs;
+            if (bannerAgo <= sinceCall + BannerBeforeMs
+                && Menus.AnnouncementReader.LocationShownText != Menus.AnnouncementReader.LocationPreviousText)
+            {
+                Log.Info($"{Tag} {_field}/{_area}/{_volume}: the banner named a new place (\"{Menus.AnnouncementReader.LocationPreviousText}\" to \"{Menus.AnnouncementReader.LocationShownText}\"): not said.");
                 _calledMs = -1;
                 return;
             }

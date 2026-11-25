@@ -157,6 +157,8 @@ namespace NocturneAccess.Systems.Navigation
         /// ExploredDoors.BehindLine): Kabukicho Prison's cells, "No one is here", then "This is the hole that the Manikin jumped
         /// into" once the Digging Manikin has dug it. "" when none is known.</summary>
         public string Behind = "";
+        /// <summary>The Kagutsuchi Tower's 167F doors (0.0.196): the Reason whose door it is, "Reason: Shijima" (PointsOfInterest.ReasonDoors).</summary>
+        public string Reason = "";
 
         /// <summary>An explored door: what the player's own exploration shows behind it, "leads to unexplored doors" or "nothing
         /// new behind it" (AreaRoutes.LeadsOf, 0.0.164); "" when not known.</summary>
@@ -184,6 +186,7 @@ namespace NocturneAccess.Systems.Navigation
             string head = Explored ? (inSentence ? "explored " : "Explored ") + lower : inSentence ? lower : word;
             string kind = ShownKind;
             return head + (Destination.Length > 0 ? " to " + Destination : "") + (kind.Length > 0 ? ", " + kind : "")
+                   + (Reason.Length > 0 ? ", " + Reason : "")
                    + (Explored && Leads.Length > 0 ? ", " + Leads : "")
                    + (Behind.Length > 0 ? ": " + Behind : "");
         }
@@ -202,7 +205,7 @@ namespace NocturneAccess.Systems.Navigation
 
         public string Spoken => NextStep ? StepPhrase(false)
             : PlainDoor ? DoorPhrase(false)
-            : Label + (State.Length > 0 ? ", " + State : "") + (DoorKind.Length > 0 ? ", " + DoorKind : "");
+            : Label + (State.Length > 0 ? ", " + State : "") + (DoorKind.Length > 0 ? ", " + DoorKind : "") + (Reason.Length > 0 ? ", " + Reason : "");
 
         /// <summary>The label inside a sentence: game names and "Soul" keep their capitals, the mod's own words do not;
         /// "explored door", "empty item box"; a door with a kind as on Page Up: "explored door, room".</summary>
@@ -290,6 +293,27 @@ namespace NocturneAccess.Systems.Navigation
         /// dumps 22 Oct 2026), taken as 41 to 45.</summary>
         internal static bool Labyrinth(int field) => field >= 40 && field <= 45;
         private const int LabyrinthSwitchPad = 5;   // BASYO41_L0005 to BASYO45_L0005 "Switch"; field 40 has pads 1 to 3 only
+
+        // ---- The Kagutsuchi Tower's 167F doors (0.0.196; Francesco, 25 Nov 2026) ----
+        // Field 32: the hub, area 0, has four doors at the 167F level (y -3600) on the cardinal axes, each paired with door
+        // 01d_03 of one route area, which the route's lift (01eve_01 / 02) reaches from 162F; only the door of the player's Reason
+        // opens, and the game says so nowhere. Read offline (f032.bf, 001_start): flag 146 puts the arrival at 01pos_31 (north),
+        // 147 at 01pos_32 (west), 145 at 01pos_29 (east), none of them at 01pos_33 (south); AppMedia's tower chart: "Yosuga east,
+        // Musubi west, Shijima north, other south" (https://appmedia.jp/?p=5582803). Francesco (no Reason) opened the south one.
+        // The game's words for the Reasons (F032INF_L0010 to L0012); "none" is the mod's (Francesco to confirm). Door table rows
+        // (F032.WAP): area 1 01d_03 to 01pos_04 (0, 6450), area 4 to 01pos_08 (-6450, 0), area 7 to 01pos_11 (0, -6450), area 10
+        // to 01pos_15 (6450, 0); back: 01d_04, 01d_08, 01d_11, 01d_15.
+        private static readonly Dictionary<(int Field, int Area, string Volume), string> ReasonDoors = new Dictionary<(int, int, string), string>
+        {
+            [(32, 1, "01d_03")] = "Shijima",
+            [(32, 0, "01d_04")] = "Shijima",
+            [(32, 4, "01d_03")] = "Musubi",
+            [(32, 0, "01d_08")] = "Musubi",
+            [(32, 7, "01d_03")] = "none",
+            [(32, 0, "01d_11")] = "none",
+            [(32, 10, "01d_03")] = "Yosuga",
+            [(32, 0, "01d_15")] = "Yosuga",
+        };
 
         private static readonly Dictionary<(int Field, int Area, string Volume), string> WayMarks = new Dictionary<(int, int, string), string>
         {
@@ -606,6 +630,7 @@ namespace NocturneAccess.Systems.Navigation
                     Destination = destination,
                     DestinationIsField = destinationIsField,
                     Behind = behind,
+                    Reason = ReasonDoors.TryGetValue((gb.fieldID, gb.areaID, name), out string reason) ? "Reason: " + reason : "",
                     Escalator = escalator,
                     EscalatorDir = escalatorDir,
                     Jump = jump,

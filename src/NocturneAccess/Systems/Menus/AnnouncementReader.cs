@@ -113,6 +113,11 @@ namespace NocturneAccess.Systems.Menus
         /// floor), and its text then: ExploredDoors takes the first banner after going through a door as where it leads (0.0.78).</summary>
         internal static int LocationShows { get; private set; }
         internal static string LocationShownText { get; private set; } = "";
+        /// <summary>When the location banner was last shown (this reader's clock, ms); ScriptWarps (0.0.196).</summary>
+        internal static long LocationShownMs { get; private set; } = -1;
+        /// <summary>The banner's text before its last show: a show naming a new place differs from it (ScriptWarps, 0.0.196).</summary>
+        internal static string LocationPreviousText { get; private set; } = "";
+        internal static long NowMs => Clock.ElapsedMilliseconds;
         private const string PromptPath = "Canvas_UI/fieldUI/fannounce/guidetext/TextTM";
 
         /// <summary>
@@ -271,7 +276,9 @@ namespace NocturneAccess.Systems.Menus
                             if (EntryOfPath.TryGetValue(LocationPath, out Entry location) && location == e)
                             {
                                 LocationShows++;
+                                LocationPreviousText = LocationShownText;
                                 LocationShownText = e.Text;
+                                LocationShownMs = now;
                             }
                             if (waited && (e.Options & Options.DropAfterQuestion) != 0 && e.Text.Trim().Length <= 3)
                             {

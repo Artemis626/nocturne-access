@@ -2,7 +2,9 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## RESUME HERE (25 Nov 2026, later still): 0.0.195 built, untested: the settings window grouped under four categories (Speech, Battle, Navigation, Sounds; 14 settings; content changes such as the chase stay in the cfg file only). 0.0.194 verified 15:07.
+## RESUME HERE (25 Nov 2026, new chat 2): 0.0.196 built, untested: the Kagutsuchi Tower (field 32): route lifts no longer say "You've been warped." (a banner naming a new place was shown), the 167F doors say their Reason ("Door, passage, Reason: Shijima"; south "Reason: none", wording to confirm). Conference room door and sanity check pass 2 skipped for now (Francesco). `docs/HANDOFF.md` last entry.
+
+## Earlier (25 Nov 2026, later still): 0.0.195 built, untested: the settings window grouped under four categories (Speech, Battle, Navigation, Sounds; 14 settings; content changes such as the chase stay in the cfg file only). 0.0.194 verified 15:07.
 
 ## Earlier (25 Nov 2026, later): 0.0.194 built, verified 15:07: the mod settings window (Shift+F; field, overworld, battle only; a small uGUI window with two settings, wall bump sound and door tone; the game sees no key while it is open). Test steps and what to check: `docs/HANDOFF.md` last entry. If Francesco likes the design, the full settings list next (`docs/SETTINGS-TUTORIAL-PLAN.md`). 0.0.193 still to test.
 
