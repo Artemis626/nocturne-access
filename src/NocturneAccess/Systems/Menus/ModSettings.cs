@@ -105,6 +105,7 @@ namespace NocturneAccess.Systems.Menus
                 Bool(Config.DoorSound),
                 Bool(Config.WayOnSound),
                 Bool(Config.AlarmSound),
+                Bool(Config.DamageFloorSound),
                 Bool(Config.SecretSound),
                 Bool(Config.ChaseSound));
 

@@ -69,6 +69,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<bool> WayOnEnabled { get; private set; }
         internal static MelonPreferences_Entry<bool> WayOnSound { get; private set; }
         internal static MelonPreferences_Entry<bool> AlarmSound { get; private set; }
+        internal static MelonPreferences_Entry<bool> DamageFloorSound { get; private set; }
         internal static MelonPreferences_Entry<bool> DoorSound { get; private set; }
         internal static MelonPreferences_Entry<bool> SecretSound { get; private set; }
         internal static MelonPreferences_Entry<bool> PipeNoDamage { get; private set; }
@@ -152,6 +153,8 @@ namespace NocturneAccess.Core
                 "A soft two-note tone, once, on reaching an area where Shift+End has a way on (after loading a save, and the first time you enter each such area).");
             AlarmSound = navigation.CreateEntry("AlarmSound", true, "Alarm tones",
                 "In the Amala Temple's Red Temple: two low falling notes when a shadow sets off the alarm (the warp devices stop), two rising notes when a reset tile switches it off.");
+            DamageFloorSound = navigation.CreateEntry("DamageFloorSound", true, "Damage floor tone",
+                "One low, wavering note when a damage floor lies just ahead or underfoot (cursed or poisoned tiles that hurt the party at every step: the Kagutsuchi Tower, the Ikebukuro Tunnel's swamps, the Labyrinth). Again only after you have been off them for a moment.");
             DoorSound = navigation.CreateEntry("DoorSound", true, "Door tone",
                 "Two soft taps, like a knock, when the game shows a door prompt (\"Open Door\", \"Enter\", \"Exit\"): the door can be gone through from where you stand.");
             SecretSound = navigation.CreateEntry("SecretSound", true, "Secret area and section exit tones",

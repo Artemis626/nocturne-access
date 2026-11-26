@@ -89,7 +89,7 @@ Every change is saved at once and takes effect straight away. The one exception 
   - Routes through other areas: the Pages list also lists points reached only through doors you have been through.
   - Way on: off, Shift+End only says "Way on is off", and the way-on tone is not played. For players who prefer to find their own way.
 - **Sounds:**
-  - Wall bump sound, door tone, way-on tone, alarm tones (the Amala Temple), secret area and section exit tones (the Labyrinth), chase pulse (the Labyrinth's chase, when it is on).
+  - Wall bump sound, door tone, way-on tone, alarm tones (the Amala Temple), damage floor tone (one low wavering note when a tile that hurts the party lies just ahead or underfoot), secret area and section exit tones (the Labyrinth), chase pulse (the Labyrinth's chase, when it is on).
 
 ### What is not in the window
 

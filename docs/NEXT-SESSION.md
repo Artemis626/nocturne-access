@@ -8,7 +8,9 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## RESUME HERE (26 Nov 2026): 0.0.198 built, untested: config `WayOnEnabled` (the way on can be switched off, settings window Navigation); README "Settings"; `docs/USER-GUIDE.md` started (outline plus the Settings chapter). Still to test: 0.0.197 (Kagutsuchi Tower way on).
 
-## RESUME HERE (26 Nov 2026, later afternoon): 0.0.200 built, untested: seams over a lower floor bridged (`WalkGrid.BridgeLayeredSeams`, probe 45): the 187F west stairs of the Kagutsuchi Tower area 16 cut 189F off, so block 7's Ride down was "beyond doors" (dump 14:27:53; Francesco has suspend data there). 0.0.199 verified (blocks 7, 1, 2 named in order). Test steps: `docs/HANDOFF.md` last entry.
+## RESUME HERE (26 Nov 2026, evening): 0.0.201 built, untested: a damage floor tone (Attr 0x4000 tiles ahead or underfoot, `DamageFloorCue`, config `DamageFloorSound`): the Kagutsuchi Tower's cursed tiles (field 36, 285F). 0.0.200 verified (lifts to Ahriman). Field 36 has no way on (not asked for). Test steps: `docs/HANDOFF.md` last entry.
+
+## Earlier (26 Nov 2026, later afternoon): 0.0.200 built, untested: seams over a lower floor bridged (`WalkGrid.BridgeLayeredSeams`, probe 45): the 187F west stairs of the Kagutsuchi Tower area 16 cut 189F off, so block 7's Ride down was "beyond doors" (dump 14:27:53; Francesco has suspend data there). 0.0.199 verified (blocks 7, 1, 2 named in order). Test steps: `docs/HANDOFF.md` last entry.
 
 ## Earlier (26 Nov 2026, afternoon): 0.0.199 built, untested: area 16 of the Kagutsuchi Tower (186F to 188F) gated its lifts on gimmick 7, but block 7's id is 5 (its path); fixed in the data. 0.0.197's route verified from the 175F Terminal to 186F. Test steps: `docs/HANDOFF.md` last entry.
 
