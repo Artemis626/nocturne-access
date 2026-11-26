@@ -7,7 +7,7 @@
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <Version>0.0.198</Version>
+    <Version>0.0.199</Version>
     <!-- Embedded PDB gives file and line numbers in MelonLoader stack traces. -->
     <DebugType>embedded</DebugType>
     <Deterministic>true</Deterministic>

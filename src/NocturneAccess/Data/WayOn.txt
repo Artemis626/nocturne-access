@@ -332,10 +332,10 @@
 # to 189F; the west stairs down, up again to the row, block 7 down; north under block 2 and its stairs to the ride 01eve_02
 # (y -500) to area 17. Francesco's 25 Nov 22:16 to 22:22 rides showed block 2 and block 1 reachable from the start too, and
 # block 1's top cut off (only its ride down), so each ride is gated on the blocks' places ('>' at the path end, up; '<' not):
-# without the gates the first reachable ride is block 2 or block 1. Block 7's id is its object's, atari_hoji_07 (its path is
-# path_hoji_05; ids 1 and 2 seen in the log as "gimmick flag ... id 1" and "id 2"). Last: block 1 down when it was raised
+# without the gates the first reachable ride is block 2 or block 1. Block 7's gimmick id is its path's, 5 (path_hoji_05; 0.0.197
+# used 7, its object atari_hoji_07, and the gates never held: 26 Nov 13:52:44 "gimmick flag ... id 5, value 1", dump 13:55:53). Last: block 1 down when it was raised
 # alone (the 22:16:44 case).
-32 16 01eve_02 01eve_09>1>2>7 01eve_06>1>7<2 01eve_05>7<1 01eve_10<7 01eve_07>1<7   # 187F: the ride to 196F; the lifts in the guide's order
+32 16 01eve_02 01eve_09>1>2>5 01eve_06>1>5<2 01eve_05>5<1 01eve_10<5 01eve_07>1<5   # 187F: the ride to 196F; the lifts in the guide's order
 # Area 17 (196F to 231F): six lifts in a shaft, each ridden up from its lower stop: block 3 (01eve_05, east, 196F level y -500
 # to -4000), block 1 (01eve_01, west, -4000 to -6000), block 6 (01eve_15, west, -7000 to -9000, "west to the stairs, go up"),
 # then the ride 01eve_09 at the top to area 18. Block 2 (01eve_04, west at y -500) and block 5 (01eve_13) lead to chests,
