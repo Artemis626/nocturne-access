@@ -169,6 +169,38 @@ if ($ENV{NAVSEAM} // 1) {
     }
     print "seam cells bridged: $seamed\n";
 }
+# NAVSEAMLAYER=1 (WalkGrid 0.0.200, default): a seam over a lower floor. A cell that already holds floors at other heights gets a
+# layer where floors on two opposite sides, probed out to the game's body radius (45), lie within a step of each other and the
+# cell has no floor within a step of them. The Kagutsuchi Tower 187F west stairs (field 32 area 16, dump 26 Nov 14:27:53): a
+# 50-unit gap between the landing (x -2000) and the first step (x -1950), over 186F's floor, cut 189F off from 187F.
+if (($ENV{NAVSEAMLAYER} // 1) && $MaxStep > 55) {   # dungeons only, as WalkGrid
+    my $p = $ENV{NAVSEAMLPROBE} // 45; my %side; my $added = 0;
+    for my $f (@floors) {
+        my ($fx0, $fz0, $fx1, $fz1) = (1e9, 1e9, -1e9, -1e9);
+        for (@{ $f->{p} }) { $fx0 = $_->[0] if $_->[0] < $fx0; $fx1 = $_->[0] if $_->[0] > $fx1; $fz0 = $_->[2] if $_->[2] < $fz0; $fz1 = $_->[2] if $_->[2] > $fz1; }
+        my ($i0, $i1, $j0, $j1) = cells($fx0 - $p, $fz0 - $p, $fx1 + $p, $fz1 + $p);
+        for my $j ($j0 .. $j1) { for my $i ($i0 .. $i1) {
+            my $c = $j * $W + $i; next unless $cnt[$c];
+            my ($x, $z) = ($gx + $i * $C, $gz + $j * $C);
+            my @probe = ([$x, $z - $p], [$x, $z + $p], [$x - $p, $z], [$x + $p, $z]);
+            for my $s (0 .. 3) { my ($sx, $sz) = @{ $probe[$s] }; push @{ $side{$c}[$s] }, planey($f, $sx, $sz) if inside($f->{p}, $sx, $sz); }
+        } }
+    }
+    for my $c (keys %side) {
+        my $best;
+        for my $axis (0, 1) {
+            for my $ya (@{ $side{$c}[2 * $axis] // [] }) { for my $yb (@{ $side{$c}[2 * $axis + 1] // [] }) {
+                next if abs($ya - $yb) > $Step;
+                my $y = $ya < $yb ? $ya : $yb;
+                next if grep { abs($hgt[$c * $layers + $_] - $y) <= $Step } 0 .. $cnt[$c] - 1;
+                $best = $y if !defined $best || $y < $best;
+            } }
+        }
+        next unless defined $best && $cnt[$c] < $layers;
+        my $k = $c * $layers + $cnt[$c]; $hgt[$k] = $best; $st[$k] = 1; $cnt[$c]++; $added++;
+    }
+    print "seam layers added over lower floors: $added\n";
+}
 # NAVRAIL=1 (WalkGrid 0.0.81, default): a wall lower than a step still blocks when it reaches the game's test height (35 above
 # the floor, fldHitChkUnit: pos.y - 35) and no floor lies at its top (a railing, not a stair riser): Kabukicho Prison's 50-unit
 # railings by the "Jump Off" volumes. A floor node within RailReach of the wall at its top height (within RailTop) makes it a riser.

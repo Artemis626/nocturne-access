@@ -8,7 +8,9 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## RESUME HERE (26 Nov 2026): 0.0.198 built, untested: config `WayOnEnabled` (the way on can be switched off, settings window Navigation); README "Settings"; `docs/USER-GUIDE.md` started (outline plus the Settings chapter). Still to test: 0.0.197 (Kagutsuchi Tower way on).
 
-## RESUME HERE (26 Nov 2026, afternoon): 0.0.199 built, untested: area 16 of the Kagutsuchi Tower (186F to 188F) gated its lifts on gimmick 7, but block 7's id is 5 (its path); fixed in the data. 0.0.197's route verified from the 175F Terminal to 186F. Test steps: `docs/HANDOFF.md` last entry.
+## RESUME HERE (26 Nov 2026, later afternoon): 0.0.200 built, untested: seams over a lower floor bridged (`WalkGrid.BridgeLayeredSeams`, probe 45): the 187F west stairs of the Kagutsuchi Tower area 16 cut 189F off, so block 7's Ride down was "beyond doors" (dump 14:27:53; Francesco has suspend data there). 0.0.199 verified (blocks 7, 1, 2 named in order). Test steps: `docs/HANDOFF.md` last entry.
+
+## Earlier (26 Nov 2026, afternoon): 0.0.199 built, untested: area 16 of the Kagutsuchi Tower (186F to 188F) gated its lifts on gimmick 7, but block 7's id is 5 (its path); fixed in the data. 0.0.197's route verified from the 175F Terminal to 186F. Test steps: `docs/HANDOFF.md` last entry.
 
 ## Earlier (25 Nov 2026, night): 0.0.197 built, untested: Shift+End way on in the Kagutsuchi Tower from the 175F Terminal (field 32 area 13) to the ride into field 36 past Ahriman (area 19), from Samurai Gamers' guide matched to the game's data; area 16's three lifts gated on the blocks' positions (new tokens `>N` / `<N`, the game's gimmick flags). 0.0.196 verified. Test steps: `docs/HANDOFF.md` last entry. Next: read his test log; then the way on for field 36 (285F onwards) by the same method. Conference stairs door and sanity check pass 2 still skipped (Francesco).
 

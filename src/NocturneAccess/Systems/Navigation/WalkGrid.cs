@@ -323,6 +323,8 @@ namespace NocturneAccess.Systems.Navigation
             }
             int markedCells = AddMarkedFloors(marked);
             int seams = BridgeSeams(floors);
+            if (!world)
+                seams += BridgeLayeredSeams(floors);
 
             int railed = 0;
             foreach ((float ax, float az, float bx, float bz, float lo, float hi) in walls)
@@ -506,6 +508,76 @@ namespace NocturneAccess.Systems.Navigation
                 bridged++;
             }
             return bridged;
+        }
+
+        // 0.0.200: a seam over a lower floor. BridgeSeams fills only empty cells; a cell that already holds a floor at another height
+        // (a stair landing above the room under it) gets a layer where floors on two opposite sides, probed out to the game's body
+        // radius (45, fldHit.fldHitChkUnit's dungeon radius), lie within a step of each other and none of its floors is within a step
+        // of them. The Kagutsuchi Tower's 187F west stairs (field 32 area 16, dump 26 Nov 2026 14:27:53): a 50-unit gap between the
+        // landing (x -2000) and the first step (x -1950), over 186F's floor, cut 189F off from 187F; Francesco walked across it.
+        private const float BodyProbe = 45f;
+
+        private static int BridgeLayeredSeams(List<CollisionPoly> floors)
+        {
+            var sides = new Dictionary<int, List<float>[]>();
+            foreach (CollisionPoly f in floors)
+            {
+                float fx0 = float.MaxValue, fz0 = float.MaxValue, fx1 = float.MinValue, fz1 = float.MinValue;
+                foreach (Vector4 v in f.Points)
+                {
+                    fx0 = Math.Min(fx0, v.x); fx1 = Math.Max(fx1, v.x);
+                    fz0 = Math.Min(fz0, v.z); fz1 = Math.Max(fz1, v.z);
+                }
+                ForCells(fx0 - BodyProbe, fz0 - BodyProbe, fx1 + BodyProbe, fz1 + BodyProbe, (c, x, z) =>
+                {
+                    if (_count[c] == 0)
+                        return;
+                    for (int s = 0; s < 4; s++)
+                    {
+                        float sx = s == 2 ? x - BodyProbe : s == 3 ? x + BodyProbe : x;
+                        float sz = s == 0 ? z - BodyProbe : s == 1 ? z + BodyProbe : z;
+                        if (!CollisionCache.ContainsXZ(f.Points, sx, sz))
+                            continue;
+                        if (!sides.TryGetValue(c, out List<float>[] lists))
+                            sides[c] = lists = new List<float>[4];
+                        (lists[s] ??= new List<float>()).Add(PlaneY(f, sx, sz));
+                    }
+                });
+            }
+            int added = 0;
+            foreach (KeyValuePair<int, List<float>[]> kv in sides)
+            {
+                int c = kv.Key, n = _count[c];
+                if (n >= Layers)
+                    continue;
+                float best = float.MaxValue;
+                for (int axis = 0; axis < 2; axis++)
+                {
+                    List<float> a = kv.Value[2 * axis], b = kv.Value[2 * axis + 1];
+                    if (a == null || b == null)
+                        continue;
+                    foreach (float ya in a)
+                        foreach (float yb in b)
+                        {
+                            if (Math.Abs(ya - yb) > StepHeight)
+                                continue;
+                            float y = Math.Min(ya, yb);   // Y points down: the higher floor
+                            bool near = false;
+                            for (int l = 0; l < n && !near; l++)
+                                near = Math.Abs(_height[c * Layers + l] - y) <= StepHeight;
+                            if (!near)
+                                best = Math.Min(best, y);
+                        }
+                }
+                if (best == float.MaxValue)
+                    continue;
+                _height[c * Layers + n] = best;
+                _state[c * Layers + n] = 1;
+                _near[c * Layers + n] = NearRange;
+                _count[c] = (byte)(n + 1);
+                added++;
+            }
+            return added;
         }
 
         // ---- Warps (0.0.52) ----
