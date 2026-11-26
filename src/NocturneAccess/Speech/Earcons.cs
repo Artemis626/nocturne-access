@@ -138,33 +138,6 @@ namespace NocturneAccess.Speech
 
         private static GCHandle _alarmOn, _alarmOff;
 
-        /// <summary>
-        /// A damage floor ahead or underfoot (0.0.201; Francesco, 26 Nov 2026: the Kagutsuchi Tower's cursed tiles, as the
-        /// Labyrinth's): one soft, uneasy note, D3 and E-flat 3 together (147 and 156 Hz, beating, a little of each octave on top),
-        /// 280 ms; low like the alarm, but a single wavering note unlike every other cue.
-        /// </summary>
-        internal static void DamageFloor() => Play(ref _damage, MakeDamage, "damage floor tone");
-
-        private static GCHandle _damage;
-
-        private static byte[] MakeDamage()
-        {
-            const int rate = 22050;
-            int n = rate * 280 / 1000;
-            var samples = new short[n];
-            for (int i = 0; i < n; i++)
-            {
-                double t = (double)i / rate;
-                double attack = Math.Min(1.0, t / 0.015);
-                double decay = Math.Exp(-t * 4.0);
-                double release = Math.Min(1.0, (n - i) / (rate * 0.03));
-                double wave = 0.4 * Math.Sin(2 * Math.PI * 146.83 * t) + 0.4 * Math.Sin(2 * Math.PI * 155.56 * t)
-                              + 0.1 * Math.Sin(2 * Math.PI * 293.66 * t) + 0.1 * Math.Sin(2 * Math.PI * 311.13 * t);
-                samples[i] = (short)(0.55 * attack * decay * release * wave * short.MaxValue);
-            }
-            return Wav(samples, rate);
-        }
-
         private static byte[] TwoNotes(double first, double second)
         {
             const int rate = 22050;

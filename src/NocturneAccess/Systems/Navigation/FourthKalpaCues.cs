@@ -53,8 +53,17 @@ namespace NocturneAccess.Systems.Navigation
         // one area file (f042_014.f2 = f042_025.f2), as the Fourth Kalpa's cursed area 2 and its twin 3 share a layout. The Soul by
         // area 14's door says "It's cursed, y'know." (F042INF_L0055) or "The curse has been undone." (L0056). Not seen in game yet:
         // Francesco crossed after Beelzebub (18 Nov 2026), so only the uncursed twins.
+        // 0.0.202: the Kagutsuchi Tower's upper floors (field 36; Francesco, 26 Nov 2026: "cursed tiles", the line as in the Fourth
+        // Kalpa on first entering the area; the game's own damage sound marks each tile). Unlike the Kalpas, patches of tiles with
+        // Attr 0x4000 (dump 26 Nov 18:55:00, area 0); read offline from the area files (research/gamedata/f036, tools/unity/f2dump.pl):
+        // areas 0 (20 polygons), 1 (10), 2 (9), 3 (11), 4 (4) and 6 (7); none in the other areas, nor in field 32.
+        private const int UpperTower = 36;
+        private static bool TowerCursed(int field, int area) =>
+            field == UpperTower && (area <= 4 || area == 6) && area >= 0;
+
         private static bool Cursed(int field, int area) =>
-            (field == Field && (area == 2 || area == 4 || area == 24)) || (field == SecondKalpa && (area == 13 || area == 25));
+            (field == Field && (area == 2 || area == 4 || area == 24)) || (field == SecondKalpa && (area == 13 || area == 25))
+            || TowerCursed(field, area);
 
         private const int SecondKalpa = 42;
         private const int EfreetArea = 16;   // B3, Efreet (the Star Key chain): beyond the cursed areas 13 and 25
@@ -110,7 +119,7 @@ namespace NocturneAccess.Systems.Navigation
                 }
             }
 
-            if ((field == Field || field == SecondKalpa) && !Cursed(field, area) && area != _damageLoggedArea && FieldState.IsExploring
+            if ((field == Field || field == SecondKalpa || field == UpperTower) && !Cursed(field, area) && area != _damageLoggedArea && FieldState.IsExploring
                 && fldPlayer.fldPlayerAct == DamageFloorAct)
             {
                 _damageLoggedArea = area;
@@ -123,7 +132,9 @@ namespace NocturneAccess.Systems.Navigation
             string line = null;
             bool secret = false;
             bool wasCursed = Cursed(oldField, oldArea), isCursed = Cursed(field, area);
-            if (isCursed && !wasCursed)
+            // In the tower the cursed areas adjoin one another, so the line comes on entering each of them (Francesco: "when first
+            // entering the area"), not only on leaving a clear one.
+            if (isCursed && (!wasCursed || (TowerCursed(field, area) && (oldField != field || oldArea != area))))
                 line = CursedWords;
             else if (wasCursed && !isCursed)
                 line = ClearWords;

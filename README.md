@@ -83,7 +83,7 @@ Every change is saved at once to `UserData/NocturneAccess.cfg` and takes effect 
 - **Speech:** speaker on every page; braille output.
 - **Battle:** speak HP changes; speak HP left after actions (F8 also switches it).
 - **Navigation:** blobber mode at start; door kinds; points of interest in map order; routes through other areas; the way on (off: Shift+End only says it is off, and its tone is not played).
-- **Sounds:** wall bump; door tone; way-on tone; alarm tones; damage floor tone; secret area and section exit tones; chase pulse.
+- **Sounds:** wall bump; door tone; way-on tone; alarm tones; secret area and section exit tones; chase pulse.
 
 The window leaves out, on purpose, the content changes listed above (such as the Third Kalpa chase), switches that could silence the mod or need a restart, debug settings and the keys. These are changed in `NocturneAccess.cfg` with the game closed.
 
