@@ -86,3 +86,20 @@ Nothing in this file has been executed on GitHub: the repository is still privat
 
 Option B in place, if the e-mail address should stay private; otherwise Option A. Either way the copyright side is ready: what
 remains in the history is ten short lines of dialogue in old developer notes.
+
+## 6. Done: Option B (26 Nov 2026, Francesco's go-ahead)
+
+- Backup first: the whole folder copied to `E:\Claude projects\Nocturne Access BACKUP 2026-11-26 before history rewrite` (559 MB,
+  `git fsck` clean, at commit `8f1c2ed`). Delete it once the public repository has been checked.
+- Commit messages scanned too: one short functional prompt only, nothing to remove.
+- `git filter-repo` (installed with `py -m pip install --user git-filter-repo`) run in place with `--replace-text` (the ten
+  dialogue lines, matched across line wraps, become "[game line removed]" in every old version; the Windows user-name path
+  becomes `%USERPROFILE%`) and `--mailmap` (author and committer e-mail become `259532419+Artemis626@users.noreply.github.com`).
+- Checked before pushing: 293 commits, all with the no-reply address; none of the ten lines left in any added line of the
+  history; the current files unchanged. Then `origin` added again and `main` and the tag `pre-labyrinth` force-pushed.
+- This folder's Git e-mail is now the no-reply address (`git config user.email`, repository only), so new commits keep it.
+- **Still true:** GitHub keeps the old commits reachable by their exact hash (checked: `c4428b9` still opens through the API).
+  Nobody outside has those hashes, but once the repository is public, anyone who had one could open it. Before the public switch,
+  either ask GitHub Support to purge the repository's unreferenced objects, or push this history to a new private repository,
+  delete the old one and rename the new one (locally only `git remote set-url`). Francesco's choice.
+- The repository is still private.
