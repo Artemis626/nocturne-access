@@ -91,9 +91,9 @@ mod's `Explored` files into `save-backups/<date>_<label>/` (git-ignored). First 
   read through: its switches exist (`ChaseOff`, `ChaseSound`, `PipeNoDamage`, `GeisGift`), but it said every change can be
   switched off, and the statue mark and the Reason doors have no switch: the sentence now says those two only add words to the
   Pages list. **Found:** `THIRD_PARTY_NOTICES.md` said the NVDA controller client is bundled in releases, the README (18 Nov)
-  that the player downloads it: the notices now follow the README. Open for Francesco: the README gives "licence
-  incompatibility" as the reason; LGPL 2.1 allows shipping the unmodified DLL beside a GPL mod, so the reason may be wrong (the
-  choice not to bundle can stay).
+  that the player downloads it: the notices now follow the README. The README gave "licence incompatibility" as the
+  reason, which was wrong (LGPL 2.1 allows shipping the unmodified DLL): removed. Francesco (26 Nov 2026): never bundle it; most
+  accessibility mod players already have a copy, and NV Access's own site is screen-reader friendly.
 - **6. Open items, still Francesco's to decide (unchanged):** probes behind a switch after the playthrough (decided 22 Nov); the
   black-screen wait for the fade; key help pages for more screens; the Puzzle Boy achievement; `CLAUDE.md`'s length (now 94 KB of
   resume lines).

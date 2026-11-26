@@ -62,7 +62,7 @@ Keys: `docs/KEYS.md`. Project state and roadmap: `docs/HANDOFF.md`.
 
 For now the mod supports **NVDA only**. It speaks by calling NV Access's 64-bit controller client, `nvdaControllerClient.dll`, directly. Other screen readers (JAWS, Narrator and others) are not supported yet. Supporting them is a goal for later.
 
-The controller client can't be distributed with this mod because of licence incompatibility, so you need to download it yourself, once:
+The controller client is not included with this mod. It is a small file from NV Access, and many players of accessibility mods already have a copy from another mod: if you do, copy that one (the 64-bit copy). Otherwise download it once from NV Access's own website, which works well with a screen reader:
 
 1. Open NV Access's official release page: https://download.nvaccess.org/releases/stable/
 2. Download the file whose name ends in `_controllerClient.zip`, for example `nvda_2025.3_controllerClient.zip`.
