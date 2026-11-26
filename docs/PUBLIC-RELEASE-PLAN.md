@@ -103,3 +103,7 @@ remains in the history is ten short lines of dialogue in old developer notes.
   either ask GitHub Support to purge the repository's unreferenced objects, or push this history to a new private repository,
   delete the old one and rename the new one (locally only `git remote set-url`). Francesco's choice.
 - The repository is still private.
+- **Purge done (26 Nov 2026, Francesco chose a new repository):** the clean history was pushed to a new private repository, the
+  old one renamed `Artemis626/nocturne-access-old` (kept private, untouched, may be archived; never make it public: it holds
+  the old history) and the new one renamed `Artemis626/nocturne-access`. Old commit hashes do not resolve on it. This folder's
+  `origin` points to it. Both repositories are private; the public switch waits for Francesco's separate command.
