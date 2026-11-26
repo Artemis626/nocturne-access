@@ -106,7 +106,8 @@ namespace NocturneAccess.Systems.Menus
                 Add("previous point of interest filter", "previous filter");
                 Add("walk to point of interest", "walk to the point");
                 Add("directions to point of interest", "directions to the point");
-                Add("way on", "the way on");
+                if (WayOn.Enabled)
+                    Add("way on", "the way on");
                 Add("where am I", "where you are");
                 Add("centre on the square", "centre on the square");
                 Add("blobber mode", "blobber mode on or off");

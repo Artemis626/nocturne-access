@@ -98,7 +98,8 @@ namespace NocturneAccess.Systems.Menus
                 Bool(Config.BlobberOnAtStart, "Takes effect at the next start. F4 switches blobber mode now."),
                 Bool(Config.DoorKinds),
                 Bool(Config.PoiMapOrder),
-                Bool(Config.AreaRoutes, changed: on => { if (!on) AutoWalk.CancelJourney("routes through other areas turned off"); }));
+                Bool(Config.AreaRoutes, changed: on => { if (!on) AutoWalk.CancelJourney("routes through other areas turned off"); }),
+                Bool(Config.WayOnEnabled, changed: on => { if (!on) WayOn.Forget(); }));
             Cat("Sounds",
                 Bool(Config.WallBumpSound),
                 Bool(Config.DoorSound),

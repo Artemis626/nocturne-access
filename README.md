@@ -77,6 +77,25 @@ The mod works alongside other MelonLoader mods for this game, such as Nocturne G
 
 Press **F7** on any screen to hear its keys: the game's own (from its button guide) and the mod's. The full list is in `docs/KEYS.md`.
 
+## Settings
+
+Press **Shift+F** in the field, on the overworld or in battle to open the mod's settings. A small window appears in the middle of the screen, and every row is spoken. It never opens inside a game menu, and while it is open the game does not react to any key.
+
+- **Categories:** W and S (or the arrow keys) move, Enter opens one, C or Escape closes the window.
+- **Inside a category:** W and S move, A, D, Enter or Space switch the setting on or off, C or Escape go back to the categories.
+- **Anywhere in the window:** Shift+F closes it, F1 repeats the row, F7 says these keys.
+
+Every change is saved at once to `UserData/NocturneAccess.cfg` and takes effect straight away, except where the window says otherwise.
+
+- **Speech:** speaker on every page; braille output.
+- **Battle:** speak HP changes; speak HP left after actions (F8 also switches it).
+- **Navigation:** blobber mode at start; door kinds; points of interest in map order; routes through other areas; the way on (off: Shift+End only says it is off, and its tone is not played).
+- **Sounds:** wall bump; door tone; way-on tone; alarm tones; secret area and section exit tones; chase pulse.
+
+The window leaves out, on purpose, the content changes listed above (such as the Third Kalpa chase), switches that could silence the mod or need a restart, debug settings and the keys. These are changed in `NocturneAccess.cfg` with the game closed.
+
+A player's guide is being written: `docs/USER-GUIDE.md`.
+
 ## Building
 
 1. Install the .NET 6 SDK or later.

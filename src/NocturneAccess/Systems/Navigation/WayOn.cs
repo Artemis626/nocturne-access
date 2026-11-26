@@ -65,10 +65,22 @@ namespace NocturneAccess.Systems.Navigation
             Log.Info($"{Tag} Field {field} area {area}: the way-on door {name} taken inside the area; choosing again.");
         }
 
+        /// <summary>The way on is on (0.0.198, Francesco: some players dislike this kind of guidance; config WayOnEnabled, settings window).</summary>
+        internal static bool Enabled => Config.WayOnEnabled?.Value ?? true;
+
+        /// <summary>Turned off: the chosen point is no longer kept in the Pages list, and nothing is chosen again.</summary>
+        internal static void Forget()
+        {
+            _markField = int.MinValue;
+            _markArea = int.MinValue;
+            _rechooseAt = -1;
+            Log.Info($"{Tag} Turned off: the chosen way on is forgotten.");
+        }
+
         internal static void Tick()
         {
             fldGlobalWork_t gb = fldGlobal.fldGb;
-            if (gb == null)
+            if (gb == null || !Enabled)
                 return;
             if (_rechooseAt >= 0 && Clock.ElapsedMilliseconds >= _rechooseAt && FieldState.IsExploring && !AutoWalk.Active)
             {
@@ -128,6 +140,11 @@ namespace NocturneAccess.Systems.Navigation
         /// <summary>Shift+End.</summary>
         internal static void Speak()
         {
+            if (!Enabled)
+            {
+                SpeechManager.Say("Way on is off. Turn it on in the mod settings, Shift+F, Navigation.", interrupt: true, force: true);
+                return;
+            }
             fldGlobalWork_t gb = fldGlobal.fldGb;
             if (gb == null || !FieldState.IsExploring)
             {
