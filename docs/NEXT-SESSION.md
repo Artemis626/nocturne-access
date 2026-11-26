@@ -8,6 +8,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## RESUME HERE (26 Nov 2026): 0.0.198 built, untested: config `WayOnEnabled` (the way on can be switched off, settings window Navigation); README "Settings"; `docs/USER-GUIDE.md` started (outline plus the Settings chapter). Still to test: 0.0.197 (Kagutsuchi Tower way on).
 
+## RESUME HERE (26 Nov 2026, night): 0.0.203 built, untested: a new encounter within 20 s of the last battle was taken as that battle resumed (no "Battle." line, field HP changes said as battle lines); a field change now ends a battle (`BattleReader.OnPartyPanel`). 0.0.202 verified (cursed floors line). Test steps: `docs/HANDOFF.md` last entry.
+
 ## RESUME HERE (26 Nov 2026, evening, later): 0.0.202 built, untested: the Kagutsuchi Tower's cursed floors get the Fourth Kalpa's spoken line on entering field 36 areas 0 to 4 and 6 (`FourthKalpaCues.TowerCursed`); the 0.0.201 tone removed (Francesco: the game's damage sound marks each step). Test steps: `docs/HANDOFF.md` last entry.
 
 ## Earlier (26 Nov 2026, evening): 0.0.201 built, untested: a damage floor tone (Attr 0x4000 tiles ahead or underfoot, `DamageFloorCue`, config `DamageFloorSound`): the Kagutsuchi Tower's cursed tiles (field 36, 285F). 0.0.200 verified (lifts to Ahriman). Field 36 has no way on (not asked for). Test steps: `docs/HANDOFF.md` last entry.

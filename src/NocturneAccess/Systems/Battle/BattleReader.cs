@@ -171,8 +171,11 @@ namespace NocturneAccess.Systems.Battle
             // The panel hides while an enemy talks (20:44 session): the same battle, not a new one. A long talk (recruiting
             // Kodama, 3 Oct 21:24, more than ResumeWindowMs) is still the same battle while the game's field has not changed
             // since it began: "Battle. Kodama." was announced again for the one enemy left.
+            // 0.0.203: a field change since the battle began ends it whatever the time: a retreat (or a quick win) followed within
+            // ResumeWindowMs by the next encounter was taken as the old battle resumed (26 Nov 22:10:22, nine cases since 23 Nov):
+            // no "Battle." line, and HP changed in the field (a heal, cursed floors) said as battle damage or healing.
             bool sameField = !_leftBattleField && _battleField != int.MinValue && CurrentField() == _battleField;
-            if (!_resultsShown && ((_goneAt >= 0 && now - _goneAt < ResumeWindowMs) || sameField))
+            if (!_resultsShown && !_leftBattleField && ((_goneAt >= 0 && now - _goneAt < ResumeWindowMs) || sameField))
             {
                 Log.Info($"{Tag} Battle UI back.");
                 return;
