@@ -6,25 +6,16 @@ A screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaste
 
 In active development and playable. It speaks the game's own text through NVDA: nothing is guessed or made up.
 
+The game is being played through with the mod in Chronicle mode, in long sessions with eyes completely closed. As of November 2026 the optional Labyrinth of Amala has been completed, and the playthrough has reached the game's final dungeon. Every new area has brought something the mod had not met before, and each was fixed as it came up, so the game looks completable in one run from start to finish. It will be declared so only once the final dungeon and the final bosses have been beaten too.
+
+The source code is public, but there is no easy-to-download release yet. A packaged release will come once that playthrough is finished.
+
 ### What you can do in game right now
 
 - **Story and menus:** dialogue with speaker names, choices, prompts, every menu, saving and loading, config, name entry.
 - **Battles:** whose turn it is, Press Turns, enemy actions, damage and healing, weaknesses and critical hits, statuses as they start and end, Analyze results, skill costs, summoning with each demon's level, HP and MP, and battle results including bosses. Status keys read your party and the enemies at any time, and a battle log repeats what just happened.
 - **Shops and services:** the Junk Shop with prices and owned counts, the Fountain of Life with fees, the Terminal and Amala Link travel, Rag's Jewelry trades. At the Cathedral of Shadows: both fusion tables with results and the Demon Compendium.
 - **Exploration:** a list of nearby points of interest (doors, exits, ladders, people, demons, item boxes, events); auto-walk to any of them, or spoken directions to walk there yourself; first-person blobber mode that keeps the game's own controls and announces walls and openings; "Where am I"; a memory of the doors you've been through, and of opened boxes; the way on (Shift+End) in the hardest dungeons; step-by-step help for the Obelisk's time puzzles; an autopilot for the Labyrinth's falling minigame. This works in dungeons, fixed-camera rooms and on the overworld map.
-
-### How effective it is
-
-As of November 2026, the game has been played in Chronicle mode, in long sessions with eyes completely closed, from the start well into its second half:
-
-- **Places:** Shinjuku, Shibuya, the Amala Network (both visits), Ginza and its Underpass, Ikebukuro and Mantra's Headquarters, the Assembly of Nihilo, Kabukicho Prison, the Ikebukuro Tunnel, Asakusa and Mifunashiro, the Obelisk with its time puzzles, Yoyogi Park, the Asakusa Tunnel, the Amala Temple (all three temples), and the Labyrinth of Amala's First, Second and Third Kalpas.
-- **Bosses beaten include:** Matador, Orthrus, Yaksini, Thor, Raidou (twice, the second time at the end of the Third Kalpa), Daisoujou, Ose, Mizuchi, Kin-Ki, the Moirai sisters, the White, Red, Black and Pale Riders, Alciel and the Mother Harlot.
-
-Handling stairs, ramps, ladders and hidden warps properly made areas that used to be a maze quick to cross. In the hardest dungeons (the Labyrinth's Kalpas, the Amala Temple, Yoyogi Park's construction site), the way on (Shift+End) points to the next step of the main route.
-
-### Why play through to the end
-
-Every new area of Nocturne has brought something the mod had never met: hidden warps in the Amala Network, ladders in the Underpass, a pyramid built differently from everything before it, corridors of steps, a prison whose floors swap places, the Obelisk's time puzzles, the Labyrinth's falling minigame and stat-locked doors. Each one blocked progress until it was found and fixed, often within the same day. The only way to make sure a blind player can finish the game is to play it to the end, find those spots and fix them. Every fix also carries over to the areas still ahead.
 
 ### Design principles
 
@@ -40,6 +31,8 @@ Every new area of Nocturne has brought something the mod had never met: hidden w
 The mod is meant to work the same in every mode the game offers: **New Game** (the 2003 game, without the extra content), **Chronicle** (the free Chronicle Pack DLC, with Raidou, the Labyrinth of Amala and more) and **Maniax** (paid DLC, with Dante instead of Raidou). It is played and tested in Chronicle mode. The game's data was compared offline: Maniax uses the same maps, doors and puzzles as Chronicle (only story scenes differ), so the Labyrinth's way on and the changes below apply to both, and where the mod names Raidou it says Dante in Maniax. New Game has no Labyrinth, so none of that comes up there.
 
 ### Content changed or skipped for accessibility
+
+**Spoiler warning:** some of the points below name places, characters and puzzles that some players may consider spoilers.
 
 A few short parts of the game depend on reacting to what is on screen faster than speech or sound can tell you. Rather than hold back the whole mod for them, the mod changes them, and says so here. Each change to how the game plays can be switched off to play the game's original version: in `UserData/NocturneAccess.cfg` (with the game closed), or with a key in game where noted. The last two items only add words to the Pages list and change nothing in the game.
 
@@ -117,6 +110,8 @@ Game files and generated assemblies are never committed.
 
 ## Acknowledgements
 
+**Spoiler warning:** this section and the next one name dungeons, puzzles and bosses that some players may consider spoilers.
+
 Some parts of the game are solved by sight: the Obelisk's time puzzles, the order of the Moirai fights, and the route
 through the Labyrinth of Amala. For these the mod's guidance was worked out with the help of fan walkthroughs, then matched
 to the game's own data, so the mod speaks only the game's names and never the guides' text. Thanks to their authors:
@@ -130,6 +125,8 @@ to the game's own data, so the mod speaks only the game's names and never the gu
   [Neoseeker](https://www.neoseeker.com/): the Moirai sisters' fights.
 
 ### Where the way on (Shift+End) has data, and its sources
+
+**Spoiler warning:** the list below names dungeons, routes and bosses that some players may consider spoilers.
 
 Each route below was read from the guides, then matched to the game's door table, area files and field script
 (`src/NocturneAccess/Data/WayOn.txt` holds the details per area). Other places have no way on yet: Shift+End says
