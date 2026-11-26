@@ -95,7 +95,7 @@ his word.
 ## The Third Kalpa holds the key (13 Nov 2026, from Francesco's 12 Nov session and the scripts)
 
 Francesco solved the Fourth Kalpa's maze by himself, eyes closed (12 Nov). His verdict: the Kalpa is meant to be solved without a
-map, so **no way on for the Fourth Kalpa** (none is built; keep it that way unless he asks). The B2 Soul (area 27): "[game line removed] [game line removed]"
+map, so **no way on for the Fourth Kalpa** (none is built; keep it that way unless he asks). The B2 Soul (area 27) hints that a switch over there must be activated, and that the far side is reached from the Kalpa above.
 
 How the two Kalpas join (no door joins them; holes run the falling minigame, door-table rows of warptype 3 that run an event):
 - Third Kalpa area 1, hole `01eve_02` (procedure `002_01eve_02`, event 80, row to pipe event 1006): the normal way down, landing in

@@ -230,6 +230,6 @@ If a walk says "Blocked." or "Walk interrupted by an event." on open ground, say
 
 ## Open items from the last dungeon session (not overworld)
 
-- A demon conversation in battle (Shikigami, 20:20) spoke two lines twice about half a second apart ("[game line removed]", "You obtained Life Stone x 1."): a reader speaks the same page twice; to look at in the dialogue or announcement reader.
+- A demon conversation in battle (Shikigami, 20:20) spoke two lines twice about half a second apart (its talk line, then "You obtained Life Stone x 1."): a reader speaks the same page twice; to look at in the dialogue or announcement reader.
 - The Annex 1F ramp item box (`docs/HANDOFF.md`, `WalkGrid` `Layers` = 3 hypothesis).
 - Custom waypoints (`docs/EXPLORED-DOORS-PLAN.md` item 4): recorded, not to build until Francesco asks.

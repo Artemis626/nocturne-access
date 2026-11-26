@@ -2,6 +2,8 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
+## RESUME HERE (26 Nov 2026, later): silent public release prepared, not executed. Francesco reads `docs/PUBLIC-RELEASE-PLAN.md` (copyright check done, git history options A, B, C) and decides; the repository stays private until then. Sanity check finished (`docs/SANITY-CHECK-PLAN.md`, second pass). Game tests unchanged: 0.0.198, 0.0.197 below.
+
 ## RESUME HERE (26 Nov 2026): 0.0.198 built, untested: config `WayOnEnabled` (the way on can be switched off, settings window Navigation); README "Settings"; `docs/USER-GUIDE.md` started (outline plus the Settings chapter). Still to test: 0.0.197 (Kagutsuchi Tower way on).
 
 ## RESUME HERE (25 Nov 2026, night): 0.0.197 built, untested: Shift+End way on in the Kagutsuchi Tower from the 175F Terminal (field 32 area 13) to the ride into field 36 past Ahriman (area 19), from Samurai Gamers' guide matched to the game's data; area 16's three lifts gated on the blocks' positions (new tokens `>N` / `<N`, the game's gimmick flags). 0.0.196 verified. Test steps: `docs/HANDOFF.md` last entry. Next: read his test log; then the way on for field 36 (285F onwards) by the same method. Conference stairs door and sanity check pass 2 still skipped (Francesco).

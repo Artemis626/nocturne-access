@@ -2,15 +2,15 @@
 
 Nocturne Access is licensed under the GNU General Public License version 3 (see `LICENSE`). It uses the components below. None of their files are stored in this repository.
 
-## Bundled in release packages
+## Required at runtime, downloaded by the player
 
 ### NVDA Controller Client
 
-- File: `nvdaControllerClient.dll` (64-bit), shipped unmodified beside `smt3hd.exe`.
+- File: `nvdaControllerClient.dll` (64-bit). Not bundled: the player downloads it from NV Access and places it beside `smt3hd.exe` (README, "Screen reader support").
 - Copyright: NV Access Limited.
 - License: GNU Lesser General Public License version 2.1.
 - Source: https://github.com/nvaccess/nvda (controller client), https://www.nvaccess.org/
-- The full license text will be included here before the first release.
+- If a release ever bundles it, its full license text goes here.
 
 ## Required at runtime, not bundled
 
@@ -37,4 +37,4 @@ No code from these projects is included yet. If any is borrowed, it will be cred
 
 ## Game files
 
-Shin Megami Tensei III Nocturne HD Remaster is © ATLUS / SEGA. No game files, and no assemblies generated from them, are included in this repository or its releases.
+Shin Megami Tensei III Nocturne HD Remaster is © ATLUS / SEGA. No game files, game assets, assemblies generated from them or decompiled game code are included in this repository or its releases. The mod speaks the game's text at run time from the player's own copy; the documentation quotes only short interface lines and prompts, to say what the player hears (copyright check, 26 Nov 2026).

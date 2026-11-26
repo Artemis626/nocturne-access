@@ -41,7 +41,7 @@ The mod is meant to work the same in every mode the game offers: **New Game** (t
 
 ### Content changed or skipped for accessibility
 
-A few short parts of the game depend on reacting to what is on screen faster than speech or sound can tell you. Rather than hold back the whole mod for them, the mod changes them, and says so here. Each change can be switched off to play the game's original version: in `UserData/NocturneAccess.cfg` (with the game closed), or with a key in game where noted.
+A few short parts of the game depend on reacting to what is on screen faster than speech or sound can tell you. Rather than hold back the whole mod for them, the mod changes them, and says so here. Each change to how the game plays can be switched off to play the game's original version: in `UserData/NocturneAccess.cfg` (with the game closed), or with a key in game where noted. The last two items only add words to the Pages list and change nothing in the game.
 
 - **The Labyrinth of Amala, Third Kalpa: Raidou's chase (Dante's in Maniax mode). Temporary.** A stealth section in real time: the pursuer runs faster than a player can react by ear, even with the mod's warning sounds. With `ChaseOff = true` (the default) he stands still and never catches you, and on first reaching the chase after loading a save the mod says so ("Chase disabled: set ChaseOff to false ...");  the rest of the section, its doors and the story go on as normal. **The boss fight against him at the end is never skipped.** An accessible way to play the chase is still wanted; until then it stays off. With `ChaseOff = false` you get the game's chase, with a low pulse that quickens as he closes in (`ChaseSound`).
 - **The Labyrinth of Amala's falling minigame.** The mod steers the fall for you (F4 hands it back to you during the fall, or a direction key takes over at once), and the party takes no damage from objects hit (`PipeNoDamage = true`, the default; macca lost to hits is unchanged).
@@ -151,3 +151,11 @@ Each route below was read from the guides, then matched to the game's door table
 ## License
 
 GNU General Public License version 3. See `LICENSE` and `THIRD_PARTY_NOTICES.md`.
+
+## Legal
+
+- Nocturne Access is an unofficial fan project. It is not affiliated with, endorsed by or sponsored by ATLUS or SEGA. Shin Megami Tensei III Nocturne HD Remaster is (c) ATLUS / SEGA; its name, and the names of its places, characters and demons, are used here only to say what the mod works with.
+- This repository holds no game files, no game assets, no assemblies generated from the game, and no decompiled game code. You need your own copy of the game.
+- The mod speaks the game's text while you play, read from your own copy at run time; it ships no copy of that text. The documentation quotes only short interface lines and prompts where it must say what the player hears.
+- The mod never touches the game's executable or its copy protection.
+

@@ -76,3 +76,25 @@ mod's `Explored` files into `save-backups/<date>_<label>/` (git-ignored). First 
   `FirstPersonFlags`, `FirstPersonAutoChain`, `FirstPersonChainIgnore`, the old `Probe` and routes key): MelonLoader keeps them, a
   fresh install has none; harmless. Mod words listed in `docs/MOD-WORDS.md` (chosen ones and the open ones).
 - **Not done yet:** the class-index pass over every name used (section 3, last item), README "Content changed" read through.
+
+## Results, second pass (26 Nov 2026, 0.0.198): the check is complete
+- **1. Build and start-up:** 0 warnings, 0 errors; version 0.0.198 in both files. `[Patch] Summary` 55 patched, 0 not declared,
+  0 failed in every session since 25 Nov 15:05 (50 before: the settings window's input hooks came with 0.0.194). In the 16 newest
+  archived sessions (23 to 25 Nov) the only errors are MelonLoader's own (its start screen's `Texture2D`, a `FileSystemWatcher`
+  path), none from the mod. Log archive 13 MB.
+- **3. Code health, last item:** every game type the code names (137) is in `docs/class-index.md`; of the 205 `Type.Member` uses
+  of game types, all are indexed except `fldTest.fldRun_MAP_OX/OZ/BX/BZ` (read by `Capture/ChaseProbe.cs`, verified in the
+  decompile): added to the index. `SDF_PADMAP` values are listed there without their prefix.
+- **4. Data files:** no duplicate lines in `WayOn.txt` or `AreaPoints.txt`; the ten way-on fields (16, 21, 26, 28, 29, 32, 34,
+  42, 43, 45) each have their README row.
+- **5. Player-facing:** every key default in `Core/Config.cs` is in `docs/KEYS.md` (Shift+F included). README "Content changed"
+  read through: its switches exist (`ChaseOff`, `ChaseSound`, `PipeNoDamage`, `GeisGift`), but it said every change can be
+  switched off, and the statue mark and the Reason doors have no switch: the sentence now says those two only add words to the
+  Pages list. **Found:** `THIRD_PARTY_NOTICES.md` said the NVDA controller client is bundled in releases, the README (18 Nov)
+  that the player downloads it: the notices now follow the README. Open for Francesco: the README gives "licence
+  incompatibility" as the reason; LGPL 2.1 allows shipping the unmodified DLL beside a GPL mod, so the reason may be wrong (the
+  choice not to bundle can stay).
+- **6. Open items, still Francesco's to decide (unchanged):** probes behind a switch after the playthrough (decided 22 Nov); the
+  black-screen wait for the fade; key help pages for more screens; the Puzzle Boy achievement; `CLAUDE.md`'s length (now 94 KB of
+  resume lines).
+- Copyright and history: `docs/PUBLIC-RELEASE-PLAN.md` (26 Nov 2026).
