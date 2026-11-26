@@ -107,3 +107,9 @@ remains in the history is ten short lines of dialogue in old developer notes.
   old one renamed `Artemis626/nocturne-access-old` (kept private, untouched, may be archived; never make it public: it holds
   the old history) and the new one renamed `Artemis626/nocturne-access`. Old commit hashes do not resolve on it. This folder's
   `origin` points to it. Both repositories are private; the public switch waits for Francesco's separate command.
+
+## 7. Public (26 Nov 2026, Francesco's command)
+
+- `Artemis626/nocturne-access` made public; `nocturne-access-old` stays private.
+- Website, on his go-ahead: the Projects page (19) says the source is public and links to GitHub; the technical overview
+  (page 13) updated from `docs/TECHNICAL-OVERVIEW.md` (spoiler warning, source link, status, changed content, progress, release).
