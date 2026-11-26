@@ -1,5 +1,7 @@
 # Event prompts from the game's own scripts (plan, 11 Oct 2026)
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Francesco, 11 Oct 2026 (after the 21:47 session): identify events by the action prompt they show ("Examine", "Jump off"), not only once visited. Read-only scouting of `GameAssembly.dll` and the proxy decompile; nothing built yet.
 
 ## Today (0.0.53 to 0.0.69)

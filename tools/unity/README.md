@@ -1,5 +1,7 @@
 # Game data tools (read-only, offline)
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Built 12 Oct 2026 for the event classification (`docs/EVENT-PROMPTS-PLAN.md`). They read the game's Unity asset bundles in
 `smt3hd_Data/StreamingAssets/PC` (UnityFS 6, LZ4 blocks, Unity 2019.4; SerializedFile 21 with type trees). Data files only:
 never the executable. Outputs go to `research/gamedata/` (git-ignored: derived from game files).

@@ -1,5 +1,7 @@
 # Settings menu and tutorial: plan (17 Nov 2026, decisions 18 Nov 2026)
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 ## Change of plan (25 Nov 2026): a simple window, built now
 
 Francesco replaced the settings-menu decision below:

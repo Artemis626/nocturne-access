@@ -1,5 +1,7 @@
 # Class index
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Every game, Unity or loader name the mod uses or plans to use, with where it was verified. No name goes into code unless it is listed here first.
 
 Sources:

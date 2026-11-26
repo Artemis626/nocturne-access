@@ -1,5 +1,7 @@
 # The Fourth Kalpa (field 44): research and proposals (12 Nov 2026)
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Francesco, 11 Nov 2026: the Fourth Kalpa disables the map, even for sighted players, to make them feel lost. Before any way on
 he asked: (2) is there cleaner data than the area names ("Area 22", "Hell's Maze", which seem random), and (3) how can the mod
 help once every door in the Pages list says "Explored"? Nothing here is built yet: these are findings and options for him to

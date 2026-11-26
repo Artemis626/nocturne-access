@@ -1,5 +1,7 @@
 # Nocturne Access
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster (Steam, Unity 2019.4.10f1 IL2CPP). One MelonLoader 0.6.1 mod (net6.0, HarmonyX, Il2CppInterop) speaking through NVDA via `nvdaControllerClient.dll`. GPL-3.0.
 
 - Repo: `E:\Claude projects\Nocturne Access`. Game: `E:\SteamLibrary\steamapps\common\smt3hd`.
@@ -107,7 +109,7 @@ Screen reader accessibility mod for Shin Megami Tensei III Nocturne HD Remaster 
 - Never touch or inspect `smt3hd.exe` (Denuvo). **Use read-only IL2CPP analysis of `GameAssembly.dll` consistently** (Francesco, 1 Oct 2026: it often beats runtime guessing): read the file offline, never load or run it (`tools/native/README.md`, `tools/native/dis.sh`).
 - Francesco launches with `--melonloader.hideconsole` (NVDA otherwise reads the console).
 - Commit messages end with the attribution line given by the environment.
-- **Francesco's website (letsaccessit.wordpress.com, since 21 Nov 2026):** never publish, unpublish, delete or change the live menu without his explicit go-ahead in chat for that action; drafts are fine when he asks for them. Website documents are technical only, screen-reader friendly (headings, short lists, no tables), marked as AI-generated, and say the repository is private and the mod is released only after he has finished the game with it at least once. His own human-written presentation will come later: publish it as he wrote it, without rewording. Keep `docs/TECHNICAL-OVERVIEW.md` the source of page 13; update the page only with his consent.
+- **Francesco's website (letsaccessit.wordpress.com, since 21 Nov 2026):** never publish, unpublish, delete or change the live menu without his explicit go-ahead in chat for that action; drafts are fine when he asks for them. Website documents are technical only, screen-reader friendly (headings, short lists, no tables), marked as AI-generated, and say that there is no packaged release until he has finished the game with it at least once (the source is public from his go-ahead, 26 Nov 2026; the private-repository line of page 13 changes only with his consent). His own human-written presentation will come later: publish it as he wrote it, without rewording. Keep `docs/TECHNICAL-OVERVIEW.md` the source of page 13; update the page only with his consent.
 - **Push to GitHub after every commit, without asking** (Francesco, 15 Oct 2026; replaces the 2 Oct rule of pushing only on his order). Commit at every working state and `git push` right after. **Never make the repository public or change its visibility without his explicit permission.**
 
 ## Build and tools

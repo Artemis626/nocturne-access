@@ -1,5 +1,7 @@
 # Nocturne Access: player's guide
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Draft, started 26 Nov 2026. Written with AI help, to be reviewed by Francesco before the public release. Only the settings chapter is written so far; the other chapters list what they will cover.
 
 ## About this guide

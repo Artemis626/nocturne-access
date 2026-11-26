@@ -1,5 +1,7 @@
 # Nocturne HD Access — Claude Code Handoff
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Sep 30, 2026 · @Francesco
 
 ## Purpose and goals

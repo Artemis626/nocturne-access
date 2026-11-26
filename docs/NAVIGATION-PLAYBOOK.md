@@ -1,5 +1,7 @@
 # Navigation playbook for screen-reader mods of 3D dungeon crawlers
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Written 7 Oct 2026, at version 0.0.60 of Nocturne Access, for a future project: another Shin Megami Tensei game, a blobber, or any dungeon crawler RPG made accessible to blind and low-vision players. It collects what navigation in Nocturne HD needed, what failed and why, and the order in which to build things. Every lesson says what happened in Nocturne, so it can be checked against the detailed records:
 
 - `docs/NAVIGATION-DESIGN.md`: first person, blobber mode, the game's input;

@@ -1,5 +1,7 @@
 # Nocturne Access: next session handoff
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
 ## RESUME HERE (26 Nov 2026, later): silent public release prepared, not executed. Francesco reads `docs/PUBLIC-RELEASE-PLAN.md` (copyright check done, git history options A, B, C) and decides; the repository stays private until then. Sanity check finished (`docs/SANITY-CHECK-PLAN.md`, second pass). Game tests unchanged: 0.0.198, 0.0.197 below.

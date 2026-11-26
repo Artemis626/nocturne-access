@@ -1,5 +1,7 @@
 # The mod's own words (for Francesco's review)
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Written 22 Nov 2026 for the sanity check (`docs/SANITY-CHECK-PLAN.md`, section 5). The mod speaks the game's own text wherever the
 game has it. These words are the mod's own, used where the game draws something only as an image or has no word at all. Each
 needs Francesco's consent (CLAUDE.md). The status comes from the records (`docs/HANDOFF.md`, memory).

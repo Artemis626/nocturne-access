@@ -1,5 +1,7 @@
 # Navigation and pathfinding: research and design
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Written 1 Oct 2026 for Francesco, analysis only (no code). Scope: 3D dungeons (field), not the world map. Every name below comes from the proxy decompile (`research/decomp/Assembly-CSharp`, marked Proxy) or the MIT reference NocturneModernController (marked Ref); none is used in code yet, and each meaning marked "to verify" needs one diagnostic run.
 
 ## 1. Verdict

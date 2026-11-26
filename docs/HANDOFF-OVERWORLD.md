@@ -1,5 +1,7 @@
 # Overworld handoff (the Vortex World map)
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Written 2 Oct 2026 at the end of the dungeon chats, for a new chat dedicated to the overworld. Step 1 (the offline reading) is done and step 2 is built as 0.0.39: see the sections after the plan. Read `CLAUDE.md` first (binding rules), then this file, then `docs/HANDOFF-PATHFINDING.md` and `docs/PATHFINDING.md` for the dungeon tools this work reuses.
 
 ## Start here (state on 3 Oct 2026, after the 14:04 session)

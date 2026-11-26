@@ -1,5 +1,7 @@
 # Shops, Fountain and fusion handoff (Shibuya and Yoyogi Park, from 3 Oct 2026)
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Written 3 Oct 2026 at the end of the overworld chat, for a new chat. Read `CLAUDE.md` first (binding rules), then this file, then `docs/NEXT-SESSION.md`. The overworld is done (`docs/HANDOFF-OVERWORLD.md`); Francesco now plays on through Shibuya and reports what is silent or wrong.
 
 ## Start here

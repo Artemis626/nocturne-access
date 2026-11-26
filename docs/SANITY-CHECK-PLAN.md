@@ -1,5 +1,7 @@
 # Sanity check of the mod (plan, 21 Nov 2026)
 
+**Spoiler warning:** this document names places, bosses and events of the game that some players may consider spoilers.
+
 Francesco's request (21 Nov 2026, after the Labyrinth of Amala was finished with 0.0.181): "a general sanity check of the mod, since
 we're nearing completion", to run in the session after a compact. Installed then: 0.0.182. This is a review, not a feature pass:
 find what is wrong, stale or risky, report it with headings, fix only what is clearly a bug, and ask Francesco about anything that
