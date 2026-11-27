@@ -31,6 +31,14 @@ namespace NocturneAccess.Systems.Navigation
         public float[] OtherFloors = Array.Empty<float>();   // other floors under the volume within its height span, tried when FloorY is not reachable (0.0.94)
         public float NX, NZ;            // a door's facing (gEvnRngBox.boxnml, pointing out to the side the player stands on), or 0 0
         public bool HasFront => NX * NX + NZ * NZ > 0.25f;
+        /// <summary>
+        /// A story event that is an upright plane (box sizez 0 with a horizontal facing): the game fires it only when the player
+        /// walks through it, so a walk to it goes through to the far side (0.0.209; Francesco, 27 Nov 2026: the Kagutsuchi Tower's
+        /// magic blocks, field 36 area 12, `01eve_03`: the first-person walk ended 64 short of the plane, "Near the story event",
+        /// and the way on named the same tile again and again). CX, CZ: the plane's facing.
+        /// </summary>
+        public bool Crossing;
+        public float CX, CZ;
 
         public bool Explored;           // a generic door (no place name) the player has gone through (ExploredDoors)
         public bool Empty;              // an item box the game has opened (fld_Npc.gfldTakaraWork MotPhase, PointsOfInterest.Opened)
@@ -628,6 +636,9 @@ namespace NocturneAccess.Systems.Navigation
                     OtherFloors = world ? Array.Empty<float>() : otherFloors,
                     NX = doorLike ? nx : 0f,
                     NZ = doorLike ? nz : 0f,
+                    Crossing = !world && !doorLike && script?.Outcome == ScriptOutcome.Story && box != null && box.sizez == 0f && nx * nx + nz * nz > 0.25f,
+                    CX = nx,
+                    CZ = nz,
                     Distance = (float)Math.Sqrt((p.x - px) * (p.x - px) + (p.z - pz) * (p.z - pz)),
                     Explored = generic && !toWorld && ExploredDoors.IsExplored(gb.fieldID, gb.areaID, name),   // an exit to the overworld is used again and again: never "explored" (Francesco, 0.0.45)
                     Warp = kind == PoiKind.Door && !world && WarpMap.TouchWarp(gb, i) != null,

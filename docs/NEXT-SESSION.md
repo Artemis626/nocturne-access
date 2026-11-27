@@ -8,6 +8,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## RESUME HERE (27 Nov 2026): 0.0.204 built, untested: key layout by blocks (F1 key help, F2 repeat, F3 party status in and out of battle, F4 enemies, F5 battle log, F6 centre; blobber mode, autopilot and HP after actions moved to the settings window; debug keys on Ctrl; saved keys reset once, `KeyLayout`). Next in `docs/KEYS-PLAN.md`: key remapping in the settings window. Test steps: `docs/HANDOFF.md` last entry.
 
+## RESUME HERE (27 Nov 2026, 18:45): 0.0.209 built, untested: Home walks through a magic tile (upright story planes, `Poi.Crossing`; first person stopped 64 short of `01eve_03`, so the way on named it again and again). 0.0.208 route verified to area 12. Test: `docs/HANDOFF.md` last entry.
+
 ## RESUME HERE (27 Nov 2026, night, later): 0.0.208 built, untested: the magic blocks' way on corrected (tiles fire only when walked through; area 14 from area 11's far east door is a dead end; route south through area 12). Test steps: `docs/HANDOFF.md` last entry.
 
 ## RESUME HERE (27 Nov 2026, night): 0.0.207 built, untested: the magic blocks' warning when the way on is off (`PuzzleWarning`, once per load) and the way on for field 36 areas 16 to 20 (past Noah to field 37's lift; not flooded offline). Test steps: `docs/HANDOFF.md` last entry.

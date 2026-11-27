@@ -87,6 +87,7 @@ namespace NocturneAccess.Systems.Navigation
         private static List<PathRun> _runs;
         private static int _run, _replans, _still, _approach, _facing, _area, _field, _combo = -1, _turns, _idle, _moveCount;
         private static bool _correcting;
+        private static float _crossFrom;    // an upright story plane (Poi.Crossing): the side the walk started on, -1 or 1; 0 not known yet (0.0.209)
         private static float _startSlack;   // how far the player stood off the first run at planning (start cell away from a blocked spot)
         private static float _lastX, _lastZ;
         private static int _progressRun = -1, _progressTicks;
@@ -168,6 +169,16 @@ namespace NocturneAccess.Systems.Navigation
                 AwaitWarp(gb);
                 return;
             }
+            // An upright story plane (0.0.209): arrived once the game fires it or the player stands CrossPast beyond it.
+            if (_target.Crossing && _crossFrom != 0f)
+            {
+                float past = -CrossSide(_target, gb.playerX, gb.playerZ) * _crossFrom;
+                if (fldEveHit.gFldEveRngIdx == _target.Index && past > 0f || past >= CrossPast)
+                {
+                    Arrived(gb, $"walked through the plane ({FieldData.F(past)} past it, gFldEveRngIdx {fldEveHit.gFldEveRngIdx})");
+                    return;
+                }
+            }
             // A story event or dialogue stops the game's movement routine while the field update goes on (0.0.23 test,
             // field 11: trigger 01eve_15 moved the player and opened a dialogue): end the walk instead of re-planning.
             int moves = FieldState.MoveCount;
@@ -229,7 +240,7 @@ namespace NocturneAccess.Systems.Navigation
             // the prompt on screen; with the hit but no prompt, carry on straight at the target (Approach ends with "Near the
             // ..." if it never comes). Before the prompt has ever been written this session, the hit counts, as up to 0.0.43.
             bool? prompt = _target.IsDoorLike ? null : Menus.AnnouncementReader.InteractionPromptVisible;
-            if (prompt.HasValue && InReach(_target, flat))
+            if (prompt.HasValue && InReach(_target, flat) && !_target.Crossing)
             {
                 if (prompt.Value)
                 {
@@ -270,7 +281,7 @@ namespace NocturneAccess.Systems.Navigation
                     Press(toTarget);
                 return;
             }
-            if (InReach(_target, flat) && inFront)
+            if (InReach(_target, flat) && inFront && !_target.Crossing)
             {
                 bool noFacing = !_target.HasFront && flat < (_target.IsDoorLike ? DoorFacingMinDistance : FacingMinDistance);
                 if (noFacing || Facing(gb, face) || ++_facing > FaceTicks)
@@ -447,6 +458,7 @@ namespace NocturneAccess.Systems.Navigation
             }
             CentreWalk.Cancel("auto-walk");
             _target = poi;
+            _crossFrom = 0f;
             _area = gb.areaID;
             _field = gb.fieldID;
             _world = FieldState.WorldMap(gb);
@@ -629,10 +641,12 @@ namespace NocturneAccess.Systems.Navigation
             if (warp == null)
                 return false;
             _target = warp;
+            _crossFrom = 0f;
             _final = goal;
             if (Plan(gb, $"{why}, warp {legs[0].Name} first, {legs.Count} warps to {goal.ResName}"))
                 return true;
             _target = goal;
+            _crossFrom = 0f;
             _final = null;
             return false;
         }
@@ -716,6 +730,7 @@ namespace NocturneAccess.Systems.Navigation
             Poi goal = _final ?? _target;
             _final = null;
             _target = goal;
+            _crossFrom = 0f;
             _replans = 0;
             _idle = 0;
             _startMs = Clock.ElapsedMilliseconds;
@@ -740,6 +755,17 @@ namespace NocturneAccess.Systems.Navigation
             float px = gb.playerX, py = gb.playerY, pz = gb.playerZ;
             int allow = target.IsDoorLike ? WarpMap.TouchWarp(gb, target.Index)?.Zone.Id ?? (WarpMap.IsAwayWarp(gb, target.Index) ? target.Index : -1) : -1;   // a warp aimed for may be entered (0.0.52; walk-on warps into other areas, 0.0.88)
             List<PathRun> runs;
+            if (target.Crossing)
+            {
+                // An upright story plane fires only when walked through (0.0.209): aim CrossDistance past it on the far side, with
+                // the plane's own zone allowed (routes otherwise go round story volumes).
+                float s = CrossSide(target, px, pz) >= 0f ? -1f : 1f;
+                float ax = target.X + target.CX * CrossDistance * s, az = target.Z + target.CZ * CrossDistance * s;
+                aim = "through it";
+                runs = WalkGrid.Plan(px, py, pz, ax, target.FloorY, az, 0f, firstPerson, out gx, out gz, target.Index);
+                if (runs != null && Dist(gx, gz, ax, az) <= AimTolerance && CrossSide(target, gx, gz) * s > 0f)
+                    return runs;
+            }
             if (target.HasFront)
             {
                 aim = "in front";
@@ -795,6 +821,13 @@ namespace NocturneAccess.Systems.Navigation
 
         private const float EntryTolerance = 90f;
 
+        /// <summary>How far past an upright story plane a walk through it aims (0.0.209), and how far past it counts as through.</summary>
+        private const float CrossDistance = 90f;
+        private const float CrossPast = 30f;
+
+        /// <summary>The signed distance of (x, z) from an upright plane's line, along its facing.</summary>
+        internal static float CrossSide(Poi target, float x, float z) => (x - target.X) * target.CX + (z - target.Z) * target.CZ;
+
         /// <summary>The compass bearing the player should face at the end: into a door (against its facing), else towards the target.</summary>
         internal static float FaceBearing(Poi target, float x, float z)
             => target.HasFront ? Bearing(0f, 0f, -target.NX, -target.NZ) : Bearing(x, z, target.X, target.Z);
@@ -808,6 +841,8 @@ namespace NocturneAccess.Systems.Navigation
         private static bool Plan(fldGlobalWork_t gb, string why)
         {
             var clock = Stopwatch.StartNew();
+            if (_target.Crossing && _crossFrom == 0f)
+                _crossFrom = CrossSide(_target, gb.playerX, gb.playerZ) >= 0f ? 1f : -1f;
             _runs = Route(gb, _target, _firstPerson, out float gx, out float gz, out string aim);
             if (_runs != null && !_target.NearVolume(gx, gz))
             {
@@ -890,7 +925,9 @@ namespace NocturneAccess.Systems.Navigation
         /// </summary>
         private static void Approach(fldGlobalWork_t gb, float x, float z, float toTarget, float flat)
         {
-            bool close = _firstPerson && !_target.IsDoorLike && flat < FacingMinDistance && !Turning(gb);
+            bool close = _firstPerson && !_target.IsDoorLike && !_target.Crossing && flat < FacingMinDistance && !Turning(gb);
+            if (_target.Crossing && _crossFrom != 0f)   // through the plane, never stopping short of it (0.0.209)
+                toTarget = Bearing(x, z, _target.X - _target.CX * CrossDistance * _crossFrom, _target.Z - _target.CZ * CrossDistance * _crossFrom);
             // The game's hit is already the target and the player faces it: step on until its prompt shows (0.0.84; 15 Oct 2026
             // 21:42:34, Kabukicho Prison area 3's switch 01eve_01: the walk stopped 68 from its centre, three Home presses ended
             // at once, "Examine" came at 5 when Francesco pressed W). Walking past it turns the bearing round: then it stops.
