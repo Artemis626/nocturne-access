@@ -479,6 +479,7 @@ namespace NocturneAccess.Systems.Navigation
         {
             WayOn.ForgetHeard();   // the way-on tone plays again on reaching each area (0.0.122)
             ChaseCues.ForgetHeard();   // the "chase disabled" line once per load (0.0.146)
+            PuzzleWarning.ForgetHeard();   // the magic blocks' warning once per load (0.0.207)
             Doors.Clear();
             Prompts.Clear();
             Arrivals.Clear();

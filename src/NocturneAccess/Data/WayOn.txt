@@ -358,3 +358,18 @@
 36 12 01eve_15 01eve_09 01d_07 01eve_14 01eve_05 01eve_04 01eve_03 01eve_02 01eve_01   # from area 14's 01d_05: ride down, the lift up; from area 11: the blocks south to the second east alcove
 36 14 01d_05 01eve_15 01eve_14 01eve_03 01eve_13 01eve_04 01eve_11 01eve_10 01eve_20 01eve_21 01d_04 01d_02   # the magic blocks to 01d_05 (from 01pos_06 or 01pos_02); from the dead entries, back out
 36 13 01d_04 01d_02 01d_03 01d_05 01d_01                           # the first pass's maze ends in a fall: back to area 11 or 12
+# After the lift (0.0.207, 27 Nov 2026; Francesco: "do it now, they can be fixed later"): the guide's steps 12 to 14 and, after
+# Noah, steps 1 to 4, matched to the door table and the script. Areas 16 to 20 keep most of their collision out of the area
+# files (f036_017: 31 polygons), so nothing here was flooded offline: the live map decides what is walkable.
+# Area 16: the slopes from the lift up to the door into area 17 (01d_01); its three riding blocks (01eve_03 to 08) lead to a
+# Mystical Chest, not onward. Area 17's 01d_02 is Noah's door: field 680 until flag 97 (door table rows 96 and 97), after it the
+# room of area 18, where the fight also returns the party (row 98, 01pos_03). With flag 97 the way leads back to area 16 and its
+# lift 01eve_09 up to area 19 (017_01eve_09, CALL_FIELD2 to 01pos_01). Area 19's demon (01eve_02, Talk) stands before a barrier
+# (atari_hoji_01, on while flag 97 is on and 2038, 2040 off: 020_start); talking drops it (ATARI_OFF, flag 2040) whatever the
+# Reason (with Musubi, flag 147, it also offers Noah again in the Labyrinth). Then door 01d_02 to area 20 and its lift up
+# (021_01eve_01, FLD_CALL_WAPEX 39: door row 109 to field 37, Thor's floors).
+36 16 01eve_09+97 01d_01-97                                       # before Noah: the door at the top of the slopes; after: the lift up beside it
+36 17 01d_01+97 01d_02-97                                         # before Noah: Noah's door (west); after: back east to area 16
+36 18 01d_01                                                      # after Noah: back into area 17
+36 19 01d_02 01eve_02                                             # the door to the lift; while the barrier stands, the demon first
+36 20 01eve_01                                                    # the lift up to field 37

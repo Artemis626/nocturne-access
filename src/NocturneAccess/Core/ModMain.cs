@@ -20,7 +20,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.206";
+        internal const string ModVersion = "0.0.207";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
@@ -109,6 +109,7 @@ namespace NocturneAccess.Core
             // ("pipe probe", PipeProbe.Tick): off since 0.0.151 (the falling minigame's autopilot was built from it and verified 23 Oct 2026; Capture/PipeProbe.cs kept)
             // ("chase probe", ChaseProbe.Tick): off since 0.0.148 (Francesco, 3 Nov 2026; the chase is off by default; Capture/ChaseProbe.cs kept for a later accessible chase)
             ("chase cues", ChaseCues.Tick),
+            ("puzzle warning", PuzzleWarning.Tick),
             ("prize gifts", Systems.PrizeGifts.Tick),
             ("script warps", ScriptWarps.Tick),
             ("pipe autopilot", PipePilot.Tick),
