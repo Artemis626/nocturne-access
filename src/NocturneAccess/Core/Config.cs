@@ -71,6 +71,7 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<bool> AlarmSound { get; private set; }
         internal static MelonPreferences_Entry<bool> DoorSound { get; private set; }
         internal static MelonPreferences_Entry<bool> SecretSound { get; private set; }
+        internal static MelonPreferences_Entry<bool> CameraSound { get; private set; }
         internal static MelonPreferences_Entry<bool> PipeNoDamage { get; private set; }
         internal static MelonPreferences_Entry<bool> ChaseSound { get; private set; }
         internal static MelonPreferences_Entry<bool> ChaseOff { get; private set; }
@@ -158,6 +159,8 @@ namespace NocturneAccess.Core
                 "In the Amala Temple's Red Temple: two low falling notes when a shadow sets off the alarm (the warp devices stop), two rising notes when a reset tile switches it off.");
             DoorSound = navigation.CreateEntry("DoorSound", true, "Door tone",
                 "Two soft taps, like a knock, when the game shows a door prompt (\"Open Door\", \"Enter\", \"Exit\"): the door can be gone through from where you stand.");
+            CameraSound = navigation.CreateEntry("CameraSound", true, "Camera change tones",
+                "When the game switches the camera: a soft swish and a low note on entering a fixed-camera room (the game's own controls; first person and blobber mode wait), the swish and a higher note on returning to the free camera.");
             SecretSound = navigation.CreateEntry("SecretSound", true, "Secret area and section exit tones",
                 "Three soft rising notes with \"Secret area reached via warp.\", when a warp takes you somewhere only sight would tell you is special (the Fourth Kalpa's Twelve Meters of Eternity at new moon); and three soft notes returning home when a section beyond it ends and drops you back in B1.");
             PipeNoDamage = navigation.CreateEntry("PipeNoDamage", true, "No damage in the falling minigame",

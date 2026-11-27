@@ -108,6 +108,7 @@ namespace NocturneAccess.Systems.Menus
                 Bool(Config.WayOnSound),
                 Bool(Config.AlarmSound),
                 Bool(Config.SecretSound),
+                Bool(Config.CameraSound),
                 Bool(Config.ChaseSound));
 
             var action = AccessTools.Method(typeof(ModSettings), nameof(AfterAction));

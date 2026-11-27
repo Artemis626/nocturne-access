@@ -138,6 +138,45 @@ namespace NocturneAccess.Speech
 
         private static GCHandle _alarmOn, _alarmOff;
 
+        /// <summary>
+        /// The camera cues (0.0.212; Francesco, 27 Nov 2026: the game switches between its free camera, where first person works,
+        /// and fixed-camera rooms with other controls, and only sight tells): a soft low swish (noise through a low-pass, 160 ms)
+        /// then one note: into a fixed camera F3 (175 Hz), back to the free camera A3 (220 Hz). The swish sets them apart from
+        /// every other cue.
+        /// </summary>
+        internal static void CameraFixed() => Play(ref _camFixed, () => Swish(174.61), "fixed camera tone");
+
+        internal static void CameraFree() => Play(ref _camFree, () => Swish(220.0), "free camera tone");
+
+        private static GCHandle _camFixed, _camFree;
+
+        private static byte[] Swish(double hz)
+        {
+            const int rate = 22050;
+            var all = new List<short>();
+            var rng = new Random(7);
+            double lp = 0;
+            int n = rate * 160 / 1000;
+            for (int i = 0; i < n; i++)
+            {
+                double t = (double)i / rate;
+                double env = Math.Sin(Math.PI * i / n);   // swells and fades
+                lp += 0.08 * ((rng.NextDouble() * 2 - 1) - lp);   // one-pole low-pass: a soft rush, not a hiss
+                all.Add((short)(0.9 * env * lp * short.MaxValue));
+            }
+            n = rate * 240 / 1000;
+            for (int i = 0; i < n; i++)
+            {
+                double t = (double)i / rate;
+                double attack = Math.Min(1.0, t / 0.012);
+                double decay = Math.Exp(-t * 6.0);
+                double release = Math.Min(1.0, (n - i) / (rate * 0.02));
+                double wave = Math.Sin(2 * Math.PI * hz * t) + 0.3 * Math.Sin(2 * Math.PI * 2 * hz * t);
+                all.Add((short)(0.45 / 1.3 * attack * decay * release * wave * short.MaxValue));
+            }
+            return Wav(all.ToArray(), rate);
+        }
+
         private static byte[] TwoNotes(double first, double second)
         {
             const int rate = 22050;
