@@ -7,7 +7,7 @@
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <Version>0.0.209</Version>
+    <Version>0.0.210</Version>
     <!-- Embedded PDB gives file and line numbers in MelonLoader stack traces. -->
     <DebugType>embedded</DebugType>
     <Deterministic>true</Deterministic>
@@ -39,6 +39,7 @@
     <EmbeddedResource Include="Data\WayOn.txt" LogicalName="WayOn.txt" />
     <EmbeddedResource Include="Data\AreaPoints.txt" LogicalName="AreaPoints.txt" />
     <EmbeddedResource Include="Data\ScriptNames.txt" LogicalName="ScriptNames.txt" />
+    <EmbeddedResource Include="Data\TilePuzzles.txt" LogicalName="TilePuzzles.txt" />
   </ItemGroup>
 
   <!-- The game only runs on Windows, and so do the screen reader backends. -->

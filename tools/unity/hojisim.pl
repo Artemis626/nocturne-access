@@ -167,6 +167,40 @@ if (my $pol = $ENV{POLICY}) {
   exit 1;
 }
 
+# TABLE=1 (0.0.210): every state reachable from the start (and from STARTS="x z off,off;x z off" more), each with the tile to
+# cross next on a shortest way to the goal. Rows for the mod's Data/TilePuzzles.txt: the off set restricted to the hojis the
+# procedures switch, the tile, the side (1: the normal side), its plane's centre and normal. Goal states get no row.
+if ($ENV{TABLE}) {
+  my @starts = ([$s0, \%off0]);
+  for (split /;/, ($ENV{STARTS} // '')) { my ($x, $z, $o) = split ' ', $_, 3; my %o = map { $_ => 1 } split /[, ]/, ($o // '');
+    my $c = cellOf($x, $z); die "start $x $z not free\n" unless free($c, \%o); push @starts, [$c, \%o] }
+  my (%node, %edges, @goal, %sw); my @q = map { [$_->[0], $_->[1], {%fl0}, undef] } @starts;
+  while (@q) { my ($pos, $off, $fl, $allow) = @{shift @q};
+    my $reg = flood($pos, $off, $allow); my $min = (sort { $a <=> $b } keys %$reg)[0]; my $k = key($off, $fl) . "|$min";
+    next if $node{$k}; $node{$k} = { off => $off, fl => $fl, reg => $reg };
+    if (reaches($reg)) { push @goal, $k; next }
+    for my $t (touches($reg, $off)) { my ($name, $cell, $d) = @$t; my ($noff, $nfl) = run($name, $d, $off, $fl);
+      $sw{$_} = 1 for grep { ($off->{$_} // 0) != ($noff->{$_} // 0) } (keys %$off, keys %$noff);
+      my $nreg = flood($cell, $noff, $name); my $nmin = (sort { $a <=> $b } keys %$nreg)[0];
+      push @{$edges{$k}}, [$name, $d, key($noff, $nfl) . "|$nmin"]; push @q, [$cell, $noff, $nfl, $name] } }
+  my %dist = map { $_ => 0 } @goal; my $changed = 1;
+  while ($changed) { $changed = 0; for my $k (keys %edges) { for my $e (@{$edges{$k}}) { next unless defined $dist{$e->[2]};
+        my $d = $dist{$e->[2]} + 1; if (!defined $dist{$k} || $d < $dist{$k}) { $dist{$k} = $d; $changed = 1 } } } }
+  my @swl = sort { $a <=> $b } keys %sw;
+  printf "# %d states, %d reach the goal, %d dead ends\nhojis %s\n", scalar keys %node, scalar grep({ defined $dist{$_} } keys %node),
+    scalar grep({ !defined $dist{$_} } keys %node), join(' ', @swl);
+  my %row;
+  for my $k (sort keys %edges) { next unless defined $dist{$k} && $dist{$k} > 0;
+    my ($best) = sort { $dist{$a->[2]} <=> $dist{$b->[2]} || $a->[0] cmp $b->[0] } grep { defined $dist{$_->[2]} } @{$edges{$k}};
+    my $o = join(',', grep { $node{$k}{off}{$_} } @swl) || '-'; my $t = $tile{$best->[0]};
+    my $fl = join(',', sort keys %{$node{$k}{fl}});
+    # a standing point: the region's cell nearest the tile's centre (the mod checks the player is in the same walkable part)
+    my ($sc) = sort { (cx(int($a / $NJ)) - $t->{x}) ** 2 + (cz($a % $NJ) - $t->{z}) ** 2 <=> (cx(int($b / $NJ)) - $t->{x}) ** 2 + (cz($b % $NJ) - $t->{z}) ** 2 } keys %{$node{$k}{reg}};
+    $row{sprintf "%s %s %s %d %.0f %.0f %.3f %.3f %.0f %.0f", $o, $fl ne '' ? $fl : '-', $best->[0], $best->[1], $t->{x}, $t->{z}, $t->{nx}, $t->{nz}, cx(int($sc / $NJ)), cz($sc % $NJ)} = $dist{$k} }
+  print "$_  # $row{$_} to go\n" for sort { $row{$b} <=> $row{$a} || $a cmp $b } keys %row;
+  exit 0;
+}
+
 # BFS over (walls, flags, region)
 my %seen; my @q = [$s0, \%off0, \%fl0, undef, []];
 while (@q) { my ($pos, $off, $fl, $allow, $path) = @{shift @q};

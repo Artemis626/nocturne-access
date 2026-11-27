@@ -217,6 +217,11 @@ namespace NocturneAccess.Systems.Navigation
                        ?? candidates.FirstOrDefault(q => (crossings.TryGetValue(q, out int c) || viaCrossings.TryGetValue(q, out c)) && c == fewest) // through story events
                        ?? candidates.FirstOrDefault(q => q.Reachable)                                      // no route planned
                        ?? candidates.FirstOrDefault(q => q.Listed);                                        // beyond doors
+            // A puzzle's tile (0.0.210) is the game's own answer: only a point listed before it and walked to crossing no story
+            // event (the puzzle's exit door) comes first; the walk tests do not choose among tiles any more.
+            if (_puzzleTile != null)
+                pick = candidates.FirstOrDefault(q => !q.Names.Contains(_puzzleTile) && crossings.TryGetValue(q, out int c0) && c0 == 0)
+                       ?? candidates.FirstOrDefault(q => q.Names.Contains(_puzzleTile)) ?? pick;
             Log.Info($"{Tag} Field {gb.fieldID} area {gb.areaID}: " + string.Join(", ", names.Select(n =>
             {
                 Poi q = candidates.FirstOrDefault(c => c.Names.Contains(n));
@@ -247,6 +252,7 @@ namespace NocturneAccess.Systems.Navigation
         }
 
         private static readonly Dictionary<int, int> Until = new Dictionary<int, int>();
+        private static string _puzzleTile;   // the tile TilePuzzle chose in Known, or null (0.0.210)
 
         /// <summary>The way-on candidates of (field, area), unless there are none or the field's "until" flag is set.</summary>
         private static bool Known(int field, int area, out List<string> names)
@@ -258,6 +264,17 @@ namespace NocturneAccess.Systems.Navigation
             {
                 names = null;
                 return false;
+            }
+            // 0.0.210: "@tiles" is the next tile of a switching-wall puzzle, from the game's wall state (TilePuzzle); points
+            // listed after it are the way back, kept only when the state has no row (solved, or a dead end).
+            _puzzleTile = null;
+            int at = names.IndexOf(TilePuzzle.Token);
+            if (at >= 0)
+            {
+                string tile = TilePuzzle.Next(fldGlobal.fldGb, out string state);
+                Log.Info($"{Tag} Field {field} area {area} puzzle: {state}.");
+                names = tile != null ? names.Take(at).Append(tile).ToList() : names.Where((n, i) => i != at).ToList();
+                _puzzleTile = tile;
             }
             // 0.0.140: "01d_11+1700" holds only once story flag 1700 is set, "01d_04-1700" only while it is off (the Black Temple:
             // a Jump Off on 2F breaks the 1F floor, flag 1700, and opens the hole down to B1F).

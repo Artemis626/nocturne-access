@@ -360,8 +360,12 @@
 # those entries are dead ends, back out. The mod's own walk test still calls a tile on a closed wall walkable from within about
 # 90; no listed tile is so near on either route (hojisim's WARNING check).
 36 11 01d_07                                                       # the Terminal floor: the south door into area 12's blocks
-36 12 01eve_15 01eve_09 01d_07 01eve_14 01eve_05 01eve_04 01eve_03 01eve_02 01eve_01   # from area 14's 01d_05: ride down, the lift up; from area 11: the blocks south to the second east alcove
-36 14 01d_05 01eve_15 01eve_14 01eve_03 01eve_13 01eve_04 01eve_11 01eve_10 01d_06 01d_04 01d_02   # the magic blocks to 01d_05 from 01pos_02; from the dead entries (01pos_06, 04, 01), back out
+# 0.0.210 (Francesco, 27 Nov 2026, third failed attempt: the way on named a tile already walked through, again and again): the
+# tiles are no longer listed and chosen by walk tests. "@tiles" is the next tile from the game's own wall state (the hit flags
+# the tiles set), looked up in Data/TilePuzzles.txt (hojisim TABLE=1); the points after it are used only when the state has
+# no row (solved, or a dead end).
+36 12 01eve_15 01eve_09 01d_07 @tiles                              # from area 14's 01d_05: ride down, the lift up; from area 11: the blocks to the second east alcove
+36 14 01d_05 @tiles 01d_06 01d_04 01d_02                           # the magic blocks to 01d_05; with no row (the dead entries), back out
 36 13 01d_04 01d_02 01d_03 01d_05 01d_01                           # the first pass's maze ends in a fall: back to area 11 or 12
 # After the lift (0.0.207, 27 Nov 2026; Francesco: "do it now, they can be fixed later"): the guide's steps 12 to 14 and, after
 # Noah, steps 1 to 4, matched to the door table and the script. Areas 16 to 20 keep most of their collision out of the area

@@ -403,3 +403,9 @@ What made it work, in the order it matters:
   needs, and check it against one logged approach ("approach ended without the game's hit") before trusting a route.
 - One entry of a puzzle area can be a dead end by design (the tower's far east door into area 14): try every entry, and route
   the player through the one the guide uses.
+- **A stateful puzzle needs a stateful way on (0.0.210; three failed attempts):** a list of points chosen by "the first walkable"
+  has no memory, and a tile just walked through stays the nearest walkable point, so the way on named it again and again. Each
+  fix of the walk tests (fire distance, stopping short) uncovered the next mismatch between the offline model of the rule and
+  the mod. What worked: read the puzzle's progress from the game's own state (here the walls' hit flags) and look the next step
+  up in a table written offline for every reachable state (`hojisim.pl TABLE=1`, `Data/TilePuzzles.txt`). When the same pattern
+  fails twice, stop patching the rule and change what the choice is based on.
