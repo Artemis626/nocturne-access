@@ -12,7 +12,7 @@ namespace NocturneAccess.Systems.Navigation
     /// magic blocks, unlike earlier way-on places, "look straight up undoable" without it, and since 0.0.198 a player may have
     /// switched the way on off for the whole game). Said once per load (ExploredDoors.ClearAll calls ForgetHeard), on first
     /// reaching such an area while the way on is off, once the player has been exploring for SettleMs with no dialogue due, and
-    /// held against interrupts, as the chase line is.
+    /// held against interrupts, as the chase line is. Only while the way on is off (Francesco confirmed, 27 Nov 2026).
     /// </summary>
     internal static class PuzzleWarning
     {
