@@ -78,6 +78,10 @@ namespace NocturneAccess.Core
         internal static MelonPreferences_Entry<string> KeyAreaRoutes { get; private set; }
         internal static MelonPreferences_Entry<string> KeyHelp { get; private set; }
         internal static MelonPreferences_Entry<string> KeyModSettings { get; private set; }
+        internal static MelonPreferences_Entry<int> KeyLayout { get; private set; }
+        internal static MelonPreferences_Entry<bool> PipeAutopilot { get; private set; }
+        /// <summary>True when this start moved the saved keys to the 0.0.204 layout (logged once by ModMain).</summary>
+        internal static bool LayoutReset { get; private set; }
 
         // Debug
         internal static MelonPreferences_Entry<bool> VerboseLogging { get; private set; }
@@ -134,8 +138,8 @@ namespace NocturneAccess.Core
                 "Lets V (Toggle POV) switch to first person on a first playthrough. Held in memory only: the game's first-person flag is never written, so saves are unchanged. Needs a restart.");
             PadInjection = navigation.CreateEntry("PadInjection", true, "Pad injection",
                 "Lets the mod press the game's own pad buttons during the field update (step test, later blobber moves). Turn off if the game crashes at start. Needs a restart.");
-            BlobberOnAtStart = navigation.CreateEntry("BlobberOnAtStart", true, "Blobber mode at start",
-                "Blobber mode is on when the game starts (F4 switches it).");
+            BlobberOnAtStart = navigation.CreateEntry("BlobberOnAtStart", true, "Blobber mode",
+                "Blobber mode on or off (kept for the next start). Switched in the mod settings window (Shift+F, Navigation) since 0.0.204; the Blobber key has no default.");
             BlobberCellSize = navigation.CreateEntry("BlobberCellSize", 600, "Blobber cell size",
                 "Development: one step in game units (600 = one corridor width in the Underground Facility).");
             DoorKinds = navigation.CreateEntry("DoorKinds", true, "Door kinds",
@@ -143,7 +147,7 @@ namespace NocturneAccess.Core
             PoiMapOrder = navigation.CreateEntry("PoiMapOrder", true, "Points of interest in map order",
                 "Page Up / Page Down go through an area's points in a fixed order, north to south and west to east, so each keeps its number while you walk. Turn off for the old order, nearest first (it changes as you move).");
             AreaRoutes = navigation.CreateEntry("AreaRoutes", false, "Routes through other areas",
-                "Page Up / Page Down also list points of the area reached only by going through other areas, by doors you have gone through (\"via 1 other area\"); Home walks there door by door, End gives the way to the first door. F7 toggles it in game.");
+                "Page Up / Page Down also list points of the area reached only by going through other areas, by doors you have gone through (\"via 1 other area\"); Home walks there door by door, End gives the way to the first door. Switched in the mod settings window (Shift+F, Navigation).");
             WallBumpSound = navigation.CreateEntry("WallBumpSound", true, "Wall bump sound",
                 "A short thud when you walk into a wall and stop (the game has no sound of its own for it).");
             WayOnEnabled = navigation.CreateEntry("WayOnEnabled", true, "Way on",
@@ -158,6 +162,8 @@ namespace NocturneAccess.Core
                 "Three soft rising notes with \"Secret area reached via warp.\", when a warp takes you somewhere only sight would tell you is special (the Fourth Kalpa's Twelve Meters of Eternity at new moon); and three soft notes returning home when a section beyond it ends and drops you back in B1.");
             PipeNoDamage = navigation.CreateEntry("PipeNoDamage", true, "No damage in the falling minigame",
                 "The Labyrinth of Amala falling minigame takes no HP from the party for the objects hit (the game takes it at the end, down to 1 HP each). Macca lost to hits is unchanged.");
+            PipeAutopilot = navigation.CreateEntry("PipeAutopilot", true, "Falling minigame autopilot",
+                "The mod steers the Labyrinth of Amala's falling minigame (a direction key takes over at once). Read at the start of each fall (0.0.204; it was F4 during the fall).");
             ChaseSound = navigation.CreateEntry("ChaseSound", true, "Chase pulse",
                 "In the Labyrinth's Third Kalpa chase: a soft low pulse while Raidou (or Dante) comes nearer within 30 metres, or is within 12 metres; faster as he closes in. He catches you within 2.5 metres.");
             ChaseOff = navigation.CreateEntry("ChaseOff", true, "Third Kalpa chase off",
@@ -167,32 +173,32 @@ namespace NocturneAccess.Core
 
             MelonPreferences_Category keys = MelonPreferences.CreateCategory("NocturneAccess_Keys", "Keys");
             keys.SetFilePath(FilePath, true, false);
-            KeyRepeat = keys.CreateEntry("Repeat", "F1", "Repeat key",
+            KeyRepeat = keys.CreateEntry("Repeat", "F2", "Repeat key",
                 "Repeats whichever came last: the menu item, or the dialogue page (plus the highlighted option while a choice is open).");
             KeyWhereAmI = keys.CreateEntry("WhereAmI", "Delete", "Where am I key",
                 "Speaks where you are: the location banner (area, or the district on the world map), the facing in first person, and the nearest point of interest.");
-            KeyBattleVerbosity = keys.CreateEntry("BattleVerbosity", "F8", "Battle verbosity key",
+            KeyBattleVerbosity = keys.CreateEntry("BattleVerbosity", "None", "Battle verbosity key",
                 "Turns on or off the HP left spoken after each hit or heal in battle (status keys always give HP).");
-            KeyBattleStatus = keys.CreateEntry("BattleStatus", "F2", "Battle status key",
-                "In battle: whose turn it is and the press turns left, then each party member with HP and MP.");
-            KeyBattleEnemies = keys.CreateEntry("BattleEnemies", "F3", "Battle enemies key",
-                "In battle: each enemy with HP, and its affinities once Analyze has shown them. Shares F3 with centring, which works only outside battle.");
+            KeyBattleStatus = keys.CreateEntry("BattleStatus", "F3", "Party status key",
+                "In battle: whose turn it is and the press turns left, then each party member with HP and MP. Outside battle (0.0.204): each party member with HP, MP and statuses.");
+            KeyBattleEnemies = keys.CreateEntry("BattleEnemies", "F4", "Battle enemies key",
+                "In battle: each enemy with HP, and its affinities once Analyze has shown them.");
             KeyBattleLog = keys.CreateEntry("BattleLog", "F5", "Battle log key",
                 "Battle: what happened in the previous side's turn and the current one so far (actions, damage, weakness and critical hits). Kept until the next battle.");
-            KeyDumpUi = keys.CreateEntry("DumpUi", "F6", "Dump UI key",
+            KeyDumpUi = keys.CreateEntry("DumpUi", "Ctrl+F6", "Dump UI key",
                 "Debug: writes every text currently visible on screen to Latest.log.");
             // "ProbeToggle" (Shift+F7) replaces the entry "ToggleProbe" (F7) of 0.0.55 and earlier, so saved configs pick up the new
             // default: F7 became the routes through other areas (0.0.56, Francesco: a function key; debug keys may use Shift).
-            KeyToggleProbe = keys.CreateEntry("ProbeToggle", "Shift+F7", "Toggle probe key",
+            KeyToggleProbe = keys.CreateEntry("ProbeToggle", "Ctrl+F7", "Toggle probe key",
                 "Debug: pauses or resumes the text probe (only when TextProbe = true).");
             // "NavigationDump" (Shift+F6) replaces the 0.0.12 entry "NavDump" (F5), so saved configs pick up the new default.
-            KeyNavDump = keys.CreateEntry("NavigationDump", "Shift+F6", "Navigation dump key",
+            KeyNavDump = keys.CreateEntry("NavigationDump", "Ctrl+Shift+F6", "Navigation dump key",
                 "Debug: writes the navigation data of the current area (position, place names, walls, auto-map, people, boxes, event volumes) to UserData/NocturneAccess/NavDumps, with a summary in Latest.log.");
-            KeyBattleDump = keys.CreateEntry("BattleDump", "Shift+F2", "Battle dump key",
+            KeyBattleDump = keys.CreateEntry("BattleDump", "Ctrl+F3", "Battle dump key",
                 "Debug: writes the battle data of this moment (turn, press turns, every unit with level, status, skills and buffs, formation, target selection) to UserData/NocturneAccess/BattleDumps, with a summary in Latest.log.");
-            KeyBlobber = keys.CreateEntry("Blobber", "F4", "Blobber mode key",
+            KeyBlobber = keys.CreateEntry("Blobber", "None", "Blobber mode key",
                 "Turns blobber mode on or off. In first person every game key stays as it is; letting go of W carries the walk on to the centre of the next square, and changes around the player are spoken.");
-            KeyCentre = keys.CreateEntry("Centre", "F3", "Centre key",
+            KeyCentre = keys.CreateEntry("Centre", "F6", "Centre key",
                 "Blobber mode, first person: walks to the centre of the current square through the game's own movement, then says the facing and the walls around.");
             KeyPoiNext = keys.CreateEntry("PoiNext", "PageUp", "Next point of interest key",
                 "Selects the next door, person or item box of the area (in map order, or nearest first: PoiMapOrder) and says its distance and compass direction.");
@@ -212,11 +218,26 @@ namespace NocturneAccess.Core
             // "AreaRoutes = F7" no longer binds it); AreaRoutes in the Navigation section still turns the routes on.
             KeyAreaRoutes = keys.CreateEntry("AreaRoutesToggle", "None", "Routes through other areas key",
                 "Turns on or off the routes through other areas in the Page Up list, Home and End (no key by default since 0.0.172).");
-            KeyHelp = keys.CreateEntry("KeyHelp", "F7", "Key help",
+            KeyHelp = keys.CreateEntry("KeyHelp", "F1", "Key help",
                 "Says the keys of the current screen: the game's own button guide (\"Q, E: Toggle Sort.\"), then the mod's keys for a menu, the field or a battle.");
             // 0.0.194: the mod settings window (Francesco, 25 Nov 2026: Shift+F, F being the game's own menu key; field, overworld and battle only).
             KeyModSettings = keys.CreateEntry("ModSettings", "Shift+F", "Mod settings key",
                 "Opens or closes the mod settings window (in the field, on the overworld and in battle; never inside a game menu). While it is open the game sees no keys.");
+            // 0.0.204: the key layout by blocks (Francesco's option C, docs/KEYS-PLAN.md): F1 key help, F2 repeat, F3 to F5 battle,
+            // F6 centre; blobber mode and HP after actions moved to the settings window; debug keys on Ctrl. A saved file keeps its
+            // old key values, so every key entry is reset to its default once, when this marker is below 2.
+            KeyLayout = keys.CreateEntry("KeyLayout", 1, "Key layout version",
+                "Do not change: the mod uses it to move saved keys to a new default layout once.");
+            if (KeyLayout.Value < 2)
+            {
+                foreach (MelonPreferences_Entry<string> e in new[] { KeyRepeat, KeyWhereAmI, KeyBattleVerbosity, KeyBattleStatus,
+                             KeyBattleEnemies, KeyBattleLog, KeyDumpUi, KeyToggleProbe, KeyNavDump, KeyBattleDump, KeyBlobber, KeyCentre,
+                             KeyPoiNext, KeyPoiPrevious, KeyPoiFilterNext, KeyPoiFilterPrevious, KeyPoiWalk, KeyPoiGuide, KeyWayOn,
+                             KeyAreaRoutes, KeyHelp, KeyModSettings })
+                    e.ResetToDefault();
+                KeyLayout.Value = 2;
+                LayoutReset = true;
+            }
 
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);

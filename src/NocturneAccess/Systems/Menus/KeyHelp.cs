@@ -93,13 +93,15 @@ namespace NocturneAccess.Systems.Menus
 
             if (BattleReader.Active)
             {
-                Add("battle status", "party status");
+                Add("party status", "party status");
                 Add("battle enemies", "enemies");
                 Add("battle log", "battle log");
                 Add("battle verbosity", "HP after actions on or off");
+                Add("mod settings", "mod settings");
             }
             else if (FieldState.IsExploring)
             {
+                Add("party status", "party status");
                 Add("next point of interest", "next point");
                 Add("previous point of interest", "previous point");
                 Add("next point of interest filter", "next filter");
@@ -111,6 +113,7 @@ namespace NocturneAccess.Systems.Menus
                 Add("where am I", "where you are");
                 Add("centre on the square", "centre on the square");
                 Add("blobber mode", "blobber mode on or off");
+                Add("mod settings", "mod settings");
             }
             else if (WhereAmI.GameLoaded)
             {

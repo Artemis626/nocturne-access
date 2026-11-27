@@ -116,12 +116,15 @@ namespace NocturneAccess.Systems.Navigation
             _manualUntil = 0;
             if (!inPipe)
                 return;
+            // 0.0.204: on or off from the settings window's "Falling minigame autopilot" row, read at the start of each fall (it was in
+            // memory, on at every launch, switched with F4 during the fall; the Blobber key still switches it while falling if bound).
+            _on = Config.PipeAutopilot?.Value ?? true;
             Log.Info($"[Pipe] Autopilot {(_on ? "on" : "off")} for this fall.");
             // The start line (0.0.142; Francesco, 2 Nov 2026, his words, the key named as the pilot really works: a held
             // direction key takes over at once, ManualMs; it replaces 0.0.112's silent start).
             bool noDamage = Config.PipeNoDamage?.Value ?? true;
             SpeechManager.Say("Pipe minigame: " + (_on ? "autoplay engaged" : "autoplay off") + (noDamage ? ", damage off" : ", damage on")
-                              + (_on ? ". Press a direction key to take control." : ". F4 for autoplay."));
+                              + (_on ? ". Press a direction key to take control." : "."));
         }
 
         private static void Release()

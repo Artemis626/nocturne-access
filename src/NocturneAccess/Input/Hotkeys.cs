@@ -41,22 +41,25 @@ namespace NocturneAccess.Input
         internal static void Init()
         {
             Bindings.Clear();
-            Add("repeat", Config.KeyRepeat, KeyCode.F1, RepeatLast);
-            Add("battle status", Config.KeyBattleStatus, KeyCode.F2, BattleReader.SpeakStatus);
-            Add("dump UI", Config.KeyDumpUi, KeyCode.F6, UiTreeDumper.Dump);
-            Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle, shift: true);
-            Add("routes through other areas", Config.KeyAreaRoutes, KeyCode.None, AreaRoutes.Toggle);
-            Add("key help", Config.KeyHelp, KeyCode.F7, KeyHelp.Speak);
-            Add("mod settings", Config.KeyModSettings, KeyCode.F, ModSettings.Toggle, shift: true);
-            Add("navigation dump", Config.KeyNavDump, KeyCode.F6, NavDump.Dump, shift: true);
-            Add("battle dump", Config.KeyBattleDump, KeyCode.F2, BattleDump.Dump, shift: true);
-            // F4 is shared too: the falling minigame's autopilot while falling (Francesco, 23 Oct 2026), blobber mode elsewhere.
-            Add("blobber mode", Config.KeyBlobber, KeyCode.F4, () => { if (PipePilot.Active) PipePilot.Toggle(); else BlobberMode.Toggle(); });
-            // F3 is shared: centring while exploring, the enemy list in battle (Francesco, 2 Oct 2026: F2 split in two).
-            Add("centre on the square", Config.KeyCentre, KeyCode.F3, () => { if (!BattleReader.Active) BlobberMode.RequestCentre(); });
-            Add("battle enemies", Config.KeyBattleEnemies, KeyCode.F3, () => { if (BattleReader.Active) BattleReader.SpeakEnemies(); });
+            // 0.0.204, the layout by blocks (Francesco's option C, docs/KEYS-PLAN.md): F1 key help, F2 repeat; F3 party status (in
+            // battle and in the field), F4 enemies, F5 battle log; F6 centre on the square; F7 and F8 free. Blobber mode, the falling
+            // minigame's autopilot and HP after actions are rows of the settings window; their keys stay, unbound by default. Debug
+            // keys on Ctrl. The fallbacks below are used only when a saved key cannot be read.
+            Add("key help", Config.KeyHelp, KeyCode.F1, KeyHelp.Speak);
+            Add("repeat", Config.KeyRepeat, KeyCode.F2, RepeatLast);
+            Add("party status", Config.KeyBattleStatus, KeyCode.F3, BattleReader.SpeakStatus);
+            Add("battle enemies", Config.KeyBattleEnemies, KeyCode.F4, BattleReader.SpeakEnemies);
             Add("battle log", Config.KeyBattleLog, KeyCode.F5, BattleLog.Speak);
-            Add("battle verbosity", Config.KeyBattleVerbosity, KeyCode.F8, BattleReader.ToggleHpLeft);
+            Add("centre on the square", Config.KeyCentre, KeyCode.F6, () => { if (!BattleReader.Active) BlobberMode.RequestCentre(); });
+            Add("mod settings", Config.KeyModSettings, KeyCode.F, ModSettings.Toggle, shift: true);
+            // Unbound by default since 0.0.204; while falling, the Blobber key (if bound) still switches the autopilot.
+            Add("blobber mode", Config.KeyBlobber, KeyCode.None, () => { if (PipePilot.Active) PipePilot.Toggle(); else BlobberMode.Toggle(); });
+            Add("battle verbosity", Config.KeyBattleVerbosity, KeyCode.None, BattleReader.ToggleHpLeft);
+            Add("routes through other areas", Config.KeyAreaRoutes, KeyCode.None, AreaRoutes.Toggle);
+            Add("battle dump", Config.KeyBattleDump, KeyCode.F3, BattleDump.Dump, ctrl: true);
+            Add("dump UI", Config.KeyDumpUi, KeyCode.F6, UiTreeDumper.Dump, ctrl: true);
+            Add("navigation dump", Config.KeyNavDump, KeyCode.F6, NavDump.Dump, shift: true, ctrl: true);
+            Add("toggle probe", Config.KeyToggleProbe, KeyCode.F7, Probes.Toggle, ctrl: true);
             Add("next point of interest", Config.KeyPoiNext, KeyCode.PageUp, () => PointsOfInterest.Cycle(1));
             Add("previous point of interest", Config.KeyPoiPrevious, KeyCode.PageDown, () => PointsOfInterest.Cycle(-1));
             Add("next point of interest filter", Config.KeyPoiFilterNext, KeyCode.PageUp, () => PointsOfInterest.CycleFilter(1), shift: true);
@@ -143,6 +146,22 @@ namespace NocturneAccess.Input
                     return b.Text.Replace("PageUp", "Page Up").Replace("PageDown", "Page Down");
             }
             return "";
+        }
+
+        /// <summary>The named binding's key went down this frame with its modifiers (0.0.204: the settings window's repeat and key help follow the bindings).</summary>
+        internal static bool IsDown(string name)
+        {
+            foreach (Binding b in Bindings)
+            {
+                if (b.Name != name || !UnityInput.GetKeyDown(b.Key))
+                    continue;
+                bool shift = UnityInput.GetKey(KeyCode.LeftShift) || UnityInput.GetKey(KeyCode.RightShift);
+                bool ctrl = UnityInput.GetKey(KeyCode.LeftControl) || UnityInput.GetKey(KeyCode.RightControl);
+                bool alt = UnityInput.GetKey(KeyCode.LeftAlt) || UnityInput.GetKey(KeyCode.RightAlt);
+                if (shift == b.Shift && ctrl == b.Ctrl && alt == b.Alt)
+                    return true;
+            }
+            return false;
         }
 
         private static void Add(string name, MelonPreferences_Entry<string> entry, KeyCode fallback, Action action,

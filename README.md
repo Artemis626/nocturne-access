@@ -37,7 +37,7 @@ The mod is meant to work the same in every mode the game offers: **New Game** (t
 A few short parts of the game depend on reacting to what is on screen faster than speech or sound can tell you. Rather than hold back the whole mod for them, the mod changes them, and says so here. Each change to how the game plays can be switched off to play the game's original version: in `UserData/NocturneAccess.cfg` (with the game closed), or with a key in game where noted. The last two items only add words to the Pages list and change nothing in the game.
 
 - **The Labyrinth of Amala, Third Kalpa: Raidou's chase (Dante's in Maniax mode).** A stealth section in real time: the pursuer runs faster than a player can react by ear, even with the mod's warning sounds. With `ChaseOff = true` (the default) he stands still and never catches you, and on first reaching the chase after loading a save the mod says so ("Chase disabled: set ChaseOff to false ...");  the rest of the section, its doors and the story go on as normal. **The boss fight against him at the end is never skipped.** The chase is built around seeing him coming, and no sound cue can make up for that, so it stays off by default. With `ChaseOff = false` you get the game's chase, with a low pulse that quickens as he closes in (`ChaseSound`).
-- **The Labyrinth of Amala's falling minigame.** The mod steers the fall for you (F4 hands it back to you during the fall, or a direction key takes over at once), and the party takes no damage from objects hit (`PipeNoDamage = true`, the default; macca lost to hits is unchanged).
+- **The Labyrinth of Amala's falling minigame.** The mod steers the fall for you (a direction key takes over at once; the "Falling minigame autopilot" setting switches it off), and the party takes no damage from objects hit (`PipeNoDamage = true`, the default; macca lost to hits is unchanged).
 - **Asakusa: the Puzzle Boy minigame (the Manikin child), a visual block puzzle the mod cannot read.** Its prize, the Geis Magatama, is needed for later challenges. Once you beat Metatron in the Labyrinth of Amala, the mod gives you Geis the way the Puzzle Boy does, and marks his prize as taken (`GeisGift = true`, the default; it says "Metatron defeated: the Puzzle Boy's prize is yours. Obtained the Geis Magatama."). With `GeisGift = false` the prize stays with the minigame.
 - **Diet Building, East Wing 1F: the statue room.** Sighted players find the one statue whose floor reflection shows no figure. The game draws that statue at random (again after each wrong pick); the mod reads the game's choice and the Pages list says "Examine, true statue" for it. The other statues and the fight behind the true one are unchanged.
 - **Tower of Kagutsuchi, 167F: the four Reason doors.** Four doors on the floor's cardinal axes, each reached by its own route's lift, and only the one of the player's Reason opens (Shijima north, Musubi west, Yosuga east, no Reason south: the game's script, and [AppMedia's tower chart](https://appmedia.jp/?p=5582803)). The game says this nowhere, so the Pages list adds the Reason to each of them ("Door, passage, Reason: Shijima") without saying which is yours. The doors themselves are unchanged.
@@ -68,7 +68,7 @@ The mod works alongside other MelonLoader mods for this game, such as Nocturne G
 
 ## Keys
 
-Press **F7** on any screen to hear its keys: the game's own (from its button guide) and the mod's. The full list is in `docs/KEYS.md`.
+Press **F1** on any screen to hear its keys: the game's own (from its button guide) and the mod's. The mod's keys are grouped: F1 key help and F2 repeat; F3 party status (in battle and outside), F4 enemies, F5 battle log; F6 centre on the square; Page Up, Page Down, Home, End, Shift+End and Delete for moving around; Shift+F the settings. F7 and F8 are free. The full list is in `docs/KEYS.md`.
 
 ## Settings
 
@@ -76,13 +76,13 @@ Press **Shift+F** in the field, on the overworld or in battle to open the mod's 
 
 - **Categories:** W and S (or the arrow keys) move, Enter opens one, C or Escape closes the window.
 - **Inside a category:** W and S move, A, D, Enter or Space switch the setting on or off, C or Escape go back to the categories.
-- **Anywhere in the window:** Shift+F closes it, F1 repeats the row, F7 says these keys.
+- **Anywhere in the window:** Shift+F closes it, F2 repeats the row, F1 says these keys.
 
 Every change is saved at once to `UserData/NocturneAccess.cfg` and takes effect straight away, except where the window says otherwise.
 
 - **Speech:** speaker on every page; braille output.
-- **Battle:** speak HP changes; speak HP left after actions (F8 also switches it).
-- **Navigation:** blobber mode at start; door kinds; points of interest in map order; routes through other areas; the way on (off: Shift+End only says it is off, and its tone is not played).
+- **Battle:** speak HP changes; speak HP left after actions.
+- **Navigation:** blobber mode (switched at once, and kept for the next start); falling minigame autopilot; door kinds; points of interest in map order; routes through other areas; the way on (off: Shift+End only says it is off, and its tone is not played).
 - **Sounds:** wall bump; door tone; way-on tone; alarm tones; secret area and section exit tones; chase pulse.
 
 The window leaves out, on purpose, the content changes listed above (such as the Third Kalpa chase), switches that could silence the mod or need a restart, debug settings and the keys. These are changed in `NocturneAccess.cfg` with the game closed.

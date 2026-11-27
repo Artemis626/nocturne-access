@@ -77,9 +77,18 @@ namespace NocturneAccess.Systems.Navigation
         {
             _cell = Math.Max(100, Config.BlobberCellSize.Value);
             _enabled = Config.BlobberOnAtStart.Value && PadInput.Installed;
-            Log.Info($"[Nav] Blobber mode {(_enabled ? "on" : "off")} at start (cell {_cell} units). F4 toggles it.");
+            Log.Info($"[Nav] Blobber mode {(_enabled ? "on" : "off")} at start (cell {_cell} units); switched in the mod settings window.");
         }
 
+        /// <summary>The settings window's "Blobber mode" row (0.0.204): sets the mode now, without a spoken line (the window says the row).</summary>
+        internal static void Set(bool on)
+        {
+            if (on == _enabled || on && !PadInput.Installed)
+                return;
+            Switch(on);
+        }
+
+        /// <summary>The Blobber key, unbound by default since 0.0.204: switches the mode and keeps it for the next start.</summary>
         internal static void Toggle()
         {
             if (!PadInput.Installed)
@@ -87,14 +96,21 @@ namespace NocturneAccess.Systems.Navigation
                 SpeechManager.Say("Blobber mode unavailable: pad injection is off.", interrupt: true, force: true);
                 return;
             }
-            _enabled = !_enabled;
+            Switch(!_enabled);
+            Config.BlobberOnAtStart.Value = _enabled;
+            Config.Save(Config.BlobberOnAtStart);
+            SpeechManager.Say(_enabled ? "Blobber mode on" : "Blobber mode off", interrupt: true, force: true);
+        }
+
+        private static void Switch(bool on)
+        {
+            _enabled = on;
             FirstPersonView.ClearUserChoice();
             StopSnap("toggled");
             CentreWalk.Cancel("blobber mode toggled");
             _firstPerson = false;
             _haveView = false;
             Log.Info($"[Nav] Blobber mode {(_enabled ? "on" : "off")}.");
-            SpeechManager.Say(_enabled ? "Blobber mode on" : "Blobber mode off", interrupt: true, force: true);
         }
 
         /// <summary>OnUpdate: speech queued during the field update.</summary>

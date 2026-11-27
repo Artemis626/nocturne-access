@@ -96,7 +96,7 @@ namespace NocturneAccess.Systems.Battle
         {
             if (!_active)
             {
-                SpeechManager.Say("Not in battle.", interrupt: true, force: true);
+                Menus.PartyStatus.SpeakField();   // 0.0.204: the party outside battle (Francesco, option C)
                 return;
             }
             ReadUnits(speakChanges: false);
@@ -120,7 +120,10 @@ namespace NocturneAccess.Systems.Battle
         internal static void SpeakEnemies()
         {
             if (!_active)
+            {
+                SpeechManager.Say("Not in battle.", interrupt: true, force: true);
                 return;
+            }
             ReadUnits(speakChanges: false);
             List<Unit> enemies = Units.Values.Where(u => u.Form >= FirstEnemy && u.Hp > 0).OrderBy(u => u.Form).ToList();
             var parts = new List<string> { enemies.Count == 1 ? "1 enemy." : $"{enemies.Count} enemies." };

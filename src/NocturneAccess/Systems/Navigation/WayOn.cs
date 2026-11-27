@@ -142,7 +142,7 @@ namespace NocturneAccess.Systems.Navigation
         {
             if (!Enabled)
             {
-                SpeechManager.Say("Way on is off. Turn it on in the mod settings, Shift+F, Navigation.", interrupt: true, force: true);
+                SpeechManager.Say($"Way on is off. Turn it on in the mod settings, {Input.Hotkeys.KeyText("mod settings")}, Navigation.", interrupt: true, force: true);
                 return;
             }
             fldGlobalWork_t gb = fldGlobal.fldGb;

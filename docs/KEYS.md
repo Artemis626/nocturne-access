@@ -4,6 +4,16 @@
 
 ## Mod keys
 
+**Layout since 0.0.204** (Francesco's option C, 27 Nov 2026, `docs/KEYS-PLAN.md`): the keys are grouped by job. The table further down keeps each feature's history and still names the keys it had before 0.0.204; read it with this list.
+
+- **General:** F1 key help; F2 repeat; Shift+F the mod settings window.
+- **Battle:** F3 party status (outside battle, since 0.0.204: each party member with HP, MP and statuses); F4 enemies ("Not in battle." outside); F5 battle log.
+- **Navigation:** F6 centre on the square (first person); Page Up and Page Down points; Shift+Page Up and Shift+Page Down filters; Home walk; End directions; Shift+End way on; Delete where am I.
+- **Free:** F7 and F8 (kept for later status keys).
+- **Moved to the settings window (no key by default):** blobber mode (Navigation, "Blobber mode", switched at once and kept for the next start), the falling minigame's autopilot (Navigation, "Falling minigame autopilot", read at the start of each fall), HP after actions (Battle). Their cfg entries `Blobber` and `BattleVerbosity` can still be given a key; a bound Blobber key also switches the autopilot during a fall.
+- **Debug, on Ctrl:** Ctrl+F3 battle dump; Ctrl+F6 UI dump; Ctrl+Shift+F6 navigation dump; Ctrl+F7 text probe.
+- **Moving an old file:** the first start of 0.0.204 resets every key entry in `NocturneAccess.cfg` to the new defaults once (entry `KeyLayout` = 2) and logs "[Config] Keys moved to the 0.0.204 layout".
+
 Keys are set in `UserData/NocturneAccess.cfg`, section `[NocturneAccess_Keys]`, using Unity `KeyCode` names such as `F8`, `Backslash` or `Alpha1`, optionally after modifiers (`Shift+F5`, `Ctrl+F5`; since 0.0.20 a plain key does not fire while Shift, Ctrl or Alt is held). Edit the file while the game is closed.
 
 | Key | Action | Since |

@@ -7,6 +7,7 @@ using Il2Cpp;
 using Il2CppTMPro;
 using MelonLoader;
 using NocturneAccess.Core;
+using NocturneAccess.Input;
 using NocturneAccess.Speech;
 using NocturneAccess.Systems.Battle;
 using NocturneAccess.Systems.Navigation;
@@ -95,7 +96,8 @@ namespace NocturneAccess.Systems.Menus
                 Bool(Config.SpeakHpChanges),
                 Bool(Config.SpeakHpLeft));
             Cat("Navigation",
-                Bool(Config.BlobberOnAtStart, "Takes effect at the next start. F4 switches blobber mode now."),
+                Bool(Config.BlobberOnAtStart, changed: on => BlobberMode.Set(on)),
+                Bool(Config.PipeAutopilot),
                 Bool(Config.DoorKinds),
                 Bool(Config.PoiMapOrder),
                 Bool(Config.AreaRoutes, changed: on => { if (!on) AutoWalk.CancelJourney("routes through other areas turned off"); }),
@@ -187,8 +189,7 @@ namespace NocturneAccess.Systems.Menus
                 return false;
             }
 
-            bool shift = UnityInput.GetKey(KeyCode.LeftShift) || UnityInput.GetKey(KeyCode.RightShift);
-            if (shift && Down(KeyCode.F))
+            if (Hotkeys.IsDown("mod settings"))
             {
                 Close();
                 return true;
@@ -213,12 +214,12 @@ namespace NocturneAccess.Systems.Menus
                 else
                     Enter();
             }
-            else if (Down(KeyCode.F1))
+            else if (Hotkeys.IsDown("repeat"))
                 SpeechManager.Say(RowLine(), interrupt: true, force: true);
-            else if (Down(KeyCode.F7))
+            else if (Hotkeys.IsDown("key help"))
                 SpeechManager.Say(_inCategory
-                    ? "W and S: move. A, D or Enter: change. C: back to the categories. Shift+F: close. F1: repeat."
-                    : "W and S: move. Enter: open a category. C or Shift+F: close. F1: repeat.", interrupt: true, force: true);
+                    ? $"W and S: move. A, D or Enter: change. C: back to the categories. {Hotkeys.KeyText("mod settings")}: close. {Hotkeys.KeyText("repeat")}: repeat."
+                    : $"W and S: move. Enter: open a category. C or {Hotkeys.KeyText("mod settings")}: close. {Hotkeys.KeyText("repeat")}: repeat.", interrupt: true, force: true);
             return true;
         }
 

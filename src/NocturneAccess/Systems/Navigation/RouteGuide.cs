@@ -45,7 +45,7 @@ namespace NocturneAccess.Systems.Navigation
             Poi target = PointsOfInterest.Current(gb);
             if (target == null)
             {
-                SpeechManager.Say("Select a point of interest first, with Page Up.", interrupt: true);
+                SpeechManager.Say($"Select a point of interest first, with {Input.Hotkeys.KeyText("next point of interest")}.", interrupt: true);
                 return;
             }
             string text = Directions(gb, target);

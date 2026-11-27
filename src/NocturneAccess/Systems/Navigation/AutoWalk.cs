@@ -394,7 +394,7 @@ namespace NocturneAccess.Systems.Navigation
             Poi poi = PointsOfInterest.Current(gb);
             if (poi == null)
             {
-                Say("Select a point of interest first, with Page Up.");
+                Say($"Select a point of interest first, with {Input.Hotkeys.KeyText("next point of interest")}.");
                 return;
             }
             if (poi.Beyond)

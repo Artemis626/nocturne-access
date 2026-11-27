@@ -238,5 +238,46 @@ namespace NocturneAccess.Systems.Menus
             string[] names = tokens[1].Split('/');
             return place < names.Length ? names[place] : "";
         }
+
+        /// <summary>
+        /// F3 outside battle (0.0.204, Francesco's option C: status at a glance): each party member with HP, MP and statuses, the
+        /// protagonist first. The party is the game's own: datCalc.datPartyDamageFld (the field's poison steps) hurts the
+        /// dds3GlobalWork.DDS3_GBWK.unitwork entries whose flag has 0x2 (read offline, 27 Nov 2026); 0x1 marks an owned unit.
+        /// </summary>
+        internal static void SpeakField()
+        {
+            if (!Navigation.WhereAmI.GameLoaded)
+            {
+                SpeechManager.Say("No game loaded.", interrupt: true, force: true);
+                return;
+            }
+            var parts = new List<string>();
+            try
+            {
+                var units = dds3GlobalWork.DDS3_GBWK?.unitwork;
+                for (int k = 0; units != null && k < units.Length; k++)
+                {
+                    datUnitWork_t w = units[k];
+                    if (w == null || w.maxhp == 0 || (w.flag & 0x1) == 0 || (w.flag & 0x2) == 0)
+                        continue;
+                    string name = k == 0 ? TextUtil.Clean(frName.frGetCNameString(0) ?? "") : TextUtil.Clean(datDevilName.Get(w.id) ?? "");
+                    if (name.Length == 0)
+                        name = k == 0 ? "You" : "Ally";
+                    var words = new List<string>();
+                    if ((w.badstatus & (1 << DeadBit)) != 0 || w.hp == 0)
+                        words.Add("Dead");
+                    words.AddRange(WordsFor(w.badstatus));
+                    string status = words.Count > 0 ? ", " + string.Join(", ", words) : "";
+                    parts.Add($"{name}: HP {w.hp} of {w.maxhp}, MP {w.mp} of {w.maxmp}{status}.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"{Tag} Field party status: {ex.Message}");
+            }
+            string text = parts.Count > 0 ? string.Join(" ", parts) : "No party data.";
+            Log.Info($"{Tag} Field party status: {text}");
+            SpeechManager.Say(text, interrupt: true, force: true);
+        }
     }
 }

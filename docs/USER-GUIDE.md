@@ -16,7 +16,7 @@ To write: what to download (the game, MelonLoader 0.6.1, the .NET 6 Desktop Runt
 
 ## 2. First steps
 
-To write: the keys you need from the very start: F1 to repeat, F7 for the keys of the screen you are on, Delete for where you are. Then the title screen, a new game, name entry and the first save, with what you hear on each.
+To write: the keys you need from the very start: F1 for the keys of the screen you are on, F2 to repeat, Delete for where you are. Then the title screen, a new game, name entry and the first save, with what you hear on each.
 
 ## 3. Hearing the game
 
@@ -28,7 +28,7 @@ To write, in this order:
 
 - **The Pages list:** Page Up and Page Down, what a point says (kind, name, distance, direction, "explored", "empty"), the fixed map order, and the filters with Shift+Page Up and Shift+Page Down.
 - **Getting there:** Home walks for you; End gives the directions so you walk yourself; how a walk stops and what "Walk interrupted by an event" means.
-- **Blobber mode:** F4, first person with the game's own controls, grid steps, F3 to centre, the wall and opening cues.
+- **Blobber mode:** switched in the settings (chapter 9), first person with the game's own controls, grid steps, F6 to centre, the wall and opening cues.
 - **Sounds you will hear:** wall bump, door knock, way-on tone and the others, with how to switch each off (chapter 9).
 - **The overworld map:** entrances, and why some are listed only once you can walk there.
 - **Doors you have been through:** what "explored" and "leads to unexplored doors" mean.
@@ -39,7 +39,7 @@ To write: Shift+End, where it has data (the hardest dungeons only), what it says
 
 ## 6. Battles
 
-To write: the battle start, whose turn it is and the Press Turns, choosing skills and targets, what is said after each action, F2 (your party), F3 (the enemies), F5 (the battle log), F8 (HP left after actions), summoning, Analyze, results.
+To write: the battle start, whose turn it is and the Press Turns, choosing skills and targets, what is said after each action, F3 (your party; outside battle too), F4 (the enemies), F5 (the battle log), the HP-after-actions setting (chapter 9), summoning, Analyze, results.
 
 ## 7. Menus, shops and fusion
 
@@ -61,7 +61,7 @@ The window has two levels.
 
 - **The categories:** Speech, Battle, Navigation and Sounds. W and S, or the up and down arrows, move. Enter, Space, A, D or the left and right arrows open one. C, Escape or Backspace close the window.
 - **The settings of a category:** W and S move. A, D, Enter, Space or the arrows switch the setting on or off. C, Escape or Backspace go back to the categories.
-- **Anywhere:** Shift+F closes the window, F1 repeats the row you are on, F7 says these keys.
+- **Anywhere:** Shift+F closes the window, F2 repeats the row you are on, F1 says these keys.
 
 The list does not wrap round: at the first or last row, the same row is said again. Each category remembers the row you left it on.
 
@@ -72,7 +72,7 @@ The list does not wrap round: at the first or last row, the same row is said aga
 - Changing a setting: "Wall bump sound, Off."
 - Closing: "Mod settings closed."
 
-Every change is saved at once and takes effect straight away. The one exception says so when you change it: blobber mode at start applies the next time you start the game (F4 switches blobber mode now).
+Every change is saved at once and takes effect straight away. Blobber mode is also kept for the next time you start the game.
 
 ### The settings
 
@@ -81,9 +81,10 @@ Every change is saved at once and takes effect straight away. The one exception 
   - Braille output: every spoken line also goes to your braille display.
 - **Battle:**
   - Speak HP changes: the HP of a unit after each hit or heal.
-  - Speak HP left after actions: also the HP left ("27 damage, HP 38 of 65"). F8 switches it too.
+  - Speak HP left after actions: also the HP left ("27 damage, HP 38 of 65").
 - **Navigation:**
-  - Blobber mode at start.
+  - Blobber mode: on or off now, and kept for the next start.
+  - Falling minigame autopilot: the mod steers the Labyrinth's falling minigame; a direction key still takes over at once.
   - Door kinds: whether a door leads to a room, a passage or an exit.
   - Points of interest in map order: off, nearest first (the order then changes as you move).
   - Routes through other areas: the Pages list also lists points reached only through doors you have been through.
@@ -105,7 +106,7 @@ To write: the README's list of changes, each with what it changes, why, and how 
 
 ## 11. When something goes wrong
 
-To write: where the log is, what to send when reporting a problem, the black screen after fast door changes, what to do if speech stops, and the debug dumps (Shift+F6, Shift+F2) a developer may ask for.
+To write: where the log is, what to send when reporting a problem, the black screen after fast door changes, what to do if speech stops, and the debug dumps (Ctrl+Shift+F6, Ctrl+F3) a developer may ask for.
 
 ## Still to decide
 

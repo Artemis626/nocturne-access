@@ -91,6 +91,10 @@ A fifth category, **Keys**, listing each player action with its key: "Repeat, F2
 
 Gamepad buttons: the mod's keys are keyboard only. A gamepad layout would be a separate study.
 
+## Built
+
+- **0.0.204 (27 Nov 2026):** option C (section 2) with the one-time reset and the spoken key names from the bindings (section 3). Remapping (section 4) is next.
+
 ## 5. Order of work
 
 1. Francesco chooses the layout (A, B or his own).
