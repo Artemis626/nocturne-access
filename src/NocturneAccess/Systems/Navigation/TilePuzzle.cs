@@ -52,12 +52,14 @@ namespace NocturneAccess.Systems.Navigation
             // its standing point is in the same part (area 14's dead-end pocket by 01pos_06 shares wall states with the route).
             WalkGrid.Ensure(gb.fieldID, gb.areaID, px, gb.playerY, pz);
             int here = WalkGrid.RegionAt(px, gb.playerY, pz);
-            List<Row> sided = rows.Where(r => ((px - r.X) * r.NX + (pz - r.Z) * r.NZ > 0f ? 1 : 0) == r.Side).ToList();
-            Row pick = sided.Where(r => here < 0 || WalkGrid.RegionAt(r.SX, gb.playerY, r.SZ) is int there && (there < 0 || there == here))
-                            .OrderBy(r => (px - r.X) * (px - r.X) + (pz - r.Z) * (pz - r.Z)).FirstOrDefault();
+            List<Row> inPart = rows.Where(r => here < 0 || WalkGrid.RegionAt(r.SX, gb.playerY, r.SZ) is int there && (there < 0 || there == here)).ToList();
+            // The side of the plane's line only breaks ties between rows of one part (area 12's {1,2}: tile 02 north of it, 03
+            // between 02 and 03). It is no test on its own (0.0.211; 20:41 session: area 14's walk reaches 01eve_10 round its
+            // end, so from 01pos_02 the player stands on the line's other side, and the only row was thrown away).
+            Row pick = inPart.OrderBy(r => ((px - r.X) * r.NX + (pz - r.Z) * r.NZ > 0f ? 1 : 0) == r.Side ? 0 : 1)
+                             .ThenBy(r => (px - r.X) * (px - r.X) + (pz - r.Z) * (pz - r.Z)).FirstOrDefault();
             state = $"walls off {offKey}, {rows.Count} row{(rows.Count == 1 ? "" : "s")} for it" +
-                    (rows.Count > 0 && sided.Count == 0 ? ", the player on none of their sides" : "") +
-                    (sided.Count > 0 && pick == null ? ", none in the player's walkable part" : "") +
+                    (rows.Count > 0 && inPart.Count == 0 ? ", none in the player's walkable part" : "") +
                     (pick != null ? $": {pick.Tile} from its {(pick.Side == 1 ? "normal" : "back")} side" : rows.Count == 0 ? " (solved, or no way on from here)" : "");
             return pick?.Tile;
         }

@@ -182,7 +182,7 @@ if ($ENV{TABLE}) {
     for my $t (touches($reg, $off)) { my ($name, $cell, $d) = @$t; my ($noff, $nfl) = run($name, $d, $off, $fl);
       $sw{$_} = 1 for grep { ($off->{$_} // 0) != ($noff->{$_} // 0) } (keys %$off, keys %$noff);
       my $nreg = flood($cell, $noff, $name); my $nmin = (sort { $a <=> $b } keys %$nreg)[0];
-      push @{$edges{$k}}, [$name, $d, key($noff, $nfl) . "|$nmin"]; push @q, [$cell, $noff, $nfl, $name] } }
+      push @{$edges{$k}}, [$name, $d, key($noff, $nfl) . "|$nmin", $cell]; push @q, [$cell, $noff, $nfl, $name] } }
   my %dist = map { $_ => 0 } @goal; my $changed = 1;
   while ($changed) { $changed = 0; for my $k (keys %edges) { for my $e (@{$edges{$k}}) { next unless defined $dist{$e->[2]};
         my $d = $dist{$e->[2]} + 1; if (!defined $dist{$k} || $d < $dist{$k}) { $dist{$k} = $d; $changed = 1 } } } }
@@ -198,6 +198,25 @@ if ($ENV{TABLE}) {
     my ($sc) = sort { (cx(int($a / $NJ)) - $t->{x}) ** 2 + (cz($a % $NJ) - $t->{z}) ** 2 <=> (cx(int($b / $NJ)) - $t->{x}) ** 2 + (cz($b % $NJ) - $t->{z}) ** 2 } keys %{$node{$k}{reg}};
     $row{sprintf "%s %s %s %d %.0f %.0f %.3f %.3f %.0f %.0f", $o, $fl ne '' ? $fl : '-', $best->[0], $best->[1], $t->{x}, $t->{z}, $t->{nx}, $t->{nz}, cx(int($sc / $NJ)), cz($sc % $NJ)} = $dist{$k} }
   print "$_  # $row{$_} to go\n" for sort { $row{$b} <=> $row{$a} || $a cmp $b } keys %row;
+  # Replay of the mod's rule (TilePuzzle.Next, 0.0.211) along the best way from each start, in the worst case where every row
+  # of a wall state lies in the player's walkable part: rows whose plane side the player is on first, then the nearest plane.
+  # A step where it would pick another tile is printed as "# CHECK".
+  my %byKey; my %bestOf;
+  for my $k (keys %edges) { next unless defined $dist{$k} && $dist{$k} > 0;
+    my ($best) = sort { $dist{$a->[2]} <=> $dist{$b->[2]} || $a->[0] cmp $b->[0] } grep { defined $dist{$_->[2]} } @{$edges{$k}};
+    $bestOf{$k} = $best; push @{$byKey{key($node{$k}{off}, $node{$k}{fl})}}, $best }
+  for my $s (@starts) { my ($cell, $off) = @$s; my $reg = flood($cell, $off, undef); my $min = (sort { $a <=> $b } keys %$reg)[0];
+    my $k = key($off, \%fl0) . "|$min"; my ($px, $pz) = (cx(int($cell / $NJ)), cz($cell % $NJ)); my @way;
+    unless (defined $dist{$k}) { printf "# replay from %.0f %.0f: no way to the goal (the mod names no tile there if the part differs)\n", $px, $pz; next }
+    while ($dist{$k} > 0) { my $best = $bestOf{$k}; my %u; my @c = grep { !$u{"$_->[0]/$_->[1]"}++ } @{$byKey{key($node{$k}{off}, $node{$k}{fl})}};
+      my ($pick) = sort { my ($ta, $tb) = ($tile{$a->[0]}, $tile{$b->[0]});
+          my $sa = ((($px - $ta->{x}) * $ta->{nx} + ($pz - $ta->{z}) * $ta->{nz}) > 0 ? 1 : 0) == $a->[1] ? 0 : 1;
+          my $sb = ((($px - $tb->{x}) * $tb->{nx} + ($pz - $tb->{z}) * $tb->{nz}) > 0 ? 1 : 0) == $b->[1] ? 0 : 1;
+          $sa <=> $sb || (($px - $ta->{x}) ** 2 + ($pz - $ta->{z}) ** 2) <=> (($px - $tb->{x}) ** 2 + ($pz - $tb->{z}) ** 2) } @c;
+      print "# CHECK at $px $pz, walls off ", join(',', sort { $a <=> $b } keys %{$node{$k}{off}}), ": the rule picks $pick->[0], the way is $best->[0]\n" if $pick->[0] ne $best->[0];
+      push @way, $best->[0]; my $t = $tile{$best->[0]}; my $cc = $best->[3]; my $sg = $best->[1] ? -1 : 1;
+      ($px, $pz) = (cx(int($cc / $NJ)) + $t->{nx} * 40 * $sg, cz($cc % $NJ) + $t->{nz} * 40 * $sg); $k = $best->[2] }
+    printf "# replay from %.0f %.0f: %s\n", cx(int($cell / $NJ)), cz($cell % $NJ), join(' ', @way) }
   exit 0;
 }
 
