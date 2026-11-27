@@ -9,7 +9,8 @@
 # research/gamedata/commands.txt, EQ, IF, GOTO, END).
 #
 # The player is a point on a 30-unit grid, clear of active walls by 46 (WalkGrid's clearance), walking on the area's floor at
-# y 0. A tile fires when the player enters its zone (within ZONE of its plane, default 75); walks avoid every other tile's zone,
+# y 0. A tile fires when the player walks through its plane (cells within ZONE of it, default 20; a tile standing on a closed
+# wall cannot fire: 27 Nov 2026, 01eve_21); walks avoid every other tile's zone,
 # as the mod's way on prefers walks that cross no story event.
 #
 # Modes:
@@ -22,7 +23,8 @@ use strict; use warnings;
 my ($f2, $flow, $prefix, $sx, $sz, $gx, $gz, @off) = @ARGV;
 die "args: f2 flow prefix sx sz gx gz [off...]\n" unless defined $gz;
 my $dir = $0; $dir =~ s{[\\/][^\\/]+$}{};
-my $C = 30; my $Clear = 46; my $Zone = $ENV{ZONE} // 75; my $GoalR = $ENV{GOALR} // 150;
+my $C = 30; my $Clear = 46; my $GoalR = $ENV{GOALR} // 150;
+my $Zone = $ENV{ZONE} // 20;   # a tile fires only when walked through (0.0.208; 75 was wrong: Home stopped 60 short of 01eve_21)
 
 # ---- Walls ----
 my (@walls, %blockOrder, @floors);
@@ -149,7 +151,13 @@ if (my $pol = $ENV{POLICY}) {
     my $reg = flood($pos, $off, $allow);
     if (reaches($reg)) { print "step $step: the goal is walkable. Done.\n"; exit 0 }
     my %touch = map { ($_->[0] => $_) } touches($reg, $off);
-    my $pick; for my $name (@list) { if ($name eq 'GOAL') { next } if ($touch{$name}) { $pick = $touch{$name}; last } }
+    my $pick; for my $name (@list) { if ($name eq 'GOAL') { next } if ($touch{$name}) { $pick = $touch{$name}; last }
+      # the mod's walk test reaches a tile from within NEAR (default 90) of its plane even through a closed wall (27 Nov 2026:
+      # 01eve_21 on hoji 13's wall was "walkable", Home stopped 60 short and the game never fired it): a listed tile so near
+      # but not crossable would be chosen first
+      my $t = $tile{$name} or next; my $near = $ENV{NEAR} // 90;
+      for my $k (keys %$reg) { my ($i, $j) = (int($k / $NJ), $k % $NJ);
+        if (segd(cx($i), cz($j), $t->{x0}, $t->{z0}, $t->{x1}, $t->{z1}) < $near) { print "step $step: WARNING $name lies within $near of the region but cannot be crossed: the mod may choose it\n"; last } } }
     unless ($pick) { print "step $step: no listed tile walkable; touchable: ", join(' ', sort keys %touch), "\n"; exit 1 }
     my ($name, $cell, $d) = @$pick; my ($noff, $nfl, $did) = run($name, $d, $off, $fl);
     print "step $step: $name (side ", ($d ? 'normal side' : 'back side'), " its normal): $did\n";

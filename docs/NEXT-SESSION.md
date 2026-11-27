@@ -8,6 +8,8 @@ Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only),
 
 ## RESUME HERE (27 Nov 2026): 0.0.204 built, untested: key layout by blocks (F1 key help, F2 repeat, F3 party status in and out of battle, F4 enemies, F5 battle log, F6 centre; blobber mode, autopilot and HP after actions moved to the settings window; debug keys on Ctrl; saved keys reset once, `KeyLayout`). Next in `docs/KEYS-PLAN.md`: key remapping in the settings window. Test steps: `docs/HANDOFF.md` last entry.
 
+## RESUME HERE (27 Nov 2026, night, later): 0.0.208 built, untested: the magic blocks' way on corrected (tiles fire only when walked through; area 14 from area 11's far east door is a dead end; route south through area 12). Test steps: `docs/HANDOFF.md` last entry.
+
 ## RESUME HERE (27 Nov 2026, night): 0.0.207 built, untested: the magic blocks' warning when the way on is off (`PuzzleWarning`, once per load) and the way on for field 36 areas 16 to 20 (past Noah to field 37's lift; not flooded offline). Test steps: `docs/HANDOFF.md` last entry.
 
 ## RESUME HERE (27 Nov 2026, evening): 0.0.206 built, untested: lifts say "lift goes up / down" from the auto-map arrows (`LiftIcons`); way on through the Kagutsuchi Tower's magic blocks (field 36 areas 11 to 14, order from `tools/unity/hojisim.pl`). Next: area 16 onward. Test steps: `docs/HANDOFF.md` last entry.

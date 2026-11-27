@@ -351,12 +351,17 @@
 # (01eve_NN, story events in the Pages list) whose procedures turn held objects' walls on and off (FLD_ATARI_ON / OFF) by the
 # side the player comes from (DIR_HIT_CNTR); the live map follows the walls, so each tile becomes walkable once the one before
 # it has fired. The order below was found and checked offline with tools/unity/hojisim.pl (the procedures run by an
-# interpreter, walls from the area files): from area 11's 01d_06 (Francesco's way, area 14 at 01pos_06) 9 tiles, from area 12's
-# 01d_07 (the guide's, area 14 at 01pos_02) 7 tiles, both ending at area 14's 01d_05, which lands by area 12's raised exit
-# (01pos_09): the ride down (01eve_09) and the lift up to area 16 (01eve_15).
-36 11 01d_06 01d_07                                                # the Terminal floor: the far east door into area 14 (else the south door into area 12's blocks)
+# interpreter, walls from the area files): area 12's tiles 01 to 05 and the alcove tile 14 to its door 01d_07 (the guide's
+# "opens east a second time"), then area 14 from 01pos_02: 7 tiles to 01d_05, which lands by area 12's raised exit (01pos_09):
+# the ride down (01eve_09) and the lift up to area 16 (01eve_15).
+# 0.0.208 (Francesco, 27 Nov 2026 18:31: Home stopped 60 short of 01eve_21 and the game never fired it; dump 18:31:21): a tile
+# fires only when the player walks through its plane, not near it, and 01eve_21 stands on hoji 13's closed wall. With that rule
+# (hojisim ZONE=20) area 14 has no way through from 01pos_06 (area 11's far east door, 0.0.206's choice), 01pos_01 or 01pos_04:
+# those entries are dead ends, back out. The mod's own walk test still calls a tile on a closed wall walkable from within about
+# 90; no listed tile is so near on either route (hojisim's WARNING check).
+36 11 01d_07                                                       # the Terminal floor: the south door into area 12's blocks
 36 12 01eve_15 01eve_09 01d_07 01eve_14 01eve_05 01eve_04 01eve_03 01eve_02 01eve_01   # from area 14's 01d_05: ride down, the lift up; from area 11: the blocks south to the second east alcove
-36 14 01d_05 01eve_15 01eve_14 01eve_03 01eve_13 01eve_04 01eve_11 01eve_10 01eve_20 01eve_21 01d_04 01d_02   # the magic blocks to 01d_05 (from 01pos_06 or 01pos_02); from the dead entries, back out
+36 14 01d_05 01eve_15 01eve_14 01eve_03 01eve_13 01eve_04 01eve_11 01eve_10 01d_06 01d_04 01d_02   # the magic blocks to 01d_05 from 01pos_02; from the dead entries (01pos_06, 04, 01), back out
 36 13 01d_04 01d_02 01d_03 01d_05 01d_01                           # the first pass's maze ends in a fall: back to area 11 or 12
 # After the lift (0.0.207, 27 Nov 2026; Francesco: "do it now, they can be fixed later"): the guide's steps 12 to 14 and, after
 # Noah, steps 1 to 4, matched to the door table and the script. Areas 16 to 20 keep most of their collision out of the area

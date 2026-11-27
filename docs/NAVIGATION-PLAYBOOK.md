@@ -391,3 +391,15 @@ What made it work, in the order it matters:
 - "Explored behind this door" must stay one room deep: following explored doors further tags every door in a hub-shaped building.
 - Puzzles drawn at random (the Diet Building's true statue) cannot come from a walkthrough: read the draw and its flags from the script and mark the live answer.
 - Thin stair wedges narrower than a map cell, and small floorless bands the game still lets the player cross, cut a walking map sampled at cell centres: check a live dump's polygons before trusting "not reachable".
+
+### Switching walls (27 Nov 2026, the Kagutsuchi Tower's magic blocks)
+
+- Tiles that switch walls by the side the player comes from can be solved offline by running their own procedures against the
+  area file's walls (`tools/unity/hojisim.pl`): BFS for the chain, then follow the way on's own rule ("the first listed point
+  walkable") step by step, since the rule, not the chain, is what the player gets.
+- A flat event plane fires only when the player walks through it. A plane standing on a closed wall cannot fire, though a walk
+  ends 60 from it and the mod's reach test calls it walkable. The first simulation fired tiles from within 75, chose an
+  entry whose first tile was such a plane, and sent Francesco to an invisible wall. Model "touch" by what the game's own hit
+  needs, and check it against one logged approach ("approach ended without the game's hit") before trusting a route.
+- One entry of a puzzle area can be a dead end by design (the tower's far east door into area 14): try every entry, and route
+  the player through the one the guide uses.
