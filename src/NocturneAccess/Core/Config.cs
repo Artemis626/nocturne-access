@@ -225,20 +225,9 @@ namespace NocturneAccess.Core
                 "Opens or closes the mod settings window (in the field, on the overworld and in battle; never inside a game menu). While it is open the game sees no keys.");
             // 0.0.204: the key layout by blocks (Francesco's option C, docs/KEYS-PLAN.md): F1 key help, F2 repeat, F3 to F5 battle,
             // F6 centre; blobber mode and HP after actions moved to the settings window; debug keys on Ctrl. A saved file keeps its
-            // old key values, so every key entry is reset to its default once, when this marker is below 2.
+            // old key values, so every key entry is reset to its default once, when this marker is below 3 (see the reset below the Debug section).
             KeyLayout = keys.CreateEntry("KeyLayout", 1, "Key layout version",
                 "Do not change: the mod uses it to move saved keys to a new default layout once.");
-            if (KeyLayout.Value < 2)
-            {
-                foreach (MelonPreferences_Entry<string> e in new[] { KeyRepeat, KeyWhereAmI, KeyBattleVerbosity, KeyBattleStatus,
-                             KeyBattleEnemies, KeyBattleLog, KeyDumpUi, KeyToggleProbe, KeyNavDump, KeyBattleDump, KeyBlobber, KeyCentre,
-                             KeyPoiNext, KeyPoiPrevious, KeyPoiFilterNext, KeyPoiFilterPrevious, KeyPoiWalk, KeyPoiGuide, KeyWayOn,
-                             KeyAreaRoutes, KeyHelp, KeyModSettings })
-                    e.ResetToDefault();
-                KeyLayout.Value = 2;
-                LayoutReset = true;
-            }
-
             MelonPreferences_Category debug = MelonPreferences.CreateCategory("NocturneAccess_Debug", "Debug");
             debug.SetFilePath(FilePath, true, false);
             VerboseLogging = debug.CreateEntry("VerboseLogging", false, "Verbose logging",
@@ -247,6 +236,20 @@ namespace NocturneAccess.Core
             // (Francesco, 6 Oct 2026: the probe off by default).
             ProbeEnabled = debug.CreateEntry("TextProbe", false, "Text probe",
                 "Research tool: logs every UI text and message-engine call to Latest.log. Needs a restart. Off by default; set to true only to research a new screen.");
+
+            // After every SetFilePath: each one reloads the whole file into every category (MelonPreferences.LoadFileAndRefreshCategories),
+            // so a reset done earlier was undone by the Debug section's load (0.0.204: the log said "Keys moved", the keys stayed; 0.0.205).
+            // The marker is 3: 0.0.204 had already written 2.
+            if (KeyLayout.Value < 3)
+            {
+                foreach (MelonPreferences_Entry<string> e in new[] { KeyRepeat, KeyWhereAmI, KeyBattleVerbosity, KeyBattleStatus,
+                             KeyBattleEnemies, KeyBattleLog, KeyDumpUi, KeyToggleProbe, KeyNavDump, KeyBattleDump, KeyBlobber, KeyCentre,
+                             KeyPoiNext, KeyPoiPrevious, KeyPoiFilterNext, KeyPoiFilterPrevious, KeyPoiWalk, KeyPoiGuide, KeyWayOn,
+                             KeyAreaRoutes, KeyHelp, KeyModSettings })
+                    e.ResetToDefault();
+                KeyLayout.Value = 3;
+                LayoutReset = true;
+            }
 
             // Write the file now so new settings appear with their defaults.
             speech.SaveToFile(false);

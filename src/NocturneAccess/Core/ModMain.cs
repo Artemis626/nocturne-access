@@ -20,7 +20,7 @@ namespace NocturneAccess.Core
     public sealed class ModMain : MelonMod
     {
         internal const string ModName = "Nocturne Access";
-        internal const string ModVersion = "0.0.204";
+        internal const string ModVersion = "0.0.205";
         internal const string ModAuthor = "Francesco";
 
         public override void OnInitializeMelon()
@@ -29,7 +29,7 @@ namespace NocturneAccess.Core
             Config.Init();
             Log.Info($"{ModName} {ModVersion} starting. Settings: {Config.FilePath}");
             if (Config.LayoutReset)
-                Log.Info("[Config] Keys moved to the 0.0.204 layout (F1 key help, F2 repeat, F3 to F5 battle, F6 centre; debug keys on Ctrl).");
+                Log.Info("[Config] Keys moved to the 0.0.204 layout (0.0.205 reset) (F1 key help, F2 repeat, F3 to F5 battle, F6 centre; debug keys on Ctrl).");
 
             SpeechManager.Init();
 
