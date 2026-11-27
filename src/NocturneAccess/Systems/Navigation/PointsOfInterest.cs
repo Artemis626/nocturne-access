@@ -332,6 +332,22 @@ namespace NocturneAccess.Systems.Navigation
         private const int StatueDrawn = 1687, StatueFound = 1686;
         internal const string TrueStatueWords = "true statue";
 
+        /// <summary>The heights of the area's event volumes (01eve_NN) standing at p's spot, p's own included (LiftIcons pairs stacked lifts by them).</summary>
+        private static List<float> SpotHeights(Il2CppReferenceArray<fldResHead_t> ranges, int n, Vector4 p)
+        {
+            var ys = new List<float>();
+            for (int k = 0; k < n; k++)
+            {
+                fldResHead_t r = ranges[k];
+                if (r?.sisei == null || r.resourceType != 10 || !EventName.IsMatch(r.resourceName ?? ""))
+                    continue;
+                Vector4 q = r.sisei.pos;
+                if (Math.Abs(q.x - p.x) <= 150f && Math.Abs(q.z - p.z) <= 150f)
+                    ys.Add(q.y);
+            }
+            return ys;
+        }
+
         private static string StatueMark(fldGlobalWork_t gb, string name)
         {
             if (gb.fieldID != 33 || gb.areaID != 23)
@@ -637,7 +653,8 @@ namespace NocturneAccess.Systems.Navigation
                     Action = script?.Outcome == ScriptOutcome.Action || jump,
                     Story = script?.Outcome == ScriptOutcome.Story,
                     Prompt = (jump ? FieldScript.PanelText(JumpPrompt) : script?.Outcome == ScriptOutcome.Action ? script.PromptText : "")
-                             + (WayMarks.TryGetValue((gb.fieldID, gb.areaID, name), out string way) ? " " + way : "") + StatueMark(gb, name),   // "Ride to elevator for next floor"
+                             + (WayMarks.TryGetValue((gb.fieldID, gb.areaID, name), out string way) ? " " + way : "") + StatueMark(gb, name)   // "Ride to elevator for next floor"
+                             + (script?.Outcome == ScriptOutcome.Action && script.Prompt == LiftIcons.RidePrompt ? LiftIcons.Mark(gb, name, p, SpotHeights(ranges, n, p)) : ""),   // "Ride, lift goes up" (0.0.206)
                     Detail = script?.Outcome == ScriptOutcome.Action ? script.Detail
                              : script?.Outcome == ScriptOutcome.Story ? FieldScript.FirstNarration(gb.areaID, name) : placeDetail,   // 0.0.97: the tile's narration ("Time passed quickly")
                     ScriptNote = script?.ToString() ?? "",
