@@ -39,7 +39,20 @@ Clear blocks, but the most used key, repeat, moves far from the left edge.
 
 Three blocks in the order a new player needs them: help, then battle, then the first-person extras. The navigation keys that matter most are not on the function row at all (Page Up, Page Down, Home, End, Delete), so the function row's navigation block is small in both options.
 
-### Option C: one key per question, shared by context
+### Option C (Francesco, 27 Nov 2026): Option B with toggles moved into the settings window
+
+Francesco's proposal: switches that are set once and left (blobber mode, the falling minigame's autopilot, HP after actions) become settings-window rows only, and lose their function keys. The function row keeps what a menu does badly: hearing things again, and status at a glance.
+
+- **Keys that go:** F4 blobber mode and the autopilot (new settings rows: "Blobber mode" switched live, replacing "Blobber mode at start", and "Falling minigame autopilot", on by default); F8 HP after actions (already a row). Routes through other areas already has no key.
+- **What remains:** key help, repeat, party status, enemies, battle log, centre on the square: six keys, so two are left free.
+- **Suggested layout:** F1 key help, F2 repeat, F3 party status (in battle as now; in the field the party's HP, MP and statuses, new), F4 enemies (battle), F5 battle log, F6 centre on the square; F7 and F8 kept free for later status keys (to choose: for example the moon and macca, now on Delete).
+- **Points to settle:**
+  - The autopilot cannot be switched mid-fall unless the window opens during the minigame (today it opens only in the field and in battle). With the row set beforehand, and a real direction key still taking over at once, a fall-time key may not be needed.
+  - Switching blobber mode now takes four presses instead of one. Fine if it is set once; worth Francesco's check if he switches it often (fixed-camera rooms, the overworld).
+  - The spoken lines that name F4 change to name the setting ("Blobber mode: set it in the mod settings").
+- **Effect on remapping:** fewer keys to list in the Keys category, and two free keys for players who want to remap.
+
+### Option D (was C): one key per question, shared by context
 
 The same key gives "status" in battle and "where am I" in the field, and so on. It uses fewer keys, but a key's meaning depends on the screen. F3 and F4 are shared today and that is part of what feels random. Not recommended.
 
