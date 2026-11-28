@@ -94,6 +94,7 @@ Gamepad buttons: the mod's keys are keyboard only. A gamepad layout would be a s
 ## Built
 
 - **0.0.204 (27 Nov 2026):** option C (section 2) with the one-time reset and the spoken key names from the bindings (section 3). Remapping (section 4) is next.
+- **0.0.205 (27 Nov 2026), verified 27 Nov:** the reset moved after the last `SetFilePath`; Francesco's cfg now has the new keys. Section 4 (remapping) waits for his go-ahead.
 
 ## 5. Order of work
 
