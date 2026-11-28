@@ -4,7 +4,7 @@
 
 Written 30 Sep 2026, updated in session 2 after the 0.0.10 test (analysis only), for a fresh chat. Read this first (after `CLAUDE.md`), then `docs/HANDOFF.md` (full project source of truth), `docs/class-index.md` (every verified name and UI path) and `docs/KEYS.md`. `docs/TEXT-HOOKING-HANDOFF.md` holds Francesco's Suikoden Access design notes that the readers follow.
 
-## KEYS (28 Nov 2026): 0.0.205 verified (cfg moved to the new layout). Next on Francesco's go-ahead: key remapping in the settings window (`docs/KEYS-PLAN.md` section 4).
+## KEYS (28 Nov 2026): 0.0.213 built, untested: key remapping in the settings window (Shift+F, category Keys). Test steps: `docs/HANDOFF.md` last entry.
 
 ## RESUME HERE (27 Nov 2026, later): 0.0.205 built, untested: the 0.0.204 key reset now really happens (it ran before the Debug section reloaded the file; marker 3). At the next start the log says "Keys moved ... (0.0.205 reset)"; then F4 is enemies only, F6 centre, blobber mode only in the settings window.
 

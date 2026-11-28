@@ -4,6 +4,8 @@
 
 ## Mod keys
 
+**Remapping since 0.0.213:** every player key can be changed in game: Shift+F, category Keys (see README "Settings" and `docs/USER-GUIDE.md` chapter 9). Debug keys stay in the cfg file.
+
 **Layout since 0.0.204** (Francesco's option C, 27 Nov 2026, `docs/KEYS-PLAN.md`): the keys are grouped by job. The table further down keeps each feature's history and still names the keys it had before 0.0.204; read it with this list.
 
 - **General:** F1 key help; F2 repeat; Shift+F the mod settings window.

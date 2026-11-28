@@ -95,6 +95,7 @@ Gamepad buttons: the mod's keys are keyboard only. A gamepad layout would be a s
 
 - **0.0.204 (27 Nov 2026):** option C (section 2) with the one-time reset and the spoken key names from the bindings (section 3). Remapping (section 4) is next.
 - **0.0.205 (27 Nov 2026), verified 27 Nov:** the reset moved after the last `SetFilePath`; Francesco's cfg now has the new keys. Section 4 (remapping) waits for his go-ahead.
+- **0.0.213 (28 Nov 2026), built, untested:** section 4 as planned: the Keys category (19 rows: 18 player keys and "Reset all keys"), capture with modifiers, refusals (game keys except Shift+F for the settings row, window keys, F9 to F12 and P, debug keys), swap on Enter, the settings key pressed twice, reset with Enter twice; `Hotkeys.Init` rebuilds the bindings at once; the category scrolls 10 rows. Mod words to confirm.
 
 ## 5. Order of work
 

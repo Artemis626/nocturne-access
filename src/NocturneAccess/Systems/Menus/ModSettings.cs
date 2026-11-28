@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using HarmonyLib;
 using Il2Cpp;
@@ -41,14 +42,20 @@ namespace NocturneAccess.Systems.Menus
         private const long ReleaseHoldMaxMs = 1500;
 
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
+        private const int VisibleRows = 10;
 
         private sealed class Item
         {
-            public MelonPreferences_Entry<bool> Entry;
+            public MelonPreferences_Entry<bool> Entry;        // an on / off setting
+            public MelonPreferences_Entry<string> KeyEntry;   // a key (0.0.213), named by KeyName
+            public string KeyName = "";
+            public bool ResetKeys;                            // the "Reset all keys" row
             public string Note = "";          // said after a change ("Takes effect at the next start.")
             public Action<bool> Changed;      // what the game needs besides the new value (routes: cancel a journey)
-            public string Label => string.IsNullOrEmpty(Entry.DisplayName) ? Entry.Identifier : Entry.DisplayName;
-            public string Value => Entry.Value ? "On" : "Off";
+            public string Label => ResetKeys ? "Reset all keys" : KeyEntry != null ? KeyName
+                : string.IsNullOrEmpty(Entry.DisplayName) ? Entry.Identifier : Entry.DisplayName;
+            public string Value => ResetKeys ? "" : KeyEntry != null ? Hotkeys.Spoken(KeyEntry.Value) : Entry.Value ? "On" : "Off";
+            public string Line => Value.Length > 0 ? $"{Label}, {Value}" : Label;
         }
 
         private sealed class Category
@@ -110,6 +117,27 @@ namespace NocturneAccess.Systems.Menus
                 Bool(Config.SecretSound),
                 Bool(Config.CameraSound),
                 Bool(Config.ChaseSound));
+            // 0.0.213: the player's keys, remapped here (debug keys stay in the cfg file only).
+            Cat("Keys",
+                KeyRow(Config.KeyHelp, "Key help"),
+                KeyRow(Config.KeyRepeat, "Repeat"),
+                KeyRow(Config.KeyBattleStatus, "Party status"),
+                KeyRow(Config.KeyBattleEnemies, "Enemies"),
+                KeyRow(Config.KeyBattleLog, "Battle log"),
+                KeyRow(Config.KeyCentre, "Centre on the square"),
+                KeyRow(Config.KeyPoiNext, "Next point"),
+                KeyRow(Config.KeyPoiPrevious, "Previous point"),
+                KeyRow(Config.KeyPoiFilterNext, "Next filter"),
+                KeyRow(Config.KeyPoiFilterPrevious, "Previous filter"),
+                KeyRow(Config.KeyPoiWalk, "Walk to the point"),
+                KeyRow(Config.KeyPoiGuide, "Directions to the point"),
+                KeyRow(Config.KeyWayOn, "Way on"),
+                KeyRow(Config.KeyWhereAmI, "Where am I"),
+                KeyRow(Config.KeyBlobber, "Blobber mode"),
+                KeyRow(Config.KeyBattleVerbosity, "HP after actions"),
+                KeyRow(Config.KeyAreaRoutes, "Routes through other areas"),
+                KeyRow(Config.KeyModSettings, "Mod settings"),
+                new Item { ResetKeys = true });
 
             var action = AccessTools.Method(typeof(ModSettings), nameof(AfterAction));
             var any = AccessTools.Method(typeof(ModSettings), nameof(AfterAnyKey));
@@ -190,6 +218,8 @@ namespace NocturneAccess.Systems.Menus
                 return false;
             }
 
+            if (CaptureTick())
+                return true;
             if (Hotkeys.IsDown("mod settings"))
             {
                 Close();
@@ -261,6 +291,16 @@ namespace NocturneAccess.Systems.Menus
         {
             Category c = Categories[_cat];
             Item item = c.Items[c.Row];
+            if (item.ResetKeys)
+            {
+                AskReset();
+                return;
+            }
+            if (item.KeyEntry != null)
+            {
+                StartCapture(item);
+                return;
+            }
             bool on = !item.Entry.Value;
             item.Entry.Value = on;
             Config.Save(item.Entry);
@@ -287,7 +327,226 @@ namespace NocturneAccess.Systems.Menus
             }
             Category cat = Categories[_cat];
             Item item = cat.Items[cat.Row];
-            return $"{item.Label}, {item.Value}, {cat.Row + 1} of {cat.Items.Count}.";
+            return $"{item.Line}, {cat.Row + 1} of {cat.Items.Count}.";
+        }
+
+        // ---- Keys category (0.0.213, docs/KEYS-PLAN.md section 4): remapping the mod's keys in the window ----
+
+        /// <summary>Letters and keys the game binds (docs/KEYS.md "Game keyboard bindings"): never a mod key, except Shift+F for this window.</summary>
+        private static readonly HashSet<KeyCode> GameKeys = new HashSet<KeyCode>
+        {
+            KeyCode.W, KeyCode.A, KeyCode.S, KeyCode.D, KeyCode.Q, KeyCode.E, KeyCode.C, KeyCode.F, KeyCode.V, KeyCode.M,
+            KeyCode.H, KeyCode.I, KeyCode.J, KeyCode.K, KeyCode.L, KeyCode.Tab, KeyCode.Escape, KeyCode.Equals, KeyCode.Plus,
+            KeyCode.KeypadPlus,
+        };
+
+        /// <summary>The window's own keys (fixed, so the window always works).</summary>
+        private static readonly HashSet<KeyCode> WindowKeys = new HashSet<KeyCode>
+        {
+            KeyCode.Return, KeyCode.KeypadEnter, KeyCode.Space, KeyCode.Backspace,
+            KeyCode.UpArrow, KeyCode.DownArrow, KeyCode.LeftArrow, KeyCode.RightArrow,
+        };
+
+        /// <summary>Keys other software uses (docs/KEYS.md "Reserved keys"): Graphics Configurator F9 to F11, Steam F12, NocturneModernController P.</summary>
+        private static readonly HashSet<KeyCode> OtherSoftwareKeys = new HashSet<KeyCode>
+        {
+            KeyCode.F9, KeyCode.F10, KeyCode.F11, KeyCode.F12, KeyCode.P,
+        };
+
+        /// <summary>Every key a press is looked for in while waiting for a new key; modifiers alone never count.</summary>
+        private static readonly KeyCode[] CaptureKeys = BuildCaptureKeys();
+
+        private static KeyCode[] BuildCaptureKeys()
+        {
+            var list = new List<KeyCode>();
+            for (KeyCode k = KeyCode.A; k <= KeyCode.Z; k++) list.Add(k);
+            for (KeyCode k = KeyCode.Alpha0; k <= KeyCode.Alpha9; k++) list.Add(k);
+            for (KeyCode k = KeyCode.Keypad0; k <= KeyCode.Keypad9; k++) list.Add(k);
+            for (KeyCode k = KeyCode.F1; k <= KeyCode.F12; k++) list.Add(k);
+            list.AddRange(new[]
+            {
+                KeyCode.Insert, KeyCode.Delete, KeyCode.Home, KeyCode.End, KeyCode.PageUp, KeyCode.PageDown,
+                KeyCode.UpArrow, KeyCode.DownArrow, KeyCode.LeftArrow, KeyCode.RightArrow, KeyCode.Tab, KeyCode.Return,
+                KeyCode.KeypadEnter, KeyCode.Space, KeyCode.Backspace, KeyCode.Minus, KeyCode.Equals, KeyCode.Plus,
+                KeyCode.KeypadPlus, KeyCode.KeypadMinus, KeyCode.KeypadMultiply, KeyCode.KeypadDivide, KeyCode.KeypadPeriod,
+                KeyCode.LeftBracket, KeyCode.RightBracket, KeyCode.Semicolon, KeyCode.Quote, KeyCode.Comma, KeyCode.Period,
+                KeyCode.Slash, KeyCode.Backslash, KeyCode.BackQuote,
+            });
+            return list.ToArray();
+        }
+
+        private static Item _capture;                 // the key row waiting for a new key
+        private static string _pending = "";          // a new key waiting for Enter (swap) or a second press (the settings key)
+        private static Item _swapWith;                // the row that has that key already
+        private static bool _confirmReset;
+
+        private static Item KeyRow(MelonPreferences_Entry<string> entry, string name) => new Item { KeyEntry = entry, KeyName = name };
+
+        private static IEnumerable<Item> KeyItems()
+        {
+            foreach (Category c in Categories)
+                foreach (Item i in c.Items)
+                    if (i.KeyEntry != null)
+                        yield return i;
+        }
+
+        private static IEnumerable<MelonPreferences_Entry<string>> DebugKeyEntries()
+            => new[] { Config.KeyDumpUi, Config.KeyToggleProbe, Config.KeyNavDump, Config.KeyBattleDump };
+
+        private static void StartCapture(Item item)
+        {
+            _capture = item;
+            _pending = "";
+            _swapWith = null;
+            Log.Info($"{Tag} Waiting for a new key for {item.KeyEntry.Identifier} (now {item.KeyEntry.Value}).");
+            SpeechManager.Say($"Press the new key for {item.KeyName}. Escape cancels.", interrupt: true, force: true);
+        }
+
+        private static void EndCapture()
+        {
+            _capture = null;
+            _pending = "";
+            _swapWith = null;
+            _confirmReset = false;
+            Redraw();
+        }
+
+        /// <summary>While a key row or the reset waits: true, and every key goes here.</summary>
+        private static bool CaptureTick()
+        {
+            if (_confirmReset)
+            {
+                if (Down(KeyCode.Return) || Down(KeyCode.KeypadEnter))
+                    ResetAllKeys();
+                else if (Down(KeyCode.Escape) || Down(KeyCode.C) || Down(KeyCode.Backspace))
+                {
+                    EndCapture();
+                    SpeechManager.Say("Cancelled.", interrupt: true, force: true);
+                }
+                return true;
+            }
+            if (_capture == null)
+                return false;
+
+            if (Down(KeyCode.Escape))
+            {
+                Item was = _capture;
+                EndCapture();
+                SpeechManager.Say($"Cancelled. {was.KeyName}, {was.Value}.", interrupt: true, force: true);
+                return true;
+            }
+            if (_swapWith != null)
+            {
+                if (Down(KeyCode.Return) || Down(KeyCode.KeypadEnter))
+                {
+                    string old = Hotkeys.Canonical(_capture.KeyEntry.Value);
+                    Item other = _swapWith;
+                    other.KeyEntry.Value = old.Length > 0 ? old : "None";
+                    Save(other.KeyEntry);
+                    Apply(_capture, _pending, $" {other.KeyName} is now {other.Value}.");
+                }
+                return true;
+            }
+
+            KeyCode key = KeyCode.None;
+            foreach (KeyCode k in CaptureKeys)
+            {
+                if (Down(k))
+                {
+                    key = k;
+                    break;
+                }
+            }
+            if (key == KeyCode.None)
+                return true;
+            bool shift = UnityInput.GetKey(KeyCode.LeftShift) || UnityInput.GetKey(KeyCode.RightShift);
+            bool ctrl = UnityInput.GetKey(KeyCode.LeftControl) || UnityInput.GetKey(KeyCode.RightControl);
+            bool alt = UnityInput.GetKey(KeyCode.LeftAlt) || UnityInput.GetKey(KeyCode.RightAlt);
+            string text = (ctrl ? "Ctrl+" : "") + (alt ? "Alt+" : "") + (shift ? "Shift+" : "") + key;
+            string said = Hotkeys.Spoken(text);
+            bool settingsRow = _capture.KeyEntry == Config.KeyModSettings;
+
+            if (_pending.Length > 0)
+            {
+                // The settings key: the same key twice, so a slip cannot lock the window away.
+                if (text == _pending)
+                    Apply(_capture, _pending, "");
+                else
+                {
+                    Item was = _capture;
+                    EndCapture();
+                    SpeechManager.Say($"Not the same key. Cancelled. {was.KeyName}, {was.Value}.", interrupt: true, force: true);
+                }
+                return true;
+            }
+
+            string refusal = null;
+            if (GameKeys.Contains(key) && !(settingsRow && text == "Shift+F"))
+                refusal = $"{said} is a game key.";
+            else if (WindowKeys.Contains(key))
+                refusal = $"{said} is used by this window.";
+            else if (OtherSoftwareKeys.Contains(key))
+                refusal = $"{said} is used by other software.";
+            else if (DebugKeyEntries().Any(e => Hotkeys.Canonical(e.Value) == text))
+                refusal = $"{said} is a debug key.";
+            if (refusal != null)
+            {
+                Log.Info($"{Tag} {text} refused for {_capture.KeyEntry.Identifier}: {refusal}");
+                SpeechManager.Say($"{refusal} Press another key, or Escape.", interrupt: true, force: true);
+                return true;
+            }
+            if (Hotkeys.Canonical(_capture.KeyEntry.Value) == text)
+            {
+                Item was = _capture;
+                EndCapture();
+                SpeechManager.Say($"Unchanged. {was.KeyName}, {was.Value}.", interrupt: true, force: true);
+                return true;
+            }
+            Item owner = KeyItems().FirstOrDefault(i => i != _capture && Hotkeys.Canonical(i.KeyEntry.Value) == text);
+            if (owner != null)
+            {
+                _swapWith = owner;
+                _pending = text;
+                SpeechManager.Say($"{said} is used by {owner.KeyName}. Enter swaps them, Escape cancels.", interrupt: true, force: true);
+                return true;
+            }
+            if (settingsRow)
+            {
+                _pending = text;
+                SpeechManager.Say($"Press {said} again to confirm.", interrupt: true, force: true);
+                return true;
+            }
+            Apply(_capture, text, "");
+            return true;
+        }
+
+        private static void Apply(Item item, string text, string extra)
+        {
+            item.KeyEntry.Value = text;
+            Save(item.KeyEntry);
+            Hotkeys.Init();
+            Log.Info($"{Tag} {item.KeyEntry.Identifier} = {text}.");
+            EndCapture();
+            SpeechManager.Say($"{item.KeyName}, {item.Value}.{extra}", interrupt: true, force: true);
+        }
+
+        private static void Save(MelonPreferences_Entry<string> entry) => Config.Save(entry);
+
+        private static void AskReset()
+        {
+            _confirmReset = true;
+            SpeechManager.Say("Press Enter again to set every key back to its default. Escape cancels.", interrupt: true, force: true);
+        }
+
+        private static void ResetAllKeys()
+        {
+            foreach (MelonPreferences_Entry<string> e in Config.KeyEntries())
+                e.ResetToDefault();
+            Save(Config.KeyHelp);
+            Hotkeys.Init();
+            Log.Info($"{Tag} Every key reset to its default.");
+            EndCapture();
+            SpeechManager.Say("All keys reset.", interrupt: true, force: true);
         }
 
         // ---- Drawing ----
@@ -352,10 +611,15 @@ namespace NocturneAccess.Systems.Menus
             {
                 Category c = Categories[_cat];
                 sb.Append($"<b>Nocturne Access settings: {c.Name}</b>\n\n");
-                for (int i = 0; i < c.Items.Count; i++)
-                    Row(sb, $"{c.Items[i].Label}: {c.Items[i].Value}", i == c.Row);
-                sb.Append("\n<size=70%>W S: move    A D Enter: change    C: back</size>");
-                rows = c.Items.Count;
+                // At most VisibleRows rows, scrolled to keep the selected one in view (the Keys category has 19, 0.0.213).
+                int first = Math.Max(0, Math.Min(c.Row - VisibleRows / 2, c.Items.Count - VisibleRows));
+                int last = Math.Min(c.Items.Count, first + VisibleRows);
+                for (int i = first; i < last; i++)
+                    Row(sb, c.Items[i].Value.Length > 0 ? $"{c.Items[i].Label}: {c.Items[i].Value}" : c.Items[i].Label, i == c.Row);
+                string hint = _capture != null ? "Press the new key    Escape: cancel"
+                    : c.Name == "Keys" ? "W S: move    Enter: new key    C: back" : "W S: move    A D Enter: change    C: back";
+                sb.Append($"\n<size=70%>{hint}</size>");
+                rows = last - first;
             }
             _text.text = sb.ToString();
 

@@ -84,8 +84,9 @@ Every change is saved at once to `UserData/NocturneAccess.cfg` and takes effect 
 - **Battle:** speak HP changes; speak HP left after actions.
 - **Navigation:** blobber mode (switched at once, and kept for the next start); falling minigame autopilot; door kinds; points of interest in map order; routes through other areas; the way on (off: Shift+End only says it is off, and its tone is not played).
 - **Sounds:** wall bump; door tone; way-on tone; alarm tones; camera change tones (0.0.212: a swish and a low note into a fixed-camera room, a higher note back to the free camera); secret area and section exit tones; chase pulse.
+- **Keys** (0.0.213): every player key. Enter on a row, then press the new key (with Shift, Ctrl or Alt if wanted); Escape cancels. A key another action has: Enter swaps the two. Game keys (W, A, S, D, Q, E, C, F, V, M, H, I, J, K, L, Tab, Escape, plus), the window's own keys (Enter, Space, Backspace, arrows), F9 to F12 and P (other software) and the debug keys are refused. The settings key must be pressed twice to confirm. "Reset all keys" (Enter twice) puts every key back to its default.
 
-The window leaves out, on purpose, the content changes listed above (such as the Third Kalpa chase), switches that could silence the mod or need a restart, debug settings and the keys. These are changed in `NocturneAccess.cfg` with the game closed.
+The window leaves out, on purpose, the content changes listed above (such as the Third Kalpa chase), switches that could silence the mod or need a restart, and the debug settings and keys. These are changed in `NocturneAccess.cfg` with the game closed.
 
 A player's guide is being written: `docs/USER-GUIDE.md`.
 

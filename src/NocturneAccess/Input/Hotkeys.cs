@@ -148,6 +148,22 @@ namespace NocturneAccess.Input
             return "";
         }
 
+        /// <summary>A key value written the way the bindings write it ("Ctrl+Shift+F6"), or "" for None or an unreadable value (0.0.213, remapping).</summary>
+        internal static string Canonical(string value)
+        {
+            var b = new Binding();
+            if (!Parse(value, b) || b.Key == KeyCode.None)
+                return "";
+            return b.Text;
+        }
+
+        /// <summary>A key value as spoken: "Page Up", "Shift+End"; "no key" when unbound.</summary>
+        internal static string Spoken(string value)
+        {
+            string c = Canonical(value);
+            return c.Length == 0 ? "no key" : c.Replace("PageUp", "Page Up").Replace("PageDown", "Page Down");
+        }
+
         /// <summary>The named binding's key went down this frame with its modifiers (0.0.204: the settings window's repeat and key help follow the bindings).</summary>
         internal static bool IsDown(string name)
         {

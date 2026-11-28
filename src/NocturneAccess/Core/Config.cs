@@ -264,6 +264,12 @@ namespace NocturneAccess.Core
             debug.SaveToFile(false);
         }
 
+        /// <summary>Every key entry, debug keys included (the 0.0.205 layout reset, the settings window's "Reset all keys", 0.0.213).</summary>
+        internal static MelonPreferences_Entry<string>[] KeyEntries() => new[] { KeyRepeat, KeyWhereAmI, KeyBattleVerbosity, KeyBattleStatus,
+            KeyBattleEnemies, KeyBattleLog, KeyDumpUi, KeyToggleProbe, KeyNavDump, KeyBattleDump, KeyBlobber, KeyCentre,
+            KeyPoiNext, KeyPoiPrevious, KeyPoiFilterNext, KeyPoiFilterPrevious, KeyPoiWalk, KeyPoiGuide, KeyWayOn,
+            KeyAreaRoutes, KeyHelp, KeyModSettings };
+
         /// <summary>Writes a setting changed in game (F7, F8) to the file; a failure is logged, never thrown.</summary>
         internal static void Save<T>(MelonPreferences_Entry<T> entry)
         {

@@ -92,13 +92,23 @@ Every change is saved at once and takes effect straight away. Blobber mode is al
 - **Sounds:**
   - Wall bump sound, door tone, way-on tone, alarm tones (the Amala Temple), camera change tones (a soft swish and a low note when the game switches to a fixed camera, with its own controls; a higher note when the free camera returns), secret area and section exit tones (the Labyrinth), chase pulse (the Labyrinth's chase, when it is on).
 
+### Keys
+
+The Keys category lists every key of the mod, with the key it has now: "Repeat, F2, 2 of 19." The list scrolls, ten rows at a time on screen.
+
+- **To change a key:** Enter (or Space, A, D, the arrows) on its row. You hear "Press the new key for Repeat. Escape cancels." Press the new key, with Shift, Ctrl or Alt if you want a combination. You hear the row again with its new key, and the key works at once.
+- **A key another action already has:** "F3 is used by Party status. Enter swaps them, Escape cancels." Enter gives the other action your old key.
+- **Keys you cannot choose:** the game's own keys (W, A, S, D, Q, E, C, F, V, M, H, I, J, K, L, Tab, Escape, plus), the window's keys (Enter, Space, Backspace, the arrows), F9 to F12 and P (used by other software), and the debug keys. You hear why, and you can press another key.
+- **The settings key itself:** press the new key twice to confirm, so a slip cannot lock the window away.
+- **Reset all keys:** the last row. Enter, then Enter again, puts every key back to its default.
+
 ### What is not in the window
 
 Some settings are changed only in `UserData/NocturneAccess.cfg`, with the game closed:
 
 - The content changes for accessibility, such as the Third Kalpa chase, the Geis gift and the falling minigame's damage (chapter 10).
 - Switches that could leave the mod silent or need a restart, such as reading dialogue, menus or battles.
-- Debug settings, and the keys.
+- Debug settings and debug keys.
 
 ## 10. Content changed for accessibility
 
